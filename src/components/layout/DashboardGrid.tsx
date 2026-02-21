@@ -256,7 +256,7 @@ function GridEditIcon() {
 }
 
 /**
- * Screensaver icon (monitor with play triangle)
+ * Screensaver icon (lamp / nightlight)
  */
 function ScreensaverIcon() {
   return (
@@ -271,10 +271,9 @@ function ScreensaverIcon() {
       strokeLinecap="round"
       strokeLinejoin="round"
     >
-      <rect x="2" y="3" width="20" height="14" rx="2" />
-      <line x1="8" y1="21" x2="16" y2="21" />
-      <line x1="12" y1="17" x2="12" y2="21" />
-      <polygon points="10,7 10,13 15,10" fill="currentColor" stroke="none" />
+      <path d="M8 2h8l4 10H4L8 2Z" />
+      <path d="M12 12v6" />
+      <path d="M8 18h8" />
     </svg>
   );
 }

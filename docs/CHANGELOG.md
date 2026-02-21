@@ -20,6 +20,10 @@ All notable changes to Prism are documented in this file.
   - Global screensaver component works without changes
 - **Per-Dashboard Orientation**: Screen orientation (landscape/portrait) saved per-dashboard in DB instead of localStorage
 
+### Changed
+- **Away Mode Icon**: Moon icon replaced with palm tree (`TreePalm`) — more intuitive "vacation/away" meaning, avoids confusion with dark mode
+- **Screensaver Icon**: Monitor-with-play icon replaced with lamp/nightlight — better represents ambient display mode
+
 ### Improved
 - **Auto-Slug Migration**: Existing layouts automatically receive URL slugs on first API fetch
 - **Last Dashboard Protection**: API prevents deleting the last remaining dashboard; default reassigned if the current default is deleted

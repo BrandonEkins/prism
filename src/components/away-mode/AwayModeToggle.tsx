@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Moon } from 'lucide-react';
+import { TreePalm } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAwayMode } from '@/lib/hooks/useAwayMode';
 import { QuickPinModal } from '@/components/auth/QuickPinModal';
@@ -56,7 +56,7 @@ export function AwayModeToggle({
         className={className}
         title="Enable Away Mode"
       >
-        <Moon className="h-4 w-4" />
+        <TreePalm className="h-4 w-4" />
         {showLabel && <span className="ml-2">Away Mode</span>}
       </Button>
 
