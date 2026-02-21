@@ -108,3 +108,6 @@ docs/requirements/
 docs/REQUIREMENTS.md
 docs/SIDE_NAVIGATION.md
 nul
+
+# Claude Code artifacts
+transcript*.json
