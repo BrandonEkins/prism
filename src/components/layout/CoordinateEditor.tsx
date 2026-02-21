@@ -87,103 +87,91 @@ export function CoordinateEditor({ widgets, onWidgetsChange, mode, onFocusedWidg
     ));
   }, [widgets, onWidgetsChange]);
 
-  // Split visible widgets into two columns for compact layout
-  const midpoint = Math.ceil(visibleIds.length / 2);
-  const leftWidgets = visibleIds.slice(0, midpoint);
-  const rightWidgets = visibleIds.slice(midpoint);
-
-  const renderWidgetTable = (widgetIds: string[]) => (
-    <table className="text-xs flex-1">
-      <thead>
-        <tr className="text-xs text-muted-foreground border-b border-border">
-          <th className="text-left py-1 px-1">Widget</th>
-          <th className="text-center py-1 px-0.5 w-11">X</th>
-          <th className="text-center py-1 px-0.5 w-11">Y</th>
-          <th className="text-center py-1 px-0.5 w-11">W</th>
-          <th className="text-center py-1 px-0.5 w-11">H</th>
-        </tr>
-      </thead>
-      <tbody>
-        {widgetIds.map(widgetId => {
-          const widget = widgets.find(w => w.i === widgetId);
-          if (!widget || widget.visible === false) return null;
-          const reg = WIDGET_REGISTRY[widgetId];
-          const color = WIDGET_COLORS[widgetId] || '#6B7280';
-          const isFocused = focusedWidget === widgetId;
-
-          return (
-            <tr
-              key={widgetId}
-              className={`border-b border-border/50 transition-colors ${
-                isFocused ? 'bg-primary/5' : ''
-              }`}
-            >
-              <td className="py-1 px-1">
-                <button
-                  onClick={() => handleRemoveWidget(widgetId)}
-                  className="w-full text-left text-xs px-1.5 py-0.5 rounded transition-colors whitespace-nowrap text-white"
-                  style={{
-                    backgroundColor: color,
-                    border: `1px solid ${color}`,
-                  }}
-                  title="Click to hide"
-                >
-                  {reg?.label || widgetId}
-                </button>
-              </td>
-              <td className="py-1 px-0.5">
-                <CoordInput
-                  value={widget.x}
-                  min={0}
-                  max={11}
-                  onChange={v => handleUpdateWidget(widgetId, 'x', v)}
-                  onFocus={() => handleFocusChange(widgetId)}
-                  onBlur={() => handleFocusChange(null)}
-                />
-              </td>
-              <td className="py-1 px-0.5">
-                <CoordInput
-                  value={widget.y}
-                  min={0}
-                  max={29}
-                  onChange={v => handleUpdateWidget(widgetId, 'y', v)}
-                  onFocus={() => handleFocusChange(widgetId)}
-                  onBlur={() => handleFocusChange(null)}
-                />
-              </td>
-              <td className="py-1 px-0.5">
-                <CoordInput
-                  value={widget.w}
-                  min={reg?.minW ?? 1}
-                  max={12}
-                  onChange={v => handleUpdateWidget(widgetId, 'w', v)}
-                  onFocus={() => handleFocusChange(widgetId)}
-                  onBlur={() => handleFocusChange(null)}
-                />
-              </td>
-              <td className="py-1 px-0.5">
-                <CoordInput
-                  value={widget.h}
-                  min={reg?.minH ?? 1}
-                  max={30}
-                  onChange={v => handleUpdateWidget(widgetId, 'h', v)}
-                  onFocus={() => handleFocusChange(widgetId)}
-                  onBlur={() => handleFocusChange(null)}
-                />
-              </td>
-            </tr>
-          );
-        })}
-      </tbody>
-    </table>
-  );
-
   return (
     <div className="space-y-1.5">
-      <div className="flex gap-2">
-        {renderWidgetTable(leftWidgets)}
-        {renderWidgetTable(rightWidgets)}
-      </div>
+      <table className="text-xs w-full">
+        <thead>
+          <tr className="text-xs text-muted-foreground border-b border-border">
+            <th className="text-left py-1 px-1">Widget</th>
+            <th className="text-center py-1 px-0.5 w-11">X</th>
+            <th className="text-center py-1 px-0.5 w-11">Y</th>
+            <th className="text-center py-1 px-0.5 w-11">W</th>
+            <th className="text-center py-1 px-0.5 w-11">H</th>
+          </tr>
+        </thead>
+        <tbody>
+          {visibleIds.map(widgetId => {
+            const widget = widgets.find(w => w.i === widgetId);
+            if (!widget || widget.visible === false) return null;
+            const reg = WIDGET_REGISTRY[widgetId];
+            const color = WIDGET_COLORS[widgetId] || '#6B7280';
+            const isFocused = focusedWidget === widgetId;
+
+            return (
+              <tr
+                key={widgetId}
+                className={`border-b border-border/50 transition-colors ${
+                  isFocused ? 'bg-primary/5' : ''
+                }`}
+              >
+                <td className="py-1 px-1">
+                  <button
+                    onClick={() => handleRemoveWidget(widgetId)}
+                    className="w-full text-left text-xs px-1.5 py-0.5 rounded transition-colors whitespace-nowrap text-white"
+                    style={{
+                      backgroundColor: color,
+                      border: `1px solid ${color}`,
+                    }}
+                    title="Click to hide"
+                  >
+                    {reg?.label || widgetId}
+                  </button>
+                </td>
+                <td className="py-1 px-0.5">
+                  <CoordInput
+                    value={widget.x}
+                    min={0}
+                    max={11}
+                    onChange={v => handleUpdateWidget(widgetId, 'x', v)}
+                    onFocus={() => handleFocusChange(widgetId)}
+                    onBlur={() => handleFocusChange(null)}
+                  />
+                </td>
+                <td className="py-1 px-0.5">
+                  <CoordInput
+                    value={widget.y}
+                    min={0}
+                    max={29}
+                    onChange={v => handleUpdateWidget(widgetId, 'y', v)}
+                    onFocus={() => handleFocusChange(widgetId)}
+                    onBlur={() => handleFocusChange(null)}
+                  />
+                </td>
+                <td className="py-1 px-0.5">
+                  <CoordInput
+                    value={widget.w}
+                    min={reg?.minW ?? 1}
+                    max={12}
+                    onChange={v => handleUpdateWidget(widgetId, 'w', v)}
+                    onFocus={() => handleFocusChange(widgetId)}
+                    onBlur={() => handleFocusChange(null)}
+                  />
+                </td>
+                <td className="py-1 px-0.5">
+                  <CoordInput
+                    value={widget.h}
+                    min={reg?.minH ?? 1}
+                    max={30}
+                    onChange={v => handleUpdateWidget(widgetId, 'h', v)}
+                    onFocus={() => handleFocusChange(widgetId)}
+                    onBlur={() => handleFocusChange(null)}
+                  />
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
       {/* Add widget dropdown */}
       {hiddenIds.length > 0 && (
         <div className="relative" ref={addRef}>

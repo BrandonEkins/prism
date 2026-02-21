@@ -207,7 +207,7 @@ export function Dashboard({
             isEditable
             renderWidget={renderSsWidget}
             margin={4}
-            headerOffset={220}
+            headerOffset={100}
             minVisibleRows={8}
             theme={SCREENSAVER_THEME}
             gridHelperText="Drag widgets to reposition &bull; Scroll to see more"
