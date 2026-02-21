@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
 import { db } from '@/lib/db/client';
 import { layouts } from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
+import { eq, desc } from 'drizzle-orm';
 import { updateLayoutSchema, validateRequest } from '@/lib/validations';
 
 interface RouteParams {
@@ -88,15 +88,16 @@ export async function PATCH(
     }
 
     const updateData: Record<string, unknown> = {
-      ...validation.data,
       updatedAt: new Date(),
     };
 
-    Object.keys(updateData).forEach(key => {
-      if (updateData[key] === undefined) {
-        delete updateData[key];
-      }
-    });
+    // Map validated fields to update data
+    const { name, widgets, isDefault, screensaverWidgets, orientation } = validation.data;
+    if (name !== undefined) updateData.name = name;
+    if (widgets !== undefined) updateData.widgets = widgets;
+    if (isDefault !== undefined) updateData.isDefault = isDefault;
+    if (screensaverWidgets !== undefined) updateData.screensaverWidgets = screensaverWidgets;
+    if (orientation !== undefined) updateData.orientation = orientation;
 
     await db
       .update(layouts)
@@ -136,7 +137,7 @@ export async function DELETE(
     const { id } = await params;
 
     const [existing] = await db
-      .select({ id: layouts.id, name: layouts.name })
+      .select({ id: layouts.id, name: layouts.name, isDefault: layouts.isDefault })
       .from(layouts)
       .where(eq(layouts.id, id));
 
@@ -147,9 +148,33 @@ export async function DELETE(
       );
     }
 
+    // Count remaining layouts
+    const allLayouts = await db.select({ id: layouts.id }).from(layouts);
+    if (allLayouts.length <= 1) {
+      return NextResponse.json(
+        { error: 'Cannot delete the last dashboard' },
+        { status: 400 }
+      );
+    }
+
     await db
       .delete(layouts)
       .where(eq(layouts.id, id));
+
+    // If we deleted the default, make the oldest remaining layout the default
+    if (existing.isDefault) {
+      const [oldest] = await db
+        .select({ id: layouts.id })
+        .from(layouts)
+        .orderBy(layouts.createdAt)
+        .limit(1);
+      if (oldest) {
+        await db
+          .update(layouts)
+          .set({ isDefault: true, updatedAt: new Date() })
+          .where(eq(layouts.id, oldest.id));
+      }
+    }
 
     return NextResponse.json({
       message: 'Layout deleted successfully',

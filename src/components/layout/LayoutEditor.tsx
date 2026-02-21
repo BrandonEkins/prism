@@ -18,6 +18,13 @@ export interface SavedLayout {
   widgets: WidgetConfig[];
 }
 
+export interface DashboardInfo {
+  id: string;
+  name: string;
+  slug: string | null;
+  isDefault: boolean;
+}
+
 export interface LayoutEditorProps {
   widgets: WidgetConfig[];
   onWidgetsChange: (widgets: WidgetConfig[]) => void;
@@ -50,6 +57,13 @@ export interface LayoutEditorProps {
   gridTotalRows?: number;
   gridTotalCols?: number;
   scrollToGridRef?: React.MutableRefObject<((row: number, col?: number) => void) | null>;
+  // Multi-dashboard props
+  allDashboards?: DashboardInfo[];
+  currentDashboardId?: string;
+  onSwitchDashboard?: (slug: string) => void;
+  onCreateDashboard?: (name: string, startFrom: 'blank' | 'template' | 'copy') => void;
+  onRenameDashboard?: (newName: string) => void;
+  onDeleteDashboard?: () => void;
 }
 
 const EXPORT_VERSION = 2;
@@ -96,7 +110,7 @@ function validateImport(data: unknown): LayoutExportV2 | null {
   return obj as unknown as LayoutExportV2;
 }
 
-type ActivePopover = 'widgets' | 'templates' | 'saved' | 'community' | 'preview' | 'more' | 'save' | null;
+type ActivePopover = 'dashboard' | 'widgets' | 'templates' | 'community' | 'preview' | 'more' | 'save' | null;
 
 export function LayoutEditor({
   widgets,
@@ -105,7 +119,6 @@ export function LayoutEditor({
   onSaveAs,
   onReset,
   onCancel,
-  onDeleteLayout,
   layoutName,
   savedLayouts = [],
   editingScreensaver = false,
@@ -129,6 +142,12 @@ export function LayoutEditor({
   gridTotalRows: _gridTotalRows = 24,
   gridTotalCols: _gridTotalCols = 12,
   scrollToGridRef,
+  allDashboards = [],
+  currentDashboardId,
+  onSwitchDashboard,
+  onCreateDashboard,
+  onRenameDashboard,
+  onDeleteDashboard,
 }: LayoutEditorProps) {
   const { zones, allSizeNames } = useScreenSafeZones();
   const effectiveEnabledSizes = enabledSizes.length > 0 ? enabledSizes : allSizeNames;
@@ -140,6 +159,8 @@ export function LayoutEditor({
   const [exportFeedback, setExportFeedback] = useState('');
   const [saveFeedback, setSaveFeedback] = useState('');
   const [showShareDialog, setShowShareDialog] = useState(false);
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [createForm, setCreateForm] = useState({ name: '', startFrom: 'template' as 'blank' | 'template' | 'copy' });
   const [shareForm, setShareForm] = useState({
     name: '',
     description: '',
@@ -176,7 +197,7 @@ export function LayoutEditor({
   }, [visibleWidgets, editingScreensaver]);
 
   const mode = editingScreensaver ? 'screensaver' : 'dashboard';
-  const saveLabel = editingScreensaver ? 'Save Screensaver' : `Save: ${layoutName || 'Untitled'}`;
+  const saveLabel = editingScreensaver ? 'Save Screensaver' : 'Save';
 
   const togglePopover = useCallback((name: ActivePopover) => {
     setActivePopover(prev => prev === name ? null : name);
@@ -200,17 +221,11 @@ export function LayoutEditor({
     return Object.entries(allTemplates).filter(([, t]) => t.orientation === screenGuideOrientation);
   }, [editingScreensaver, screenGuideOrientation]);
 
-  const savedItems = editingScreensaver ? screensaverPresets : savedLayouts;
-
   const handleSelectTemplate = (templateKey: string) => {
     const template = LAYOUT_TEMPLATES[templateKey];
     if (template) {
       onWidgetsChange(template.widgets.map(w => ({ ...w, visible: true })));
     }
-  };
-
-  const handleSelectSavedLayout = (layout: SavedLayout) => {
-    onWidgetsChange(layout.widgets.map(w => ({ ...w, visible: w.visible !== false })));
   };
 
   const handleSelectSsTemplate = (templateKey: string) => {
@@ -381,6 +396,38 @@ export function LayoutEditor({
     setShowShareDialog(false);
   };
 
+  const handleRename = () => {
+    const newName = window.prompt('Rename dashboard:', layoutName || '');
+    if (newName && newName !== layoutName) {
+      onRenameDashboard?.(newName);
+    }
+    setActivePopover(null);
+  };
+
+  const handleDelete = () => {
+    if (allDashboards.length <= 1) {
+      window.alert('Cannot delete the last dashboard.');
+      return;
+    }
+    const currentSlug = allDashboards.find(d => d.id === currentDashboardId)?.slug;
+    if (window.confirm(`Delete "${layoutName}"? Devices bookmarked at /d/${currentSlug || '...'} will stop working.`)) {
+      onDeleteDashboard?.();
+    }
+    setActivePopover(null);
+  };
+
+  const handleCreateOpen = () => {
+    setCreateForm({ name: '', startFrom: 'template' });
+    setShowCreateDialog(true);
+    setActivePopover(null);
+  };
+
+  const handleCreateSubmit = () => {
+    if (!createForm.name.trim()) return;
+    onCreateDashboard?.(createForm.name.trim(), createForm.startFrom);
+    setShowCreateDialog(false);
+  };
+
   const btnClass = "px-2 py-1.5 text-xs rounded-md whitespace-nowrap transition-colors";
   const moreItemClass = "w-full text-left px-3 py-1.5 text-sm hover:bg-accent transition-colors";
 
@@ -391,9 +438,54 @@ export function LayoutEditor({
           {/* Left group */}
           <div className="flex items-center gap-1.5 flex-wrap">
             <EditIcon />
-            <span className="text-sm font-medium">
-              {editingScreensaver ? 'Screensaver' : layoutName || 'Untitled'}
-            </span>
+
+            {/* Dashboard name dropdown */}
+            {editingScreensaver ? (
+              <span className="text-sm font-medium">Screensaver</span>
+            ) : (
+              <PopoverButton
+                label={<span className="font-medium">{layoutName || 'Untitled'}</span>}
+                isActive={activePopover === 'dashboard'}
+                onToggle={() => togglePopover('dashboard')}
+                width={220}
+              >
+                <div className="py-1 max-h-[40vh] overflow-auto">
+                  {allDashboards.map(dashboard => (
+                    <button
+                      key={dashboard.id}
+                      onClick={() => {
+                        if (dashboard.id !== currentDashboardId && dashboard.slug) {
+                          onSwitchDashboard?.(dashboard.slug);
+                        } else if (dashboard.id !== currentDashboardId && dashboard.isDefault) {
+                          // Default dashboard uses /
+                          window.location.href = '/';
+                        }
+                        setActivePopover(null);
+                      }}
+                      className={`w-full text-left px-3 py-1.5 text-sm hover:bg-accent transition-colors flex items-center gap-2 ${
+                        dashboard.id === currentDashboardId ? 'bg-accent/50' : ''
+                      }`}
+                    >
+                      <span className="flex-1 truncate">{dashboard.name}</span>
+                      {dashboard.id === currentDashboardId && (
+                        <CheckIcon />
+                      )}
+                      {dashboard.isDefault && dashboard.id !== currentDashboardId && (
+                        <span className="text-[10px] text-muted-foreground">default</span>
+                      )}
+                    </button>
+                  ))}
+                  <div className="border-t border-border my-1" />
+                  <button
+                    onClick={handleCreateOpen}
+                    className={`${moreItemClass} text-primary`}
+                  >
+                    + New Dashboard...
+                  </button>
+                </div>
+              </PopoverButton>
+            )}
+
             <div className="h-4 w-px bg-border mx-0.5" />
 
             {/* Orientation toggle */}
@@ -454,72 +546,6 @@ export function LayoutEditor({
                     No templates for {screenGuideOrientation}
                   </div>
                 )}
-              </div>
-            </PopoverButton>
-
-            {/* Saved layouts popover */}
-            <PopoverButton
-              label={`Saved${savedItems.length > 0 ? ` (${savedItems.length})` : ''}`}
-              isActive={activePopover === 'saved'}
-              onToggle={() => togglePopover('saved')}
-              width={200}
-            >
-              <div className="py-1 max-h-[40vh] overflow-auto">
-                {savedItems.length === 0 && (
-                  <div className="px-3 py-2 text-xs text-muted-foreground italic">No saved layouts</div>
-                )}
-                {editingScreensaver
-                  ? screensaverPresets.map(preset => (
-                      <div key={preset.name} className="group flex items-center hover:bg-accent">
-                        <button
-                          onClick={() => { handleSelectSsPreset(preset); setActivePopover(null); }}
-                          className="flex-1 text-left px-3 py-1.5 text-xs truncate"
-                          title={`${preset.widgets.filter(w => w.visible !== false).length} widgets`}
-                        >
-                          {preset.name}
-                        </button>
-                        {onDeleteScreensaverPreset && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (window.confirm(`Delete preset "${preset.name}"?`)) {
-                                onDeleteScreensaverPreset(preset.name);
-                              }
-                            }}
-                            className="p-1 mr-1 rounded text-muted-foreground opacity-0 group-hover:opacity-100 hover:text-destructive hover:bg-destructive/10 transition-all flex-shrink-0"
-                            title="Delete preset"
-                          >
-                            <TrashIcon />
-                          </button>
-                        )}
-                      </div>
-                    ))
-                  : savedLayouts.map(layout => (
-                      <div key={layout.id} className="group flex items-center hover:bg-accent">
-                        <button
-                          onClick={() => { handleSelectSavedLayout(layout); setActivePopover(null); }}
-                          className="flex-1 text-left px-3 py-1.5 text-xs truncate"
-                          title={`${layout.widgets.length} widgets`}
-                        >
-                          {layout.name}
-                        </button>
-                        {onDeleteLayout && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (window.confirm(`Delete layout "${layout.name}"?`)) {
-                                onDeleteLayout(layout.id);
-                              }
-                            }}
-                            className="p-1 mr-1 rounded text-muted-foreground opacity-0 group-hover:opacity-100 hover:text-destructive hover:bg-destructive/10 transition-all flex-shrink-0"
-                            title="Delete layout"
-                          >
-                            <TrashIcon />
-                          </button>
-                        )}
-                      </div>
-                    ))
-                }
               </div>
             </PopoverButton>
 
@@ -659,10 +685,27 @@ export function LayoutEditor({
               label="More"
               isActive={activePopover === 'more'}
               onToggle={() => togglePopover('more')}
-              width={140}
+              width={180}
               align="right"
             >
               <div className="py-1">
+                {!editingScreensaver && onRenameDashboard && (
+                  <button onClick={handleRename} className={moreItemClass}>
+                    Rename Dashboard...
+                  </button>
+                )}
+                {!editingScreensaver && onDeleteDashboard && (
+                  <button
+                    onClick={handleDelete}
+                    className={`${moreItemClass} ${allDashboards.length <= 1 ? 'text-muted-foreground cursor-not-allowed' : 'text-destructive'}`}
+                    disabled={allDashboards.length <= 1}
+                  >
+                    Delete Dashboard
+                  </button>
+                )}
+                {!editingScreensaver && (onRenameDashboard || onDeleteDashboard) && (
+                  <div className="border-t border-border my-1" />
+                )}
                 <button onClick={() => { if (editingScreensaver) { onScreensaverReset?.(); } else { onReset(); } setActivePopover(null); }} className={moreItemClass}>
                   Reset
                 </button>
@@ -688,6 +731,65 @@ export function LayoutEditor({
           </div>
         </div>
       </div>
+
+      {/* Create Dashboard modal */}
+      {showCreateDialog && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50" onClick={() => setShowCreateDialog(false)}>
+          <div className="bg-popover border border-border rounded-lg shadow-xl p-4 max-w-sm w-full mx-4 space-y-3" onClick={e => e.stopPropagation()}>
+            <div className="text-sm font-medium">New Dashboard</div>
+            <div>
+              <label className="text-xs text-muted-foreground">Name</label>
+              <input
+                type="text"
+                value={createForm.name}
+                onChange={e => setCreateForm(f => ({ ...f, name: e.target.value }))}
+                placeholder="e.g. Kitchen Display"
+                className="w-full px-2 py-1.5 text-sm bg-muted border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                maxLength={100}
+                autoFocus
+                onKeyDown={e => { if (e.key === 'Enter') handleCreateSubmit(); }}
+              />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground block mb-1">Start from</label>
+              <div className="flex gap-2">
+                {([
+                  { value: 'template' as const, label: 'Default Template' },
+                  { value: 'copy' as const, label: 'Copy Current' },
+                  { value: 'blank' as const, label: 'Blank' },
+                ]).map(opt => (
+                  <button
+                    key={opt.value}
+                    onClick={() => setCreateForm(f => ({ ...f, startFrom: opt.value }))}
+                    className={`px-2 py-1 text-xs rounded-md border transition-colors ${
+                      createForm.startFrom === opt.value
+                        ? 'bg-primary text-primary-foreground border-primary'
+                        : 'bg-muted border-border hover:bg-accent'
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={() => setShowCreateDialog(false)}
+                className="px-3 py-1.5 text-sm rounded-md bg-muted hover:bg-accent transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleCreateSubmit}
+                disabled={!createForm.name.trim()}
+                className="px-3 py-1.5 text-sm rounded-md bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
+              >
+                Create
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Import modal */}
       {showImportDialog && (
@@ -931,10 +1033,10 @@ function ChevronIcon({ open }: { open: boolean }) {
   );
 }
 
-function TrashIcon() {
+function CheckIcon() {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M20 6 9 17l-5-5" />
     </svg>
   );
 }

@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import { Suspense, useState, useCallback, useEffect, useMemo, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { AppShell } from '@/components/layout/AppShell';
 import { DashboardGrid, DashboardLayout, DashboardHeader } from '@/components/layout/DashboardGrid';
 import { LayoutGridEditor, SCREENSAVER_THEME } from '@/components/layout/LayoutGridEditor';
@@ -41,12 +42,15 @@ class WidgetBoundary extends React.Component<
 export interface DashboardProps {
   weatherLocation?: string;
   className?: string;
+  slug?: string;
 }
 
 export function Dashboard({
   weatherLocation = 'Springfield, IL',
   className,
+  slug,
 }: DashboardProps) {
+  const router = useRouter();
   const [isMounted, setIsMounted] = useState(false);
   useEffect(() => { setIsMounted(true); }, []);
 
@@ -58,22 +62,48 @@ export function Dashboard({
   const [showAddChore, setShowAddChore] = useState(false);
   const [showAddShopping, setShowAddShopping] = useState(false);
 
-  const layout = useDashboardLayout(data.layouts);
+  const layout = useDashboardLayout(data.layouts, slug);
+
+  // Redirect to / if slug doesn't resolve to a layout (after layouts have loaded)
+  useEffect(() => {
+    if (slug && !data.layouts.loading && data.layouts.allLayouts.length > 0 && !layout.activeLayout) {
+      router.replace('/');
+    }
+  }, [slug, data.layouts.loading, data.layouts.allLayouts.length, layout.activeLayout, router]);
 
   // Grid control state shared between LayoutEditor toolbar and LayoutGridEditor
   const { allSizeNames } = useScreenSafeZones();
+
+  // Orientation from active layout (DB), fallback to landscape
   const [screenGuideOrientation, setScreenGuideOrientationState] = useState<'landscape' | 'portrait'>(() => {
-    if (typeof window === 'undefined') return 'landscape';
-    try {
-      const stored = localStorage.getItem('prism:layout-designer-orientation');
-      if (stored === 'portrait' || stored === 'landscape') return stored;
-    } catch { /* ignore */ }
+    const fromLayout = layout.activeLayout?.orientation;
+    if (fromLayout === 'portrait' || fromLayout === 'landscape') return fromLayout;
     return 'landscape';
   });
-  const setScreenGuideOrientation = useCallback((o: 'landscape' | 'portrait') => {
+
+  // Sync orientation when active layout changes
+  useEffect(() => {
+    const fromLayout = layout.activeLayout?.orientation;
+    if (fromLayout === 'portrait' || fromLayout === 'landscape') {
+      setScreenGuideOrientationState(fromLayout);
+    }
+  }, [layout.activeLayout?.orientation]);
+
+  const setScreenGuideOrientation = useCallback(async (o: 'landscape' | 'portrait') => {
     setScreenGuideOrientationState(o);
-    try { localStorage.setItem('prism:layout-designer-orientation', o); } catch { /* ignore */ }
-  }, []);
+    // Persist to DB
+    if (layout.activeLayout) {
+      try {
+        await data.layouts.saveLayout({
+          id: layout.activeLayout.id,
+          name: layout.activeLayout.name,
+          widgets: layout.activeLayout.widgets,
+          orientation: o,
+        });
+      } catch { /* ignore */ }
+    }
+  }, [layout.activeLayout, data.layouts]);
+
   const [enabledSizes, setEnabledSizes] = useState<string[]>(allSizeNames);
   const [gridScrollY, setGridScrollY] = useState(0);
   const [gridVisibleRows, setGridVisibleRows] = useState(12);
@@ -97,6 +127,56 @@ export function Dashboard({
       prev.includes(size) ? prev.filter(s => s !== size) : [...prev, size]
     );
   }, []);
+
+  // Dashboard management callbacks for LayoutEditor
+  const handleSwitchDashboard = useCallback((targetSlug: string) => {
+    router.push(`/d/${targetSlug}`);
+  }, [router]);
+
+  const handleCreateDashboard = useCallback(async (name: string, startFrom: 'blank' | 'template' | 'copy') => {
+    const { DEFAULT_TEMPLATE } = await import('@/lib/constants/layoutTemplates');
+    let widgets: WidgetConfig[];
+    if (startFrom === 'copy' && layout.activeLayout) {
+      widgets = layout.activeLayout.widgets;
+    } else if (startFrom === 'template') {
+      widgets = DEFAULT_TEMPLATE.widgets;
+    } else {
+      // Blank: single clock widget
+      widgets = [{ i: 'clock', x: 4, y: 4, w: 4, h: 4, visible: true }];
+    }
+    try {
+      const result = await data.layouts.saveLayout({ name, widgets, isDefault: false });
+      const saved = result as { slug?: string };
+      if (saved?.slug) {
+        router.push(`/d/${saved.slug}`);
+      }
+    } catch (err) {
+      console.error('Failed to create dashboard:', err);
+    }
+  }, [layout.activeLayout, data.layouts, router]);
+
+  const handleRenameDashboard = useCallback(async (newName: string) => {
+    if (!layout.activeLayout) return;
+    try {
+      await data.layouts.saveLayout({
+        id: layout.activeLayout.id,
+        name: newName,
+        widgets: layout.activeLayout.widgets,
+      });
+    } catch (err) {
+      console.error('Failed to rename dashboard:', err);
+    }
+  }, [layout.activeLayout, data.layouts]);
+
+  const handleDeleteDashboard = useCallback(async () => {
+    if (!layout.activeLayout) return;
+    try {
+      await data.layouts.deleteLayout(layout.activeLayout.id);
+      router.push('/');
+    } catch (err) {
+      console.error('Failed to delete dashboard:', err);
+    }
+  }, [layout.activeLayout, data.layouts, router]);
 
   const widgetProps = buildWidgetProps(data, requireAuth, {
     setShowAddTask, setShowAddMessage, setShowAddChore, setShowAddShopping,
@@ -173,7 +253,7 @@ export function Dashboard({
             onReset={layout.handleReset}
             onCancel={() => { layout.setEditingScreensaver(false); layout.handleCancel(); }}
             onDeleteLayout={data.layouts.deleteLayout}
-            layoutName={data.layouts.savedLayout?.name}
+            layoutName={layout.activeLayout?.name}
             savedLayouts={data.layouts.allLayouts.map(l => ({ id: l.id, name: l.name, widgets: l.widgets }))}
             editingScreensaver={layout.editingScreensaver}
             onToggleScreensaverEdit={() => layout.setEditingScreensaver(!layout.editingScreensaver)}
@@ -197,6 +277,12 @@ export function Dashboard({
             gridTotalRows={gridTotalRows}
             gridTotalCols={gridTotalCols}
             scrollToGridRef={scrollToGridRef}
+            allDashboards={data.layouts.allLayouts.map(l => ({ id: l.id, name: l.name, slug: l.slug, isDefault: l.isDefault }))}
+            currentDashboardId={layout.activeLayout?.id}
+            onSwitchDashboard={handleSwitchDashboard}
+            onCreateDashboard={handleCreateDashboard}
+            onRenameDashboard={handleRenameDashboard}
+            onDeleteDashboard={handleDeleteDashboard}
           />
         )}
 

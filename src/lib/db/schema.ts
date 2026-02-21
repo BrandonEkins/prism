@@ -656,13 +656,22 @@ export const layouts = pgTable('layouts', {
 
   name: varchar('name', { length: 100 }).notNull(),
 
+  // URL-safe identifier for multi-dashboard routing (/d/[slug])
+  slug: varchar('slug', { length: 100 }).unique(),
+
   isDefault: boolean('is_default').default(false).notNull(),
 
-  // For multi-display setups: which display is this for?
+  // Legacy field — replaced by slug for multi-dashboard routing
   displayId: varchar('display_id', { length: 100 }),
 
   // Widget configuration (JSON array of widget objects)
   widgets: jsonb('widgets').notNull(),
+
+  // Per-dashboard screensaver layout (null = use default template)
+  screensaverWidgets: jsonb('screensaver_widgets'),
+
+  // Per-dashboard screen orientation
+  orientation: varchar('orientation', { length: 20 }).default('landscape'),
 
   createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
   createdAt: timestamp('created_at').defaultNow().notNull(),

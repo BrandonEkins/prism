@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { DEFAULT_TEMPLATE } from '@/lib/constants/layoutTemplates';
 import {
   loadScreensaverLayout,
@@ -10,61 +10,97 @@ import {
   saveScreensaverPreset,
   deleteScreensaverPreset,
 } from '@/components/screensaver/Screensaver';
-import type { WidgetConfig } from '@/lib/hooks/useLayouts';
+import type { WidgetConfig, Layout } from '@/lib/hooks/useLayouts';
 
 interface LayoutsData {
-  savedLayout: { id?: string; name: string; widgets: WidgetConfig[] } | null;
-  saveLayout: (data: { id?: string; name: string; widgets: WidgetConfig[]; isDefault: boolean }) => Promise<unknown>;
+  savedLayout: Layout | null;
+  saveLayout: (data: Partial<Layout> & { name: string; widgets: WidgetConfig[] }) => Promise<unknown>;
   deleteLayout: (id: string) => Promise<void>;
-  allLayouts: Array<{ id: string; name: string; widgets: WidgetConfig[] }>;
+  allLayouts: Layout[];
 }
 
-export function useDashboardLayout(layouts: LayoutsData) {
+export function useDashboardLayout(layouts: LayoutsData, slug?: string) {
   const [isEditing, setIsEditing] = useState(false);
   const [editingWidgets, setEditingWidgets] = useState<WidgetConfig[]>([]);
   const preEditWidgetsRef = useRef<WidgetConfig[]>([]);
   const [editingScreensaver, setEditingScreensaver] = useState(false);
 
-  const [ssLayout, setSsLayout] = useState<WidgetConfig[]>(() => loadScreensaverLayout());
+  // Resolve active layout: by slug if provided, otherwise default
+  const activeLayout = slug
+    ? layouts.allLayouts.find(l => l.slug === slug) || null
+    : layouts.savedLayout;
+
+  const [ssLayout, setSsLayout] = useState<WidgetConfig[]>(() => {
+    // Initialize from DB if available, otherwise from localStorage
+    if (activeLayout?.screensaverWidgets) return activeLayout.screensaverWidgets;
+    return loadScreensaverLayout();
+  });
   const [ssPresets, setSsPresets] = useState(() =>
     typeof window !== 'undefined' ? getScreensaverPresets() : []
   );
 
+  // Bridge: write active dashboard's screensaver to localStorage on layout change
+  // so the global Screensaver component (which reads from localStorage) uses the right one
+  const bridgedLayoutId = useRef<string | null>(null);
+  useEffect(() => {
+    if (!activeLayout) return;
+    if (bridgedLayoutId.current === activeLayout.id) return;
+    bridgedLayoutId.current = activeLayout.id;
+
+    if (activeLayout.screensaverWidgets) {
+      setSsLayout(activeLayout.screensaverWidgets);
+      saveScreensaverLayout(activeLayout.screensaverWidgets);
+    } else {
+      // First load: migrate localStorage screensaver to this dashboard
+      const fromLocal = loadScreensaverLayout();
+      setSsLayout(fromLocal);
+    }
+  }, [activeLayout]);
+
   const activeWidgets = isEditing
     ? editingWidgets
-    : layouts.savedLayout?.widgets ?? DEFAULT_TEMPLATE.widgets;
+    : activeLayout?.widgets ?? DEFAULT_TEMPLATE.widgets;
 
   const handleEditStart = useCallback(() => {
-    const current = layouts.savedLayout?.widgets ?? DEFAULT_TEMPLATE.widgets;
+    const current = activeLayout?.widgets ?? DEFAULT_TEMPLATE.widgets;
     preEditWidgetsRef.current = current;
     setEditingWidgets(current);
     setIsEditing(true);
-  }, [layouts.savedLayout]);
+  }, [activeLayout]);
 
   const handleSave = useCallback(async (name?: string) => {
     try {
-      await layouts.saveLayout({
-        ...(layouts.savedLayout ? { id: layouts.savedLayout.id } : {}),
-        name: name || layouts.savedLayout?.name || 'My Layout',
+      const saveData: Partial<Layout> & { name: string; widgets: WidgetConfig[] } = {
+        ...(activeLayout ? { id: activeLayout.id } : {}),
+        name: name || activeLayout?.name || 'My Layout',
         widgets: editingWidgets,
-        isDefault: true,
-      });
+        isDefault: activeLayout?.isDefault ?? true,
+        screensaverWidgets: ssLayout,
+        orientation: activeLayout?.orientation || 'landscape',
+      };
+      await layouts.saveLayout(saveData);
       setIsEditing(false);
     } catch (err) {
       console.error('Failed to save layout:', err);
     }
-  }, [layouts.savedLayout, editingWidgets, layouts.saveLayout]);
+  }, [activeLayout, editingWidgets, ssLayout, layouts]);
 
   const handleSaveAs = useCallback(async (defaultName?: string) => {
     const name = window.prompt('Layout name:', defaultName || 'New Layout');
     if (!name) return;
     try {
-      await layouts.saveLayout({ name, widgets: editingWidgets, isDefault: true });
+      await layouts.saveLayout({
+        name,
+        widgets: editingWidgets,
+        isDefault: true,
+        screensaverWidgets: ssLayout,
+        orientation: activeLayout?.orientation || 'landscape',
+      });
       setIsEditing(false);
     } catch (err) {
       console.error('Failed to save layout:', err);
     }
-  }, [editingWidgets, layouts.saveLayout]);
+  }, [editingWidgets, ssLayout, activeLayout, layouts]);
 
   const handleReset = useCallback(() => {
     setEditingWidgets(DEFAULT_TEMPLATE.widgets);
@@ -75,7 +111,7 @@ export function useDashboardLayout(layouts: LayoutsData) {
     setIsEditing(false);
   }, []);
 
-  // Screensaver callbacks
+  // Screensaver callbacks — save to both DB (via layout) and localStorage
   const handleSsLayoutChange = useCallback((newLayout: WidgetConfig[]) => {
     setSsLayout(newLayout);
     saveScreensaverLayout(newLayout);
@@ -98,10 +134,24 @@ export function useDashboardLayout(layouts: LayoutsData) {
     });
   }, []);
 
-  const handleSsSave = useCallback(() => {
+  const handleSsSave = useCallback(async () => {
+    // Save screensaver to DB by updating the current layout
     saveScreensaverLayout(ssLayout);
+    if (activeLayout) {
+      try {
+        await layouts.saveLayout({
+          id: activeLayout.id,
+          name: activeLayout.name,
+          widgets: activeLayout.widgets,
+          isDefault: activeLayout.isDefault,
+          screensaverWidgets: ssLayout,
+        });
+      } catch (err) {
+        console.error('Failed to save screensaver to DB:', err);
+      }
+    }
     setIsEditing(false);
-  }, [ssLayout]);
+  }, [ssLayout, activeLayout, layouts]);
 
   const handleSsSaveAs = useCallback(() => {
     const name = window.prompt('Preset name:', 'My Screensaver');
@@ -148,6 +198,7 @@ export function useDashboardLayout(layouts: LayoutsData) {
     editingScreensaver, setEditingScreensaver,
     ssLayout, ssPresets,
     activeWidgets,
+    activeLayout,
     handleEditStart, handleSave, handleSaveAs, handleReset, handleCancel,
     handleSsLayoutChange, handleSsWidgetToggle, handleSsSave, handleSsSaveAs,
     handleSsReset, handleSelectSsTemplate, handleSelectSsPreset, handleDeleteSsPreset,

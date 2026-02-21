@@ -214,9 +214,11 @@ const widgetConfigSchema = z.object({
 
 export const createLayoutSchema = z.object({
   name: z.string().min(1, 'Name is required').max(100),
+  slug: z.string().max(100).regex(/^[a-z0-9-]+$/).optional(),
   isDefault: z.boolean().optional().default(false),
-  displayId: z.string().max(100).optional(),
   widgets: z.array(widgetConfigSchema).min(1, 'At least one widget is required'),
+  screensaverWidgets: z.array(widgetConfigSchema).nullable().optional(),
+  orientation: z.enum(['landscape', 'portrait']).optional().default('landscape'),
   createdBy: uuidSchema.optional(),
 });
 

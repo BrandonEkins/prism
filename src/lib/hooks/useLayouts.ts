@@ -18,9 +18,11 @@ export interface WidgetConfig {
 export interface Layout {
   id: string;
   name: string;
+  slug: string | null;
   isDefault: boolean;
-  displayId?: string;
   widgets: WidgetConfig[];
+  screensaverWidgets: WidgetConfig[] | null;
+  orientation: string;
   createdBy?: string;
   createdAt: string;
   updatedAt: string;
