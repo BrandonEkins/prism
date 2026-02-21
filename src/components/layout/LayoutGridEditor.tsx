@@ -5,7 +5,6 @@ import { useMemo, useRef, useState, useCallback, useEffect } from 'react';
 import { ResponsiveGridLayout as RGL, useContainerWidth, getCompactor } from 'react-grid-layout';
 import type { LayoutItem, Layout } from 'react-grid-layout';
 import { isLightColor } from '@/lib/utils/color';
-import { LayoutMinimap } from '@/components/layout/LayoutMinimap';
 import { useScreenSafeZones } from '@/lib/hooks/useScreenSafeZones';
 import type { WidgetConfig } from '@/lib/hooks/useLayouts';
 import 'react-grid-layout/css/styles.css';

@@ -26,21 +26,21 @@ test('Dashboard overview — logged in with layout editor', async ({ page }) => 
   await page.waitForTimeout(2000);
 
   // Toggle screen safe zone sizes to show the dashed lines
-  const btn24 = page.locator('button').filter({ hasText: '24"' });
-  if (await btn24.count() > 0) {
-    await btn24.first().click();
+  const btn1080 = page.locator('button').filter({ hasText: '16:9 (1080p)' });
+  if (await btn1080.count() > 0) {
+    await btn1080.first().click();
     await page.waitForTimeout(1500);
   }
 
-  const btn27 = page.locator('button').filter({ hasText: '27"' });
-  if (await btn27.count() > 0) {
-    await btn27.first().click();
+  const btnSurface = page.locator('button').filter({ hasText: '3:2 (Surface)' });
+  if (await btnSurface.count() > 0) {
+    await btnSurface.first().click();
     await page.waitForTimeout(1500);
   }
 
-  const btn32 = page.locator('button').filter({ hasText: '32"' });
-  if (await btn32.count() > 0) {
-    await btn32.first().click();
+  const btniPad = page.locator('button').filter({ hasText: '4:3 (iPad)' });
+  if (await btniPad.count() > 0) {
+    await btniPad.first().click();
     await page.waitForTimeout(1500);
   }
 

@@ -99,7 +99,7 @@ export const LAYOUT_TEMPLATES: Record<string, LayoutTemplate> = {
   },
 
   // ── Portrait Templates ───────────────────────────────────────────
-  // Portrait safe zones: 15"=8cols/12rows, 24"=9cols/14rows, 27"=10cols/18rows, 32"=12cols/22rows
+  // Portrait: narrower screens hit lower RGL breakpoints (fewer cols)
   // Widgets stay within ~10 columns and stack deep for a vertical feel
   familyCentralPortrait: {
     name: 'Family Central',

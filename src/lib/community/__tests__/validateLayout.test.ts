@@ -14,7 +14,7 @@ function makeLayout(overrides: Partial<CommunityLayoutData> = {}): CommunityLayo
     description: 'A test layout for validation',
     author: 'Tester',
     tags: ['test'],
-    screenSizes: ['27"'],
+    screenSizes: ['2560x1440'],
     orientation: 'landscape',
     widgets: [
       { i: 'calendar', x: 0, y: 0, w: 6, h: 8 },
@@ -360,7 +360,7 @@ describe('validateCommunityLayout', () => {
         author: 'Prism',
         mode: 'dashboard',
         tags: [],
-        screenSizes: ['27"'],
+        screenSizes: ['2560x1440'],
         orientation: 'landscape',
         widgetCount: 4,
         createdAt: '2026-01-01',

@@ -55,8 +55,8 @@ export function useDashboardLayout(layouts: LayoutsData) {
     }
   }, [layouts.savedLayout, editingWidgets, layouts.saveLayout]);
 
-  const handleSaveAs = useCallback(async () => {
-    const name = window.prompt('Layout name:', 'New Layout');
+  const handleSaveAs = useCallback(async (defaultName?: string) => {
+    const name = window.prompt('Layout name:', defaultName || 'New Layout');
     if (!name) return;
     try {
       await layouts.saveLayout({ name, widgets: editingWidgets, isDefault: true });

@@ -8,15 +8,8 @@
       "description": "Balanced layout with calendar, tasks, and family features",
       "author": "Prism",
       "mode": "dashboard",
-      "tags": [
-        "balanced",
-        "family"
-      ],
-      "screenSizes": [
-        "24\"",
-        "27\"",
-        "32\""
-      ],
+      "tags": ["balanced", "family"],
+      "screenSizes": ["1920x1080", "2560x1440", "3840x2160"],
       "orientation": "landscape",
       "widgetCount": 7,
       "createdAt": "2026-02-18"
@@ -28,15 +21,8 @@
       "description": "Tasks and chores front and center",
       "author": "Prism",
       "mode": "dashboard",
-      "tags": [
-        "productivity",
-        "tasks"
-      ],
-      "screenSizes": [
-        "24\"",
-        "27\"",
-        "32\""
-      ],
+      "tags": ["productivity", "tasks"],
+      "screenSizes": ["1920x1080", "2560x1440", "3840x2160"],
       "orientation": "landscape",
       "widgetCount": 6,
       "createdAt": "2026-02-18"
@@ -48,15 +34,8 @@
       "description": "Large calendar with compact info sidebar",
       "author": "Prism",
       "mode": "dashboard",
-      "tags": [
-        "calendar",
-        "minimal"
-      ],
-      "screenSizes": [
-        "24\"",
-        "27\"",
-        "32\""
-      ],
+      "tags": ["calendar", "minimal"],
+      "screenSizes": ["1920x1080", "2560x1440", "3840x2160"],
       "orientation": "landscape",
       "widgetCount": 6,
       "createdAt": "2026-02-18"
@@ -68,15 +47,8 @@
       "description": "Cal, Clk, Wtr, Bdy, Msg in landscape",
       "author": "Sandy Dargoport",
       "mode": "dashboard",
-      "tags": [
-        "calendar focus",
-        "big calendar"
-      ],
-      "screenSizes": [
-        "24\"",
-        "27\"",
-        "32\""
-      ],
+      "tags": ["calendar focus", "big calendar"],
+      "screenSizes": ["1920x1080", "2560x1440", "3840x2160"],
       "orientation": "landscape",
       "widgetCount": 5,
       "createdAt": "2026-02-19"
@@ -88,14 +60,8 @@
       "description": "Everything visible at a glance",
       "author": "Prism",
       "mode": "dashboard",
-      "tags": [
-        "comprehensive",
-        "overview"
-      ],
-      "screenSizes": [
-        "27\"",
-        "32\""
-      ],
+      "tags": ["comprehensive", "overview"],
+      "screenSizes": ["2560x1440", "3840x2160"],
       "orientation": "landscape",
       "widgetCount": 9,
       "createdAt": "2026-02-18"
@@ -107,16 +73,8 @@
       "description": "Clean and simple - just the essentials",
       "author": "Prism",
       "mode": "dashboard",
-      "tags": [
-        "minimal",
-        "clean"
-      ],
-      "screenSizes": [
-        "15\"",
-        "24\"",
-        "27\"",
-        "32\""
-      ],
+      "tags": ["minimal", "clean"],
+      "screenSizes": ["1366x768", "1920x1080", "2560x1440", "3840x2160"],
       "orientation": "landscape",
       "widgetCount": 4,
       "createdAt": "2026-02-18"
@@ -128,15 +86,8 @@
       "description": "Focus on meals and shopping",
       "author": "Prism",
       "mode": "dashboard",
-      "tags": [
-        "meals",
-        "kitchen"
-      ],
-      "screenSizes": [
-        "24\"",
-        "27\"",
-        "32\""
-      ],
+      "tags": ["meals", "kitchen"],
+      "screenSizes": ["1920x1080", "2560x1440", "3840x2160"],
       "orientation": "landscape",
       "widgetCount": 6,
       "createdAt": "2026-02-18"
@@ -148,16 +99,8 @@
       "description": "Clock and weather, top-right corner",
       "author": "Prism",
       "mode": "screensaver",
-      "tags": [
-        "minimal",
-        "clean"
-      ],
-      "screenSizes": [
-        "15\"",
-        "24\"",
-        "27\"",
-        "32\""
-      ],
+      "tags": ["minimal", "clean"],
+      "screenSizes": ["1366x768", "1920x1080", "2560x1440", "3840x2160"],
       "orientation": "landscape",
       "widgetCount": 2,
       "createdAt": "2026-02-18"
@@ -169,16 +112,8 @@
       "description": "Small clock and weather overlay - photos fill the screen",
       "author": "Prism",
       "mode": "screensaver",
-      "tags": [
-        "photos",
-        "minimal"
-      ],
-      "screenSizes": [
-        "15\"",
-        "24\"",
-        "27\"",
-        "32\""
-      ],
+      "tags": ["photos", "minimal"],
+      "screenSizes": ["1366x768", "1920x1080", "2560x1440", "3840x2160"],
       "orientation": "landscape",
       "widgetCount": 2,
       "createdAt": "2026-02-18"
@@ -190,15 +125,8 @@
       "description": "Calendar on the left, clock + weather + messages on the right",
       "author": "Prism",
       "mode": "screensaver",
-      "tags": [
-        "informational",
-        "calendar"
-      ],
-      "screenSizes": [
-        "24\"",
-        "27\"",
-        "32\""
-      ],
+      "tags": ["informational", "calendar"],
+      "screenSizes": ["1920x1080", "2560x1440", "3840x2160"],
       "orientation": "landscape",
       "widgetCount": 4,
       "createdAt": "2026-02-18"
@@ -210,15 +138,8 @@
       "description": "Tasks and chores across the top, clock + weather + messages on the right",
       "author": "Prism",
       "mode": "screensaver",
-      "tags": [
-        "family",
-        "tasks"
-      ],
-      "screenSizes": [
-        "24\"",
-        "27\"",
-        "32\""
-      ],
+      "tags": ["family", "tasks"],
+      "screenSizes": ["1920x1080", "2560x1440", "3840x2160"],
       "orientation": "landscape",
       "widgetCount": 5,
       "createdAt": "2026-02-18"
@@ -230,15 +151,8 @@
       "description": "Meals spanning the top, shopping list below, clock + weather on the right",
       "author": "Prism",
       "mode": "screensaver",
-      "tags": [
-        "kitchen",
-        "meals"
-      ],
-      "screenSizes": [
-        "24\"",
-        "27\"",
-        "32\""
-      ],
+      "tags": ["kitchen", "meals"],
+      "screenSizes": ["1920x1080", "2560x1440", "3840x2160"],
       "orientation": "landscape",
       "widgetCount": 4,
       "createdAt": "2026-02-18"
@@ -250,14 +164,8 @@
       "description": "Full grid with all common widgets",
       "author": "Prism",
       "mode": "screensaver",
-      "tags": [
-        "comprehensive",
-        "overview"
-      ],
-      "screenSizes": [
-        "27\"",
-        "32\""
-      ],
+      "tags": ["comprehensive", "overview"],
+      "screenSizes": ["2560x1440", "3840x2160"],
       "orientation": "landscape",
       "widgetCount": 7,
       "createdAt": "2026-02-18"
@@ -270,9 +178,7 @@
       "author": "Sandy Dargoport",
       "mode": "dashboard",
       "tags": [],
-      "screenSizes": [
-        "2560x1440"
-      ],
+      "screenSizes": ["2560x1440"],
       "orientation": "landscape",
       "widgetCount": 3,
       "createdAt": "2026-02-21"

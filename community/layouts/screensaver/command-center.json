@@ -6,7 +6,7 @@
   "description": "Full grid with all common widgets",
   "author": "Prism",
   "tags": ["comprehensive", "overview"],
-  "screenSizes": ["27\"", "32\""],
+  "screenSizes": ["2560x1440", "3840x2160"],
   "orientation": "landscape",
   "widgets": [
     { "i": "calendar", "x": 0, "y": 0, "w": 4, "h": 6 },

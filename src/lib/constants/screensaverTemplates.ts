@@ -77,7 +77,7 @@ export const SCREENSAVER_TEMPLATES: Record<string, ScreensaverTemplate> = {
   },
 
   // ── Portrait Templates ───────────────────────────────────────────
-  // Portrait safe zones: 15"=8cols, 24"=9cols, 27"=10cols, 32"=12cols
+  // Portrait: narrower screens hit lower RGL breakpoints (fewer cols)
   // Widgets stay within ~10 columns and stack deep for a vertical feel
   minimalPortrait: {
     name: 'Minimal',

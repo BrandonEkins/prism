@@ -2,10 +2,9 @@
 
 import * as React from 'react';
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
-import { WidgetPicker } from './WidgetPicker';
 import { LAYOUT_TEMPLATES } from '@/lib/constants/layoutTemplates';
 import { SCREENSAVER_TEMPLATES } from '@/lib/constants/screensaverTemplates';
-import { WIDGET_REGISTRY, SCREENSAVER_WIDGETS } from '@/components/widgets/widgetRegistry';
+import { WIDGET_REGISTRY } from '@/components/widgets/widgetRegistry';
 import { CommunityGallery } from './CommunityGallery';
 import { TemplateSidebar } from './TemplateSidebar';
 import { LayoutPreview } from './LayoutPreview';
@@ -24,7 +23,7 @@ export interface LayoutEditorProps {
   widgets: WidgetConfig[];
   onWidgetsChange: (widgets: WidgetConfig[]) => void;
   onSave: (name?: string) => void;
-  onSaveAs: () => void;
+  onSaveAs: (defaultName?: string) => void;
   onReset: () => void;
   onCancel: () => void;
   onDeleteLayout?: (id: string) => void;
@@ -201,32 +200,6 @@ export function LayoutEditor({
     return () => document.removeEventListener('mousedown', handler);
   }, [saveDropdownOpen]);
 
-  const handleToggleWidget = (widgetType: string, visible: boolean) => {
-    const exists = widgets.find(w => w.i === widgetType);
-    if (exists) {
-      onWidgetsChange(
-        widgets.map(w =>
-          w.i === widgetType ? { ...w, visible } : w
-        )
-      );
-    } else if (visible) {
-      const reg = WIDGET_REGISTRY[widgetType];
-      if (!reg) return;
-      const maxY = Math.max(0, ...widgets.map(w => w.y + w.h));
-      onWidgetsChange([
-        ...widgets,
-        {
-          i: widgetType,
-          x: 0,
-          y: maxY,
-          w: reg.defaultW,
-          h: reg.defaultH,
-          visible: true,
-        },
-      ]);
-    }
-  };
-
   const handleSelectTemplate = (templateKey: string) => {
     const template = LAYOUT_TEMPLATES[templateKey];
     if (template) {
@@ -251,13 +224,15 @@ export function LayoutEditor({
     }
   };
 
-  const handleApplyCommunityLayout = useCallback((newWidgets: WidgetConfig[]) => {
+  const handleApplyCommunityLayout = useCallback((newWidgets: WidgetConfig[], name: string) => {
     if (editingScreensaver && onSelectScreensaverPreset) {
       onSelectScreensaverPreset(newWidgets);
+      onScreensaverSaveAs?.();
     } else {
       onWidgetsChange(newWidgets);
+      onSaveAs(name);
     }
-  }, [editingScreensaver, onSelectScreensaverPreset, onWidgetsChange]);
+  }, [editingScreensaver, onSelectScreensaverPreset, onWidgetsChange, onSaveAs, onScreensaverSaveAs]);
 
   const buildExportData = useCallback((): LayoutExportV2 => {
     return {
@@ -521,7 +496,7 @@ export function LayoutEditor({
         </div>
       </div>
 
-      {/* Controls row: orientation + templates + widget picker */}
+      {/* Controls row: orientation + templates */}
       <div className="pt-2 border-t border-border flex items-center gap-3 flex-wrap">
         <button
           onClick={() => onScreenGuideOrientationChange?.(screenGuideOrientation === 'landscape' ? 'portrait' : 'landscape')}
@@ -547,12 +522,6 @@ export function LayoutEditor({
           onDeleteScreensaverPreset={onDeleteScreensaverPreset}
           onToggleCommunity={() => setShowCommunity(prev => !prev)}
         />
-        <div className="h-4 w-px bg-border" />
-        {editingScreensaver && screensaverWidgets && onScreensaverWidgetToggle ? (
-          <WidgetPicker widgets={screensaverWidgets} onToggle={onScreensaverWidgetToggle} widgetList={SCREENSAVER_WIDGETS} />
-        ) : !editingScreensaver ? (
-          <WidgetPicker widgets={widgets} onToggle={handleToggleWidget} />
-        ) : null}
       </div>
 
       {/* Coordinate tables + layout preview + scroll minimap — single compact row */}
@@ -597,7 +566,7 @@ export function LayoutEditor({
                 <button
                   key={size}
                   onClick={() => onToggleSize?.(size)}
-                  className={`text-[10px] px-1.5 py-0.5 rounded transition-colors whitespace-nowrap ${
+                  className={`text-xs px-1.5 py-0.5 rounded transition-colors whitespace-nowrap ${
                     isEnabled ? 'text-white' : 'text-muted-foreground/50 line-through'
                   }`}
                   style={{
@@ -609,25 +578,25 @@ export function LayoutEditor({
                 </button>
               );
             })}
-            <span className="text-[8px] text-muted-foreground mt-1 leading-tight">Click map<br/>to scroll</span>
+            <span className="text-[9px] text-muted-foreground mt-1 leading-tight">Click map<br/>to scroll</span>
           </div>
           {validation.errors.length > 0 && (
-            <div className="bg-destructive/10 border border-destructive/30 rounded-md p-1.5 mt-1">
-              <p className="text-[10px] font-medium text-destructive mb-0.5">
+            <div className="bg-destructive/10 border border-destructive/30 rounded-md p-1.5 max-w-[180px]">
+              <p className="text-xs font-medium text-destructive mb-0.5">
                 {validation.errors.length} issue{validation.errors.length > 1 ? 's' : ''}
               </p>
-              {validation.errors.slice(0, 2).map((err, i) => (
-                <p key={i} className="text-[9px] text-destructive/80 leading-tight">{err}</p>
+              {validation.errors.slice(0, 3).map((err, i) => (
+                <p key={i} className="text-xs text-destructive/80 leading-tight">{err}</p>
               ))}
-              {validation.errors.length > 2 && (
-                <p className="text-[9px] text-destructive/60">+{validation.errors.length - 2} more</p>
+              {validation.errors.length > 3 && (
+                <p className="text-xs text-destructive/60">+{validation.errors.length - 3} more</p>
               )}
             </div>
           )}
           {validation.warnings.length > 0 && validation.errors.length === 0 && (
-            <div className="bg-amber-500/10 border border-amber-500/30 rounded-md p-1.5 mt-1">
+            <div className="bg-amber-500/10 border border-amber-500/30 rounded-md p-1.5 max-w-[180px]">
               {validation.warnings.slice(0, 2).map((w, i) => (
-                <p key={i} className="text-[9px] text-amber-600 leading-tight">{w}</p>
+                <p key={i} className="text-xs text-amber-600 leading-tight">{w}</p>
               ))}
             </div>
           )}
@@ -635,7 +604,7 @@ export function LayoutEditor({
       </div>
 
       {/* Scrollable content area */}
-      <div className="max-h-[80vh] overflow-auto">
+      <div className="max-h-[40vh] overflow-auto">
         {/* Community gallery */}
         {showCommunity && (
           <div className="pt-2 border-t border-border">
@@ -720,7 +689,7 @@ export function LayoutEditor({
             <div className="flex items-center gap-4">
               <div>
                 <label className="text-xs text-muted-foreground block mb-1">Target Resolutions *</label>
-                <div className="flex gap-1 flex-wrap">
+                <div className="flex gap-1 flex-wrap items-center">
                   {['1920x1080', '2560x1440', '3840x2160', '2560x1600', '2048x1536', '1366x768'].map(size => (
                     <button
                       key={size}
@@ -739,7 +708,34 @@ export function LayoutEditor({
                       {size}
                     </button>
                   ))}
+                  <input
+                    type="text"
+                    placeholder="Custom (e.g. 2736x1824)"
+                    className="px-2 py-0.5 text-xs bg-muted border border-border rounded-full w-[155px] focus:outline-none focus:ring-1 focus:ring-primary"
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') {
+                        const val = (e.target as HTMLInputElement).value.trim();
+                        if (/^\d{3,5}x\d{3,5}$/.test(val) && !shareForm.screenSizes.includes(val)) {
+                          setShareForm(f => ({ ...f, screenSizes: [...f.screenSizes, val] }));
+                          (e.target as HTMLInputElement).value = '';
+                        }
+                      }
+                    }}
+                  />
                 </div>
+                {shareForm.screenSizes.filter(s => !['1920x1080', '2560x1440', '3840x2160', '2560x1600', '2048x1536', '1366x768'].includes(s)).length > 0 && (
+                  <div className="flex gap-1 flex-wrap mt-1">
+                    {shareForm.screenSizes.filter(s => !['1920x1080', '2560x1440', '3840x2160', '2560x1600', '2048x1536', '1366x768'].includes(s)).map(size => (
+                      <button
+                        key={size}
+                        onClick={() => setShareForm(f => ({ ...f, screenSizes: f.screenSizes.filter(s => s !== size) }))}
+                        className="px-2 py-0.5 text-xs rounded-full border bg-primary text-primary-foreground border-primary transition-colors"
+                      >
+                        {size} &times;
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
               <div>
                 <label className="text-xs text-muted-foreground block mb-1">Orientation *</label>

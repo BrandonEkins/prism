@@ -6,7 +6,7 @@
   "description": "Balanced layout with calendar, tasks, and family features",
   "author": "Prism",
   "tags": ["balanced", "family"],
-  "screenSizes": ["24\"", "27\"", "32\""],
+  "screenSizes": ["1920x1080", "2560x1440", "3840x2160"],
   "orientation": "landscape",
   "widgets": [
     { "i": "calendar", "x": 0, "y": 0, "w": 7, "h": 12 },

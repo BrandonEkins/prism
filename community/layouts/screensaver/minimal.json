@@ -6,7 +6,7 @@
   "description": "Clock and weather, top-right corner",
   "author": "Prism",
   "tags": ["minimal", "clean"],
-  "screenSizes": ["15\"", "24\"", "27\"", "32\""],
+  "screenSizes": ["1366x768", "1920x1080", "2560x1440", "3840x2160"],
   "orientation": "landscape",
   "widgets": [
     { "i": "clock", "x": 8, "y": 0, "w": 4, "h": 3 },

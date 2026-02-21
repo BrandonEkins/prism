@@ -13,10 +13,10 @@ import type { WidgetConfig } from '@/lib/hooks/useLayouts';
 
 interface CommunityGalleryProps {
   mode: 'dashboard' | 'screensaver';
-  onApplyLayout: (widgets: WidgetConfig[]) => void;
+  onApplyLayout: (widgets: WidgetConfig[], name: string) => void;
 }
 
-const SCREEN_SIZE_OPTIONS = ['15"', '24"', '27"', '32"'];
+const SCREEN_SIZE_OPTIONS = ['1920x1080', '2560x1440', '3840x2160', '2560x1600', '2048x1536', '1366x768'];
 
 export function CommunityGallery({ mode, onApplyLayout }: CommunityGalleryProps) {
   const [search, setSearch] = useState('');
@@ -57,7 +57,7 @@ export function CommunityGallery({ mode, onApplyLayout }: CommunityGalleryProps)
           h: w.h,
           visible: true,
         }));
-        onApplyLayout(widgets);
+        onApplyLayout(widgets, entry.name);
       }
     } finally {
       setLoading(null);
@@ -184,7 +184,7 @@ function CommunityLayoutCard({
         {entry.screenSizes.length > 0 && (
           <div className="flex gap-1 mt-1 flex-wrap">
             {entry.screenSizes.map(s => (
-              <span key={s} className="text-[10px] px-1.5 py-0.5 bg-muted rounded-full border border-border">
+              <span key={s} className="text-xs px-1.5 py-0.5 bg-muted rounded-full border border-border">
                 {s}
               </span>
             ))}

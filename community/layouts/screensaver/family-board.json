@@ -6,7 +6,7 @@
   "description": "Tasks and chores across the top, clock + weather + messages on the right",
   "author": "Prism",
   "tags": ["family", "tasks"],
-  "screenSizes": ["24\"", "27\"", "32\""],
+  "screenSizes": ["1920x1080", "2560x1440", "3840x2160"],
   "orientation": "landscape",
   "widgets": [
     { "i": "tasks", "x": 0, "y": 0, "w": 4, "h": 5 },
