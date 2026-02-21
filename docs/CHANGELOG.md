@@ -2,6 +2,28 @@
 
 All notable changes to Prism are documented in this file.
 
+## [0.9.4] - 2026-02-21
+
+### Added
+- **Multi-Dashboard Support**: Multiple named dashboards for different physical screens
+  - Each dashboard has its own widget layout, screensaver, and orientation
+  - URL routing via `/d/[slug]` (e.g. `/d/kitchen`, `/d/hallway`)
+  - `/` continues to show the default dashboard
+  - Devices bookmark their dashboard URL for persistent per-screen layouts
+- **Dashboard Management** in layout designer toolbar:
+  - Dashboard name is now a dropdown listing all dashboards
+  - "New Dashboard..." creation dialog with Blank, Default Template, or Copy Current options
+  - "Rename Dashboard..." and "Delete Dashboard" in the More menu
+  - Switching dashboards navigates to `/d/[slug]`
+- **Per-Dashboard Screensaver**: Each dashboard stores its own screensaver layout in the database
+  - Screensaver bridge writes active dashboard's screensaver to localStorage on mount
+  - Global screensaver component works without changes
+- **Per-Dashboard Orientation**: Screen orientation (landscape/portrait) saved per-dashboard in DB instead of localStorage
+
+### Improved
+- **Auto-Slug Migration**: Existing layouts automatically receive URL slugs on first API fetch
+- **Last Dashboard Protection**: API prevents deleting the last remaining dashboard; default reassigned if the current default is deleted
+
 ## [0.9.3] - 2026-02-11
 
 ### Added
