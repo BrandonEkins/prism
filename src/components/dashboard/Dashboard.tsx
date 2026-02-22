@@ -9,6 +9,8 @@ import { LayoutGridEditor, SCREENSAVER_THEME } from '@/components/layout/LayoutG
 import { LayoutEditor } from '@/components/layout/LayoutEditor';
 import { useAuth } from '@/components/providers';
 import { useScreenSafeZones } from '@/lib/hooks/useScreenSafeZones';
+import { useOrientation } from '@/lib/hooks/useOrientation';
+import { useIsMobile } from '@/lib/hooks/useIsMobile';
 import { AddTaskModal, AddMessageModal, AddChoreModal, AddShoppingItemModal } from '@/components/modals';
 import { WIDGET_REGISTRY } from '@/components/widgets/widgetRegistry';
 import { renderScreensaverPreview } from '@/components/screensaver/ScreensaverWidgetPreview';
@@ -73,6 +75,12 @@ export function Dashboard({
       router.replace('/');
     }
   }, [slug, data.layouts.loading, data.layouts.allLayouts.length, layout.activeLayout, router]);
+
+  // Detect portrait nav to offset grid height (nav covers bottom 80px + safe area)
+  const deviceOrientation = useOrientation();
+  const isMobile = useIsMobile();
+  const hasPortraitNav = !isMobile && deviceOrientation === 'portrait';
+  const bottomOffset = hasPortraitNav ? 96 : 0; // matches AppShell pb-24
 
   // Grid control state shared between LayoutEditor toolbar and LayoutGridEditor
   const { allSizeNames } = useScreenSafeZones();
@@ -297,6 +305,7 @@ export function Dashboard({
             renderWidget={renderSsWidget}
             margin={4}
             headerOffset={100}
+            bottomOffset={bottomOffset}
             minVisibleRows={8}
             theme={SCREENSAVER_THEME}
             gridHelperText="Drag widgets to reposition &bull; Scroll to see more"
@@ -320,6 +329,7 @@ export function Dashboard({
               widgetConstraints={dashboardConstraints}
               margin={8}
               headerOffset={140}
+              bottomOffset={bottomOffset}
               screenGuideOrientation={screenGuideOrientation}
               enabledSizes={enabledSizes}
               onScrollInfo={handleScrollInfo}

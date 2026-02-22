@@ -53,6 +53,7 @@ export interface LayoutGridEditorProps {
   widgetConstraints?: Record<string, { minW?: number; minH?: number }>;
   margin?: number;
   headerOffset?: number;
+  bottomOffset?: number;
   minVisibleRows?: number;
   theme?: EditorTheme;
   gridHelperText?: string;
@@ -85,6 +86,7 @@ export function LayoutGridEditor({
   widgetConstraints,
   margin: marginProp = 8,
   headerOffset = 140,
+  bottomOffset = 0,
   minVisibleRows = 0,
   theme = DASHBOARD_THEME,
   gridHelperText,
@@ -119,9 +121,9 @@ export function LayoutGridEditor({
 
   const visibleRows = useMemo(() => {
     if (typeof window === 'undefined') return 24;
-    const availableHeight = window.innerHeight - headerOffset;
+    const availableHeight = window.innerHeight - headerOffset - bottomOffset;
     return Math.max(minVisibleRows, Math.floor((availableHeight + margin) / (cellSize + margin)));
-  }, [cellSize, margin, headerOffset, minVisibleRows]);
+  }, [cellSize, margin, headerOffset, bottomOffset, minVisibleRows]);
 
   const visibleCols = useMemo(() => {
     if (width <= 0) return cols;
@@ -493,7 +495,7 @@ export function LayoutGridEditor({
     <div
       ref={containerRef as React.RefObject<HTMLDivElement>}
       className={`relative overflow-hidden ${className || ''}`}
-      style={{ height: '100%', maxHeight: '100vh' }}
+      style={{ height: visibleRows * (cellSize + margin) + 2 * containerPadding }}
     >
       {mounted && width > 0 ? (
         <div style={{ height: '100%' }}>
