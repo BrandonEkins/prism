@@ -28,7 +28,6 @@ test.describe('Task CRUD', () => {
   test('create a task via modal', async ({ page }) => {
     await page.goto('/tasks');
     await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(1500);
 
     // Click "Add Task" button
     const addBtn = page.getByRole('button', { name: /Add Task/i });
@@ -49,7 +48,6 @@ test.describe('Task CRUD', () => {
     await expect(modal).not.toBeVisible({ timeout: 5000 });
 
     // Verify task appears on the page
-    await page.waitForTimeout(1000);
     await expect(page.getByText(TEST_TITLE)).toBeVisible({ timeout: 10000 });
   });
 
@@ -63,7 +61,6 @@ test.describe('Task CRUD', () => {
 
     await page.goto('/tasks');
     await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(1500);
 
     // Edit via API (the UI edit flow varies; test the mutation works)
     const patchRes = await page.request.patch(`/api/tasks/${created.id}`, {
@@ -74,7 +71,6 @@ test.describe('Task CRUD', () => {
     // Refresh and verify
     await page.reload();
     await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(1500);
     await expect(page.getByText(EDITED_TITLE)).toBeVisible({ timeout: 10000 });
   });
 
@@ -87,7 +83,6 @@ test.describe('Task CRUD', () => {
 
     await page.goto('/tasks');
     await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(1500);
 
     // Complete via API
     const completeRes = await page.request.patch(`/api/tasks/${created.id}`, {

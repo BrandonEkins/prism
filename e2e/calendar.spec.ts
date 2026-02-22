@@ -36,13 +36,11 @@ test.describe('Calendar', () => {
 
     // Navigate away from today first
     await page.click('button[aria-label="Next"]');
-    await page.waitForTimeout(500);
 
     // Click Today to return
     const todayBtn = page.getByRole('button', { name: 'Today' });
     await expect(todayBtn).toBeVisible({ timeout: 5000 });
     await todayBtn.click();
-    await page.waitForTimeout(500);
 
     await expect(page.locator('h1').first()).toBeVisible();
   });
@@ -53,16 +51,16 @@ test.describe('Calendar', () => {
 
     const headerText = await page.locator('h1').first().textContent();
 
-    // Click Next
+    // Click Next — wait for header text to change
     await page.click('button[aria-label="Next"]');
-    await page.waitForTimeout(500);
+    await expect(page.locator('h1').first()).not.toHaveText(headerText!, { timeout: 5000 });
 
     const newHeaderText = await page.locator('h1').first().textContent();
     expect(newHeaderText).not.toBe(headerText);
 
-    // Click Previous to go back
+    // Click Previous — wait for header text to restore
     await page.click('button[aria-label="Previous"]');
-    await page.waitForTimeout(500);
+    await expect(page.locator('h1').first()).toHaveText(headerText!, { timeout: 5000 });
 
     const restoredText = await page.locator('h1').first().textContent();
     expect(restoredText).toBe(headerText);
@@ -79,16 +77,14 @@ test.describe('Calendar', () => {
     const monthBtn = viewSwitcher.getByRole('button', { name: 'Month' });
     if (await monthBtn.isVisible({ timeout: 3000 })) {
       await monthBtn.click();
-      await page.waitForTimeout(1000);
-      await expect(page.locator('h1').first()).toBeVisible();
+      await expect(page.locator('h1').first()).toBeVisible({ timeout: 5000 });
     }
 
     // Try switching to Day view
     const dayBtn = viewSwitcher.getByRole('button', { name: 'Day' });
     if (await dayBtn.isVisible({ timeout: 3000 })) {
       await dayBtn.click();
-      await page.waitForTimeout(1000);
-      await expect(page.locator('h1').first()).toBeVisible();
+      await expect(page.locator('h1').first()).toBeVisible({ timeout: 5000 });
     }
   });
 

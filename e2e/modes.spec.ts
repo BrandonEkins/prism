@@ -89,7 +89,6 @@ test.describe('Away Mode & Babysitter Mode', () => {
 
     await page.goto('/');
     await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(2000);
 
     // Babysitter mode overlay (z-9997) should be visible
     const overlay = page.locator('.z-\\[9997\\]');

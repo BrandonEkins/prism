@@ -48,7 +48,6 @@ test.describe('Chore CRUD', () => {
   test('create chore via modal UI', async ({ page }) => {
     await page.goto('/chores');
     await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(1500);
 
     const addBtn = page.getByRole('button', { name: /Add Chore/i });
     await expect(addBtn).toBeVisible({ timeout: 10000 });
@@ -66,7 +65,6 @@ test.describe('Chore CRUD', () => {
     await expect(modal).not.toBeVisible({ timeout: 5000 });
 
     // Verify chore appears on page
-    await page.waitForTimeout(1500);
     await expect(page.getByText(TEST_TITLE)).toBeVisible({ timeout: 10000 });
   });
 

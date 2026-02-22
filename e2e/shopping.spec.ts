@@ -30,7 +30,7 @@ test.describe('Shopping', () => {
   test('shopping items display in categories or columns', async ({ page }) => {
     await page.goto('/shopping');
     await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(2000);
+    await expect(page.locator('h1')).toContainText('Shopping', { timeout: 10000 });
 
     // Category columns have data-category or data-column attributes
     const categories = page.locator('[data-category]');
@@ -46,10 +46,11 @@ test.describe('Shopping', () => {
   test('checking an item updates progress', async ({ page }) => {
     await page.goto('/shopping');
     await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(2000);
+    await expect(page.locator('h1')).toContainText('Shopping', { timeout: 10000 });
 
     // Find progress text showing "X/Y" format
     const progressText = page.getByText(/\d+\/\d+/);
+    await expect(progressText.first()).toBeVisible({ timeout: 10000 });
     const initialText = await progressText.first().textContent();
 
     // Find a clickable shopping item
@@ -59,7 +60,9 @@ test.describe('Shopping', () => {
 
     if (await items.count() > 0) {
       await items.first().click();
-      await page.waitForTimeout(1500);
+
+      // Wait for progress text to update
+      await expect(progressText.first()).not.toHaveText(initialText!, { timeout: 10000 });
 
       // Progress text should have changed
       const updatedText = await progressText.first().textContent();
@@ -73,7 +76,7 @@ test.describe('Shopping', () => {
   test('shopping mode can be entered and exited', async ({ page }) => {
     await page.goto('/shopping');
     await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(2000);
+    await expect(page.locator('h1')).toContainText('Shopping', { timeout: 10000 });
 
     // Look for the enter shopping mode button (maximize icon)
     const enterBtn = page.locator('button').filter({
@@ -82,7 +85,6 @@ test.describe('Shopping', () => {
 
     if (await enterBtn.count() > 0 && await enterBtn.first().isVisible({ timeout: 3000 })) {
       await enterBtn.first().click();
-      await page.waitForTimeout(1000);
 
       // In shopping mode, the exit button (minimize) should appear
       const exitBtn = page.locator('button').filter({
@@ -91,14 +93,12 @@ test.describe('Shopping', () => {
       await expect(exitBtn.first()).toBeVisible({ timeout: 5000 });
 
       await exitBtn.first().click();
-      await page.waitForTimeout(500);
     }
   });
 
   test('progress bar reflects checked items', async ({ page }) => {
     await page.goto('/shopping');
     await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(2000);
 
     // Progress text or bar should be visible showing "X/Y" format
     const progressText = page.getByText(/\d+\/\d+/);

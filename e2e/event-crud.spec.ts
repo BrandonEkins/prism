@@ -47,7 +47,6 @@ test.describe('Event CRUD', () => {
   test('create event via modal UI', async ({ page }) => {
     await page.goto('/calendar');
     await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(1500);
 
     // Look for Add Event button
     const addBtn = page.getByRole('button', { name: /Add Event/i });

@@ -31,7 +31,7 @@ test.describe('Tasks', () => {
   test('tasks are displayed from database', async ({ page }) => {
     await page.goto('/tasks');
     await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(2000);
+    await expect(page.locator('h1')).toContainText('Tasks', { timeout: 10000 });
 
     // Use the API to confirm there are tasks
     const response = await page.request.get('/api/tasks');
@@ -46,7 +46,7 @@ test.describe('Tasks', () => {
   test('status filter buttons are visible', async ({ page }) => {
     await page.goto('/tasks');
     await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(2000);
+    await expect(page.locator('h1')).toContainText('Tasks', { timeout: 10000 });
 
     // Look for filter buttons — "Active" and "Completed" status filters
     const activeFilter = page.getByRole('button', { name: 'Active' });
@@ -55,10 +55,8 @@ test.describe('Tasks', () => {
     // At least one filter button should be visible (desktop layout)
     const anyVisible = await activeFilter.isVisible() || await completedFilter.isVisible();
     // On mobile these might be hidden, so just confirm the page loaded
-    await expect(page.locator('h1')).toContainText('Tasks');
     if (anyVisible) {
       await activeFilter.click();
-      await page.waitForTimeout(500);
       await expect(page.locator('h1')).toContainText('Tasks');
     }
   });
@@ -66,18 +64,17 @@ test.describe('Tasks', () => {
   test('group by person toggle switches view mode', async ({ page }) => {
     await page.goto('/tasks');
     await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(2000);
+    await expect(page.locator('h1')).toContainText('Tasks', { timeout: 10000 });
 
     // groupByUser defaults to true — the button should have 'secondary' variant
     const groupBtn = page.getByRole('button', { name: /Group by Person/i });
     if (await groupBtn.isVisible()) {
       // Click to toggle OFF grouped view
       await groupBtn.click();
-      await page.waitForTimeout(500);
+      await expect(page.locator('h1')).toContainText('Tasks');
 
       // Click again to toggle back ON
       await groupBtn.click();
-      await page.waitForTimeout(500);
 
       // Tasks should still be visible after toggling
       await expect(page.locator('h1')).toContainText('Tasks');

@@ -30,7 +30,7 @@ test.describe('Chores', () => {
   test('chores are displayed from database', async ({ page }) => {
     await page.goto('/chores');
     await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(2000);
+    await expect(page.locator('h1')).toContainText('Chores', { timeout: 10000 });
 
     // Verify via API that chores exist
     const response = await page.request.get('/api/chores');
@@ -51,7 +51,6 @@ test.describe('Chores', () => {
     await expect(historyBtn).toBeVisible({ timeout: 10000 });
 
     await historyBtn.click();
-    await page.waitForTimeout(1000);
 
     // Should show "Recent Completions" heading
     const historyHeading = page.getByText(/Recent Completions|Completion History/i);
@@ -61,7 +60,7 @@ test.describe('Chores', () => {
   test('group by person view shows user columns', async ({ page }) => {
     await page.goto('/chores');
     await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(2000);
+    await expect(page.locator('h1')).toContainText('Chores', { timeout: 10000 });
 
     const groupBtn = page.getByRole('button', { name: /Group by Person/i });
     if (await groupBtn.isVisible()) {

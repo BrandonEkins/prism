@@ -52,15 +52,13 @@ test.describe('Shopping CRUD', () => {
 
     await page.goto('/shopping');
     await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(2000);
-
     await expect(page.getByText(itemName)).toBeVisible({ timeout: 10000 });
   });
 
   test('add item via modal', async ({ page }) => {
     await page.goto('/shopping');
     await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(2000);
+    await expect(page.locator('h1')).toContainText('Shopping', { timeout: 10000 });
 
     // Look for Add Item button (icon or text)
     const addBtn = page.getByRole('button', { name: /Add Item/i });
@@ -77,7 +75,6 @@ test.describe('Shopping CRUD', () => {
       await dialog.locator('button[type="submit"]').click();
 
       await expect(dialog).not.toBeVisible({ timeout: 5000 });
-      await page.waitForTimeout(1000);
       await expect(page.getByText(itemName)).toBeVisible({ timeout: 10000 });
 
       // Track for cleanup

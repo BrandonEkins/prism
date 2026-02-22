@@ -39,7 +39,6 @@ test.describe('Settings', () => {
     const displayBtn = page.getByRole('button', { name: /Display/i });
     await expect(displayBtn).toBeVisible({ timeout: 10000 });
     await displayBtn.click();
-    await page.waitForTimeout(500);
 
     // Display section should show theme-related content
     const themeText = page.getByText(/Theme|Dark|Light/i);
@@ -52,7 +51,6 @@ test.describe('Settings', () => {
 
     const familyBtn = page.getByRole('button', { name: /Family Members/i });
     await familyBtn.click();
-    await page.waitForTimeout(1000);
 
     // Should show actual family member names in the settings content area
     // Use .font-medium to target the member name display, not nav elements
@@ -68,7 +66,6 @@ test.describe('Settings', () => {
     const aboutBtn = page.getByRole('button', { name: /About/i });
     await expect(aboutBtn).toBeVisible({ timeout: 10000 });
     await aboutBtn.click();
-    await page.waitForTimeout(500);
 
     // About section should show version number
     const versionText = page.getByText(/\d+\.\d+\.\d+/);
