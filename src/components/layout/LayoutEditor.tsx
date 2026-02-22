@@ -161,7 +161,6 @@ export function LayoutEditor({
   const [importText, setImportText] = useState('');
   const [importError, setImportError] = useState('');
   const [exportFeedback, setExportFeedback] = useState('');
-  const [saveFeedback, setSaveFeedback] = useState('');
   const [showShareDialog, setShowShareDialog] = useState(false);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [createForm, setCreateForm] = useState({ name: '', startFrom: 'template' as 'blank' | 'template' | 'copy' });
@@ -354,8 +353,7 @@ export function LayoutEditor({
     } else {
       onSave();
     }
-    setSaveFeedback('Saved!');
-    setTimeout(() => setSaveFeedback(''), 2000);
+    toast({ title: 'Layout saved' });
   };
 
   const handleShareOpen = () => {
@@ -683,7 +681,7 @@ export function LayoutEditor({
                 onClick={handleSave}
                 className="px-2 py-1.5 text-xs rounded-l-md whitespace-nowrap bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
               >
-                {saveFeedback || saveLabel}
+                {saveLabel}
               </button>
               <button
                 onClick={() => togglePopover('save')}

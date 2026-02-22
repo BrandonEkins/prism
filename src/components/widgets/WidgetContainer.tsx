@@ -216,15 +216,19 @@ export function WidgetContainer({
         onClick && 'cursor-pointer hover:shadow-md transition-shadow',
         // Allow header popover dropdowns to overflow
         'overflow-visible',
-        // Strip Card bg/border/shadow when grid-level background is applied
-        stripCardBg && 'bg-transparent backdrop-blur-none border-transparent shadow-none',
+        // Strip Card styling when grid-level background is applied
+        stripCardBg && 'backdrop-blur-none border-transparent shadow-none',
         // Auto text color based on background luminance
         // Future: per-widget text color manual override could replace this
         backgroundColor && (isLightColor(backgroundColor) ? 'text-black' : 'text-white'),
         className
       )}
       onClick={onClick}
-      style={backgroundColor ? { backgroundColor } : undefined}
+      style={
+        stripCardBg
+          ? { backgroundColor: 'transparent' }
+          : backgroundColor ? { backgroundColor } : undefined
+      }
     >
       {/* WIDGET HEADER */}
       {showHeader && title && (

@@ -79,9 +79,10 @@ export function useDashboardLayout(layouts: LayoutsData, slug?: string) {
         orientation: activeLayout?.orientation || 'landscape',
       };
       await layouts.saveLayout(saveData);
-      setIsEditing(false);
     } catch (err) {
       console.error('Failed to save layout:', err);
+    } finally {
+      setIsEditing(false);
     }
   }, [activeLayout, editingWidgets, ssLayout, layouts]);
 
