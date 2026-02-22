@@ -1,91 +1,29 @@
 /**
- * Tests for useIdleDetection hook core logic.
- *
- * We mock React hooks and capture the effects/callbacks to test:
- * - Idle state triggers after timeout
- * - Activity resets the timer
- * - forceIdle bypasses timer
- * - Disabled when timeout <= 0
+ * @jest-environment jsdom
  */
 
-// --- Minimal window/localStorage mock ---
-const storageData: Record<string, string> = {};
-const eventListeners: Record<string, ((...args: unknown[]) => void)[]> = {};
+/**
+ * Tests for useIdleDetection hook using renderHook.
+ *
+ * Tests idle state after timeout, activity resets, forceIdle,
+ * custom event handling, and cleanup on unmount.
+ */
 
-const mockWindow = {
-  addEventListener: jest.fn((event: string, handler: (...args: unknown[]) => void) => {
-    if (!eventListeners[event]) eventListeners[event] = [];
-    eventListeners[event].push(handler);
-  }),
-  removeEventListener: jest.fn((event: string, handler: (...args: unknown[]) => void) => {
-    if (eventListeners[event]) {
-      eventListeners[event] = eventListeners[event].filter(h => h !== handler);
-    }
-  }),
-  dispatchEvent: jest.fn(),
-};
-
-Object.defineProperty(global, 'window', { value: mockWindow, writable: true, configurable: true });
-Object.defineProperty(global, 'localStorage', {
-  value: {
-    getItem: (key: string) => storageData[key] ?? null,
-    setItem: (key: string, value: string) => { storageData[key] = value; },
-    removeItem: (key: string) => { delete storageData[key]; },
-  },
-  writable: true,
-  configurable: true,
-});
-
-// --- Mock React ---
-type EffectFn = () => (() => void) | void;
-const capturedEffects: EffectFn[] = [];
-let stateStore: Record<number, unknown> = {};
-let stateIndex = 0;
-let refStore: Record<number, { current: unknown }> = {};
-let refIndex = 0;
-
-jest.mock('react', () => ({
-  useState: (init: unknown) => {
-    const idx = stateIndex++;
-    if (!(idx in stateStore)) {
-      stateStore[idx] = typeof init === 'function' ? (init as () => unknown)() : init;
-    }
-    const setter = (val: unknown) => {
-      stateStore[idx] = typeof val === 'function' ? (val as (prev: unknown) => unknown)(stateStore[idx]) : val;
-    };
-    return [stateStore[idx], setter];
-  },
-  useEffect: (effect: EffectFn) => {
-    capturedEffects.push(effect);
-  },
-  useCallback: (fn: (...args: unknown[]) => unknown) => fn,
-  useRef: (init: unknown) => {
-    const idx = refIndex++;
-    if (!(idx in refStore)) {
-      refStore[idx] = { current: init };
-    }
-    return refStore[idx];
-  },
-}));
-
+import { renderHook, act } from '@testing-library/react';
 import { useIdleDetection } from '../useIdleDetection';
+
+// Suppress fetch calls from the away mode auto-check
+beforeAll(() => {
+  global.fetch = jest.fn().mockResolvedValue({
+    ok: true,
+    json: () => Promise.resolve({ enabled: false }),
+  });
+});
 
 describe('useIdleDetection', () => {
   beforeEach(() => {
     jest.useFakeTimers();
-    capturedEffects.length = 0;
-    stateStore = {};
-    stateIndex = 0;
-    refStore = {};
-    refIndex = 0;
-    for (const key of Object.keys(eventListeners)) {
-      eventListeners[key] = [];
-    }
-    for (const key of Object.keys(storageData)) {
-      delete storageData[key];
-    }
-    mockWindow.addEventListener.mockClear();
-    mockWindow.removeEventListener.mockClear();
+    localStorage.clear();
   });
 
   afterEach(() => {
@@ -93,78 +31,187 @@ describe('useIdleDetection', () => {
   });
 
   it('returns isIdle=false initially', () => {
-    const result = useIdleDetection(60);
-    expect(result.isIdle).toBe(false);
+    const { result } = renderHook(() => useIdleDetection(60));
+    expect(result.current.isIdle).toBe(false);
   });
 
-  it('returns forceIdle function', () => {
-    const result = useIdleDetection(60);
-    expect(typeof result.forceIdle).toBe('function');
+  it('returns a forceIdle function', () => {
+    const { result } = renderHook(() => useIdleDetection(60));
+    expect(typeof result.current.forceIdle).toBe('function');
   });
 
-  it('uses initialTimeout parameter', () => {
-    useIdleDetection(45);
-    // First state call is timeout, should be 45
-    expect(stateStore[0]).toBe(45);
+  it('becomes idle after timeout elapses', () => {
+    const { result } = renderHook(() => useIdleDetection(5)); // 5 seconds
+
+    act(() => {
+      jest.advanceTimersByTime(5000);
+    });
+
+    expect(result.current.isIdle).toBe(true);
   });
 
-  it('falls back to stored timeout when no initial value', () => {
-    storageData['prism-screensaver-timeout'] = '90';
-    stateStore = {};
-    stateIndex = 0;
-    refStore = {};
-    refIndex = 0;
+  it('does not become idle before timeout elapses', () => {
+    const { result } = renderHook(() => useIdleDetection(10));
 
-    useIdleDetection();
+    act(() => {
+      jest.advanceTimersByTime(9000); // 9 of 10 seconds
+    });
 
-    expect(stateStore[0]).toBe(90);
+    expect(result.current.isIdle).toBe(false);
   });
 
-  it('falls back to default 120s when no stored value and no initial', () => {
-    stateStore = {};
-    stateIndex = 0;
-    refStore = {};
-    refIndex = 0;
+  it('resets timer on mousemove so idle is delayed', () => {
+    const { result } = renderHook(() => useIdleDetection(5));
 
-    useIdleDetection();
+    // Advance 4 seconds (almost idle)
+    act(() => {
+      jest.advanceTimersByTime(4000);
+    });
+    expect(result.current.isIdle).toBe(false);
 
-    expect(stateStore[0]).toBe(120);
+    // Simulate mousemove to reset timer
+    act(() => {
+      window.dispatchEvent(new Event('mousemove'));
+    });
+
+    // Advance another 4 seconds — shouldn't be idle yet (timer was reset)
+    act(() => {
+      jest.advanceTimersByTime(4000);
+    });
+    expect(result.current.isIdle).toBe(false);
+
+    // Advance 1 more second — now should be idle (5s after reset)
+    act(() => {
+      jest.advanceTimersByTime(1000);
+    });
+    expect(result.current.isIdle).toBe(true);
   });
 
-  it('registers mousemove and keydown event listeners via effects', () => {
-    useIdleDetection(60);
+  it('forceIdle immediately activates idle state', () => {
+    const { result } = renderHook(() => useIdleDetection(60));
+    expect(result.current.isIdle).toBe(false);
 
-    // Run all captured effects
-    const cleanups: (() => void)[] = [];
-    for (const effect of capturedEffects) {
-      const cleanup = effect();
-      if (cleanup) cleanups.push(cleanup);
-    }
+    act(() => {
+      result.current.forceIdle();
+    });
 
-    // Should have registered various event listeners
-    expect(mockWindow.addEventListener).toHaveBeenCalled();
-
-    const registeredEvents = mockWindow.addEventListener.mock.calls.map(
-      (call: unknown[]) => call[0]
-    );
-    expect(registeredEvents).toContain('mousemove');
-    expect(registeredEvents).toContain('keydown');
-    expect(registeredEvents).toContain('touchstart');
-
-    // Clean up
-    for (const cleanup of cleanups) cleanup();
+    expect(result.current.isIdle).toBe(true);
   });
 
-  it('registers screensaver custom event listener', () => {
-    useIdleDetection(60);
+  it('does not activate idle when timeout is 0 (disabled)', () => {
+    const { result } = renderHook(() => useIdleDetection(0));
 
-    for (const effect of capturedEffects) {
-      effect();
-    }
+    act(() => {
+      jest.advanceTimersByTime(300000); // 5 minutes
+    });
 
-    const registeredEvents = mockWindow.addEventListener.mock.calls.map(
-      (call: unknown[]) => call[0]
-    );
-    expect(registeredEvents).toContain('prism:screensaver');
+    expect(result.current.isIdle).toBe(false);
+  });
+
+  it('uses stored timeout from localStorage when no initialTimeout', () => {
+    localStorage.setItem('prism-screensaver-timeout', '3');
+
+    const { result } = renderHook(() => useIdleDetection());
+
+    act(() => {
+      jest.advanceTimersByTime(3000);
+    });
+
+    expect(result.current.isIdle).toBe(true);
+  });
+
+  it('defaults to 120s when no stored value and no initialTimeout', () => {
+    const { result } = renderHook(() => useIdleDetection());
+
+    act(() => {
+      jest.advanceTimersByTime(119000);
+    });
+    expect(result.current.isIdle).toBe(false);
+
+    act(() => {
+      jest.advanceTimersByTime(1000);
+    });
+    expect(result.current.isIdle).toBe(true);
+  });
+
+  it('dismisses idle on keydown after becoming idle', () => {
+    const { result } = renderHook(() => useIdleDetection(2));
+
+    act(() => {
+      jest.advanceTimersByTime(2000);
+    });
+    expect(result.current.isIdle).toBe(true);
+
+    act(() => {
+      window.dispatchEvent(new Event('keydown'));
+    });
+
+    expect(result.current.isIdle).toBe(false);
+  });
+
+  it('responds to prism:screensaver custom event by forcing idle', () => {
+    const { result } = renderHook(() => useIdleDetection(60));
+
+    act(() => {
+      window.dispatchEvent(new Event('prism:screensaver'));
+    });
+
+    expect(result.current.isIdle).toBe(true);
+  });
+
+  it('responds to prism:screensaver-timeout-change by updating timeout', () => {
+    const { result } = renderHook(() => useIdleDetection(999));
+
+    // Change timeout to 2 seconds via custom event
+    act(() => {
+      window.dispatchEvent(
+        new CustomEvent('prism:screensaver-timeout-change', { detail: 2 })
+      );
+    });
+
+    // Old timeout (999s) should not apply — new 2s timeout should
+    act(() => {
+      jest.advanceTimersByTime(2000);
+    });
+
+    expect(result.current.isIdle).toBe(true);
+  });
+
+  it('cleans up event listeners on unmount', () => {
+    const removeSpy = jest.spyOn(window, 'removeEventListener');
+    const { unmount } = renderHook(() => useIdleDetection(60));
+
+    unmount();
+
+    const removedEvents = removeSpy.mock.calls.map((call) => call[0]);
+    expect(removedEvents).toContain('mousemove');
+    expect(removedEvents).toContain('keydown');
+    expect(removedEvents).toContain('touchstart');
+    expect(removedEvents).toContain('prism:screensaver');
+    expect(removedEvents).toContain('prism:screensaver-timeout-change');
+
+    removeSpy.mockRestore();
+  });
+
+  it('forceIdle prevents first dismiss interaction (double-tap protection)', () => {
+    const { result } = renderHook(() => useIdleDetection(60));
+
+    // Force idle (simulates clicking the screensaver button)
+    act(() => {
+      result.current.forceIdle();
+    });
+    expect(result.current.isIdle).toBe(true);
+
+    // First mousedown should NOT dismiss (it's the mouseup from the button click)
+    act(() => {
+      window.dispatchEvent(new Event('mousedown'));
+    });
+    expect(result.current.isIdle).toBe(true);
+
+    // Second interaction should dismiss
+    act(() => {
+      window.dispatchEvent(new Event('mousedown'));
+    });
+    expect(result.current.isIdle).toBe(false);
   });
 });

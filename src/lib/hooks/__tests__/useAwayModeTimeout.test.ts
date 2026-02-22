@@ -1,156 +1,109 @@
 /**
- * Tests for useAwayModeTimeout hook.
+ * @jest-environment jsdom
+ */
+
+/**
+ * Tests for useAwayModeTimeout hook using renderHook.
  *
  * Tests localStorage persistence, custom event dispatch,
  * and cross-component synchronization via event listeners.
  */
 
-// --- Minimal window/localStorage mock ---
-const storageData: Record<string, string> = {};
-const eventListeners: Record<string, ((...args: unknown[]) => void)[]> = {};
-const dispatched: unknown[] = [];
-
-const mockWindow = {
-  addEventListener: jest.fn((event: string, handler: (...args: unknown[]) => void) => {
-    if (!eventListeners[event]) eventListeners[event] = [];
-    eventListeners[event].push(handler);
-  }),
-  removeEventListener: jest.fn((event: string, handler: (...args: unknown[]) => void) => {
-    if (eventListeners[event]) {
-      eventListeners[event] = eventListeners[event].filter(h => h !== handler);
-    }
-  }),
-  dispatchEvent: jest.fn((event: unknown) => { dispatched.push(event); }),
-};
-
-Object.defineProperty(global, 'window', { value: mockWindow, writable: true, configurable: true });
-Object.defineProperty(global, 'localStorage', {
-  value: {
-    getItem: (key: string) => storageData[key] ?? null,
-    setItem: (key: string, value: string) => { storageData[key] = value; },
-    removeItem: (key: string) => { delete storageData[key]; },
-  },
-  writable: true,
-  configurable: true,
-});
-
-// Mock CustomEvent for node environment
-class MockCustomEvent {
-  type: string;
-  detail: unknown;
-  constructor(type: string, opts?: { detail?: unknown }) {
-    this.type = type;
-    this.detail = opts?.detail;
-  }
-}
-Object.defineProperty(global, 'CustomEvent', { value: MockCustomEvent, writable: true, configurable: true });
-
-// --- Mock React ---
-type EffectFn = () => (() => void) | void;
-const capturedEffects: EffectFn[] = [];
-let stateStore: Record<number, unknown> = {};
-let stateIdx = 0;
-
-jest.mock('react', () => ({
-  useState: (init: unknown) => {
-    const idx = stateIdx++;
-    if (!(idx in stateStore)) {
-      stateStore[idx] = typeof init === 'function' ? (init as () => unknown)() : init;
-    }
-    const setter = (val: unknown) => {
-      stateStore[idx] = typeof val === 'function' ? (val as (prev: unknown) => unknown)(stateStore[idx]) : val;
-    };
-    return [stateStore[idx], setter];
-  },
-  useEffect: (effect: EffectFn) => {
-    capturedEffects.push(effect);
-  },
-  useCallback: (fn: (...args: unknown[]) => unknown) => fn,
-}));
-
+import { renderHook, act } from '@testing-library/react';
 import { useAwayModeTimeout } from '../useAwayModeTimeout';
 
 describe('useAwayModeTimeout', () => {
   beforeEach(() => {
-    capturedEffects.length = 0;
-    stateStore = {};
-    stateIdx = 0;
-    dispatched.length = 0;
-    for (const key of Object.keys(eventListeners)) {
-      eventListeners[key] = [];
-    }
-    for (const key of Object.keys(storageData)) {
-      delete storageData[key];
-    }
-    mockWindow.addEventListener.mockClear();
-    mockWindow.removeEventListener.mockClear();
-    mockWindow.dispatchEvent.mockClear();
+    localStorage.clear();
   });
 
-  it('returns default timeout of 0 (disabled)', () => {
-    const result = useAwayModeTimeout();
-    expect(result.timeout).toBe(0);
+  it('returns default timeout of 0 (disabled) when no stored value', () => {
+    const { result } = renderHook(() => useAwayModeTimeout());
+    expect(result.current.timeout).toBe(0);
   });
 
-  it('reads stored timeout from localStorage', () => {
-    storageData['prism-away-mode-timeout'] = '24';
-    stateStore = {};
-    stateIdx = 0;
+  it('reads stored timeout from localStorage on init', () => {
+    localStorage.setItem('prism-away-mode-timeout', '24');
 
-    const result = useAwayModeTimeout();
-    expect(result.timeout).toBe(24);
+    const { result } = renderHook(() => useAwayModeTimeout());
+    expect(result.current.timeout).toBe(24);
   });
 
-  it('returns a setTimeout function', () => {
-    const result = useAwayModeTimeout();
-    expect(typeof result.setTimeout).toBe('function');
+  it('setTimeout updates the returned timeout value', () => {
+    const { result } = renderHook(() => useAwayModeTimeout());
+    expect(result.current.timeout).toBe(0);
+
+    act(() => {
+      result.current.setTimeout(48);
+    });
+
+    expect(result.current.timeout).toBe(48);
   });
 
   it('setTimeout persists value to localStorage', () => {
-    const result = useAwayModeTimeout();
-    result.setTimeout(48);
+    const { result } = renderHook(() => useAwayModeTimeout());
 
-    expect(storageData['prism-away-mode-timeout']).toBe('48');
+    act(() => {
+      result.current.setTimeout(168);
+    });
+
+    expect(localStorage.getItem('prism-away-mode-timeout')).toBe('168');
   });
 
-  it('setTimeout dispatches custom event', () => {
-    const result = useAwayModeTimeout();
-    result.setTimeout(168);
+  it('setTimeout dispatches custom event with the hours value', () => {
+    const dispatchSpy = jest.spyOn(window, 'dispatchEvent');
+    const { result } = renderHook(() => useAwayModeTimeout());
 
-    expect(mockWindow.dispatchEvent).toHaveBeenCalledTimes(1);
-    const event = dispatched[0] as MockCustomEvent;
-    expect(event.type).toBe('prism:away-mode-timeout-change');
-    expect(event.detail).toBe(168);
-  });
+    act(() => {
+      result.current.setTimeout(72);
+    });
 
-  it('registers event listener for cross-component sync', () => {
-    useAwayModeTimeout();
-
-    // Run captured effects
-    for (const effect of capturedEffects) {
-      effect();
-    }
-
-    const registeredEvents = mockWindow.addEventListener.mock.calls.map(
-      (call: unknown[]) => call[0]
+    const event = dispatchSpy.mock.calls.find(
+      (call) => (call[0] as CustomEvent).type === 'prism:away-mode-timeout-change'
     );
-    expect(registeredEvents).toContain('prism:away-mode-timeout-change');
+    expect(event).toBeTruthy();
+    expect((event![0] as CustomEvent).detail).toBe(72);
+
+    dispatchSpy.mockRestore();
   });
 
-  it('effect cleanup removes event listener', () => {
-    useAwayModeTimeout();
+  it('updates timeout when receiving custom event from another component', () => {
+    const { result } = renderHook(() => useAwayModeTimeout());
+    expect(result.current.timeout).toBe(0);
 
-    const cleanups: (() => void)[] = [];
-    for (const effect of capturedEffects) {
-      const cleanup = effect();
-      if (cleanup) cleanups.push(cleanup);
-    }
+    // Simulate another component dispatching a timeout change
+    act(() => {
+      window.dispatchEvent(
+        new CustomEvent('prism:away-mode-timeout-change', { detail: 96 })
+      );
+    });
 
-    for (const cleanup of cleanups) cleanup();
+    expect(result.current.timeout).toBe(96);
+  });
 
-    expect(mockWindow.removeEventListener).toHaveBeenCalledWith(
-      'prism:away-mode-timeout-change',
-      expect.any(Function)
+  it('cleans up event listener on unmount', () => {
+    const removeSpy = jest.spyOn(window, 'removeEventListener');
+    const { unmount } = renderHook(() => useAwayModeTimeout());
+
+    unmount();
+
+    const removeCall = removeSpy.mock.calls.find(
+      (call) => call[0] === 'prism:away-mode-timeout-change'
     );
+    expect(removeCall).toBeTruthy();
+
+    removeSpy.mockRestore();
+  });
+
+  it('two instances stay synchronized via events', () => {
+    const { result: result1 } = renderHook(() => useAwayModeTimeout());
+    const { result: result2 } = renderHook(() => useAwayModeTimeout());
+
+    act(() => {
+      result1.current.setTimeout(120);
+    });
+
+    // The event dispatch from setTimeout should update the second instance
+    expect(result2.current.timeout).toBe(120);
   });
 });
