@@ -1,179 +1,142 @@
 /**
- * Tests for useVisibilityPolling hook.
- *
- * We test the hook's core logic by mocking useEffect to capture the
- * effect function, then running it with fake timers and a minimal
- * document mock (no jsdom required).
+ * @jest-environment jsdom
  */
 
-// --- Minimal document mock for node environment ---
-const visibilityListeners: (() => void)[] = [];
-let mockHidden = false;
+/**
+ * Tests for useVisibilityPolling hook using renderHook.
+ *
+ * Tests interval setup, pause on hidden, immediate resume on visible,
+ * cleanup on unmount, and disabled behavior.
+ */
 
-const mockDocument = {
-  get hidden() { return mockHidden; },
-  addEventListener: jest.fn((event: string, handler: () => void) => {
-    if (event === 'visibilitychange') visibilityListeners.push(handler);
-  }),
-  removeEventListener: jest.fn((event: string, handler: () => void) => {
-    if (event === 'visibilitychange') {
-      const idx = visibilityListeners.indexOf(handler);
-      if (idx >= 0) visibilityListeners.splice(idx, 1);
-    }
-  }),
-};
-
-// Assign to global before importing the module
-Object.defineProperty(global, 'document', {
-  value: mockDocument,
-  writable: true,
-  configurable: true,
-});
-
-function fireVisibilityChange() {
-  for (const handler of [...visibilityListeners]) {
-    handler();
-  }
-}
-
-// --- Mock React.useEffect to capture the effect function ---
-let capturedEffect: (() => (() => void) | void) | null = null;
-
-jest.mock('react', () => ({
-  useEffect: (effect: () => (() => void) | void) => {
-    capturedEffect = effect;
-  },
-}));
-
+import { renderHook } from '@testing-library/react';
 import { useVisibilityPolling } from '../useVisibilityPolling';
 
-// --- Tests ---
+// Helper to simulate visibilitychange
+function setDocumentHidden(hidden: boolean) {
+  Object.defineProperty(document, 'hidden', {
+    value: hidden,
+    writable: true,
+    configurable: true,
+  });
+  document.dispatchEvent(new Event('visibilitychange'));
+}
 
 describe('useVisibilityPolling', () => {
   beforeEach(() => {
     jest.useFakeTimers();
-    capturedEffect = null;
-    mockHidden = false;
-    visibilityListeners.length = 0;
-    mockDocument.addEventListener.mockClear();
-    mockDocument.removeEventListener.mockClear();
+    Object.defineProperty(document, 'hidden', {
+      value: false,
+      writable: true,
+      configurable: true,
+    });
   });
 
   afterEach(() => {
     jest.useRealTimers();
   });
 
-  it('sets up interval with specified ms', () => {
+  it('calls callback at the specified interval', () => {
     const callback = jest.fn();
-    useVisibilityPolling(callback, 5000);
+    renderHook(() => useVisibilityPolling(callback, 5000));
 
-    const cleanup = capturedEffect!() as () => void;
+    expect(callback).not.toHaveBeenCalled();
 
     jest.advanceTimersByTime(5000);
     expect(callback).toHaveBeenCalledTimes(1);
 
     jest.advanceTimersByTime(5000);
     expect(callback).toHaveBeenCalledTimes(2);
-
-    cleanup();
   });
 
   it('does not set up interval when intervalMs is 0', () => {
     const callback = jest.fn();
-    useVisibilityPolling(callback, 0);
+    renderHook(() => useVisibilityPolling(callback, 0));
 
-    const result = capturedEffect!();
-    expect(result).toBeUndefined();
-
-    jest.advanceTimersByTime(10000);
+    jest.advanceTimersByTime(30000);
     expect(callback).not.toHaveBeenCalled();
   });
 
   it('does not set up interval for negative intervalMs', () => {
     const callback = jest.fn();
-    useVisibilityPolling(callback, -100);
+    renderHook(() => useVisibilityPolling(callback, -100));
 
-    const result = capturedEffect!();
-    expect(result).toBeUndefined();
-
-    jest.advanceTimersByTime(10000);
+    jest.advanceTimersByTime(30000);
     expect(callback).not.toHaveBeenCalled();
   });
 
   it('pauses polling when page becomes hidden', () => {
     const callback = jest.fn();
-    useVisibilityPolling(callback, 1000);
-    const cleanup = capturedEffect!() as () => void;
+    renderHook(() => useVisibilityPolling(callback, 1000));
 
-    // Let 2 ticks fire
     jest.advanceTimersByTime(2000);
     expect(callback).toHaveBeenCalledTimes(2);
 
-    // Hide page
-    mockHidden = true;
-    fireVisibilityChange();
+    setDocumentHidden(true);
 
-    // Should NOT fire more callbacks
     jest.advanceTimersByTime(5000);
-    expect(callback).toHaveBeenCalledTimes(2);
-
-    cleanup();
+    expect(callback).toHaveBeenCalledTimes(2); // No new calls
   });
 
-  it('resumes polling and fires immediately when page becomes visible', () => {
+  it('fires callback immediately when page becomes visible again', () => {
     const callback = jest.fn();
-    useVisibilityPolling(callback, 1000);
-    const cleanup = capturedEffect!() as () => void;
+    renderHook(() => useVisibilityPolling(callback, 1000));
 
-    // Hide page
-    mockHidden = true;
-    fireVisibilityChange();
+    setDocumentHidden(true);
     callback.mockClear();
 
-    // Make visible again
-    mockHidden = false;
-    fireVisibilityChange();
+    setDocumentHidden(false);
 
     // Should fire immediately on becoming visible
     expect(callback).toHaveBeenCalledTimes(1);
+  });
 
-    // And resume interval
+  it('resumes interval after becoming visible', () => {
+    const callback = jest.fn();
+    renderHook(() => useVisibilityPolling(callback, 1000));
+
+    setDocumentHidden(true);
+    callback.mockClear();
+
+    setDocumentHidden(false);
+    expect(callback).toHaveBeenCalledTimes(1); // immediate call
+
     jest.advanceTimersByTime(1000);
-    expect(callback).toHaveBeenCalledTimes(2);
-
-    cleanup();
+    expect(callback).toHaveBeenCalledTimes(2); // interval resumes
   });
 
   it('cleans up interval and event listener on unmount', () => {
     const callback = jest.fn();
-    useVisibilityPolling(callback, 1000);
-    const cleanup = capturedEffect!() as () => void;
+    const removeSpy = jest.spyOn(document, 'removeEventListener');
+    const { unmount } = renderHook(() => useVisibilityPolling(callback, 1000));
 
-    expect(mockDocument.addEventListener).toHaveBeenCalledWith(
-      'visibilitychange',
-      expect.any(Function)
-    );
+    unmount();
 
-    cleanup();
-
+    // No more callbacks after unmount
     callback.mockClear();
     jest.advanceTimersByTime(5000);
     expect(callback).not.toHaveBeenCalled();
 
-    expect(mockDocument.removeEventListener).toHaveBeenCalledWith(
-      'visibilitychange',
-      expect.any(Function)
+    // Event listener was removed
+    const removeCall = removeSpy.mock.calls.find(
+      (call) => call[0] === 'visibilitychange'
     );
+    expect(removeCall).toBeTruthy();
+
+    removeSpy.mockRestore();
   });
 
   it('registers visibilitychange listener on document', () => {
+    const addSpy = jest.spyOn(document, 'addEventListener');
     const callback = jest.fn();
-    useVisibilityPolling(callback, 3000);
-    capturedEffect!();
 
-    expect(mockDocument.addEventListener).toHaveBeenCalledWith(
-      'visibilitychange',
-      expect.any(Function)
+    renderHook(() => useVisibilityPolling(callback, 3000));
+
+    const addCall = addSpy.mock.calls.find(
+      (call) => call[0] === 'visibilitychange'
     );
+    expect(addCall).toBeTruthy();
+
+    addSpy.mockRestore();
   });
 });
