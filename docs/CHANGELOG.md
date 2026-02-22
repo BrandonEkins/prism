@@ -5,6 +5,12 @@ All notable changes to Prism are documented in this file.
 ## [0.9.5] - 2026-02-21
 
 ### Added
+- **Tier 1 Unit Tests**: High-impact coverage for core utilities (80 tests)
+  - Color utility (`isLightColor`): luminance calculation, boundary values, a11y contrast
+  - Class merging (`cn`): Tailwind conflict resolution, conditionals, object/array syntax, modifier handling
+  - Rate limiting: window logic, boundary conditions, Redis failure fallback, user isolation, 429 headers
+  - OpenWeather: Kelvin→Fahrenheit/m/s→mph conversions, all 10 condition code ranges, forecast aggregation
+  - Backup utilities: path traversal defense, filename validation, file filtering, size formatting
 - **CRUD Mutation Tests**: E2E tests for create/edit/delete flows (25 tests)
   - Task CRUD: create via modal, edit, toggle complete, delete, API listing
   - Chore CRUD: create via modal/API, parent auto-approve, child approval workflow, disable prevents completion
