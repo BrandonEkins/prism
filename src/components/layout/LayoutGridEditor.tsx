@@ -64,26 +64,6 @@ export interface LayoutGridEditorProps {
   scrollToRef?: React.MutableRefObject<((row: number, col?: number) => void) | null>;
 }
 
-function ColorPickerButton({ bgColor, onClick }: { bgColor?: string; onClick: (e: React.MouseEvent) => void }) {
-  const stop = (e: React.SyntheticEvent) => e.stopPropagation();
-  return (
-    <button
-      onClick={onClick}
-      onPointerDown={stop}
-      onTouchStart={stop}
-      className="relative w-8 h-8 rounded-full shadow-md"
-      style={{
-        backgroundColor: bgColor || 'transparent',
-        boxShadow: '0 0 0 1px rgba(0,0,0,0.6), 0 0 0 2px rgba(255,255,255,0.8), 0 0 0 2.5px rgba(0,0,0,0.3)',
-      }}
-      title="Widget settings"
-    >
-      {/* Invisible touch expander for 48px hit area */}
-      <span className="absolute -inset-2" aria-hidden="true" />
-    </button>
-  );
-}
-
 export function LayoutGridEditor({
   layout,
   onLayoutChange,
@@ -104,13 +84,12 @@ export function LayoutGridEditor({
 }: LayoutGridEditorProps) {
   const { zones: SAFE_ZONES, allSizeNames } = useScreenSafeZones();
   const { width, containerRef, mounted } = useContainerWidth();
-  const [colorPickerWidget, setColorPickerWidget] = useState<string | null>(null);
+  const [selectedWidget, setSelectedWidget] = useState<string | null>(null);
   const [scrollY, setScrollY] = useState(0);
   const [scrollX, setScrollX] = useState(0);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [screenGuideOrientationInternal, setScreenGuideOrientationInternal] = useState<'landscape' | 'portrait'>('landscape');
   const [enabledSizesInternal, setEnabledSizesInternal] = useState<string[]>(allSizeNames);
-  const [showPanel, setShowPanel] = useState(true);
 
   const screenGuideOrientation = screenGuideOrientationProp ?? screenGuideOrientationInternal;
   const enabledSizes = enabledSizesProp ?? enabledSizesInternal;
@@ -268,93 +247,99 @@ export function LayoutGridEditor({
   };
 
   const getTextClass = (widget: WidgetConfig, fallback: string) => {
-    if (!widget.backgroundColor) return fallback;
+    if (!widget.backgroundColor || widget.backgroundOpacity === 0) return fallback;
     return isLightColor(widget.backgroundColor) ? 'text-black' : 'text-white';
   };
 
-  const colorPickerRef = useRef<HTMLDivElement>(null);
-
+  // Clear selection when widget becomes invisible
   useEffect(() => {
-    if (!colorPickerWidget) return;
-    const handler = (e: MouseEvent | TouchEvent) => {
-      if (colorPickerRef.current && !colorPickerRef.current.contains(e.target as Node)) {
-        setColorPickerWidget(null);
-      }
-    };
-    document.addEventListener('mousedown', handler);
-    document.addEventListener('touchstart', handler);
-    return () => {
-      document.removeEventListener('mousedown', handler);
-      document.removeEventListener('touchstart', handler);
-    };
-  }, [colorPickerWidget]);
+    if (selectedWidget && !layout.find(w => w.i === selectedWidget && w.visible !== false)) {
+      setSelectedWidget(null);
+    }
+  }, [selectedWidget, layout]);
 
-  const renderColorPicker = (widget: WidgetConfig) => {
-    const bgColor = widget.backgroundColor;
-    const olColor = widget.outlineColor;
-    const bgOpacity = widget.backgroundOpacity ?? 1;
-    const isOpen = colorPickerWidget === widget.i;
+  const selectedWidgetConfig = selectedWidget
+    ? layoutRef.current.find(w => w.i === selectedWidget && w.visible !== false)
+    : null;
+
+  const renderPropertiesBar = () => {
+    if (!selectedWidgetConfig || !selectedWidget) return null;
+    const bgColor = selectedWidgetConfig.backgroundColor;
+    const olColor = selectedWidgetConfig.outlineColor;
+    const bgOpacity = selectedWidgetConfig.backgroundOpacity ?? 1;
+    const displayName = selectedWidgetConfig.i.charAt(0).toUpperCase() + selectedWidgetConfig.i.slice(1);
 
     return (
-      <div className="absolute top-1 left-1 z-20" ref={isOpen ? colorPickerRef : undefined}>
-        <ColorPickerButton
-          bgColor={bgColor}
-          onClick={(e) => { e.stopPropagation(); setColorPickerWidget(isOpen ? null : widget.i); }}
-        />
-        {isOpen && (
-          <div className="absolute top-10 left-0 bg-card border border-border rounded-lg p-2 shadow-xl z-30 w-[220px] space-y-2" onClick={(e) => e.stopPropagation()} onPointerDown={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()}>
-            <div>
-              <div className="text-[10px] text-muted-foreground mb-1">Background</div>
-              <div className="grid grid-cols-4 gap-1">
-                {COLOR_OPTIONS.map((c, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => updateWidgetColor(widget.i, { backgroundColor: c })}
-                    className={`w-9 h-9 rounded-full border transition-transform hover:scale-110 ${
-                      c === null ? 'bg-gradient-to-br from-white to-gray-400 border-gray-300' : 'border-gray-400'
-                    } ${bgColor === c || (!bgColor && c === null) ? 'ring-2 ring-primary ring-offset-1' : ''}`}
-                    style={c ? { backgroundColor: c } : undefined}
-                    title={c === null ? 'None' : c}
-                  />
-                ))}
-              </div>
-            </div>
-            <div className="border-t border-border pt-1.5">
-              <div className="text-[10px] text-muted-foreground mb-1">Outline</div>
-              <div className="grid grid-cols-4 gap-1">
-                {COLOR_OPTIONS.map((c, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => updateWidgetColor(widget.i, { outlineColor: c })}
-                    className={`w-9 h-9 rounded-full border transition-transform hover:scale-110 ${
-                      c === null ? 'bg-gradient-to-br from-white to-gray-400 border-gray-300' : 'border-gray-400'
-                    } ${olColor === c || (!olColor && c === null) ? 'ring-2 ring-primary ring-offset-1' : ''}`}
-                    style={c ? { backgroundColor: c } : undefined}
-                    title={c === null ? 'None' : c}
-                  />
-                ))}
-              </div>
-            </div>
-            <div className="border-t border-border pt-1.5">
-              <div className="text-[10px] text-muted-foreground mb-1">Opacity</div>
-              <div className="flex gap-1">
-                {[1, 0.75, 0.5, 0.25].map((o) => (
-                  <button
-                    key={o}
-                    onClick={() => updateWidgetColor(widget.i, { backgroundOpacity: o })}
-                    className={`flex-1 min-h-[44px] py-2 text-[10px] rounded border transition-colors ${
-                      bgOpacity === o
-                        ? 'bg-primary text-primary-foreground border-primary'
-                        : 'border-border hover:bg-accent/50'
-                    }`}
-                  >
-                    {Math.round(o * 100)}%
-                  </button>
-                ))}
-              </div>
+      <div className="bg-card/95 backdrop-blur-sm border-b border-border">
+        <div className="flex items-center justify-between px-3 pt-2 pb-1">
+          <span className="text-sm font-medium">{displayName} Widget</span>
+          <button
+            onClick={() => setSelectedWidget(null)}
+            className="p-1.5 hover:bg-accent rounded transition-colors"
+            aria-label="Close properties"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M18 6 6 18" /><path d="m6 6 12 12" />
+            </svg>
+          </button>
+        </div>
+        <div className="flex gap-4 px-3 pb-2 overflow-x-auto">
+          {/* Fill */}
+          <div className="shrink-0">
+            <div className="text-[10px] text-muted-foreground mb-1">Fill</div>
+            <div className="grid grid-cols-8 gap-1">
+              {COLOR_OPTIONS.map((c, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => updateWidgetColor(selectedWidget, { backgroundColor: c })}
+                  className={`w-8 h-8 rounded-full border transition-transform hover:scale-110 ${
+                    c === null ? 'bg-gradient-to-br from-white to-gray-400 border-gray-300' : 'border-gray-400'
+                  } ${bgColor === c || (!bgColor && c === null) ? 'ring-2 ring-primary ring-offset-1' : ''}`}
+                  style={c ? { backgroundColor: c } : undefined}
+                  title={c === null ? 'None' : c}
+                />
+              ))}
             </div>
           </div>
-        )}
+          <div className="w-px bg-border self-stretch shrink-0" />
+          {/* Outline */}
+          <div className="shrink-0">
+            <div className="text-[10px] text-muted-foreground mb-1">Outline</div>
+            <div className="grid grid-cols-8 gap-1">
+              {COLOR_OPTIONS.map((c, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => updateWidgetColor(selectedWidget, { outlineColor: c })}
+                  className={`w-8 h-8 rounded-full border transition-transform hover:scale-110 ${
+                    c === null ? 'bg-gradient-to-br from-white to-gray-400 border-gray-300' : 'border-gray-400'
+                  } ${olColor === c || (!olColor && c === null) ? 'ring-2 ring-primary ring-offset-1' : ''}`}
+                  style={c ? { backgroundColor: c } : undefined}
+                  title={c === null ? 'None' : c}
+                />
+              ))}
+            </div>
+          </div>
+          <div className="w-px bg-border self-stretch shrink-0" />
+          {/* Opacity */}
+          <div className="shrink-0">
+            <div className="text-[10px] text-muted-foreground mb-1">Opacity</div>
+            <div className="flex gap-1">
+              {[0, 0.25, 0.5, 0.75, 1].map((o) => (
+                <button
+                  key={o}
+                  onClick={() => updateWidgetColor(selectedWidget, { backgroundOpacity: o })}
+                  className={`px-3 min-h-[44px] text-xs rounded border transition-colors ${
+                    bgOpacity === o
+                      ? 'bg-primary text-primary-foreground border-primary'
+                      : 'border-border hover:bg-accent/50'
+                  }`}
+                >
+                  {Math.round(o * 100)}%
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
     );
   };
@@ -437,6 +422,7 @@ export function LayoutGridEditor({
   if (isEditable) {
     return (
       <div className={className || ''}>
+        {renderPropertiesBar()}
         <div
           ref={combinedRef}
           onScroll={handleScroll}
@@ -445,6 +431,7 @@ export function LayoutGridEditor({
         >
           <div
             className="relative editing-mode"
+            onClick={() => setSelectedWidget(null)}
             style={{
               minHeight: totalRows * (cellSize + margin) + 2 * containerPadding,
               minWidth: totalCols * (cellSize + margin) + 2 * containerPadding,
@@ -475,11 +462,16 @@ export function LayoutGridEditor({
                 {visibleWidgets.map(w => {
                   const widgetStyle = getWidgetStyle(w);
                   const textClass = getTextClass(w, '');
+                  const isSelected = selectedWidget === w.i;
 
                   return (
-                    <div key={w.i} className={`relative ${colorPickerWidget === w.i ? 'z-[100]' : ''}`} style={widgetStyle}>
-                      <div className={`absolute inset-0 z-10 border-2 border-dashed ${theme.borderDash} rounded-lg pointer-events-none`} />
-                      {renderColorPicker(w)}
+                    <div
+                      key={w.i}
+                      className={`relative cursor-pointer ${isSelected ? 'ring-2 ring-primary ring-offset-2 z-[100]' : ''}`}
+                      style={widgetStyle}
+                      onClick={(e) => { e.stopPropagation(); setSelectedWidget(w.i); }}
+                    >
+                      <div className={`absolute inset-0 z-10 border-2 border-dashed ${isSelected ? 'border-primary' : theme.borderDash} rounded-lg pointer-events-none`} />
                       <div className={`h-full w-full overflow-hidden ${textClass}`}>
                         {renderWidget(w)}
                       </div>
