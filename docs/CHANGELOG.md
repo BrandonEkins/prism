@@ -21,6 +21,7 @@ All notable changes to Prism are documented in this file.
 - **Console cleanup**: Removed 28 debug `console.log` calls from production code (birthday sync, calendar sync, calendar settings, backup utils)
 - **TypeScript**: Replaced `as any` cast in maintenance route with proper type validation
 - **Chore authorization**: Added missing `requireRole` check on POST /api/chores
+- **Portrait grid overlap**: Bottom widgets no longer render behind the portrait navigation bar on iPads and vertical monitors
 
 ## [0.9.5] - 2026-02-21
 
