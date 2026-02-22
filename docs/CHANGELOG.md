@@ -5,6 +5,10 @@ All notable changes to Prism are documented in this file.
 ## [0.9.5] - 2026-02-21
 
 ### Added
+- **Tier 2 Unit Tests**: Integration and hook coverage (41 tests)
+  - Calendar sync service: token refresh timing (5-min window, null expiry), source validation (missing/wrong provider/no token), event upsert, deleted event cleanup, per-source error isolation
+  - OneDrive integration: OAuth URL generation, token exchange/refresh, folder listing, photo MIME filtering, pagination with `@odata.nextLink`, photo download
+  - `useVisibilityPolling` hook: interval setup, pause on hidden, immediate resume on visible, cleanup on unmount, disabled when interval <= 0
 - **Tier 1 Unit Tests**: High-impact coverage for core utilities (80 tests)
   - Color utility (`isLightColor`): luminance calculation, boundary values, a11y contrast
   - Class merging (`cn`): Tailwind conflict resolution, conditionals, object/array syntax, modifier handling

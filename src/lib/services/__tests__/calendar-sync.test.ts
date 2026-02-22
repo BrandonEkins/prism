@@ -1,0 +1,324 @@
+/**
+ * Tests for calendar-sync service.
+ *
+ * The service is heavily dependent on DB and external APIs, so we mock
+ * all external dependencies and test the orchestration logic:
+ * - tokenNeedsRefresh timing logic (tested indirectly through syncGoogleCalendarSource)
+ * - Source validation (missing source, wrong provider, no access token)
+ * - Token refresh flow
+ * - Error isolation per-source in syncAllGoogleCalendars
+ * - Deleted event cleanup logic
+ */
+
+// --- Mocks ---
+
+const mockFindFirst = jest.fn();
+const mockFindMany = jest.fn();
+const mockInsert = jest.fn();
+const mockUpdate = jest.fn();
+const mockDelete = jest.fn();
+
+const mockOnConflictDoUpdate = jest.fn().mockResolvedValue(undefined);
+const mockInsertValues = jest.fn().mockReturnValue({ onConflictDoUpdate: mockOnConflictDoUpdate });
+mockInsert.mockReturnValue({ values: mockInsertValues });
+
+const mockUpdateSet = jest.fn().mockReturnValue({ where: jest.fn().mockResolvedValue(undefined) });
+mockUpdate.mockReturnValue({ set: mockUpdateSet });
+
+const mockDeleteWhere = jest.fn().mockResolvedValue(undefined);
+mockDelete.mockReturnValue({ where: mockDeleteWhere });
+
+jest.mock('@/lib/db/client', () => ({
+  db: {
+    query: {
+      calendarSources: { findFirst: (...args: unknown[]) => mockFindFirst(...args), findMany: (...args: unknown[]) => mockFindMany(...args) },
+      events: { findMany: (...args: unknown[]) => mockFindMany(...args) },
+    },
+    insert: (...args: unknown[]) => mockInsert(...args),
+    update: (...args: unknown[]) => mockUpdate(...args),
+    delete: (...args: unknown[]) => mockDelete(...args),
+  },
+}));
+
+jest.mock('@/lib/db/schema', () => ({
+  calendarSources: { id: 'id', provider: 'provider', enabled: 'enabled' },
+  events: { calendarSourceId: 'calendarSourceId', externalEventId: 'externalEventId', startTime: 'startTime', id: 'id' },
+}));
+
+const mockFetchCalendarEvents = jest.fn();
+const mockRefreshAccessToken = jest.fn();
+const mockConvertEvent = jest.fn();
+
+jest.mock('@/lib/integrations/google-calendar', () => ({
+  fetchCalendarEvents: (...args: unknown[]) => mockFetchCalendarEvents(...args),
+  refreshAccessToken: (...args: unknown[]) => mockRefreshAccessToken(...args),
+  convertGoogleEventToInternal: (...args: unknown[]) => mockConvertEvent(...args),
+}));
+
+jest.mock('@/lib/utils/crypto', () => ({
+  decrypt: (val: string) => `decrypted_${val}`,
+  encrypt: (val: string) => `encrypted_${val}`,
+}));
+
+// Suppress console.log/error from sync logging
+jest.spyOn(console, 'log').mockImplementation(() => {});
+jest.spyOn(console, 'error').mockImplementation(() => {});
+
+import { syncGoogleCalendarSource, syncAllGoogleCalendars } from '../calendar-sync';
+
+// --- Helpers ---
+
+function makeSource(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 'source-1',
+    provider: 'google',
+    accessToken: 'encrypted-access-token',
+    refreshToken: 'encrypted-refresh-token',
+    tokenExpiresAt: new Date(Date.now() + 3600 * 1000), // 1 hour from now
+    sourceCalendarId: 'primary',
+    dashboardCalendarName: 'Test Calendar',
+    enabled: true,
+    ...overrides,
+  };
+}
+
+// --- Tests ---
+
+describe('syncGoogleCalendarSource', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockFetchCalendarEvents.mockResolvedValue([]);
+    // Return no prism events for cleanup check
+    mockFindMany.mockResolvedValue([]);
+  });
+
+  it('returns error when source is not found', async () => {
+    mockFindFirst.mockResolvedValue(null);
+
+    const result = await syncGoogleCalendarSource('nonexistent');
+
+    expect(result.synced).toBe(0);
+    expect(result.errors).toContain('Calendar source not found');
+  });
+
+  it('returns error when provider is not google', async () => {
+    mockFindFirst.mockResolvedValue(makeSource({ provider: 'ical' }));
+
+    const result = await syncGoogleCalendarSource('source-1');
+
+    expect(result.synced).toBe(0);
+    expect(result.errors).toContain('Not a Google Calendar source');
+  });
+
+  it('returns error when no access token available', async () => {
+    mockFindFirst.mockResolvedValue(makeSource({ accessToken: null }));
+
+    const result = await syncGoogleCalendarSource('source-1');
+
+    expect(result.synced).toBe(0);
+    expect(result.errors).toContain('No access token available');
+  });
+
+  it('refreshes token when expired', async () => {
+    // Token expired 10 minutes ago
+    const expiredSource = makeSource({
+      tokenExpiresAt: new Date(Date.now() - 10 * 60 * 1000),
+    });
+    mockFindFirst.mockResolvedValue(expiredSource);
+    mockRefreshAccessToken.mockResolvedValue({
+      access_token: 'new-access-token',
+      refresh_token: 'new-refresh-token',
+      expires_in: 3600,
+    });
+
+    await syncGoogleCalendarSource('source-1');
+
+    expect(mockRefreshAccessToken).toHaveBeenCalledWith('decrypted_encrypted-refresh-token');
+  });
+
+  it('refreshes token when within 5-minute window', async () => {
+    // Token expires in 3 minutes (within 5-minute refresh window)
+    const soonExpiring = makeSource({
+      tokenExpiresAt: new Date(Date.now() + 3 * 60 * 1000),
+    });
+    mockFindFirst.mockResolvedValue(soonExpiring);
+    mockRefreshAccessToken.mockResolvedValue({
+      access_token: 'new-token',
+      expires_in: 3600,
+    });
+
+    await syncGoogleCalendarSource('source-1');
+
+    expect(mockRefreshAccessToken).toHaveBeenCalled();
+  });
+
+  it('does not refresh token when well within validity', async () => {
+    // Token expires in 30 minutes (well outside 5-minute window)
+    const validSource = makeSource({
+      tokenExpiresAt: new Date(Date.now() + 30 * 60 * 1000),
+    });
+    mockFindFirst.mockResolvedValue(validSource);
+
+    await syncGoogleCalendarSource('source-1');
+
+    expect(mockRefreshAccessToken).not.toHaveBeenCalled();
+  });
+
+  it('refreshes token when tokenExpiresAt is null', async () => {
+    const noExpiry = makeSource({ tokenExpiresAt: null });
+    mockFindFirst.mockResolvedValue(noExpiry);
+    mockRefreshAccessToken.mockResolvedValue({
+      access_token: 'new-token',
+      expires_in: 3600,
+    });
+
+    await syncGoogleCalendarSource('source-1');
+
+    expect(mockRefreshAccessToken).toHaveBeenCalled();
+  });
+
+  it('returns error when refresh token is missing and token expired', async () => {
+    const noRefresh = makeSource({
+      tokenExpiresAt: new Date(Date.now() - 10 * 60 * 1000),
+      refreshToken: null,
+    });
+    mockFindFirst.mockResolvedValue(noRefresh);
+
+    const result = await syncGoogleCalendarSource('source-1');
+
+    expect(result.synced).toBe(0);
+    expect(result.errors).toContain('Token expired and no refresh token available');
+  });
+
+  it('syncs events and returns count', async () => {
+    mockFindFirst.mockResolvedValue(makeSource());
+    mockFetchCalendarEvents.mockResolvedValue([
+      { id: 'event-1', summary: 'Meeting' },
+      { id: 'event-2', summary: 'Lunch' },
+    ]);
+    mockConvertEvent.mockImplementation((event: { id: string; summary: string }) => ({
+      externalEventId: event.id,
+      title: event.summary,
+      startTime: new Date(),
+      endTime: new Date(),
+    }));
+
+    const result = await syncGoogleCalendarSource('source-1');
+
+    expect(result.synced).toBe(2);
+    expect(result.errors).toHaveLength(0);
+  });
+
+  it('continues syncing other events when one fails', async () => {
+    mockFindFirst.mockResolvedValue(makeSource());
+    mockFetchCalendarEvents.mockResolvedValue([
+      { id: 'event-1', summary: 'Good Event' },
+      { id: 'event-2', summary: 'Bad Event' },
+      { id: 'event-3', summary: 'Another Good Event' },
+    ]);
+
+    let callCount = 0;
+    mockConvertEvent.mockImplementation((event: { id: string; summary: string }) => {
+      callCount++;
+      if (callCount === 2) throw new Error('Conversion failed');
+      return {
+        externalEventId: event.id,
+        title: event.summary,
+        startTime: new Date(),
+        endTime: new Date(),
+      };
+    });
+
+    const result = await syncGoogleCalendarSource('source-1');
+
+    expect(result.synced).toBe(2);
+    expect(result.errors).toHaveLength(1);
+    expect(result.errors[0]).toContain('event-2');
+  });
+
+  it('deletes prism events no longer in Google', async () => {
+    mockFindFirst.mockResolvedValue(makeSource());
+    // Google only has event-1
+    mockFetchCalendarEvents.mockResolvedValue([
+      { id: 'event-1', summary: 'Still exists' },
+    ]);
+    mockConvertEvent.mockReturnValue({
+      externalEventId: 'event-1',
+      title: 'Still exists',
+      startTime: new Date(),
+      endTime: new Date(),
+    });
+    // Prism has event-1 and event-2 (event-2 was deleted from Google)
+    mockFindMany.mockResolvedValue([
+      { id: 'prism-1', externalEventId: 'event-1', title: 'Still exists' },
+      { id: 'prism-2', externalEventId: 'event-2', title: 'Deleted from Google' },
+    ]);
+
+    await syncGoogleCalendarSource('source-1');
+
+    // Should delete prism-2 (event-2 no longer in Google)
+    expect(mockDelete).toHaveBeenCalled();
+  });
+
+  it('does not delete local-only events (no externalEventId)', async () => {
+    mockFindFirst.mockResolvedValue(makeSource());
+    mockFetchCalendarEvents.mockResolvedValue([]);
+    // Prism has a local event (no externalEventId)
+    mockFindMany.mockResolvedValue([
+      { id: 'prism-local', externalEventId: null, title: 'Local Event' },
+    ]);
+
+    await syncGoogleCalendarSource('source-1');
+
+    // Should NOT delete local events
+    expect(mockDeleteWhere).not.toHaveBeenCalled();
+  });
+});
+
+describe('syncAllGoogleCalendars', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockFetchCalendarEvents.mockResolvedValue([]);
+    mockFindMany.mockResolvedValue([]);
+  });
+
+  it('syncs all enabled Google sources', async () => {
+    // findMany for sources returns 2 calendars
+    mockFindMany.mockResolvedValueOnce([
+      makeSource({ id: 'source-1', dashboardCalendarName: 'Cal 1' }),
+      makeSource({ id: 'source-2', dashboardCalendarName: 'Cal 2' }),
+    ]);
+    // findFirst for each sync call
+    mockFindFirst.mockResolvedValue(makeSource());
+    // findMany for event cleanup returns empty for each source
+    mockFindMany.mockResolvedValue([]);
+
+    const result = await syncAllGoogleCalendars();
+
+    expect(result.total).toBe(0); // No events to sync
+    expect(result.errors).toHaveLength(0);
+  });
+
+  it('isolates errors per-source', async () => {
+    // findMany returns 2 sources
+    mockFindMany.mockResolvedValueOnce([
+      makeSource({ id: 'source-1', dashboardCalendarName: 'Good Cal' }),
+      makeSource({ id: 'source-bad', dashboardCalendarName: 'Bad Cal' }),
+    ]);
+
+    // First source works, second throws
+    let syncCallCount = 0;
+    mockFindFirst.mockImplementation(() => {
+      syncCallCount++;
+      if (syncCallCount === 2) {
+        return makeSource({ id: 'source-bad', accessToken: null });
+      }
+      return makeSource({ id: 'source-1' });
+    });
+
+    const result = await syncAllGoogleCalendars();
+
+    // First source synced fine, second had error, but both were attempted
+    expect(result.errors.length).toBeGreaterThan(0);
+  });
+});
