@@ -6,6 +6,7 @@ import { ResponsiveGridLayout as RGL, useContainerWidth, getCompactor } from 're
 import type { LayoutItem, Layout } from 'react-grid-layout';
 import { isLightColor, hexToRgba } from '@/lib/utils/color';
 import { useScreenSafeZones } from '@/lib/hooks/useScreenSafeZones';
+import { WidgetBgOverrideProvider } from '@/components/widgets/WidgetContainer';
 import type { WidgetConfig } from '@/lib/hooks/useLayouts';
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
@@ -85,6 +86,7 @@ export function LayoutGridEditor({
   const { zones: SAFE_ZONES, allSizeNames } = useScreenSafeZones();
   const { width, containerRef, mounted } = useContainerWidth();
   const [selectedWidget, setSelectedWidget] = useState<string | null>(null);
+  const tapStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
   const [scrollY, setScrollY] = useState(0);
   const [scrollX, setScrollX] = useState(0);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -463,6 +465,7 @@ export function LayoutGridEditor({
                   const widgetStyle = getWidgetStyle(w);
                   const textClass = getTextClass(w, '');
                   const isSelected = selectedWidget === w.i;
+                  const hasCustomBg = !!w.backgroundColor;
 
                   return (
                     <div
@@ -470,11 +473,29 @@ export function LayoutGridEditor({
                       className={`relative cursor-pointer ${isSelected ? 'ring-2 ring-primary ring-offset-2 z-[100]' : ''}`}
                       style={widgetStyle}
                       onClick={(e) => { e.stopPropagation(); setSelectedWidget(w.i); }}
+                      onTouchStart={(e) => {
+                        const touch = e.touches[0];
+                        if (touch) tapStartRef.current = { x: touch.clientX, y: touch.clientY, time: Date.now() };
+                      }}
+                      onTouchEnd={(e) => {
+                        if (!tapStartRef.current) return;
+                        const t = e.changedTouches[0];
+                        if (!t) { tapStartRef.current = null; return; }
+                        const dx = Math.abs(t.clientX - tapStartRef.current.x);
+                        const dy = Math.abs(t.clientY - tapStartRef.current.y);
+                        const dt = Date.now() - tapStartRef.current.time;
+                        tapStartRef.current = null;
+                        if (dx < 10 && dy < 10 && dt < 500) {
+                          setSelectedWidget(w.i);
+                        }
+                      }}
                     >
                       <div className={`absolute inset-0 z-10 border-2 border-dashed ${isSelected ? 'border-primary' : theme.borderDash} rounded-lg pointer-events-none`} />
-                      <div className={`h-full w-full overflow-hidden ${textClass}`}>
-                        {renderWidget(w)}
-                      </div>
+                      <WidgetBgOverrideProvider value={{ hasCustomBg }}>
+                        <div className={`h-full w-full overflow-hidden ${textClass}`}>
+                          {renderWidget(w)}
+                        </div>
+                      </WidgetBgOverrideProvider>
                     </div>
                   );
                 })}
@@ -515,12 +536,15 @@ export function LayoutGridEditor({
             {visibleWidgets.map(w => {
               const widgetStyle = getWidgetStyle(w);
               const textClass = getTextClass(w, '');
+              const hasCustomBg = !!w.backgroundColor;
 
               return (
                 <div key={w.i} className="relative" style={widgetStyle}>
-                  <div className={`h-full w-full overflow-hidden ${textClass}`}>
-                    {renderWidget(w)}
-                  </div>
+                  <WidgetBgOverrideProvider value={{ hasCustomBg }}>
+                    <div className={`h-full w-full overflow-hidden ${textClass}`}>
+                      {renderWidget(w)}
+                    </div>
+                  </WidgetBgOverrideProvider>
                 </div>
               );
             })}

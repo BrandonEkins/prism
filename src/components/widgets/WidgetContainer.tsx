@@ -76,6 +76,11 @@ export function useWidgetAlignments() {
 const WidgetAlignmentContext = React.createContext<Record<string, WidgetAlignment>>({});
 export const WidgetAlignmentProvider = WidgetAlignmentContext.Provider;
 
+// Context for grid-level background override — when the grid wrapper applies a custom
+// background, the Card strips its own bg/border/shadow so there's no double background.
+const WidgetBgOverrideContext = React.createContext<{ hasCustomBg: boolean } | null>(null);
+export const WidgetBgOverrideProvider = WidgetBgOverrideContext.Provider;
+
 // Context for current widget ID so WidgetContainer can self-lookup
 const WidgetIdContext = React.createContext<string | null>(null);
 export const WidgetIdProvider = WidgetIdContext.Provider;
@@ -185,6 +190,10 @@ export function WidgetContainer({
   const resolvedId = widgetId || contextWidgetId;
   const alignment = alignmentProp || (resolvedId ? contextAlignments[resolvedId] : undefined);
 
+  // When grid-level background is applied, strip Card's own bg so it doesn't double up
+  const bgOverride = React.useContext(WidgetBgOverrideContext);
+  const stripCardBg = bgOverride?.hasCustomBg === true;
+
   // Size classes for the grid
   const sizeClasses: Record<WidgetSize, string> = {
     small: 'col-span-1 row-span-1',
@@ -207,6 +216,8 @@ export function WidgetContainer({
         onClick && 'cursor-pointer hover:shadow-md transition-shadow',
         // Allow header popover dropdowns to overflow
         'overflow-visible',
+        // Strip Card bg/border/shadow when grid-level background is applied
+        stripCardBg && 'bg-transparent backdrop-blur-none border-transparent shadow-none',
         // Auto text color based on background luminance
         // Future: per-widget text color manual override could replace this
         backgroundColor && (isLightColor(backgroundColor) ? 'text-black' : 'text-white'),
