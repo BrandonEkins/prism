@@ -165,6 +165,8 @@ export function LayoutEditor({
   const [showShareDialog, setShowShareDialog] = useState(false);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [createForm, setCreateForm] = useState({ name: '', startFrom: 'template' as 'blank' | 'template' | 'copy' });
+  const [showRenameDialog, setShowRenameDialog] = useState(false);
+  const [renameValue, setRenameValue] = useState('');
   const [shareForm, setShareForm] = useState({
     name: '',
     description: '',
@@ -400,12 +402,18 @@ export function LayoutEditor({
     setShowShareDialog(false);
   };
 
-  const handleRename = () => {
-    const newName = window.prompt('Rename dashboard:', layoutName || '');
-    if (newName && newName !== layoutName) {
-      onRenameDashboard?.(newName);
-    }
+  const handleRenameOpen = () => {
+    setRenameValue(layoutName || '');
+    setShowRenameDialog(true);
     setActivePopover(null);
+  };
+
+  const handleRenameSubmit = () => {
+    const trimmed = renameValue.trim();
+    if (trimmed && trimmed !== layoutName) {
+      onRenameDashboard?.(trimmed);
+    }
+    setShowRenameDialog(false);
   };
 
   const handleDelete = async () => {
@@ -443,7 +451,17 @@ export function LayoutEditor({
         <div className="flex items-center justify-between gap-2 flex-wrap">
           {/* Left group */}
           <div className="flex items-center gap-1.5 flex-wrap">
-            <EditIcon />
+            {!editingScreensaver && onRenameDashboard ? (
+              <button
+                onClick={handleRenameOpen}
+                className="p-1 rounded hover:bg-accent transition-colors"
+                title="Rename dashboard"
+              >
+                <EditIcon />
+              </button>
+            ) : (
+              <EditIcon />
+            )}
 
             {/* Dashboard name dropdown */}
             {editingScreensaver ? (
@@ -696,7 +714,7 @@ export function LayoutEditor({
             >
               <div className="py-1">
                 {!editingScreensaver && onRenameDashboard && (
-                  <button onClick={handleRename} className={moreItemClass}>
+                  <button onClick={handleRenameOpen} className={moreItemClass}>
                     Rename Dashboard...
                   </button>
                 )}
@@ -791,6 +809,42 @@ export function LayoutEditor({
                 className="px-3 py-1.5 text-sm rounded-md bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
               >
                 Create
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Rename Dashboard modal */}
+      {showRenameDialog && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50" onClick={() => setShowRenameDialog(false)}>
+          <div className="bg-popover border border-border rounded-lg shadow-xl p-4 max-w-sm w-full mx-4 space-y-3" onClick={e => e.stopPropagation()}>
+            <div className="text-sm font-medium">Rename Dashboard</div>
+            <div>
+              <label className="text-xs text-muted-foreground">Name</label>
+              <input
+                type="text"
+                value={renameValue}
+                onChange={e => setRenameValue(e.target.value)}
+                className="w-full px-2 py-1.5 text-sm bg-muted border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                maxLength={100}
+                autoFocus
+                onKeyDown={e => { if (e.key === 'Enter') handleRenameSubmit(); }}
+              />
+            </div>
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={() => setShowRenameDialog(false)}
+                className="px-3 py-1.5 text-sm rounded-md bg-muted hover:bg-accent transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleRenameSubmit}
+                disabled={!renameValue.trim() || renameValue.trim() === layoutName}
+                className="px-3 py-1.5 text-sm rounded-md bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
+              >
+                Rename
               </button>
             </div>
           </div>

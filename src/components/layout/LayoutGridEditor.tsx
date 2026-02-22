@@ -4,7 +4,7 @@ import * as React from 'react';
 import { useMemo, useRef, useState, useCallback, useEffect } from 'react';
 import { ResponsiveGridLayout as RGL, useContainerWidth, getCompactor } from 'react-grid-layout';
 import type { LayoutItem, Layout } from 'react-grid-layout';
-import { isLightColor } from '@/lib/utils/color';
+import { isLightColor, hexToRgba } from '@/lib/utils/color';
 import { useScreenSafeZones } from '@/lib/hooks/useScreenSafeZones';
 import type { WidgetConfig } from '@/lib/hooks/useLayouts';
 import 'react-grid-layout/css/styles.css';
@@ -65,16 +65,22 @@ export interface LayoutGridEditorProps {
 }
 
 function ColorPickerButton({ bgColor, onClick }: { bgColor?: string; onClick: (e: React.MouseEvent) => void }) {
+  const stop = (e: React.SyntheticEvent) => e.stopPropagation();
   return (
     <button
       onClick={onClick}
-      className="w-5 h-5 rounded-full shadow-md"
+      onPointerDown={stop}
+      onTouchStart={stop}
+      className="relative w-8 h-8 rounded-full shadow-md"
       style={{
         backgroundColor: bgColor || 'transparent',
         boxShadow: '0 0 0 1px rgba(0,0,0,0.6), 0 0 0 2px rgba(255,255,255,0.8), 0 0 0 2.5px rgba(0,0,0,0.3)',
       }}
       title="Widget settings"
-    />
+    >
+      {/* Invisible touch expander for 48px hit area */}
+      <span className="absolute -inset-2" aria-hidden="true" />
+    </button>
   );
 }
 
@@ -250,8 +256,10 @@ export function LayoutGridEditor({
     if (!widget.backgroundColor && !widget.outlineColor) return undefined;
     const style: React.CSSProperties = { borderRadius: '0.5rem' };
     if (widget.backgroundColor) {
-      style.backgroundColor = widget.backgroundColor;
-      style.opacity = widget.backgroundOpacity ?? 1;
+      const opacity = widget.backgroundOpacity ?? 1;
+      style.backgroundColor = opacity < 1
+        ? hexToRgba(widget.backgroundColor, opacity)
+        : widget.backgroundColor;
     }
     if (widget.outlineColor) {
       style.border = `2px solid ${widget.outlineColor}`;
@@ -294,7 +302,7 @@ export function LayoutGridEditor({
           onClick={(e) => { e.stopPropagation(); setColorPickerWidget(isOpen ? null : widget.i); }}
         />
         {isOpen && (
-          <div className="absolute top-8 left-0 bg-card border border-border rounded-lg p-2 shadow-xl z-30 w-[200px] space-y-2" onClick={(e) => e.stopPropagation()}>
+          <div className="absolute top-10 left-0 bg-card border border-border rounded-lg p-2 shadow-xl z-30 w-[220px] space-y-2" onClick={(e) => e.stopPropagation()} onPointerDown={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()}>
             <div>
               <div className="text-[10px] text-muted-foreground mb-1">Background</div>
               <div className="grid grid-cols-4 gap-1">
@@ -302,7 +310,7 @@ export function LayoutGridEditor({
                   <button
                     key={idx}
                     onClick={() => updateWidgetColor(widget.i, { backgroundColor: c })}
-                    className={`w-7 h-7 rounded-full border transition-transform hover:scale-110 ${
+                    className={`w-9 h-9 rounded-full border transition-transform hover:scale-110 ${
                       c === null ? 'bg-gradient-to-br from-white to-gray-400 border-gray-300' : 'border-gray-400'
                     } ${bgColor === c || (!bgColor && c === null) ? 'ring-2 ring-primary ring-offset-1' : ''}`}
                     style={c ? { backgroundColor: c } : undefined}
@@ -318,7 +326,7 @@ export function LayoutGridEditor({
                   <button
                     key={idx}
                     onClick={() => updateWidgetColor(widget.i, { outlineColor: c })}
-                    className={`w-7 h-7 rounded-full border transition-transform hover:scale-110 ${
+                    className={`w-9 h-9 rounded-full border transition-transform hover:scale-110 ${
                       c === null ? 'bg-gradient-to-br from-white to-gray-400 border-gray-300' : 'border-gray-400'
                     } ${olColor === c || (!olColor && c === null) ? 'ring-2 ring-primary ring-offset-1' : ''}`}
                     style={c ? { backgroundColor: c } : undefined}
@@ -334,7 +342,7 @@ export function LayoutGridEditor({
                   <button
                     key={o}
                     onClick={() => updateWidgetColor(widget.i, { backgroundOpacity: o })}
-                    className={`flex-1 py-0.5 text-[10px] rounded border transition-colors ${
+                    className={`flex-1 min-h-[44px] py-2 text-[10px] rounded border transition-colors ${
                       bgOpacity === o
                         ? 'bg-primary text-primary-foreground border-primary'
                         : 'border-border hover:bg-accent/50'

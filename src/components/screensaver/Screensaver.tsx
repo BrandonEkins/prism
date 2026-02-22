@@ -12,6 +12,7 @@ import { Cloud, CloudRain, CloudSnow, Sun, CloudSun, Droplets, Wind } from 'luci
 import { ResponsiveGridLayout as RGL, useContainerWidth, getCompactor } from 'react-grid-layout';
 import type { LayoutItem, Layout } from 'react-grid-layout';
 import type { WidgetConfig } from '@/lib/hooks/useLayouts';
+import { hexToRgba } from '@/lib/utils/color';
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
 
@@ -177,10 +178,12 @@ function ScreensaverGrid() {
 
   const getWidgetStyle = (w: WidgetConfig) => {
     if (!w.backgroundColor) return undefined;
+    const opacity = w.backgroundOpacity ?? 1;
     return {
-      backgroundColor: w.backgroundColor,
+      backgroundColor: opacity < 1
+        ? hexToRgba(w.backgroundColor, opacity)
+        : w.backgroundColor,
       borderRadius: '0.5rem',
-      opacity: w.backgroundOpacity ?? 1,
     };
   };
 

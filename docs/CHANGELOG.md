@@ -2,6 +2,14 @@
 
 All notable changes to Prism are documented in this file.
 
+## [1.0.1] - 2026-02-22
+
+### Fixed
+- **Background opacity**: Widget background opacity no longer makes text/icons transparent — uses rgba background color instead of CSS opacity
+- **Color picker touch targets**: Increased button sizes to meet 44px HIG minimum, prevented RGL drag from intercepting touch events on color picker
+- **Pencil icon**: Edit icon in dashboard toolbar now opens rename dialog on click
+- **Rename dialog**: Replaced browser `window.prompt()` with styled modal dialog (consistent with v1.0 polish)
+
 ## [1.0.0] - 2026-02-22
 
 ### Changed
