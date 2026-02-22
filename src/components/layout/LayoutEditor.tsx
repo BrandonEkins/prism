@@ -713,11 +713,6 @@ export function LayoutEditor({
               align="right"
             >
               <div className="py-1">
-                {!editingScreensaver && onRenameDashboard && (
-                  <button onClick={handleRenameOpen} className={moreItemClass}>
-                    Rename Dashboard...
-                  </button>
-                )}
                 {!editingScreensaver && onDeleteDashboard && (
                   <button
                     onClick={handleDelete}
@@ -727,7 +722,7 @@ export function LayoutEditor({
                     Delete Dashboard
                   </button>
                 )}
-                {!editingScreensaver && (onRenameDashboard || onDeleteDashboard) && (
+                {!editingScreensaver && onDeleteDashboard && (
                   <div className="border-t border-border my-1" />
                 )}
                 <button onClick={() => { if (editingScreensaver) { onScreensaverReset?.(); } else { onReset(); } setActivePopover(null); }} className={moreItemClass}>
