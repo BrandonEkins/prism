@@ -44,6 +44,11 @@ jest.mock('@/lib/cache/redis', () => ({
   invalidateCache: jest.fn().mockResolvedValue(undefined),
 }));
 
+// --- Rate limit mock ---
+jest.mock('@/lib/cache/rateLimit', () => ({
+  rateLimitGuard: jest.fn().mockResolvedValue(null),
+}));
+
 // --- Recipe parser mock ---
 const mockParseRecipeFromUrl = jest.fn();
 
@@ -87,23 +92,35 @@ describe('POST /api/recipes/import-url', () => {
   });
 
   it('returns 400 for invalid URL format', async () => {
-    mockParseRecipeFromUrl.mockRejectedValue(new Error('Invalid URL'));
-
     const res = await POST(makeRequest({ url: 'not-a-url' }));
     const data = await res.json();
 
     expect(res.status).toBe(400);
-    expect(data.error).toContain('Invalid URL');
+    expect(data.error).toContain('private or internal');
   });
 
   it('returns 400 for non-HTTP URL', async () => {
-    mockParseRecipeFromUrl.mockRejectedValue(new Error('Only HTTP/HTTPS URLs are supported'));
-
     const res = await POST(makeRequest({ url: 'ftp://example.com/recipe' }));
     const data = await res.json();
 
     expect(res.status).toBe(400);
-    expect(data.error).toContain('HTTP/HTTPS');
+    expect(data.error).toContain('private or internal');
+  });
+
+  it('returns 400 for localhost URL (SSRF protection)', async () => {
+    const res = await POST(makeRequest({ url: 'http://localhost:8080/recipe' }));
+    const data = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(data.error).toContain('private or internal');
+  });
+
+  it('returns 400 for private IP URL (SSRF protection)', async () => {
+    const res = await POST(makeRequest({ url: 'http://192.168.1.1/recipe' }));
+    const data = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(data.error).toContain('private or internal');
   });
 
   it('returns 502 when fetch fails', async () => {

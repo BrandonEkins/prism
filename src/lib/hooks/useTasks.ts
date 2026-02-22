@@ -117,6 +117,13 @@ export function useTasks(options: UseTasksOptions = {}): UseTasksResult {
    */
   const toggleTask = useCallback(
     async (taskId: string, completed: boolean) => {
+      // Optimistically update UI immediately
+      setTasks((prev) =>
+        prev.map((task) =>
+          task.id === taskId ? { ...task, completed } : task
+        )
+      );
+
       try {
         const response = await fetch(`/api/tasks/${taskId}`, {
           method: 'PATCH',
@@ -127,20 +134,18 @@ export function useTasks(options: UseTasksOptions = {}): UseTasksResult {
         if (!response.ok) {
           throw new Error('Failed to update task');
         }
-
-        // Optimistically update local state
-        setTasks((prev) =>
-          prev.map((task) =>
-            task.id === taskId ? { ...task, completed } : task
-          )
-        );
       } catch (err) {
         console.error('Error updating task:', err);
-        // Refresh to get correct state on error
-        fetchTasks();
+        // Revert optimistic update on failure
+        setTasks((prev) =>
+          prev.map((task) =>
+            task.id === taskId ? { ...task, completed: !completed } : task
+          )
+        );
+        throw err;
       }
     },
-    [fetchTasks]
+    []
   );
 
   // Initial fetch

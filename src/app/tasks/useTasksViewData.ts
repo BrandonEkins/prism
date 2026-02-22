@@ -178,12 +178,15 @@ export function useTasksViewData() {
     if (!user) return;
     if (user.role !== 'parent') { toast({ title: 'Only parents can delete tasks', variant: 'warning' }); return; }
     if (!await confirm('Delete this task?', 'Are you sure you want to delete this task?')) return;
+    // Optimistically remove from UI
+    const previousTasks = [...tasks];
+    setTasks((prev) => prev.filter((t) => t.id !== taskId));
     try {
       const response = await fetch(`/api/tasks/${taskId}`, { method: 'DELETE' });
       if (!response.ok) throw new Error('Failed to delete task');
-      refreshTasks();
     } catch (err) {
       console.error('Error deleting task:', err);
+      setTasks(previousTasks); // Revert on failure
       toast({ title: 'Failed to delete task', variant: 'destructive' });
     }
   };

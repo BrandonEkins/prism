@@ -14,7 +14,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAuth, getDisplayAuth } from '@/lib/auth';
+import { requireAuth, requireRole, getDisplayAuth } from '@/lib/auth';
 import { db } from '@/lib/db/client';
 import { chores, users, choreCompletions } from '@/lib/db/schema';
 import { eq, and, desc, isNull, or, lte } from 'drizzle-orm';
@@ -181,6 +181,9 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const auth = await requireAuth();
   if (auth instanceof NextResponse) return auth;
+
+  const roleCheck = requireRole(auth, 'canManageChores');
+  if (roleCheck) return roleCheck;
 
   const { rateLimitGuard } = await import('@/lib/cache/rateLimit');
   const limited = await rateLimitGuard(auth.userId, 'chores', 30, 60);

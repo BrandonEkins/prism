@@ -7,15 +7,20 @@ All notable changes to Prism are documented in this file.
 ### Changed
 - **Toast Notifications**: Replaced all 55 browser `alert()` calls with styled toast notifications (success/warning/destructive variants) using shadcn/Radix toast system
 - **Confirm Dialogs**: Replaced all 18 browser `confirm()` calls with styled AlertDialog modals via reusable `useConfirmDialog` hook
+- **Optimistic UI**: Task toggle, task delete, shopping item toggle, and shopping item delete now update instantly with automatic rollback on failure
 
 ### Added
 - **Error Pages**: App-level `error.tsx` and `not-found.tsx` with route-level error boundaries for calendar and settings
 - **Accessibility**: Added ~60 `aria-label` attributes to icon-only buttons across all views, widgets, modals, and settings sections
 - **Stack trace protection**: Error boundaries gate error details behind `NODE_ENV === 'development'`
+- **SSRF Protection**: Recipe URL import validates against private IP ranges, localhost, and internal hostnames
+- **Rate Limiting**: Recipe URL import limited to 10 requests per 60 seconds per user
+- **Docker Resource Limits**: Container memory and CPU caps (app: 2GB/2CPU, db: 2GB/2CPU, redis: 512MB/1CPU) with Redis LRU eviction policy
 
 ### Fixed
 - **Console cleanup**: Removed 28 debug `console.log` calls from production code (birthday sync, calendar sync, calendar settings, backup utils)
 - **TypeScript**: Replaced `as any` cast in maintenance route with proper type validation
+- **Chore authorization**: Added missing `requireRole` check on POST /api/chores
 
 ## [0.9.5] - 2026-02-21
 

@@ -128,6 +128,16 @@ export function useShoppingLists(options: UseShoppingListsOptions = {}): UseShop
    */
   const toggleItem = useCallback(
     async (itemId: string, checked: boolean) => {
+      // Optimistically update UI immediately
+      setLists((prev) =>
+        prev.map((list) => ({
+          ...list,
+          items: list.items.map((item) =>
+            item.id === itemId ? { ...item, checked } : item
+          ),
+        }))
+      );
+
       try {
         const response = await fetch(`/api/shopping-items/${itemId}`, {
           method: 'PATCH',
@@ -139,24 +149,21 @@ export function useShoppingLists(options: UseShoppingListsOptions = {}): UseShop
           const errorData = await response.json().catch(() => ({}));
           throw new Error(errorData.error || 'Failed to update item');
         }
-
-        // Optimistically update local state
+      } catch (err) {
+        console.error('Error updating item:', err);
+        // Revert optimistic update on failure
         setLists((prev) =>
           prev.map((list) => ({
             ...list,
             items: list.items.map((item) =>
-              item.id === itemId ? { ...item, checked } : item
+              item.id === itemId ? { ...item, checked: !checked } : item
             ),
           }))
         );
-      } catch (err) {
-        console.error('Error updating item:', err);
-        // Refresh to get correct state on error
-        fetchLists();
-        throw err; // Re-throw so caller can handle the error
+        throw err;
       }
     },
-    [fetchLists]
+    []
   );
 
   /**
@@ -212,6 +219,15 @@ export function useShoppingLists(options: UseShoppingListsOptions = {}): UseShop
    */
   const deleteItem = useCallback(
     async (itemId: string) => {
+      // Optimistically remove from UI immediately
+      const previousLists = lists;
+      setLists((prev) =>
+        prev.map((list) => ({
+          ...list,
+          items: list.items.filter((item) => item.id !== itemId),
+        }))
+      );
+
       try {
         const response = await fetch(`/api/shopping-items/${itemId}`, {
           method: 'DELETE',
@@ -220,21 +236,13 @@ export function useShoppingLists(options: UseShoppingListsOptions = {}): UseShop
         if (!response.ok) {
           throw new Error('Failed to delete item');
         }
-
-        // Optimistically update local state
-        setLists((prev) =>
-          prev.map((list) => ({
-            ...list,
-            items: list.items.filter((item) => item.id !== itemId),
-          }))
-        );
       } catch (err) {
         console.error('Error deleting item:', err);
-        // Refresh to get correct state on error
-        fetchLists();
+        // Revert optimistic update on failure
+        setLists(previousLists);
       }
     },
-    [fetchLists]
+    [lists]
   );
 
   // Initial fetch
