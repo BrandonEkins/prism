@@ -5,6 +5,10 @@ All notable changes to Prism are documented in this file.
 ## [0.9.5] - 2026-02-21
 
 ### Added
+- **Auth & Cache Unit Tests**: Session management, auth cascade, and Redis cache layer (79 tests)
+  - Session management: token generation (64-char hex, uniqueness), createSession (Redis storage, per-role TTL, user_sessions set, Redis unavailable/error fallback), validateSession (valid/missing/expired cleanup, empty token), invalidateSession/All, login lockout (attempt tracking, TTL, fail-open)
+  - Auth cascade (`requireAuth`/`optionalAuth`/`getDisplayAuth`): Bearer token priority, cookie session fallback, 401 responses, displayUserId setting fallback to guest role
+  - Redis cache utilities: getCached (hit/miss/invalid JSON/Redis error fallback), setCache, invalidateCache (scanIterator with string and array keys), deleteCache, cacheExists, getCacheTTL, graceful degradation on all error paths
 - **API Route Integration Tests**: Business logic coverage (18 tests)
   - Chore complete/approve workflow: parent auto-approval, child pending approval, disabled chore rejection, duplicate pending (409), assignment enforcement, approval with deleted user fallback
   - Family member deletion: child deletion, parent deletion with others remaining, last parent protection, auth/role enforcement
