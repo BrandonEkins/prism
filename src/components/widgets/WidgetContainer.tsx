@@ -37,7 +37,7 @@ import * as React from 'react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui';
-import { isLightColor } from '@/lib/utils/color';
+import { isLightColor, hexToHslValues } from '@/lib/utils/color';
 
 /**
  * WIDGET ALIGNMENT
@@ -234,7 +234,14 @@ export function WidgetContainer({
         ...(stripCardBg
           ? { backgroundColor: 'transparent' }
           : backgroundColor ? { backgroundColor } : {}),
-        ...(overrideTextColor ? { color: overrideTextColor } : {}),
+        ...(overrideTextColor ? {
+          color: overrideTextColor,
+          // Override Tailwind CSS custom properties so text-foreground, text-muted-foreground,
+          // text-card-foreground etc. all resolve to the chosen color
+          '--foreground': hexToHslValues(overrideTextColor),
+          '--card-foreground': hexToHslValues(overrideTextColor),
+          '--muted-foreground': hexToHslValues(overrideTextColor),
+        } as React.CSSProperties : {}),
       }}
     >
       {/* WIDGET HEADER */}
