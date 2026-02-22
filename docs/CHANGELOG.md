@@ -5,6 +5,16 @@ All notable changes to Prism are documented in this file.
 ## [0.9.5] - 2026-02-21
 
 ### Added
+- **CRUD Mutation Tests**: E2E tests for create/edit/delete flows (25 tests)
+  - Task CRUD: create via modal, edit, toggle complete, delete, API listing
+  - Chore CRUD: create via modal/API, parent auto-approve, child approval workflow, disable prevents completion
+  - Shopping CRUD: add item via API/modal, check/uncheck, create list, delete item
+  - Event CRUD: create via API/modal, edit, delete, toggle all-day
+  - Message CRUD: post, list, pin toggle, delete, parent delete others' messages
+  - Shared cleanup helpers (`e2e/helpers/cleanup.ts`) for API-based test resource cleanup
+- **calculateNextDue Unit Tests**: 22 tests for chore scheduling logic covering all 8 frequency branches, startDay overrides, and edge cases
+- **withAuth Unit Tests**: 8 tests for the API auth wrapper middleware (auth, permissions, rate limiting)
+- **Extracted calculateNextDue**: DRY refactor — shared utility at `src/lib/utils/calculateNextDue.ts` used by both chore complete and approve routes
 - **E2E Test Suite**: Comprehensive Playwright tests covering core user flows (~40 tests)
   - Auth: PIN pad open/close, login/logout, incorrect PIN error, child login
   - Dashboard: widget rendering, sidebar nav links, direct URL routing
