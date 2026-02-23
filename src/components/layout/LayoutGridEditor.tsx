@@ -435,7 +435,7 @@ export function LayoutGridEditor({
                       : 'border-border hover:bg-accent/50'
                   }`}
                 >
-                  {Math.round(o * 100)}
+                  {Math.round(o * 100)}%
                 </button>
               ))}
             </>
@@ -477,20 +477,20 @@ export function LayoutGridEditor({
                             <rect x="0" y={16 - fillLevel * 16} width="16" height={fillLevel * 16} />
                           </clipPath>
                         </defs>
-                        <circle cx="8" cy="8" r="7" fill={fillColor} clipPath={`url(#hb-${id})`} />
+                        <circle cx="8" cy="8" r="7" fill={fillColor} stroke={fillColor} strokeWidth="0.5" clipPath={`url(#hb-${id})`} />
                       </>
                     )}
                     {color === 'transparent' && (
                       <>
                         <defs>
-                          <pattern id="hb-checker" width="4" height="4" patternUnits="userSpaceOnUse">
+                          <pattern id={`hb-checker-${id}`} width="4" height="4" patternUnits="userSpaceOnUse">
                             <rect width="2" height="2" fill="#ccc" />
                             <rect x="2" y="2" width="2" height="2" fill="#ccc" />
                             <rect x="2" width="2" height="2" fill="#fff" />
                             <rect y="2" width="2" height="2" fill="#fff" />
                           </pattern>
                         </defs>
-                        <circle cx="8" cy="8" r="7" fill="url(#hb-checker)" />
+                        <circle cx="8" cy="8" r="7" fill={`url(#hb-checker-${id})`} />
                       </>
                     )}
                   </svg>

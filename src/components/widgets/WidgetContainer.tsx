@@ -286,8 +286,8 @@ export function WidgetContainer({
         className={cn(
           // Fill remaining space
           'flex-1 flex flex-col',
-          // Overflow handling
-          'overflow-hidden',
+          // Allow content scrolling within widget
+          'overflow-auto',
           // Remove padding if no header
           !showHeader && 'pt-4',
           // Per-widget alignment
