@@ -2,6 +2,19 @@
 
 All notable changes to Prism are documented in this file.
 
+## [1.0.3] - 2026-02-22
+
+### Added
+- **Theme color palettes**: 6 curated palettes (Seasonal, Ocean, Sunset, Forest, Mono, Candy) replace the hardcoded 15-color swatch grid
+- **Seasonal palette**: Auto-generates 8 harmonized colors from the current month's seasonal theme, with light/dark mode support
+- **Unified color picker**: Single shared swatch row with target selector (Fill/Outline/Text) replaces 3 separate swatch grids, saving horizontal space
+- **Target buttons**: Fill, Outline, and Text buttons with color indicator dots show which property the palette applies to
+- **Special swatches**: Context-aware first swatch — Transparent (fill), None/Ban (outline), Auto/Sparkles (text)
+
+### Improved
+- **Properties bar layout**: Consolidated from 3 scrollable swatch grids into theme pills → single swatch row → target buttons + opacity
+- **Custom color picker**: Single rainbow button applies to whichever target is active
+
 ## [1.0.2] - 2026-02-22
 
 ### Added
