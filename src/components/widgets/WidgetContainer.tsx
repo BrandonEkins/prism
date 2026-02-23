@@ -222,8 +222,8 @@ export function WidgetContainer({
         'flex flex-col',
         // Interactive cursor if clickable
         onClick && 'cursor-pointer hover:shadow-md transition-shadow',
-        // Allow header popover dropdowns to overflow
-        'overflow-visible',
+        // Clip content within card so CardContent overflow-auto can scroll
+        'overflow-hidden',
         // Strip Card styling when grid-level background is applied
         stripCardBg && 'backdrop-blur-none border-transparent shadow-none',
         // Auto text color based on background luminance (skipped when explicit textColor override)

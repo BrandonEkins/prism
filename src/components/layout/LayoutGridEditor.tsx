@@ -433,11 +433,15 @@ export function LayoutGridEditor({
               <div className="w-px h-6 bg-border mx-0.5" />
               {[0, 0.25, 0.5, 0.75, 1].map((o) => {
                 const currentOpacity = colorTarget === 'fill' ? bgOpacity : colorTarget === 'outline' ? olOpacity : txtOpacity;
-                const opacityKey = colorTarget === 'fill' ? 'backgroundOpacity' : colorTarget === 'outline' ? 'outlineOpacity' : 'textOpacity';
+                const handleOpacityClick = () => {
+                  if (colorTarget === 'fill') updateWidgetColor(selectedWidget, { backgroundOpacity: o });
+                  else if (colorTarget === 'outline') updateWidgetColor(selectedWidget, { outlineOpacity: o });
+                  else updateWidgetColor(selectedWidget, { textOpacity: o });
+                };
                 return (
                   <button
                     key={o}
-                    onClick={() => updateWidgetColor(selectedWidget, { [opacityKey]: o })}
+                    onClick={handleOpacityClick}
                     onPointerDown={(e) => e.stopPropagation()}
                     className={`w-8 h-8 rounded-full text-[10px] border transition-colors touch-manipulation ${
                       currentOpacity === o
@@ -482,19 +486,30 @@ export function LayoutGridEditor({
                 >
                   <Icon className="w-3.5 h-3.5" />
                   <span>{label}</span>
-                  {/* Harvey ball indicator */}
+                  {/* Harvey ball pie-slice indicator: 25% per slice, starting from 12 o'clock clockwise */}
                   <svg viewBox="0 0 16 16" className="w-4 h-4 shrink-0">
                     <circle cx="8" cy="8" r="7" fill={isActive ? 'rgba(255,255,255,0.3)' : '#e5e5e5'} stroke={ballStroke} strokeWidth="1" />
-                    {fillLevel > 0 && (
-                      <>
-                        <defs>
-                          <clipPath id={`hb-${id}`}>
-                            <rect x="0" y={16 - fillLevel * 16} width="16" height={fillLevel * 16} />
-                          </clipPath>
-                        </defs>
-                        <circle cx="8" cy="8" r="7" fill={fillColor} clipPath={`url(#hb-${id})`} />
-                      </>
-                    )}
+                    {fillLevel > 0 && (() => {
+                      // Each 25% = one quarter pie slice; compute arc path
+                      const slices = Math.round(fillLevel * 4); // 0-4 slices
+                      if (slices >= 4) {
+                        // Full circle
+                        return <circle cx="8" cy="8" r="7" fill={fillColor} stroke={ballStroke} strokeWidth="0.5" />;
+                      }
+                      // SVG arc from 12 o'clock clockwise
+                      const endAngle = (slices / 4) * 2 * Math.PI - Math.PI / 2;
+                      const ex = 8 + 7 * Math.cos(endAngle);
+                      const ey = 8 + 7 * Math.sin(endAngle);
+                      const largeArc = slices > 2 ? 1 : 0;
+                      return (
+                        <path
+                          d={`M8,8 L8,1 A7,7 0 ${largeArc},1 ${ex.toFixed(2)},${ey.toFixed(2)} Z`}
+                          fill={fillColor}
+                          stroke={ballStroke}
+                          strokeWidth="0.5"
+                        />
+                      );
+                    })()}
                     {color === 'transparent' && (
                       <>
                         <defs>
@@ -505,7 +520,7 @@ export function LayoutGridEditor({
                             <rect y="2" width="2" height="2" fill="#fff" />
                           </pattern>
                         </defs>
-                        <circle cx="8" cy="8" r="7" fill={`url(#hb-checker-${id})`} />
+                        <circle cx="8" cy="8" r="7" fill={`url(#hb-checker-${id})`} stroke={ballStroke} strokeWidth="0.5" />
                       </>
                     )}
                   </svg>
