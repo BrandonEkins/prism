@@ -237,10 +237,12 @@ export function WidgetContainer({
         ...(overrideTextColor ? {
           color: overrideTextColor,
           // Override Tailwind CSS custom properties so text-foreground, text-muted-foreground,
-          // text-card-foreground etc. all resolve to the chosen color
+          // text-card-foreground, text-primary, text-seasonal-accent etc. all resolve to the chosen color
           '--foreground': hexToHslValues(overrideTextColor),
           '--card-foreground': hexToHslValues(overrideTextColor),
           '--muted-foreground': hexToHslValues(overrideTextColor),
+          '--primary': hexToHslValues(overrideTextColor),
+          '--seasonal-accent': hexToHslValues(overrideTextColor),
         } as React.CSSProperties : {}),
       }}
     >

@@ -11,7 +11,13 @@ All notable changes to Prism are documented in this file.
 
 ### Fixed
 - **Text color persistence**: Widget text color now saves to database (was being stripped by API validation)
-- **Text color coverage**: Overrides Tailwind CSS custom properties (`--foreground`, `--card-foreground`, `--muted-foreground`) so all text in the widget — including muted/secondary text — picks up the chosen color
+- **Text color coverage**: Overrides CSS custom properties (`--foreground`, `--card-foreground`, `--muted-foreground`, `--primary`, `--seasonal-accent`) so all text, icons, and accents in the widget pick up the chosen color
+- **Day view transparency**: DayViewSideBySide calendar now strips `bg-card/85` in transparent widget mode
+- **Calendar dropdown**: Select trigger and filter chips go transparent with the widget
+- **iPad properties bar**: Added `onPointerDown` + `touch-manipulation` to all swatch buttons for reliable iPad touch
+
+### Added
+- **Custom color picker**: Rainbow swatch in Fill, Outline, and Text sections opens native color picker for full color gamut
 
 ### Improved
 - **Calendar dark mode**: Replaced hardcoded `bg-gray-200` past-day backgrounds with theme-aware `bg-muted` variants that adapt to light/dark mode

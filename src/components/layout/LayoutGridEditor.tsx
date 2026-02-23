@@ -91,6 +91,9 @@ export function LayoutGridEditor({
   const { width, containerRef, mounted } = useContainerWidth();
   const [selectedWidget, setSelectedWidget] = useState<string | null>(null);
   const tapStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
+  const fillPickerRef = useRef<HTMLInputElement | null>(null);
+  const outlinePickerRef = useRef<HTMLInputElement | null>(null);
+  const textPickerRef = useRef<HTMLInputElement | null>(null);
   const [scrollY, setScrollY] = useState(0);
   const [scrollX, setScrollX] = useState(0);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -271,6 +274,68 @@ export function LayoutGridEditor({
     ? layoutRef.current.find(w => w.i === selectedWidget && w.visible !== false)
     : null;
 
+  // Swatch button renderer — handles both click and touch to work on iPad
+  const renderSwatch = (
+    color: string | null,
+    isSelected: boolean,
+    onSelect: () => void,
+    title: string,
+    isTransparentSwatch?: boolean,
+  ) => (
+    <button
+      key={title}
+      onClick={onSelect}
+      onPointerDown={(e) => e.stopPropagation()}
+      className={`w-8 h-8 rounded-full border transition-transform hover:scale-110 touch-manipulation ${
+        color === null
+          ? 'bg-gradient-to-br from-white to-gray-400 border-gray-300'
+          : isTransparentSwatch
+            ? 'border-gray-300 overflow-hidden'
+            : 'border-gray-400'
+      } ${isSelected ? 'ring-2 ring-primary ring-offset-1' : ''}`}
+      style={color && !isTransparentSwatch ? { backgroundColor: color } : undefined}
+      title={title}
+    >
+      {isTransparentSwatch && (
+        <svg viewBox="0 0 32 32" className="w-full h-full">
+          <pattern id="checker" width="8" height="8" patternUnits="userSpaceOnUse">
+            <rect width="4" height="4" fill="#ccc" />
+            <rect x="4" y="4" width="4" height="4" fill="#ccc" />
+            <rect x="4" width="4" height="4" fill="#fff" />
+            <rect y="4" width="4" height="4" fill="#fff" />
+          </pattern>
+          <circle cx="16" cy="16" r="16" fill="url(#checker)" />
+        </svg>
+      )}
+    </button>
+  );
+
+  // Custom color button — opens native color picker
+  const renderCustomColorButton = (
+    inputRef: React.RefObject<HTMLInputElement | null>,
+    currentColor: string | undefined,
+    onChange: (hex: string) => void,
+  ) => (
+    <div className="relative">
+      <button
+        onClick={() => inputRef.current?.click()}
+        onPointerDown={(e) => e.stopPropagation()}
+        className="w-8 h-8 rounded-full border border-gray-400 transition-transform hover:scale-110 touch-manipulation overflow-hidden"
+        style={{
+          background: 'conic-gradient(red, yellow, lime, aqua, blue, magenta, red)',
+        }}
+        title="Custom color"
+      />
+      <input
+        ref={(el) => { (inputRef as React.MutableRefObject<HTMLInputElement | null>).current = el; }}
+        type="color"
+        className="sr-only"
+        value={currentColor || '#3B82F6'}
+        onChange={(e) => onChange(e.target.value)}
+      />
+    </div>
+  );
+
   const renderPropertiesBar = () => {
     if (!selectedWidgetConfig || !selectedWidget) return null;
     const bgColor = selectedWidgetConfig.backgroundColor;
@@ -281,7 +346,7 @@ export function LayoutGridEditor({
     const hasColorFill = bgColor && bgColor !== 'transparent';
 
     return (
-      <div className="bg-card/95 backdrop-blur-sm border-b border-border">
+      <div className="bg-card/95 backdrop-blur-sm border-b border-border" onPointerDown={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-3 pt-2 pb-1">
           <span className="text-sm font-medium">{displayName} Widget</span>
           <button
@@ -299,51 +364,36 @@ export function LayoutGridEditor({
           <div className="shrink-0">
             <div className="text-[10px] text-muted-foreground mb-1">Fill</div>
             <div className="grid grid-cols-9 gap-1">
-              {FILL_OPTIONS.map((c, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => updateWidgetColor(selectedWidget, { backgroundColor: c })}
-                  className={`w-8 h-8 rounded-full border transition-transform hover:scale-110 ${
-                    c === null
-                      ? 'bg-gradient-to-br from-white to-gray-400 border-gray-300'
-                      : c === 'transparent'
-                        ? 'border-gray-300 overflow-hidden'
-                        : 'border-gray-400'
-                  } ${bgColor === c || (!bgColor && c === null) ? 'ring-2 ring-primary ring-offset-1' : ''}`}
-                  style={c && c !== 'transparent' ? { backgroundColor: c } : undefined}
-                  title={c === null ? 'None' : c === 'transparent' ? 'Transparent' : c}
-                >
-                  {c === 'transparent' && (
-                    <svg viewBox="0 0 32 32" className="w-full h-full">
-                      <pattern id="checker" width="8" height="8" patternUnits="userSpaceOnUse">
-                        <rect width="4" height="4" fill="#ccc" />
-                        <rect x="4" y="4" width="4" height="4" fill="#ccc" />
-                        <rect x="4" width="4" height="4" fill="#fff" />
-                        <rect y="4" width="4" height="4" fill="#fff" />
-                      </pattern>
-                      <circle cx="16" cy="16" r="16" fill="url(#checker)" />
-                    </svg>
-                  )}
-                </button>
-              ))}
+              {FILL_OPTIONS.map((c, idx) =>
+                renderSwatch(
+                  c,
+                  bgColor === c || (!bgColor && c === null),
+                  () => updateWidgetColor(selectedWidget, { backgroundColor: c }),
+                  c === null ? 'None' : c === 'transparent' ? 'Transparent' : c,
+                  c === 'transparent',
+                )
+              )}
+              {renderCustomColorButton(fillPickerRef, hasColorFill ? bgColor : undefined, (hex) =>
+                updateWidgetColor(selectedWidget, { backgroundColor: hex })
+              )}
             </div>
           </div>
           <div className="w-px bg-border self-stretch shrink-0" />
           {/* Outline */}
           <div className="shrink-0">
             <div className="text-[10px] text-muted-foreground mb-1">Outline</div>
-            <div className="grid grid-cols-8 gap-1">
-              {COLOR_OPTIONS.map((c, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => updateWidgetColor(selectedWidget, { outlineColor: c })}
-                  className={`w-8 h-8 rounded-full border transition-transform hover:scale-110 ${
-                    c === null ? 'bg-gradient-to-br from-white to-gray-400 border-gray-300' : 'border-gray-400'
-                  } ${olColor === c || (!olColor && c === null) ? 'ring-2 ring-primary ring-offset-1' : ''}`}
-                  style={c ? { backgroundColor: c } : undefined}
-                  title={c === null ? 'None' : c}
-                />
-              ))}
+            <div className="grid grid-cols-9 gap-1">
+              {COLOR_OPTIONS.map((c, idx) =>
+                renderSwatch(
+                  c,
+                  olColor === c || (!olColor && c === null),
+                  () => updateWidgetColor(selectedWidget, { outlineColor: c }),
+                  c === null ? 'None' : c,
+                )
+              )}
+              {renderCustomColorButton(outlinePickerRef, olColor || undefined, (hex) =>
+                updateWidgetColor(selectedWidget, { outlineColor: hex })
+              )}
             </div>
           </div>
           <div className="w-px bg-border self-stretch shrink-0" />
@@ -357,7 +407,8 @@ export function LayoutGridEditor({
                     <button
                       key={o}
                       onClick={() => updateWidgetColor(selectedWidget, { backgroundOpacity: o })}
-                      className={`px-3 min-h-[44px] text-xs rounded border transition-colors ${
+                      onPointerDown={(e) => e.stopPropagation()}
+                      className={`px-3 min-h-[44px] text-xs rounded border transition-colors touch-manipulation ${
                         bgOpacity === o
                           ? 'bg-primary text-primary-foreground border-primary'
                           : 'border-border hover:bg-accent/50'
@@ -374,18 +425,18 @@ export function LayoutGridEditor({
           {/* Text Color */}
           <div className="shrink-0">
             <div className="text-[10px] text-muted-foreground mb-1">Text</div>
-            <div className="grid grid-cols-8 gap-1">
-              {COLOR_OPTIONS.map((c, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => updateWidgetColor(selectedWidget, { textColor: c })}
-                  className={`w-8 h-8 rounded-full border transition-transform hover:scale-110 ${
-                    c === null ? 'bg-gradient-to-br from-white to-gray-400 border-gray-300' : 'border-gray-400'
-                  } ${txtColor === c || (!txtColor && c === null) ? 'ring-2 ring-primary ring-offset-1' : ''}`}
-                  style={c ? { backgroundColor: c } : undefined}
-                  title={c === null ? 'Auto' : c}
-                />
-              ))}
+            <div className="grid grid-cols-9 gap-1">
+              {COLOR_OPTIONS.map((c, idx) =>
+                renderSwatch(
+                  c,
+                  txtColor === c || (!txtColor && c === null),
+                  () => updateWidgetColor(selectedWidget, { textColor: c }),
+                  c === null ? 'Auto' : c,
+                )
+              )}
+              {renderCustomColorButton(textPickerRef, txtColor || undefined, (hex) =>
+                updateWidgetColor(selectedWidget, { textColor: hex })
+              )}
             </div>
           </div>
         </div>

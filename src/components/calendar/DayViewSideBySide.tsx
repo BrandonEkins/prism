@@ -6,6 +6,7 @@ import {
 } from 'date-fns';
 import { Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useWidgetBgOverride } from '@/components/widgets/WidgetContainer';
 import { useHiddenHours } from '@/lib/hooks/useHiddenHours';
 import type { CalendarEvent } from '@/types/calendar';
 
@@ -24,6 +25,9 @@ export function DayViewSideBySide({
   selectedCalendarIds,
   onEventClick,
 }: DayViewSideBySideProps) {
+  const bgOverride = useWidgetBgOverride();
+  const transparentMode = bgOverride?.hasCustomBg === true;
+
   // Hidden hours hook
   const { settings: hiddenSettings, toggleHidden, getVisibleHours } = useHiddenHours();
 
@@ -82,7 +86,7 @@ export function DayViewSideBySide({
   return (
     <div className="h-full flex flex-col">
       {/* All-day events row */}
-      <div className="flex-shrink-0 border-b border-border bg-card/85 backdrop-blur-sm rounded-t-md">
+      <div className={cn('flex-shrink-0 border-b border-border rounded-t-md', !transparentMode && 'bg-card/85 backdrop-blur-sm')}>
         <div className="flex">
           {/* Time column header with toggle button */}
           <div className="w-16 flex-shrink-0 flex items-center justify-center">
@@ -133,7 +137,7 @@ export function DayViewSideBySide({
       </div>
 
       {/* Hourly schedule - scales to fit available space */}
-      <div className="flex-1 flex bg-card/85 backdrop-blur-sm rounded-b-md min-h-0">
+      <div className={cn('flex-1 flex rounded-b-md min-h-0', !transparentMode && 'bg-card/85 backdrop-blur-sm')}>
         {/* Time column */}
         <div className="w-16 flex-shrink-0 grid min-h-0" style={{ gridTemplateRows: `repeat(${hours.length}, 1fr)` }}>
           {hours.map((hour) => (
