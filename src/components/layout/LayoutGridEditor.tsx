@@ -419,10 +419,31 @@ export function LayoutGridEditor({
               onChange={(e) => applyColorToTarget(selectedWidget, e.target.value)}
             />
           </div>
+
+          {/* Opacity — inline on swatch row, visible when solid fill */}
+          {hasColorFill && (
+            <>
+              <div className="w-px h-6 bg-border mx-0.5" />
+              {[0, 0.25, 0.5, 0.75, 1].map((o) => (
+                <button
+                  key={o}
+                  onClick={() => updateWidgetColor(selectedWidget, { backgroundOpacity: o })}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  className={`w-8 h-8 rounded-full text-[10px] border transition-colors touch-manipulation ${
+                    bgOpacity === o
+                      ? 'bg-primary text-primary-foreground border-primary'
+                      : 'border-border hover:bg-accent/50'
+                  }`}
+                >
+                  {Math.round(o * 100)}
+                </button>
+              ))}
+            </>
+          )}
         </div>
 
         {/* Row 4: Target buttons with harvey ball indicators */}
-        <div className="flex items-center gap-2 px-3 pb-1.5">
+        <div className="flex items-center gap-2 px-3 pb-2">
           <div className="flex gap-1">
             {([
               { id: 'fill' as const, icon: PaintBucket, label: 'Fill', color: bgColor, opacity: bgOpacity },
@@ -478,27 +499,6 @@ export function LayoutGridEditor({
             })}
           </div>
         </div>
-
-        {/* Row 5: Opacity — always visible when widget has a solid fill */}
-        {hasColorFill && (
-          <div className="flex items-center gap-1 px-3 pb-2" onPointerDown={(e) => e.stopPropagation()}>
-            <span className="text-xs text-muted-foreground mr-1">Opacity</span>
-            {[0, 0.25, 0.5, 0.75, 1].map((o) => (
-              <button
-                key={o}
-                onClick={() => updateWidgetColor(selectedWidget, { backgroundOpacity: o })}
-                onPointerDown={(e) => e.stopPropagation()}
-                className={`px-2.5 min-h-[44px] text-xs rounded border transition-colors touch-manipulation ${
-                  bgOpacity === o
-                    ? 'bg-primary text-primary-foreground border-primary'
-                    : 'border-border hover:bg-accent/50'
-                }`}
-              >
-                {Math.round(o * 100)}%
-              </button>
-            ))}
-          </div>
-        )}
       </div>
     );
   };
