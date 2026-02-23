@@ -219,7 +219,7 @@ export function SettingsView() {
                                 github.com/sandydargoport/prism/projects
                               </a>
                             </p>
-                            <p><strong>Version:</strong> 0.9.2</p>
+                            <p><strong>Version:</strong> 1.0.3</p>
                           </div>
                           <p className="pt-2 text-xs">
                             Built with Claude Code. Currently in beta.
