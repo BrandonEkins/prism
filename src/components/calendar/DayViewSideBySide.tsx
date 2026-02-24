@@ -136,10 +136,11 @@ export function DayViewSideBySide({
         </div>
       </div>
 
-      {/* Hourly schedule - scales to fit available space */}
-      <div className={cn('flex-1 flex rounded-b-md min-h-0', !transparentMode && 'bg-card/85 backdrop-blur-sm')}>
+      {/* Hourly schedule - scrollable when widget is small */}
+      <div className={cn('flex-1 overflow-auto rounded-b-md min-h-0', !transparentMode && 'bg-card/85 backdrop-blur-sm')}>
+        <div className="flex min-h-full" style={{ minHeight: `${hours.length * 28}px` }}>
         {/* Time column */}
-        <div className="w-16 flex-shrink-0 grid min-h-0" style={{ gridTemplateRows: `repeat(${hours.length}, 1fr)` }}>
+        <div className="w-16 flex-shrink-0 grid" style={{ gridTemplateRows: `repeat(${hours.length}, minmax(28px, 1fr))` }}>
           {hours.map((hour) => (
             <div key={hour} className="pr-2 text-right text-xs text-muted-foreground border-t border-border flex items-start pt-0.5 min-h-0">
               {format(new Date().setHours(hour, 0), 'h a')}
@@ -172,8 +173,8 @@ export function DayViewSideBySide({
           return (
             <div
               key={group.id}
-              className="flex-1 min-w-0 border-l border-border grid min-h-0"
-              style={{ gridTemplateRows: `repeat(${hours.length}, 1fr)` }}
+              className="flex-1 min-w-0 border-l border-border grid"
+              style={{ gridTemplateRows: `repeat(${hours.length}, minmax(28px, 1fr))` }}
             >
               {hours.map((hour) => {
                 const hourEvents = calEvents.filter((event) => event.startTime.getHours() === hour);
@@ -206,6 +207,7 @@ export function DayViewSideBySide({
             </div>
           );
         })}
+        </div>
       </div>
     </div>
   );

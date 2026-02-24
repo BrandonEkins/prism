@@ -107,8 +107,8 @@ export function WeekView({
 
         {/* Hourly grid - scales to fit available space */}
         <div
-          className={cn('flex-1 grid min-h-0', !transparentMode && isPast && 'bg-muted/20')}
-          style={{ gridTemplateRows: `repeat(${hours.length}, 1fr)` }}
+          className={cn('flex-1 shrink-0 grid', !transparentMode && isPast && 'bg-muted/20')}
+          style={{ gridTemplateRows: `repeat(${hours.length}, minmax(20px, 1fr))` }}
         >
           {hours.map((hour) => {
             const hourEvents = getHourEvents(date, hour);
@@ -147,10 +147,10 @@ export function WeekView({
   // Portrait: 2 rows of 4 days each (compact) - grid ensures equal split
   if (isPortrait) {
     return (
-      <div className="h-full grid grid-rows-2 gap-1 overflow-hidden">
-        <div className={cn('flex gap-px rounded-md overflow-hidden min-h-0', !transparentMode && 'bg-card/85 backdrop-blur-sm')}>
+      <div className="h-full grid gap-1 overflow-auto" style={{ gridTemplateRows: `repeat(2, minmax(${48 + hours.length * 20}px, 1fr))` }}>
+        <div className={cn('flex gap-px rounded-md', !transparentMode && 'bg-card/85 backdrop-blur-sm')}>
           {/* Time column */}
-          <div className="w-8 shrink-0 flex flex-col min-h-0">
+          <div className="w-8 shrink-0 flex flex-col">
             {/* Header with toggle button */}
             <div className="h-12 shrink-0 flex items-center justify-center">
               <button
@@ -167,11 +167,11 @@ export function WeekView({
                 <Clock className="h-3 w-3" />
               </button>
             </div>
-            <div className="flex-1 grid min-h-0" style={{ gridTemplateRows: `repeat(${hours.length}, 1fr)` }}>
+            <div className="flex-1 shrink-0 grid" style={{ gridTemplateRows: `repeat(${hours.length}, minmax(20px, 1fr))` }}>
               {hours.map((hour) => (
                 <div
                   key={hour}
-                  className="text-[9px] text-muted-foreground text-right pr-0.5 border-t border-transparent flex items-start min-h-0"
+                  className="text-[9px] text-muted-foreground text-right pr-0.5 border-t border-transparent flex items-start"
                 >
                   {format(new Date().setHours(hour, 0), 'ha')}
                 </div>
@@ -180,15 +180,15 @@ export function WeekView({
           </div>
           {row1Days.map((date) => renderDayColumn(date, true))}
         </div>
-        <div className={cn('flex gap-px rounded-md overflow-hidden min-h-0', !transparentMode && 'bg-card/85 backdrop-blur-sm')}>
+        <div className={cn('flex gap-px rounded-md', !transparentMode && 'bg-card/85 backdrop-blur-sm')}>
           {/* Time column */}
-          <div className="w-8 shrink-0 flex flex-col min-h-0">
+          <div className="w-8 shrink-0 flex flex-col">
             <div className="h-12 shrink-0" /> {/* Header spacer */}
-            <div className="flex-1 grid min-h-0" style={{ gridTemplateRows: `repeat(${hours.length}, 1fr)` }}>
+            <div className="flex-1 shrink-0 grid" style={{ gridTemplateRows: `repeat(${hours.length}, minmax(20px, 1fr))` }}>
               {hours.map((hour) => (
                 <div
                   key={hour}
-                  className="text-[9px] text-muted-foreground text-right pr-0.5 border-t border-transparent flex items-start min-h-0"
+                  className="text-[9px] text-muted-foreground text-right pr-0.5 border-t border-transparent flex items-start"
                 >
                   {format(new Date().setHours(hour, 0), 'ha')}
                 </div>
@@ -257,10 +257,11 @@ export function WeekView({
         })}
       </div>
 
-      {/* Hourly schedule - scales to fit available space */}
-      <div className="flex-1 flex min-h-0">
+      {/* Hourly schedule - scrollable when widget is small */}
+      <div className="flex-1 overflow-auto min-h-0">
+        <div className="flex min-h-full" style={{ minHeight: `${hours.length * 28}px` }}>
         {/* Time column */}
-        <div className="w-14 shrink-0 grid min-h-0" style={{ gridTemplateRows: `repeat(${hours.length}, 1fr)` }}>
+        <div className="w-14 shrink-0 grid" style={{ gridTemplateRows: `repeat(${hours.length}, minmax(28px, 1fr))` }}>
           {hours.map((hour) => (
             <div key={hour} className="pr-1 text-right text-xs text-muted-foreground border-t border-border flex items-start pt-0.5 min-h-0">
               {format(new Date().setHours(hour, 0), 'h a')}
@@ -273,8 +274,8 @@ export function WeekView({
           return (
             <div
               key={date.toISOString()}
-              className={cn('flex-1 min-w-0 border-l border-border grid min-h-0', !transparentMode && isPast && 'bg-muted/10')}
-              style={{ gridTemplateRows: `repeat(${hours.length}, 1fr)` }}
+              className={cn('flex-1 min-w-0 border-l border-border grid', !transparentMode && isPast && 'bg-muted/10')}
+              style={{ gridTemplateRows: `repeat(${hours.length}, minmax(28px, 1fr))` }}
             >
               {hours.map((hour) => {
                 const hourEvents = getHourEvents(date, hour);
@@ -305,6 +306,7 @@ export function WeekView({
             </div>
           );
         })}
+        </div>
       </div>
     </div>
   );

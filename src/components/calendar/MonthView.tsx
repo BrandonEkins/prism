@@ -58,7 +58,7 @@ export function MonthView({
   const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
   return (
-    <div className="h-full flex flex-col overflow-hidden">
+    <div className="h-full flex flex-col overflow-auto">
       {/* Month header with themed color */}
       <div
         className="shrink-0 text-center py-2 font-bold text-base text-white rounded-t-lg mb-2 shadow-sm"
@@ -79,8 +79,8 @@ export function MonthView({
 
       {/* Auto-scaling calendar grid */}
       <div
-        className="flex-1 grid grid-cols-7 gap-1 min-h-0"
-        style={{ gridTemplateRows: `repeat(${numWeeks}, 1fr)` }}
+        className="flex-1 shrink-0 grid grid-cols-7 gap-1"
+        style={{ gridTemplateRows: `repeat(${numWeeks}, minmax(60px, 1fr))` }}
       >
         {days.map((date, index) => {
           const dayEvents = events
