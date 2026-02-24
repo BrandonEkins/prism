@@ -30,7 +30,7 @@ import { format, isToday, isTomorrow, isPast, parseISO } from 'date-fns';
 import { ClipboardList, Plus, AlertCircle, CheckCircle, Clock, Hourglass } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { WidgetContainer, WidgetEmpty } from './WidgetContainer';
-import { Button, Badge, ScrollArea, UserAvatar } from '@/components/ui';
+import { Button, Badge, UserAvatar } from '@/components/ui';
 
 /**
  * CHORE TYPE
@@ -182,7 +182,7 @@ export function ChoresWidget({
           }
         />
       ) : (
-        <ScrollArea className="h-full -mr-2 pr-2">
+        <div className="overflow-auto h-full -mr-2 pr-2">
           <div className="space-y-2">
             {displayChores.map((chore) => (
               <ChoreItem
@@ -200,7 +200,7 @@ export function ChoresWidget({
               +{filteredChores.length - maxChores} more chores
             </div>
           )}
-        </ScrollArea>
+        </div>
       )}
     </WidgetContainer>
   );

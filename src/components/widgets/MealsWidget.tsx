@@ -6,7 +6,7 @@ import { format, startOfWeek, addDays, parseISO } from 'date-fns';
 import { UtensilsCrossed, Plus, ChevronLeft, ChevronRight, Clock, CheckCircle2, Undo2, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { WidgetContainer, WidgetEmpty } from './WidgetContainer';
-import { Button, Badge, ScrollArea, UserAvatar } from '@/components/ui';
+import { Button, Badge, UserAvatar } from '@/components/ui';
 import { Input } from '@/components/ui/input';
 
 // Meal type imported from shared types
@@ -119,7 +119,7 @@ export function MealsWidget({
             }
           />
         ) : (
-          <ScrollArea className="h-full -mr-2 pr-2">
+          <div className="overflow-auto h-full -mr-2 pr-2">
             <div className="space-y-3">
               {(['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const).map((day, index) => {
                 const dayMeals = mealsByDay[day] || [];
@@ -138,7 +138,7 @@ export function MealsWidget({
                 );
               })}
             </div>
-          </ScrollArea>
+          </div>
         )}
       </WidgetContainer>
 
