@@ -218,12 +218,11 @@ export function WidgetContainer({
         sizeClasses[size],
         // Full height within grid cell
         'h-full',
-        // Flex column layout
-        'flex flex-col',
+        // Grid layout: header gets auto height, content gets remaining space
+        // (CSS Grid gives the content row a definite height, enabling ScrollArea h-full)
+        'grid overflow-hidden',
         // Interactive cursor if clickable
         onClick && 'cursor-pointer hover:shadow-md transition-shadow',
-        // Clip content within card so CardContent overflow-auto can scroll
-        'overflow-hidden',
         // Strip Card styling when grid-level background is applied
         stripCardBg && 'backdrop-blur-none border-transparent shadow-none',
         // Auto text color based on background luminance (skipped when explicit textColor override)
@@ -232,6 +231,8 @@ export function WidgetContainer({
       )}
       onClick={onClick}
       style={{
+        // Grid rows: auto for header (if present), 1fr for content
+        gridTemplateRows: showHeader && title ? 'auto 1fr' : '1fr',
         ...(stripCardBg
           ? { backgroundColor: 'transparent' }
           : backgroundColor ? { backgroundColor } : {}),
@@ -290,11 +291,10 @@ export function WidgetContainer({
       {/* WIDGET CONTENT */}
       <CardContent
         className={cn(
-          // Fill remaining space; h-0 + flex-1 establishes definite height,
-          // min-h-0 overrides flex min-height:auto so overflow-auto scrolls
-          'flex-1 flex flex-col h-0 min-h-0',
-          // Allow content scrolling within widget
-          'overflow-auto',
+          // Fill remaining space; min-h-0 prevents grid row overflow
+          'flex flex-col min-h-0',
+          // Clip content overflow (individual widgets use ScrollArea for scrolling)
+          'overflow-hidden',
           // Remove padding if no header
           !showHeader && 'pt-4',
           // Per-widget alignment

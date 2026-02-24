@@ -29,7 +29,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { MessageSquare, Pin, Plus, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { WidgetContainer, WidgetEmpty } from './WidgetContainer';
-import { Button, ScrollArea, UserAvatar } from '@/components/ui';
+import { Button, UserAvatar } from '@/components/ui';
 
 
 /**
@@ -145,7 +145,7 @@ export function MessagesWidget({
           }
         />
       ) : (
-        <ScrollArea className="h-full -mr-2 pr-2">
+        <div className="overflow-auto h-full -mr-2 pr-2">
           <div className="space-y-3">
             {displayMessages.map((message) => (
               <MessageItem
@@ -163,7 +163,7 @@ export function MessagesWidget({
               +{allMessages.length - maxMessages} more messages
             </div>
           )}
-        </ScrollArea>
+        </div>
       )}
     </WidgetContainer>
   );

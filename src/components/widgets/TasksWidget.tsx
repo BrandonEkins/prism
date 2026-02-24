@@ -31,7 +31,7 @@ import { format, isToday, isTomorrow, isPast } from 'date-fns';
 import { CheckSquare, Plus, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { WidgetContainer, WidgetEmpty } from './WidgetContainer';
-import { Button, Checkbox, Badge, ScrollArea, UserAvatar } from '@/components/ui';
+import { Button, Checkbox, Badge, UserAvatar } from '@/components/ui';
 
 
 /**
@@ -181,7 +181,7 @@ export function TasksWidget({
           }
         />
       ) : (
-        <ScrollArea className="h-full -mr-2 pr-2">
+        <div className="overflow-auto h-full -mr-2 pr-2">
           <div className="space-y-2">
             {displayTasks.map((task) => (
               <TaskItem
@@ -199,7 +199,7 @@ export function TasksWidget({
               +{filteredTasks.length - maxTasks} more tasks
             </div>
           )}
-        </ScrollArea>
+        </div>
       )}
     </WidgetContainer>
   );

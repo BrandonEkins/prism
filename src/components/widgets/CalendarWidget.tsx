@@ -20,7 +20,6 @@ import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { WidgetContainer, WidgetEmpty, useWidgetBgOverride } from './WidgetContainer';
 import {
-  ScrollArea,
   Badge,
   Select,
   SelectContent,
@@ -273,7 +272,7 @@ export function CalendarWidget({
             message="No upcoming events"
           />
         ) : (
-          <ScrollArea className="h-full -mr-2 pr-2">
+          <div className="overflow-auto h-full -mr-2 pr-2">
             <div className="space-y-4">
               {eventsByDay.map(({ date, events: dayEvts }) => (
                 <DaySection
@@ -285,7 +284,7 @@ export function CalendarWidget({
                 />
               ))}
             </div>
-          </ScrollArea>
+          </div>
         )
       )}
 
