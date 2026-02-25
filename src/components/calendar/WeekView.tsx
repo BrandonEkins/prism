@@ -11,6 +11,7 @@ import {
 } from 'date-fns';
 import { Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useWidgetBgOverride } from '@/components/widgets/WidgetContainer';
 import { useOrientation } from '@/lib/hooks/useOrientation';
 import { useHiddenHours } from '@/lib/hooks/useHiddenHours';
 import type { CalendarEvent } from '@/types/calendar';
@@ -35,6 +36,8 @@ export function WeekView({
   events,
   onEventClick,
 }: WeekViewProps) {
+  const bgOverride = useWidgetBgOverride();
+  const transparentMode = bgOverride?.hasCustomBg === true;
   const weekStart = startOfWeek(currentDate);
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
   const orientation = useOrientation();
@@ -74,7 +77,7 @@ export function WeekView({
         <div
           className={cn(
             'text-center py-1 shrink-0 rounded-t-md',
-            isPast && 'bg-gray-200 text-gray-600 dark:bg-muted/40 dark:text-muted-foreground',
+            !transparentMode && isPast && 'bg-muted/50 text-muted-foreground',
             isToday(date) && 'bg-primary text-primary-foreground'
           )}
         >
@@ -88,7 +91,7 @@ export function WeekView({
 
         {/* All-day events - scrollable */}
         {allDayEvents.length > 0 && (
-          <div className={cn('shrink-0 border-b border-border p-0.5 bg-card/50 max-h-16 overflow-y-auto', isPast && 'bg-gray-100 dark:bg-muted/30')}>
+          <div className={cn('shrink-0 border-b border-border p-0.5 max-h-16 overflow-y-auto', !transparentMode && 'bg-card/50', !transparentMode && isPast && 'bg-muted/30')}>
             {allDayEvents.map((event, idx) => (
               <button
                 key={event.id}
@@ -104,8 +107,8 @@ export function WeekView({
 
         {/* Hourly grid - scales to fit available space */}
         <div
-          className={cn('flex-1 grid min-h-0', isPast && 'bg-gray-100 dark:bg-muted/20')}
-          style={{ gridTemplateRows: `repeat(${hours.length}, 1fr)` }}
+          className={cn('flex-1 shrink-0 grid', !transparentMode && isPast && 'bg-muted/20')}
+          style={{ gridTemplateRows: `repeat(${hours.length}, minmax(20px, 1fr))` }}
         >
           {hours.map((hour) => {
             const hourEvents = getHourEvents(date, hour);
@@ -144,10 +147,10 @@ export function WeekView({
   // Portrait: 2 rows of 4 days each (compact) - grid ensures equal split
   if (isPortrait) {
     return (
-      <div className="h-full grid grid-rows-2 gap-1 overflow-hidden">
-        <div className="flex gap-px bg-card/85 backdrop-blur-sm rounded-md overflow-hidden min-h-0">
+      <div className="h-full grid gap-1 overflow-auto" style={{ gridTemplateRows: `repeat(2, minmax(${48 + hours.length * 20}px, 1fr))` }}>
+        <div className={cn('flex gap-px rounded-md', !transparentMode && 'bg-card/85 backdrop-blur-sm')}>
           {/* Time column */}
-          <div className="w-8 shrink-0 flex flex-col min-h-0">
+          <div className="w-8 shrink-0 flex flex-col">
             {/* Header with toggle button */}
             <div className="h-12 shrink-0 flex items-center justify-center">
               <button
@@ -164,11 +167,11 @@ export function WeekView({
                 <Clock className="h-3 w-3" />
               </button>
             </div>
-            <div className="flex-1 grid min-h-0" style={{ gridTemplateRows: `repeat(${hours.length}, 1fr)` }}>
+            <div className="flex-1 shrink-0 grid" style={{ gridTemplateRows: `repeat(${hours.length}, minmax(20px, 1fr))` }}>
               {hours.map((hour) => (
                 <div
                   key={hour}
-                  className="text-[9px] text-muted-foreground text-right pr-0.5 border-t border-transparent flex items-start min-h-0"
+                  className="text-[9px] text-muted-foreground text-right pl-0.5 pr-0.5 border-t border-transparent flex items-start"
                 >
                   {format(new Date().setHours(hour, 0), 'ha')}
                 </div>
@@ -177,15 +180,15 @@ export function WeekView({
           </div>
           {row1Days.map((date) => renderDayColumn(date, true))}
         </div>
-        <div className="flex gap-px bg-card/85 backdrop-blur-sm rounded-md overflow-hidden min-h-0">
+        <div className={cn('flex gap-px rounded-md', !transparentMode && 'bg-card/85 backdrop-blur-sm')}>
           {/* Time column */}
-          <div className="w-8 shrink-0 flex flex-col min-h-0">
+          <div className="w-8 shrink-0 flex flex-col">
             <div className="h-12 shrink-0" /> {/* Header spacer */}
-            <div className="flex-1 grid min-h-0" style={{ gridTemplateRows: `repeat(${hours.length}, 1fr)` }}>
+            <div className="flex-1 shrink-0 grid" style={{ gridTemplateRows: `repeat(${hours.length}, minmax(20px, 1fr))` }}>
               {hours.map((hour) => (
                 <div
                   key={hour}
-                  className="text-[9px] text-muted-foreground text-right pr-0.5 border-t border-transparent flex items-start min-h-0"
+                  className="text-[9px] text-muted-foreground text-right pl-0.5 pr-0.5 border-t border-transparent flex items-start"
                 >
                   {format(new Date().setHours(hour, 0), 'ha')}
                 </div>
@@ -199,10 +202,11 @@ export function WeekView({
   }
 
   // Landscape: 7-column hourly grid
+  // Single scroll container with sticky header eliminates scrollbar width mismatch
   return (
-    <div className="h-full flex flex-col bg-card/85 backdrop-blur-sm rounded-md overflow-hidden">
-      {/* Day headers row */}
-      <div className="flex shrink-0">
+    <div className={cn('h-full rounded-md overflow-auto', !transparentMode && 'bg-card/85 backdrop-blur-sm')}>
+      {/* Day headers row - sticky so it stays visible while scrolling hours */}
+      <div className={cn('flex sticky top-0 z-20', !transparentMode && 'bg-card')}>
         {/* Time column spacer with toggle button */}
         <div className="w-14 shrink-0 flex items-center justify-center">
           <button
@@ -227,7 +231,7 @@ export function WeekView({
               <div
                 className={cn(
                   'text-center py-2',
-                  isPast && 'bg-gray-200 text-gray-600 dark:bg-muted/40 dark:text-muted-foreground',
+                  !transparentMode && isPast && 'bg-muted/50 text-muted-foreground',
                   isToday(date) && 'bg-primary text-primary-foreground'
                 )}
               >
@@ -236,7 +240,7 @@ export function WeekView({
               </div>
               {/* All-day events - scrollable */}
               {allDayEvents.length > 0 && (
-                <div className="px-1 py-0.5 border-b border-border bg-card/50 max-h-20 overflow-y-auto">
+                <div className={cn('px-1 py-0.5 border-b border-border max-h-20 overflow-y-auto', !transparentMode && 'bg-card/50')}>
                   {allDayEvents.map((event) => (
                     <button
                       key={event.id}
@@ -254,12 +258,12 @@ export function WeekView({
         })}
       </div>
 
-      {/* Hourly schedule - scales to fit available space */}
-      <div className="flex-1 flex min-h-0">
+      {/* Hourly grid */}
+      <div className="flex" style={{ minHeight: `${hours.length * 28}px` }}>
         {/* Time column */}
-        <div className="w-14 shrink-0 grid min-h-0" style={{ gridTemplateRows: `repeat(${hours.length}, 1fr)` }}>
+        <div className="w-14 shrink-0 grid" style={{ gridTemplateRows: `repeat(${hours.length}, minmax(28px, 1fr))` }}>
           {hours.map((hour) => (
-            <div key={hour} className="pr-1 text-right text-xs text-muted-foreground border-t border-border flex items-start pt-0.5 min-h-0">
+            <div key={hour} className="pl-1 pr-1 text-right text-xs text-muted-foreground border-t border-border flex items-start pt-0.5 min-h-0">
               {format(new Date().setHours(hour, 0), 'h a')}
             </div>
           ))}
@@ -270,8 +274,8 @@ export function WeekView({
           return (
             <div
               key={date.toISOString()}
-              className={cn('flex-1 min-w-0 border-l border-border grid min-h-0', isPast && 'bg-gray-50 dark:bg-muted/10')}
-              style={{ gridTemplateRows: `repeat(${hours.length}, 1fr)` }}
+              className={cn('flex-1 min-w-0 border-l border-border grid', !transparentMode && isPast && 'bg-muted/10')}
+              style={{ gridTemplateRows: `repeat(${hours.length}, minmax(28px, 1fr))` }}
             >
               {hours.map((hour) => {
                 const hourEvents = getHourEvents(date, hour);

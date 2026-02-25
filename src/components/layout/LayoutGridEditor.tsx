@@ -4,20 +4,17 @@ import * as React from 'react';
 import { useMemo, useRef, useState, useCallback, useEffect } from 'react';
 import { ResponsiveGridLayout as RGL, useContainerWidth, getCompactor } from 'react-grid-layout';
 import type { LayoutItem, Layout } from 'react-grid-layout';
-import { isLightColor } from '@/lib/utils/color';
+import { PaintBucket, Square, Type } from 'lucide-react';
+import { isLightColor, hexToRgba } from '@/lib/utils/color';
 import { useScreenSafeZones } from '@/lib/hooks/useScreenSafeZones';
+import { WidgetBgOverrideProvider } from '@/components/widgets/WidgetContainer';
+import { useTheme } from '@/components/providers';
+import { getColorPalette, FIXED_COLORS, PALETTE_ORDER, type PaletteId } from '@/lib/constants/colorPalettes';
 import type { WidgetConfig } from '@/lib/hooks/useLayouts';
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
 
 const overlapCompactor = getCompactor(null, true);
-
-const COLOR_OPTIONS = [
-  null,
-  '#3B82F6', '#EC4899', '#10B981', '#F59E0B', '#8B5CF6',
-  '#EF4444', '#06B6D4', '#84CC16', '#F97316', '#6366F1',
-  '#FFFFFF', '#9CA3AF', '#6B7280', '#374151', '#000000',
-];
 
 export interface EditorTheme {
   gridBg: string;
@@ -64,20 +61,6 @@ export interface LayoutGridEditorProps {
   scrollToRef?: React.MutableRefObject<((row: number, col?: number) => void) | null>;
 }
 
-function ColorPickerButton({ bgColor, onClick }: { bgColor?: string; onClick: (e: React.MouseEvent) => void }) {
-  return (
-    <button
-      onClick={onClick}
-      className="w-5 h-5 rounded-full shadow-md"
-      style={{
-        backgroundColor: bgColor || 'transparent',
-        boxShadow: '0 0 0 1px rgba(0,0,0,0.6), 0 0 0 2px rgba(255,255,255,0.8), 0 0 0 2.5px rgba(0,0,0,0.3)',
-      }}
-      title="Widget settings"
-    />
-  );
-}
-
 export function LayoutGridEditor({
   layout,
   onLayoutChange,
@@ -98,13 +81,18 @@ export function LayoutGridEditor({
 }: LayoutGridEditorProps) {
   const { zones: SAFE_ZONES, allSizeNames } = useScreenSafeZones();
   const { width, containerRef, mounted } = useContainerWidth();
-  const [colorPickerWidget, setColorPickerWidget] = useState<string | null>(null);
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === 'dark';
+  const [selectedWidget, setSelectedWidget] = useState<string | null>(null);
+  const tapStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
+  const colorPickerRef = useRef<HTMLInputElement | null>(null);
+  const [colorTarget, setColorTarget] = useState<'fill' | 'outline' | 'text'>('fill');
+  const [paletteId, setPaletteId] = useState<PaletteId>('seasonal');
   const [scrollY, setScrollY] = useState(0);
   const [scrollX, setScrollX] = useState(0);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [screenGuideOrientationInternal, setScreenGuideOrientationInternal] = useState<'landscape' | 'portrait'>('landscape');
   const [enabledSizesInternal, setEnabledSizesInternal] = useState<string[]>(allSizeNames);
-  const [showPanel, setShowPanel] = useState(true);
 
   const screenGuideOrientation = screenGuideOrientationProp ?? screenGuideOrientationInternal;
   const enabledSizes = enabledSizesProp ?? enabledSizesInternal;
@@ -231,7 +219,7 @@ export function LayoutGridEditor({
     };
   }, [onLayoutChange]);
 
-  const updateWidgetColor = useCallback((widgetId: string, updates: { backgroundColor?: string | null; backgroundOpacity?: number; outlineColor?: string | null }) => {
+  const updateWidgetColor = useCallback((widgetId: string, updates: { backgroundColor?: string | null; backgroundOpacity?: number; outlineColor?: string | null; outlineOpacity?: number; textColor?: string | null; textOpacity?: number }) => {
     const updated = layoutRef.current.map(w => {
       if (w.i === widgetId) {
         return {
@@ -239,6 +227,9 @@ export function LayoutGridEditor({
           backgroundColor: updates.backgroundColor === null ? undefined : (updates.backgroundColor ?? w.backgroundColor),
           backgroundOpacity: updates.backgroundOpacity ?? w.backgroundOpacity,
           outlineColor: updates.outlineColor === null ? undefined : (updates.outlineColor ?? w.outlineColor),
+          outlineOpacity: updates.outlineOpacity ?? w.outlineOpacity,
+          textColor: updates.textColor === null ? undefined : (updates.textColor ?? w.textColor),
+          textOpacity: updates.textOpacity ?? w.textOpacity,
         };
       }
       return w;
@@ -249,104 +240,295 @@ export function LayoutGridEditor({
   const getWidgetStyle = (widget: WidgetConfig): React.CSSProperties | undefined => {
     if (!widget.backgroundColor && !widget.outlineColor) return undefined;
     const style: React.CSSProperties = { borderRadius: '0.5rem' };
-    if (widget.backgroundColor) {
-      style.backgroundColor = widget.backgroundColor;
-      style.opacity = widget.backgroundOpacity ?? 1;
+    if (widget.backgroundColor && widget.backgroundColor !== 'transparent') {
+      const opacity = widget.backgroundOpacity ?? 1;
+      style.backgroundColor = opacity < 1
+        ? hexToRgba(widget.backgroundColor, opacity)
+        : widget.backgroundColor;
     }
     if (widget.outlineColor) {
-      style.border = `2px solid ${widget.outlineColor}`;
+      const olOpacity = widget.outlineOpacity ?? 1;
+      style.border = `2px solid ${olOpacity < 1 ? hexToRgba(widget.outlineColor, olOpacity) : widget.outlineColor}`;
     }
     return style;
   };
 
   const getTextClass = (widget: WidgetConfig, fallback: string) => {
-    if (!widget.backgroundColor) return fallback;
+    // textColor is applied via context → WidgetContainer inline style, not as a class
+    if (widget.textColor) return '';
+    if (!widget.backgroundColor || widget.backgroundColor === 'transparent' || widget.backgroundOpacity === 0) return fallback;
     return isLightColor(widget.backgroundColor) ? 'text-black' : 'text-white';
   };
 
-  const colorPickerRef = useRef<HTMLDivElement>(null);
-
+  // Clear selection when widget becomes invisible
   useEffect(() => {
-    if (!colorPickerWidget) return;
-    const handler = (e: MouseEvent | TouchEvent) => {
-      if (colorPickerRef.current && !colorPickerRef.current.contains(e.target as Node)) {
-        setColorPickerWidget(null);
-      }
-    };
-    document.addEventListener('mousedown', handler);
-    document.addEventListener('touchstart', handler);
-    return () => {
-      document.removeEventListener('mousedown', handler);
-      document.removeEventListener('touchstart', handler);
-    };
-  }, [colorPickerWidget]);
+    if (selectedWidget && !layout.find(w => w.i === selectedWidget && w.visible !== false)) {
+      setSelectedWidget(null);
+    }
+  }, [selectedWidget, layout]);
 
-  const renderColorPicker = (widget: WidgetConfig) => {
-    const bgColor = widget.backgroundColor;
-    const olColor = widget.outlineColor;
-    const bgOpacity = widget.backgroundOpacity ?? 1;
-    const isOpen = colorPickerWidget === widget.i;
+  const selectedWidgetConfig = selectedWidget
+    ? layoutRef.current.find(w => w.i === selectedWidget && w.visible !== false)
+    : null;
+
+  // Get current color value for whichever target is active
+  const getActiveColor = (widget: WidgetConfig): string | undefined => {
+    if (colorTarget === 'fill') return widget.backgroundColor;
+    if (colorTarget === 'outline') return widget.outlineColor;
+    return widget.textColor;
+  };
+
+  // Apply a color to whichever target is active
+  const applyColorToTarget = (widgetId: string, color: string | null) => {
+    if (colorTarget === 'fill') {
+      updateWidgetColor(widgetId, { backgroundColor: color });
+    } else if (colorTarget === 'outline') {
+      updateWidgetColor(widgetId, { outlineColor: color });
+    } else {
+      updateWidgetColor(widgetId, { textColor: color });
+    }
+  };
+
+  const renderPropertiesBar = () => {
+    if (!selectedWidgetConfig || !selectedWidget) return null;
+    const bgColor = selectedWidgetConfig.backgroundColor;
+    const olColor = selectedWidgetConfig.outlineColor;
+    const txtColor = selectedWidgetConfig.textColor;
+    const bgOpacity = selectedWidgetConfig.backgroundOpacity ?? 1;
+    const olOpacity = selectedWidgetConfig.outlineOpacity ?? 1;
+    const txtOpacity = selectedWidgetConfig.textOpacity ?? 1;
+    const displayName = selectedWidgetConfig.i.charAt(0).toUpperCase() + selectedWidgetConfig.i.slice(1);
+    const hasColorFill = bgColor && bgColor !== 'transparent';
+    const hasColorOutline = !!olColor;
+    const hasColorText = !!txtColor;
+    const activeColor = getActiveColor(selectedWidgetConfig);
+
+    const palette = getColorPalette(paletteId, isDark);
+    const swatchColors = palette.colors;
+    // Append black + white unless monochrome (which already has them)
+    const fixedColors = paletteId === 'mono' ? [] : FIXED_COLORS;
+
+    // Determine which swatch is selected based on active target
+    const isSwatchSelected = (hex: string) => activeColor === hex;
 
     return (
-      <div className="absolute top-1 left-1 z-20" ref={isOpen ? colorPickerRef : undefined}>
-        <ColorPickerButton
-          bgColor={bgColor}
-          onClick={(e) => { e.stopPropagation(); setColorPickerWidget(isOpen ? null : widget.i); }}
-        />
-        {isOpen && (
-          <div className="absolute top-8 left-0 bg-card border border-border rounded-lg p-2 shadow-xl z-30 w-[200px] space-y-2" onClick={(e) => e.stopPropagation()}>
-            <div>
-              <div className="text-[10px] text-muted-foreground mb-1">Background</div>
-              <div className="grid grid-cols-4 gap-1">
-                {COLOR_OPTIONS.map((c, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => updateWidgetColor(widget.i, { backgroundColor: c })}
-                    className={`w-7 h-7 rounded-full border transition-transform hover:scale-110 ${
-                      c === null ? 'bg-gradient-to-br from-white to-gray-400 border-gray-300' : 'border-gray-400'
-                    } ${bgColor === c || (!bgColor && c === null) ? 'ring-2 ring-primary ring-offset-1' : ''}`}
-                    style={c ? { backgroundColor: c } : undefined}
-                    title={c === null ? 'None' : c}
-                  />
-                ))}
-              </div>
-            </div>
-            <div className="border-t border-border pt-1.5">
-              <div className="text-[10px] text-muted-foreground mb-1">Outline</div>
-              <div className="grid grid-cols-4 gap-1">
-                {COLOR_OPTIONS.map((c, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => updateWidgetColor(widget.i, { outlineColor: c })}
-                    className={`w-7 h-7 rounded-full border transition-transform hover:scale-110 ${
-                      c === null ? 'bg-gradient-to-br from-white to-gray-400 border-gray-300' : 'border-gray-400'
-                    } ${olColor === c || (!olColor && c === null) ? 'ring-2 ring-primary ring-offset-1' : ''}`}
-                    style={c ? { backgroundColor: c } : undefined}
-                    title={c === null ? 'None' : c}
-                  />
-                ))}
-              </div>
-            </div>
-            <div className="border-t border-border pt-1.5">
-              <div className="text-[10px] text-muted-foreground mb-1">Opacity</div>
-              <div className="flex gap-1">
-                {[1, 0.75, 0.5, 0.25].map((o) => (
+      <div className="bg-card/95 backdrop-blur-sm border-b border-border" onPointerDown={(e) => e.stopPropagation()}>
+        {/* Row 1: Widget name + close */}
+        <div className="flex items-center justify-between px-3 pt-2 pb-1">
+          <span className="text-sm font-medium">{displayName} Widget</span>
+          <button
+            onClick={() => setSelectedWidget(null)}
+            className="p-1.5 hover:bg-accent rounded transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center touch-manipulation"
+            aria-label="Close properties"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M18 6 6 18" /><path d="m6 6 12 12" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Row 2: Theme selector pills */}
+        <div className="flex gap-1 px-3 pb-1.5">
+          {PALETTE_ORDER.map((id) => {
+            const p = getColorPalette(id, isDark);
+            return (
+              <button
+                key={id}
+                onClick={() => setPaletteId(id)}
+                onPointerDown={(e) => e.stopPropagation()}
+                className={`px-2.5 py-1 text-xs rounded-full border transition-colors touch-manipulation ${
+                  paletteId === id
+                    ? 'bg-primary text-primary-foreground border-primary'
+                    : 'border-border hover:bg-accent/50 text-muted-foreground'
+                }`}
+              >
+                {p.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Row 3: Special swatch + themed colors + B/W + custom picker */}
+        <div className="flex items-center gap-1 px-3 pb-1.5">
+          {/* Special swatch — checkerboard for all targets */}
+          {(() => {
+            const specialValue = colorTarget === 'fill' ? 'transparent' : null;
+            const isSpecialSelected = colorTarget === 'fill'
+              ? bgColor === 'transparent'
+              : colorTarget === 'outline' ? !olColor : !txtColor;
+            const title = colorTarget === 'fill' ? 'Transparent' : colorTarget === 'outline' ? 'None' : 'Auto';
+            return (
+              <button
+                onClick={() => applyColorToTarget(selectedWidget, specialValue)}
+                onPointerDown={(e) => e.stopPropagation()}
+                className={`w-8 h-8 rounded-full border border-gray-300 overflow-hidden transition-transform hover:scale-110 touch-manipulation ${
+                  isSpecialSelected ? 'ring-2 ring-primary ring-offset-1' : ''
+                }`}
+                title={title}
+              >
+                <svg viewBox="0 0 32 32" className="w-full h-full">
+                  <pattern id="checker-props" width="8" height="8" patternUnits="userSpaceOnUse">
+                    <rect width="4" height="4" fill="#ccc" />
+                    <rect x="4" y="4" width="4" height="4" fill="#ccc" />
+                    <rect x="4" width="4" height="4" fill="#fff" />
+                    <rect y="4" width="4" height="4" fill="#fff" />
+                  </pattern>
+                  <circle cx="16" cy="16" r="16" fill="url(#checker-props)" />
+                </svg>
+              </button>
+            );
+          })()}
+
+          <div className="w-px h-6 bg-border mx-0.5" />
+
+          {/* Themed color swatches */}
+          {swatchColors.map((hex) => (
+            <button
+              key={hex}
+              onClick={() => applyColorToTarget(selectedWidget, hex)}
+              onPointerDown={(e) => e.stopPropagation()}
+              className={`w-8 h-8 rounded-full border border-gray-400 transition-transform hover:scale-110 touch-manipulation ${
+                isSwatchSelected(hex) ? 'ring-2 ring-primary ring-offset-1' : ''
+              }`}
+              style={{ backgroundColor: hex }}
+              title={hex}
+            />
+          ))}
+
+          {/* Fixed colors: black + white (unless mono) */}
+          {fixedColors.map((hex) => (
+            <button
+              key={hex}
+              onClick={() => applyColorToTarget(selectedWidget, hex)}
+              onPointerDown={(e) => e.stopPropagation()}
+              className={`w-8 h-8 rounded-full border border-gray-400 transition-transform hover:scale-110 touch-manipulation ${
+                isSwatchSelected(hex) ? 'ring-2 ring-primary ring-offset-1' : ''
+              }`}
+              style={{ backgroundColor: hex }}
+              title={hex}
+            />
+          ))}
+
+          {/* Custom color picker (rainbow button) */}
+          <div className="relative">
+            <button
+              onClick={() => colorPickerRef.current?.click()}
+              onPointerDown={(e) => e.stopPropagation()}
+              className="w-8 h-8 rounded-full border border-gray-400 transition-transform hover:scale-110 touch-manipulation overflow-hidden"
+              style={{ background: 'conic-gradient(red, yellow, lime, aqua, blue, magenta, red)' }}
+              title="Custom color"
+            />
+            <input
+              ref={(el) => { (colorPickerRef as React.MutableRefObject<HTMLInputElement | null>).current = el; }}
+              type="color"
+              className="sr-only"
+              value={activeColor || '#3B82F6'}
+              onChange={(e) => applyColorToTarget(selectedWidget, e.target.value)}
+            />
+          </div>
+
+          {/* Opacity — inline on swatch row, visible when active target has a color */}
+          {((colorTarget === 'fill' && hasColorFill) || (colorTarget === 'outline' && hasColorOutline) || (colorTarget === 'text' && hasColorText)) && (
+            <>
+              <div className="w-px h-6 bg-border mx-0.5" />
+              {[0, 0.25, 0.5, 0.75, 1].map((o) => {
+                const currentOpacity = colorTarget === 'fill' ? bgOpacity : colorTarget === 'outline' ? olOpacity : txtOpacity;
+                const handleOpacityClick = () => {
+                  if (colorTarget === 'fill') updateWidgetColor(selectedWidget, { backgroundOpacity: o });
+                  else if (colorTarget === 'outline') updateWidgetColor(selectedWidget, { outlineOpacity: o });
+                  else updateWidgetColor(selectedWidget, { textOpacity: o });
+                };
+                return (
                   <button
                     key={o}
-                    onClick={() => updateWidgetColor(widget.i, { backgroundOpacity: o })}
-                    className={`flex-1 py-0.5 text-[10px] rounded border transition-colors ${
-                      bgOpacity === o
+                    onClick={handleOpacityClick}
+                    onPointerDown={(e) => e.stopPropagation()}
+                    className={`w-8 h-8 rounded-full text-[10px] border transition-colors touch-manipulation ${
+                      currentOpacity === o
                         ? 'bg-primary text-primary-foreground border-primary'
                         : 'border-border hover:bg-accent/50'
                     }`}
                   >
                     {Math.round(o * 100)}%
                   </button>
-                ))}
-              </div>
-            </div>
+                );
+              })}
+            </>
+          )}
+        </div>
+
+        {/* Row 4: Target buttons with harvey ball indicators */}
+        <div className="flex items-center gap-2 px-3 pb-2">
+          <div className="flex gap-1">
+            {([
+              { id: 'fill' as const, icon: PaintBucket, label: 'Fill', color: bgColor, opacity: bgOpacity },
+              { id: 'outline' as const, icon: Square, label: 'Outline', color: olColor, opacity: olOpacity },
+              { id: 'text' as const, icon: Type, label: 'Text', color: txtColor, opacity: txtOpacity },
+            ]).map(({ id, icon: Icon, label, color, opacity }) => {
+              const fillColor = color && color !== 'transparent' ? color : '#999';
+              const fillLevel = !color || color === 'transparent' ? 0 : opacity;
+              const isActive = colorTarget === id;
+              // Contrasting stroke: light stroke on dark fills, dark stroke on light fills
+              const ballStroke = fillLevel > 0 && color && color !== 'transparent'
+                ? (isLightColor(color) ? '#333' : '#fff')
+                : (isActive ? 'rgba(255,255,255,0.6)' : '#999');
+
+              return (
+                <button
+                  key={id}
+                  onClick={() => setColorTarget(id)}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  className={`relative flex items-center gap-1.5 px-2.5 min-h-[44px] min-w-[44px] text-xs rounded border transition-colors touch-manipulation ${
+                    isActive
+                      ? 'bg-primary text-primary-foreground border-primary'
+                      : 'border-border hover:bg-accent/50'
+                  }`}
+                >
+                  <Icon className="w-3.5 h-3.5" />
+                  <span>{label}</span>
+                  {/* Harvey ball pie-slice indicator: 25% per slice, starting from 12 o'clock clockwise */}
+                  <svg viewBox="0 0 16 16" className="w-4 h-4 shrink-0">
+                    <circle cx="8" cy="8" r="7" fill={isActive ? 'rgba(255,255,255,0.3)' : '#e5e5e5'} stroke={ballStroke} strokeWidth="1" />
+                    {fillLevel > 0 && (() => {
+                      // Each 25% = one quarter pie slice; compute arc path
+                      const slices = Math.round(fillLevel * 4); // 0-4 slices
+                      if (slices >= 4) {
+                        // Full circle
+                        return <circle cx="8" cy="8" r="7" fill={fillColor} stroke={ballStroke} strokeWidth="0.5" />;
+                      }
+                      // SVG arc from 12 o'clock clockwise
+                      const endAngle = (slices / 4) * 2 * Math.PI - Math.PI / 2;
+                      const ex = 8 + 7 * Math.cos(endAngle);
+                      const ey = 8 + 7 * Math.sin(endAngle);
+                      const largeArc = slices > 2 ? 1 : 0;
+                      return (
+                        <path
+                          d={`M8,8 L8,1 A7,7 0 ${largeArc},1 ${ex.toFixed(2)},${ey.toFixed(2)} Z`}
+                          fill={fillColor}
+                          stroke={ballStroke}
+                          strokeWidth="0.5"
+                        />
+                      );
+                    })()}
+                    {color === 'transparent' && (
+                      <>
+                        <defs>
+                          <pattern id={`hb-checker-${id}`} width="4" height="4" patternUnits="userSpaceOnUse">
+                            <rect width="2" height="2" fill="#ccc" />
+                            <rect x="2" y="2" width="2" height="2" fill="#ccc" />
+                            <rect x="2" width="2" height="2" fill="#fff" />
+                            <rect y="2" width="2" height="2" fill="#fff" />
+                          </pattern>
+                        </defs>
+                        <circle cx="8" cy="8" r="7" fill={`url(#hb-checker-${id})`} stroke={ballStroke} strokeWidth="0.5" />
+                      </>
+                    )}
+                  </svg>
+                </button>
+              );
+            })}
           </div>
-        )}
+        </div>
       </div>
     );
   };
@@ -429,6 +611,7 @@ export function LayoutGridEditor({
   if (isEditable) {
     return (
       <div className={className || ''}>
+        {renderPropertiesBar()}
         <div
           ref={combinedRef}
           onScroll={handleScroll}
@@ -437,6 +620,7 @@ export function LayoutGridEditor({
         >
           <div
             className="relative editing-mode"
+            onClick={() => setSelectedWidget(null)}
             style={{
               minHeight: totalRows * (cellSize + margin) + 2 * containerPadding,
               minWidth: totalCols * (cellSize + margin) + 2 * containerPadding,
@@ -467,14 +651,40 @@ export function LayoutGridEditor({
                 {visibleWidgets.map(w => {
                   const widgetStyle = getWidgetStyle(w);
                   const textClass = getTextClass(w, '');
+                  const isSelected = selectedWidget === w.i;
+                  const hasCustomBg = !!w.backgroundColor;
 
                   return (
-                    <div key={w.i} className={`relative ${colorPickerWidget === w.i ? 'z-[100]' : ''}`} style={widgetStyle}>
-                      <div className={`absolute inset-0 z-10 border-2 border-dashed ${theme.borderDash} rounded-lg pointer-events-none`} />
-                      {renderColorPicker(w)}
-                      <div className={`h-full w-full overflow-hidden ${textClass}`}>
-                        {renderWidget(w)}
-                      </div>
+                    <div
+                      key={w.i}
+                      className={`relative cursor-pointer ${isSelected ? 'ring-2 ring-primary ring-offset-2 z-[100]' : ''}`}
+                      style={widgetStyle}
+                      onClick={(e) => { e.stopPropagation(); setSelectedWidget(w.i); }}
+                      onTouchStart={(e) => {
+                        const touch = e.touches[0];
+                        if (touch) tapStartRef.current = { x: touch.clientX, y: touch.clientY, time: Date.now() };
+                      }}
+                      onTouchEnd={(e) => {
+                        if (!tapStartRef.current) return;
+                        const t = e.changedTouches[0];
+                        if (!t) { tapStartRef.current = null; return; }
+                        const dx = Math.abs(t.clientX - tapStartRef.current.x);
+                        const dy = Math.abs(t.clientY - tapStartRef.current.y);
+                        const dt = Date.now() - tapStartRef.current.time;
+                        tapStartRef.current = null;
+                        if (dx < 10 && dy < 10 && dt < 500) {
+                          e.stopPropagation();
+                          e.preventDefault();
+                          setSelectedWidget(w.i);
+                        }
+                      }}
+                    >
+                      <div className={`absolute inset-0 z-10 border-2 border-dashed ${isSelected ? 'border-primary' : theme.borderDash} rounded-lg pointer-events-none`} />
+                      <WidgetBgOverrideProvider value={{ hasCustomBg, textColor: w.textColor, textOpacity: w.textOpacity }}>
+                        <div className={`h-full w-full overflow-hidden ${textClass}`}>
+                          {renderWidget(w)}
+                        </div>
+                      </WidgetBgOverrideProvider>
                     </div>
                   );
                 })}
@@ -515,12 +725,15 @@ export function LayoutGridEditor({
             {visibleWidgets.map(w => {
               const widgetStyle = getWidgetStyle(w);
               const textClass = getTextClass(w, '');
+              const hasCustomBg = !!w.backgroundColor;
 
               return (
                 <div key={w.i} className="relative" style={widgetStyle}>
-                  <div className={`h-full w-full overflow-hidden ${textClass}`}>
-                    {renderWidget(w)}
-                  </div>
+                  <WidgetBgOverrideProvider value={{ hasCustomBg, textColor: w.textColor, textOpacity: w.textOpacity }}>
+                    <div className={`h-full w-full overflow-hidden ${textClass}`}>
+                      {renderWidget(w)}
+                    </div>
+                  </WidgetBgOverrideProvider>
                 </div>
               );
             })}

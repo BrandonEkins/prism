@@ -426,8 +426,8 @@ export function ShoppingView() {
         {/* Collapsible header - hidden in shopping mode */}
         {!shoppingMode && (
           <>
-            <header className="flex-shrink-0 border-b border-border bg-card/85 backdrop-blur-sm px-3 py-2 safe-area-top">
-              <div className="flex items-center justify-between">
+            <header className="flex-shrink-0 border-b border-border bg-card/85 backdrop-blur-sm px-4 safe-area-top">
+              <div className="flex items-center justify-between h-16">
                 <div className="flex items-center gap-4">
                   <Button variant="ghost" size="icon" asChild className="hidden md:inline-flex">
                     <Link href="/" aria-label="Back to dashboard"><Home className="h-5 w-5" /></Link>

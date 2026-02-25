@@ -18,9 +18,8 @@ import {
 } from 'date-fns';
 import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { WidgetContainer, WidgetEmpty } from './WidgetContainer';
+import { WidgetContainer, WidgetEmpty, useWidgetBgOverride } from './WidgetContainer';
 import {
-  ScrollArea,
   Badge,
   Select,
   SelectContent,
@@ -76,6 +75,9 @@ export function CalendarWidget({
   gridW = 2,
   gridH = 2,
 }: CalendarWidgetProps) {
+  const bgOverride = useWidgetBgOverride();
+  const transparentMode = bgOverride?.hasCustomBg === true;
+
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewType, setViewType] = useState<WidgetViewType>(() => {
     if (typeof window !== 'undefined') {
@@ -185,7 +187,7 @@ export function CalendarWidget({
       {/* View selector */}
       {availableViews.length > 1 && (
         <Select value={viewType} onValueChange={(v) => setViewType(v as WidgetViewType)}>
-          <SelectTrigger className="h-6 w-[70px] text-[10px]">
+          <SelectTrigger className={cn("h-6 w-[70px] text-[10px]", transparentMode && "bg-transparent border-current/20")}>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -214,7 +216,7 @@ export function CalendarWidget({
           'px-2 py-1 rounded-full text-[10px] font-medium transition-colors leading-none',
           selectedCalendarIds.has('all')
             ? 'bg-primary text-primary-foreground'
-            : 'bg-muted text-muted-foreground hover:bg-accent'
+            : transparentMode ? 'text-current/70 hover:text-current' : 'bg-muted text-muted-foreground hover:bg-accent'
         )}
       >
         All
@@ -270,7 +272,7 @@ export function CalendarWidget({
             message="No upcoming events"
           />
         ) : (
-          <ScrollArea className="h-full -mr-2 pr-2">
+          <div className="overflow-auto h-full -mr-2 pr-2">
             <div className="space-y-4">
               {eventsByDay.map(({ date, events: dayEvts }) => (
                 <DaySection
@@ -282,7 +284,7 @@ export function CalendarWidget({
                 />
               ))}
             </div>
-          </ScrollArea>
+          </div>
         )
       )}
 

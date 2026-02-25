@@ -11,6 +11,7 @@ import {
   getWeek,
 } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { useWidgetBgOverride } from '@/components/widgets/WidgetContainer';
 import { useOrientation } from '@/lib/hooks/useOrientation';
 import type { CalendarEvent } from '@/types/calendar';
 
@@ -25,6 +26,8 @@ export function TwoWeekView({
   events,
   onEventClick,
 }: TwoWeekViewProps) {
+  const bgOverride = useWidgetBgOverride();
+  const transparentMode = bgOverride?.hasCustomBg === true;
   const weekStart = startOfWeek(currentDate);
   const orientation = useOrientation();
   const isPortrait = orientation === 'portrait';
@@ -52,9 +55,10 @@ export function TwoWeekView({
     return (
       <div
         className={cn(
-          'border border-border rounded-md bg-card/85 backdrop-blur-sm h-full',
+          'border border-border rounded-md h-full',
+          !transparentMode && 'bg-card/85 backdrop-blur-sm',
           'flex flex-col overflow-hidden',
-          isPast && 'bg-gray-200 text-gray-600 dark:bg-muted/40 dark:text-muted-foreground',
+          !transparentMode && isPast && 'bg-muted/50 text-muted-foreground',
           isToday(date) && 'border-primary border-2'
         )}
       >
@@ -102,7 +106,7 @@ export function TwoWeekView({
   // Portrait: 2 columns (Week 1, Week 2) x 7 rows (days of week)
   if (isPortrait) {
     return (
-      <div className="h-full flex flex-col gap-1 overflow-hidden">
+      <div className="h-full flex flex-col gap-1 overflow-auto">
         {/* Header row with week numbers */}
         <div className="flex shrink-0 gap-1">
           <div className="w-10 shrink-0" /> {/* Day label spacer */}
@@ -116,8 +120,8 @@ export function TwoWeekView({
 
         {/* Day rows - each row takes equal space, scales to fit */}
         <div
-          className="flex-1 grid gap-1 min-h-0"
-          style={{ gridTemplateRows: 'repeat(7, 1fr)' }}
+          className="flex-1 shrink-0 grid gap-1"
+          style={{ gridTemplateRows: 'repeat(7, minmax(50px, 1fr))' }}
         >
           {dayNames.map((dayName, dayIndex) => (
             <div key={dayIndex} className="flex gap-1 min-h-0 h-full">
@@ -144,7 +148,7 @@ export function TwoWeekView({
 
   // Landscape: 7 columns x 2 rows
   return (
-    <div className="h-full flex flex-col overflow-hidden">
+    <div className="h-full flex flex-col overflow-auto">
       {/* Day headers */}
       <div className="grid grid-cols-7 gap-1 mb-1 shrink-0">
         {dayNames.map((name) => (
@@ -155,9 +159,9 @@ export function TwoWeekView({
       </div>
 
       {/* Calendar grid - equal sized cells */}
-      <div className="flex-1 grid grid-cols-7 grid-rows-2 gap-1">
+      <div className="flex-1 shrink-0 grid grid-cols-7 gap-1" style={{ gridTemplateRows: 'repeat(2, minmax(100px, 1fr))' }}>
         {days.map((date, index) => (
-          <div key={index} className="min-h-0">
+          <div key={index}>
             {renderDayCell(date)}
           </div>
         ))}

@@ -149,8 +149,8 @@ export function RecipesView() {
     <PageWrapper>
       <div className="h-screen flex flex-col">
         {/* Header */}
-        <header className="flex-shrink-0 border-b border-border bg-card/85 backdrop-blur-sm px-4 py-3">
-          <div className="flex items-center justify-between">
+        <header className="flex-shrink-0 border-b border-border bg-card/85 backdrop-blur-sm px-4">
+          <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-4">
               <Button variant="ghost" size="icon" asChild>
                 <Link href="/" aria-label="Back to dashboard">
@@ -164,15 +164,15 @@ export function RecipesView() {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="outline" onClick={handleImportUrlWithAuth}>
+              <Button variant="outline" size="sm" onClick={handleImportUrlWithAuth}>
                 <Link2 className="h-4 w-4 mr-1" />
                 Import URL
               </Button>
-              <Button variant="outline" onClick={handleImportPaprikaWithAuth}>
+              <Button variant="outline" size="sm" onClick={handleImportPaprikaWithAuth}>
                 <FileUp className="h-4 w-4 mr-1" />
                 Import Paprika
               </Button>
-              <Button onClick={handleAddWithAuth}>
+              <Button size="sm" onClick={handleAddWithAuth}>
                 <Plus className="h-4 w-4 mr-1" />
                 Add Recipe
               </Button>

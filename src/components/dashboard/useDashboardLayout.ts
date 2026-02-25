@@ -57,6 +57,20 @@ export function useDashboardLayout(layouts: LayoutsData, slug?: string) {
     }
   }, [activeLayout]);
 
+  // Re-enter edit mode after dashboard switch (sessionStorage flag)
+  useEffect(() => {
+    if (activeLayout && typeof window !== 'undefined') {
+      const flag = sessionStorage.getItem('prism:editing');
+      if (flag) {
+        sessionStorage.removeItem('prism:editing');
+        const current = activeLayout.widgets ?? DEFAULT_TEMPLATE.widgets;
+        preEditWidgetsRef.current = current;
+        setEditingWidgets(current);
+        setIsEditing(true);
+      }
+    }
+  }, [activeLayout]);
+
   const activeWidgets = isEditing
     ? editingWidgets
     : activeLayout?.widgets ?? DEFAULT_TEMPLATE.widgets;

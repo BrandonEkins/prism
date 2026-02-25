@@ -27,7 +27,7 @@ import { useState } from 'react';
 import { ShoppingCart, Plus, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { WidgetContainer, WidgetEmpty } from './WidgetContainer';
-import { Button, Checkbox, Badge, ScrollArea, Progress } from '@/components/ui';
+import { Button, Checkbox, Badge, Progress } from '@/components/ui';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -203,7 +203,7 @@ export function ShoppingWidget({
             </div>
           )}
 
-          <ScrollArea className="h-full -mr-2 pr-2">
+          <div className="overflow-auto h-full -mr-2 pr-2">
             <div className="space-y-2">
               {items.map((item) => {
                 const isChecked: boolean =
@@ -221,7 +221,7 @@ export function ShoppingWidget({
                 );
               })}
             </div>
-          </ScrollArea>
+          </div>
         </>
       )}
     </WidgetContainer>

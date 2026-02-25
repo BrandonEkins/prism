@@ -6,10 +6,6 @@ BACKUP_HOUR=${BACKUP_HOUR:-3}  # Default: 3 AM
 
 echo "[$(date)] Backup scheduler started (daily at ${BACKUP_HOUR}:00)"
 
-# Run initial backup on container start
-echo "[$(date)] Running initial backup..."
-/scripts/backup.sh
-
 # Loop forever, running backup at the scheduled hour
 while true; do
   CURRENT_HOUR=$(date +%H)

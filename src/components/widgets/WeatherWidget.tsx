@@ -162,7 +162,7 @@ export function WeatherWidget({
       error={error}
       className={className}
     >
-      <div className={cn('flex h-full', isVertical ? 'flex-col' : 'flex-col')}>
+      <div className="overflow-auto h-full">
         {/* CURRENT CONDITIONS */}
         <div className="flex items-center justify-between mb-4">
           {/* Temperature and icon */}
@@ -221,7 +221,7 @@ export function WeatherWidget({
 
         {/* FORECAST */}
         {showForecast && (
-          <div className={cn('flex-1 border-t border-border pt-3')}>
+          <div className={cn('border-t border-border pt-3')}>
             {isVertical ? (
               // Vertical layout: stack forecast days
               <div className="space-y-2">

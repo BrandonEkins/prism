@@ -37,7 +37,7 @@ import * as React from 'react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui';
-import { isLightColor } from '@/lib/utils/color';
+import { isLightColor, hexToHslValues, hexToRgba } from '@/lib/utils/color';
 
 /**
  * WIDGET ALIGNMENT
@@ -75,6 +75,17 @@ export function useWidgetAlignments() {
 // Context for passing alignment to WidgetContainer without threading through every widget
 const WidgetAlignmentContext = React.createContext<Record<string, WidgetAlignment>>({});
 export const WidgetAlignmentProvider = WidgetAlignmentContext.Provider;
+
+// Context for grid-level background override — when the grid wrapper applies a custom
+// background, the Card strips its own bg/border/shadow so there's no double background.
+// Also carries explicit textColor so WidgetContainer can apply it on the Card.
+const WidgetBgOverrideContext = React.createContext<{ hasCustomBg: boolean; textColor?: string; textOpacity?: number } | null>(null);
+export const WidgetBgOverrideProvider = WidgetBgOverrideContext.Provider;
+
+/** Hook for sub-components (e.g. calendar views) to check if widget has custom bg */
+export function useWidgetBgOverride() {
+  return React.useContext(WidgetBgOverrideContext);
+}
 
 // Context for current widget ID so WidgetContainer can self-lookup
 const WidgetIdContext = React.createContext<string | null>(null);
@@ -185,6 +196,12 @@ export function WidgetContainer({
   const resolvedId = widgetId || contextWidgetId;
   const alignment = alignmentProp || (resolvedId ? contextAlignments[resolvedId] : undefined);
 
+  // When grid-level background is applied, strip Card's own bg so it doesn't double up
+  const bgOverride = React.useContext(WidgetBgOverrideContext);
+  const stripCardBg = bgOverride?.hasCustomBg === true;
+  const overrideTextColor = bgOverride?.textColor;
+  const overrideTextOpacity = bgOverride?.textOpacity ?? 1;
+
   // Size classes for the grid
   const sizeClasses: Record<WidgetSize, string> = {
     small: 'col-span-1 row-span-1',
@@ -201,19 +218,43 @@ export function WidgetContainer({
         sizeClasses[size],
         // Full height within grid cell
         'h-full',
-        // Flex column layout
-        'flex flex-col',
+        // Grid layout: header gets auto height, content gets remaining space
+        // (CSS Grid gives the content row a definite height, enabling ScrollArea h-full)
+        'grid overflow-hidden',
         // Interactive cursor if clickable
         onClick && 'cursor-pointer hover:shadow-md transition-shadow',
-        // Allow header popover dropdowns to overflow
-        'overflow-visible',
-        // Auto text color based on background luminance
-        // Future: per-widget text color manual override could replace this
-        backgroundColor && (isLightColor(backgroundColor) ? 'text-black' : 'text-white'),
+        // Strip Card styling when grid-level background is applied
+        stripCardBg && 'backdrop-blur-none border-transparent shadow-none',
+        // Auto text color based on background luminance (skipped when explicit textColor override)
+        !overrideTextColor && backgroundColor && (isLightColor(backgroundColor) ? 'text-black' : 'text-white'),
         className
       )}
       onClick={onClick}
-      style={backgroundColor ? { backgroundColor } : undefined}
+      style={{
+        // Grid rows: auto for header (if present), 1fr for content
+        gridTemplateRows: showHeader && title ? 'auto 1fr' : '1fr',
+        ...(stripCardBg
+          ? { backgroundColor: 'transparent' }
+          : backgroundColor ? { backgroundColor } : {}),
+        ...(overrideTextColor ? (() => {
+          const hsl = hexToHslValues(overrideTextColor);
+          // When text opacity < 1, append alpha to HSL values so Tailwind's hsl() picks it up
+          const hslVal = overrideTextOpacity < 1 ? `${hsl} / ${overrideTextOpacity}` : hsl;
+          return {
+            color: overrideTextOpacity < 1 ? hexToRgba(overrideTextColor, overrideTextOpacity) : overrideTextColor,
+            // Override Tailwind CSS custom properties so text-foreground, text-muted-foreground,
+            // text-card-foreground, text-primary, text-seasonal-accent etc. all resolve to the chosen color
+            '--foreground': hslVal,
+            '--card-foreground': hslVal,
+            '--muted-foreground': hslVal,
+            '--primary': hslVal,
+            '--seasonal-accent': hslVal,
+            // Override border colors so Select/dropdown outlines pick up the custom color
+            '--input': hslVal,
+            '--border': hslVal,
+          } as React.CSSProperties;
+        })() : {}),
+      }}
     >
       {/* WIDGET HEADER */}
       {showHeader && title && (
@@ -250,9 +291,9 @@ export function WidgetContainer({
       {/* WIDGET CONTENT */}
       <CardContent
         className={cn(
-          // Fill remaining space
-          'flex-1 flex flex-col',
-          // Overflow handling
+          // Fill remaining space; min-h-0 prevents grid row overflow
+          'flex flex-col min-h-0',
+          // Clip content overflow (individual widgets use ScrollArea for scrolling)
           'overflow-hidden',
           // Remove padding if no header
           !showHeader && 'pt-4',

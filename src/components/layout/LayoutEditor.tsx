@@ -439,7 +439,7 @@ export function LayoutEditor({
 
   return (
     <>
-      <div ref={toolbarRef} className="relative z-50 bg-card/85 backdrop-blur-sm border-b border-border px-4 py-2">
+      <div ref={toolbarRef} className="relative z-[200] bg-card/85 backdrop-blur-sm border-b border-border px-4 py-2">
         <div className="flex items-center justify-between gap-2 flex-wrap">
           {/* Left group */}
           <div className="flex items-center gap-1.5 flex-wrap">
@@ -461,9 +461,10 @@ export function LayoutEditor({
                       key={dashboard.id}
                       onClick={() => {
                         if (dashboard.id !== currentDashboardId && dashboard.slug) {
+                          sessionStorage.setItem('prism:editing', 'true');
                           onSwitchDashboard?.(dashboard.slug);
                         } else if (dashboard.id !== currentDashboardId && dashboard.isDefault) {
-                          // Default dashboard uses /
+                          sessionStorage.setItem('prism:editing', 'true');
                           window.location.href = '/';
                         }
                         setActivePopover(null);
@@ -503,7 +504,7 @@ export function LayoutEditor({
                   : 'bg-primary/10 border-primary/30 text-primary hover:bg-primary/20'
               }`}
             >
-              {screenGuideOrientation === 'landscape' ? '\u2B1C Land' : '\u25AF Port'}
+              {screenGuideOrientation === 'landscape' ? '\u2B1C Landscape' : '\u25AF Portrait'}
             </button>
 
             {/* Widgets popover */}
@@ -659,32 +660,41 @@ export function LayoutEditor({
               </button>
             )}
 
-            {/* Save split button */}
-            <div className="relative flex">
+            {/* Save split button (no Save As for screensaver — it's part of the dashboard) */}
+            {editingScreensaver ? (
               <button
                 onClick={handleSave}
-                className="px-2 py-1.5 text-xs rounded-l-md whitespace-nowrap bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+                className="px-2 py-1.5 text-xs rounded-md whitespace-nowrap bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
               >
                 {saveFeedback || saveLabel}
               </button>
-              <button
-                onClick={() => togglePopover('save')}
-                className="px-1.5 py-1.5 rounded-r-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors border-l border-primary-foreground/20"
-                aria-label="Save options"
-              >
-                <ChevronIcon open={activePopover === 'save'} />
-              </button>
-              {activePopover === 'save' && (
-                <div className="absolute right-0 top-full mt-1 z-50 min-w-[120px] bg-popover border border-border rounded-md shadow-md py-1">
-                  <button
-                    onClick={() => { (editingScreensaver ? onScreensaverSaveAs : onSaveAs)?.(); setActivePopover(null); }}
-                    className={moreItemClass}
-                  >
-                    Save As...
-                  </button>
-                </div>
-              )}
-            </div>
+            ) : (
+              <div className="relative flex">
+                <button
+                  onClick={handleSave}
+                  className="px-2 py-1.5 text-xs rounded-l-md whitespace-nowrap bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+                >
+                  {saveFeedback || saveLabel}
+                </button>
+                <button
+                  onClick={() => togglePopover('save')}
+                  className="px-1.5 py-1.5 rounded-r-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors border-l border-primary-foreground/20"
+                  aria-label="Save options"
+                >
+                  <ChevronIcon open={activePopover === 'save'} />
+                </button>
+                {activePopover === 'save' && (
+                  <div className="absolute right-0 top-full mt-1 z-50 min-w-[120px] bg-popover border border-border rounded-md shadow-md py-1">
+                    <button
+                      onClick={() => { onSaveAs?.(); setActivePopover(null); }}
+                      className={moreItemClass}
+                    >
+                      Save As...
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* More dropdown */}
             <PopoverButton
