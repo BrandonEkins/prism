@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { toast } from '@/components/ui/use-toast';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useConfirmDialog } from '@/lib/hooks/useConfirmDialog';
-import { RefreshCw, ExternalLink, Plus, Trash2, Pencil, Check, X } from 'lucide-react';
+import { RefreshCw, ExternalLink, Plus, Trash2, Pencil, Check, X, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -373,6 +373,24 @@ export function CalendarsSection() {
                             </span>
                           )}
                         </div>
+                        {cal.syncErrors?.needsReauth && (
+                          <div className="flex items-center gap-2 mt-1">
+                            <AlertTriangle className="h-3.5 w-3.5 text-orange-500 shrink-0" />
+                            <span className="text-xs text-orange-600 dark:text-orange-400">
+                              Token expired — re-authentication required
+                            </span>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-6 text-xs ml-auto border-orange-500/50 text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-950"
+                              onClick={() => {
+                                window.location.href = `/api/auth/google?reauth=${cal.id}`;
+                              }}
+                            >
+                              Re-authenticate
+                            </Button>
+                          </div>
+                        )}
                       </div>
                     </div>
                     <label className="flex items-center gap-2 cursor-pointer">

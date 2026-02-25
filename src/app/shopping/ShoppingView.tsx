@@ -23,44 +23,23 @@ import { ShoppingItemRow } from '@/app/shopping/ShoppingItemRow';
 import { ItemModal } from '@/app/shopping/ItemModal';
 import { ListModal } from '@/app/shopping/ListModal';
 import { ShoppingCelebration } from '@/app/shopping/ShoppingCelebration';
+import { CategoryManagerModal } from '@/app/shopping/CategoryManagerModal';
 import { useShoppingViewData } from './useShoppingViewData';
+import { useShoppingCategories } from '@/lib/hooks/useShoppingCategories';
 import { useOrientation } from '@/lib/hooks/useOrientation';
 import { cn } from '@/lib/utils';
 import type { ShoppingItem } from '@/types';
-
-// Default grocery categories in a logical store layout order
-const DEFAULT_GROCERY_CATEGORIES: GroceryCategory[] = ['produce', 'bakery', 'meat', 'dairy', 'frozen', 'pantry'];
-type GroceryCategory = 'produce' | 'bakery' | 'meat' | 'dairy' | 'frozen' | 'pantry';
-
-// LocalStorage key for category order
-const CATEGORY_ORDER_KEY = 'prism:grocery-category-order';
 
 // Base number of empty lines to show in each category
 const BASE_EMPTY_LINES = 6;
 
 export function getCategoryEmoji(category: string): string {
-  switch (category) {
-    case 'produce': return '🥬';
-    case 'dairy': return '🥛';
-    case 'meat': return '🥩';
-    case 'bakery': return '🥖';
-    case 'frozen': return '🧊';
-    case 'pantry': return '🥫';
-    case 'household': return '🧴';
-    default: return '🛒';
-  }
-}
-
-function getCategoryColor(category: string): string {
-  const colorMap: Record<string, string> = {
-    produce: '#22C55E', // green
-    bakery: '#F59E0B',  // amber
-    meat: '#EF4444',    // red
-    dairy: '#3B82F6',   // blue
-    frozen: '#8B5CF6',  // purple
-    pantry: '#F97316',  // orange
+  // Fallback function — components should prefer the hook's getCategoryEmoji
+  const defaults: Record<string, string> = {
+    produce: '🥬', dairy: '🥛', meat: '🥩', bakery: '🥖',
+    frozen: '🧊', pantry: '🥫', household: '🧴',
   };
-  return colorMap[category] || '#3B82F6';
+  return defaults[category] || '🛒';
 }
 
 export function ShoppingView() {
@@ -78,12 +57,22 @@ export function ShoppingView() {
     totalItems, checkedItems, progress,
   } = useShoppingViewData();
 
-  // Track which category to default when opening modal
-  const [defaultCategory, setDefaultCategory] = useState<GroceryCategory | null>(null);
+  const {
+    categories: dynamicCategories,
+    addCategory, removeCategory, reorderCategories,
+    getCategoryEmoji: getDynCategoryEmoji,
+    getCategoryColor: getDynCategoryColor,
+  } = useShoppingCategories();
 
-  // Category order (persisted in localStorage)
-  const [categoryOrder, setCategoryOrder] = useState<GroceryCategory[]>(DEFAULT_GROCERY_CATEGORIES);
-  const [draggedCategory, setDraggedCategory] = useState<GroceryCategory | null>(null);
+  // Track which category to default when opening modal
+  const [defaultCategory, setDefaultCategory] = useState<string | null>(null);
+
+  // Category order derived from dynamic categories
+  const categoryOrder = dynamicCategories.map(c => c.id);
+  const [draggedCategory, setDraggedCategory] = useState<string | null>(null);
+
+  // Manage categories modal
+  const [showCategoryManager, setShowCategoryManager] = useState(false);
 
   // Non-grocery column order (persisted in localStorage)
   const NON_GROCERY_ORDER_KEY = 'prism:non-grocery-column-order';
@@ -93,17 +82,9 @@ export function ShoppingView() {
   // Touch drag state
   const touchStartRef = useRef<{ x: number; y: number; element: HTMLElement | null }>({ x: 0, y: 0, element: null });
 
-  // Load category order from localStorage on mount
+  // Load non-grocery column order from localStorage on mount
   useEffect(() => {
     try {
-      const saved = localStorage.getItem(CATEGORY_ORDER_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length === DEFAULT_GROCERY_CATEGORIES.length) {
-          setCategoryOrder(parsed as GroceryCategory[]);
-        }
-      }
-      // Load non-grocery column order
       const savedColumns = localStorage.getItem(NON_GROCERY_ORDER_KEY);
       if (savedColumns) {
         const parsed = JSON.parse(savedColumns);
@@ -116,15 +97,11 @@ export function ShoppingView() {
     }
   }, []);
 
-  // Save category order to localStorage
-  const saveCategoryOrder = useCallback((order: GroceryCategory[]) => {
-    setCategoryOrder(order);
-    try {
-      localStorage.setItem(CATEGORY_ORDER_KEY, JSON.stringify(order));
-    } catch {
-      // Ignore storage errors
-    }
-  }, []);
+  // Save category order via settings
+  const saveCategoryOrder = useCallback((order: string[]) => {
+    const reordered = order.map(id => dynamicCategories.find(c => c.id === id)).filter(Boolean) as typeof dynamicCategories;
+    reorderCategories(reordered);
+  }, [dynamicCategories, reorderCategories]);
 
   // Save non-grocery column order
   const saveColumnOrder = useCallback((order: [1, 2] | [2, 1]) => {
@@ -137,11 +114,11 @@ export function ShoppingView() {
   }, []);
 
   // Drag and drop handlers for category reordering (mouse)
-  const handleDragStart = useCallback((category: GroceryCategory) => {
+  const handleDragStart = useCallback((category: string) => {
     setDraggedCategory(category);
   }, []);
 
-  const handleDragOver = useCallback((e: React.DragEvent, targetCategory: GroceryCategory) => {
+  const handleDragOver = useCallback((e: React.DragEvent, targetCategory: string) => {
     e.preventDefault();
     if (!draggedCategory || draggedCategory === targetCategory) return;
 
@@ -161,7 +138,7 @@ export function ShoppingView() {
   }, []);
 
   // Touch handlers for category reordering
-  const handleTouchStart = useCallback((e: React.TouchEvent, category: GroceryCategory) => {
+  const handleTouchStart = useCallback((e: React.TouchEvent, category: string) => {
     const touch = e.touches[0];
     if (!touch) return;
     touchStartRef.current = {
@@ -182,7 +159,7 @@ export function ShoppingView() {
     for (const el of elements) {
       const categoryAttr = el.getAttribute('data-category');
       if (categoryAttr && categoryAttr !== draggedCategory) {
-        const targetCategory = categoryAttr as GroceryCategory;
+        const targetCategory = categoryAttr;
         const newOrder = [...categoryOrder];
         const draggedIndex = newOrder.indexOf(draggedCategory);
         const targetIndex = newOrder.indexOf(targetCategory);
@@ -329,11 +306,11 @@ export function ShoppingView() {
 
   // For non-grocery, use the existing filteredItems
   const otherItems = Object.entries(filteredItems).filter(
-    ([cat]) => !categoryOrder.includes(cat as GroceryCategory)
+    ([cat]) => !categoryOrder.includes(cat)
   );
 
   // Handle adding item with login prompt
-  const handleAddItem = async (category?: GroceryCategory) => {
+  const handleAddItem = async (category?: string) => {
     const user = await requireAuth("Who's adding an item?");
     if (!user) return;
 
@@ -344,7 +321,7 @@ export function ShoppingView() {
   };
 
   // Handle inline item add
-  const handleInlineAdd = async (category: GroceryCategory) => {
+  const handleInlineAdd = async (category: string) => {
     const name = inlineInputs[category]?.trim();
     if (!name || !activeList) return;
 
@@ -363,14 +340,14 @@ export function ShoppingView() {
     }
   };
 
-  const handleInlineKeyDown = (e: KeyboardEvent<HTMLInputElement>, category: GroceryCategory) => {
+  const handleInlineKeyDown = (e: KeyboardEvent<HTMLInputElement>, category: string) => {
     if (e.key === 'Enter') {
       e.preventDefault();
       handleInlineAdd(category);
     }
   };
 
-  const handleInlineBlur = (e: FocusEvent<HTMLInputElement>, category: GroceryCategory) => {
+  const handleInlineBlur = (e: FocusEvent<HTMLInputElement>, category: string) => {
     // Add item when user taps out of the input
     handleInlineAdd(category);
   };
@@ -472,6 +449,12 @@ export function ShoppingView() {
                   </Button>
                 </div>
                 <div className="flex gap-2">
+                  {activeList && isGroceryLayout && (
+                    <Button variant="ghost" size="sm" title="Manage grocery categories"
+                      onClick={() => setShowCategoryManager(true)}>
+                      <Settings className="h-4 w-4 mr-1" />Categories
+                    </Button>
+                  )}
                   {activeList && (
                     <Button variant="ghost" size="sm" title="Edit list settings"
                       onClick={async () => {
@@ -545,7 +528,7 @@ export function ShoppingView() {
                 isPortrait ? 'grid-cols-2' : 'grid-cols-3'
               )}>
                 {groceryCategoryItems.map(({ category, items }) => {
-                  const categoryColor = getCategoryColor(category);
+                  const categoryColor = getDynCategoryColor(category);
                   const categoryExtraRows = extraRows[category] || 0;
                   const totalEmptyLines = BASE_EMPTY_LINES + categoryExtraRows;
                   const emptyLinesNeeded = Math.max(0, totalEmptyLines - items.length);
@@ -575,7 +558,7 @@ export function ShoppingView() {
                         style={{ backgroundColor: categoryColor + '20' }}
                       >
                         <GripVertical className="h-4 w-4 text-muted-foreground/50 shrink-0" />
-                        <span className="text-xl">{getCategoryEmoji(category)}</span>
+                        <span className="text-xl">{getDynCategoryEmoji(category)}</span>
                         <h3
                           className="text-base font-bold capitalize"
                           style={{ color: categoryColor }}
@@ -681,7 +664,7 @@ export function ShoppingView() {
                   {otherItems.map(([category, items]) => (
                     <div key={category} className="border rounded-lg p-3 bg-card/90 backdrop-blur-sm">
                       <h4 className="text-base font-semibold text-muted-foreground mb-2 capitalize flex items-center gap-2">
-                        <span>{getCategoryEmoji(category)}</span><span>{category}</span>
+                        <span>{getDynCategoryEmoji(category)}</span><span>{category}</span>
                       </h4>
                       <div className="space-y-1">
                         {(items as ShoppingItem[]).map((item) => (
@@ -942,6 +925,16 @@ export function ShoppingView() {
                 toast({ title: err instanceof Error ? err.message : 'Failed to delete list. Please try again.', variant: 'destructive' });
               }
             } : undefined} />
+        )}
+
+        {showCategoryManager && (
+          <CategoryManagerModal
+            categories={dynamicCategories}
+            onAdd={addCategory}
+            onRemove={removeCategory}
+            onReorder={reorderCategories}
+            onClose={() => setShowCategoryManager(false)}
+          />
         )}
 
         {/* Celebration animation when all items checked */}

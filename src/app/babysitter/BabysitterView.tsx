@@ -20,6 +20,7 @@ import { useBabysitterInfo, type BabysitterInfoItem, type BabysitterSection } fr
 import { useWifiConfig } from '@/lib/hooks/useWifiConfig';
 import { QuickPinModal } from '@/components/auth/QuickPinModal';
 import { WifiQRCode } from '@/components/ui/WifiQRCode';
+import { BabysitterModeToggle } from '@/components/babysitter-mode/BabysitterModeToggle';
 import { cn } from '@/lib/utils';
 
 interface EmergencyContact {
@@ -99,20 +100,23 @@ export function BabysitterView() {
   return (
     <PageWrapper>
       {/* Header */}
-      <div className="flex items-center justify-between mb-6 print:mb-4">
+      <header className="flex items-center justify-between h-16 border-b border-border bg-card/85 backdrop-blur-sm px-4 mb-6 print:mb-4 print:border-0">
         <div className="flex items-center gap-3">
           <Link href="/">
             <Button variant="ghost" size="icon" className="print:hidden">
               <Home className="h-5 w-5" />
             </Button>
           </Link>
-          <h1 className="text-2xl font-bold">Babysitter Info</h1>
+          <h1 className="text-xl font-bold">Babysitter Info</h1>
         </div>
-        <Button variant="outline" onClick={handlePrint} className="print:hidden">
-          <Printer className="h-4 w-4 mr-2" />
-          Print
-        </Button>
-      </div>
+        <div className="flex items-center gap-2 print:hidden">
+          <BabysitterModeToggle variant="default" size="sm" showLabel />
+          <Button variant="outline" size="sm" onClick={handlePrint}>
+            <Printer className="h-4 w-4 mr-1" />
+            Print
+          </Button>
+        </div>
+      </header>
 
       {/* Content */}
       {items.length === 0 ? (

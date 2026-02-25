@@ -22,6 +22,7 @@ import { UserAvatar } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { PageWrapper } from '@/components/layout';
 import { TaskItem } from '@/app/tasks/TaskItem';
 import { TaskModal } from '@/app/tasks/TaskModal';
@@ -50,6 +51,10 @@ export function TasksView() {
   // Group by user toggle (default to true)
   const [groupByUser, setGroupByUser] = useState(true);
 
+  // Inline task add state
+  const [inlineTask, setInlineTask] = useState('');
+  const [inlineTaskByUser, setInlineTaskByUser] = useState<Record<string, string>>({});
+
   // Celebration state
   const [celebratingUser, setCelebratingUser] = useState<{ id: string; name: string } | null>(null);
 
@@ -75,6 +80,34 @@ export function TasksView() {
 
     return groups;
   }, [groupByUser, filteredTasks, familyMembers]);
+
+  const handleInlineAdd = async (assignedTo?: string) => {
+    const value = assignedTo ? inlineTaskByUser[assignedTo]?.trim() : inlineTask.trim();
+    if (!value) return;
+
+    const user = await requireAuth('Add Task', 'Please log in to add a task');
+    if (!user) return;
+
+    try {
+      const body: Record<string, string> = { title: value };
+      if (assignedTo) body.assignedTo = assignedTo;
+      const response = await fetch('/api/tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (!response.ok) throw new Error('Failed to create task');
+      refreshTasks();
+      if (assignedTo) {
+        setInlineTaskByUser(prev => ({ ...prev, [assignedTo]: '' }));
+      } else {
+        setInlineTask('');
+      }
+    } catch (err) {
+      console.error('Error creating task:', err);
+      toast({ title: 'Failed to create task', variant: 'destructive' });
+    }
+  };
 
   const handleAddWithAuth = async () => {
     const user = await requireAuth('Add Task', 'Please log in to add a task');
@@ -229,6 +262,27 @@ export function TasksView() {
                     </div>
                     {/* Scrollable tasks list */}
                     <div className="flex-1 overflow-y-auto p-2 space-y-1">
+                      {/* Inline add input */}
+                      <div className="pb-1">
+                        <Input
+                          placeholder="Add a task..."
+                          value={user ? (inlineTaskByUser[user.id] || '') : inlineTask}
+                          onChange={(e) => {
+                            if (user) {
+                              setInlineTaskByUser(prev => ({ ...prev, [user.id]: e.target.value }));
+                            } else {
+                              setInlineTask(e.target.value);
+                            }
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              handleInlineAdd(user?.id);
+                            }
+                          }}
+                          className="h-8 text-sm"
+                        />
+                      </div>
                       {tasks.map((task) => {
                         const dueDate = task.dueDate ? new Date(task.dueDate) : null;
                         const isOverdue = dueDate && !task.completed && isPast(dueDate);
@@ -310,6 +364,18 @@ export function TasksView() {
             </div>
           ) : (
             <div className="space-y-2 max-w-4xl mx-auto">
+              <Input
+                placeholder="Add a task..."
+                value={inlineTask}
+                onChange={(e) => setInlineTask(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleInlineAdd();
+                  }
+                }}
+                className="h-9"
+              />
               {filteredTasks.map((task) => (
                 <TaskItem key={task.id} task={task}
                   onToggle={() => toggleTask(task.id)}

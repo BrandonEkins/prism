@@ -35,12 +35,14 @@ export async function GET(request: Request) {
       return NextResponse.redirect(`${BASE_URL}/settings?error=missing_code`);
     }
 
-    // Parse state to get user ID
+    // Parse state to get user ID and reauth source ID
     let userId: string | null = null;
+    let reauthSourceId: string | null = null;
     if (state) {
       try {
         const parsed = JSON.parse(state);
-        userId = parsed.userId;
+        userId = parsed.userId || null;
+        reauthSourceId = parsed.reauth || null;
       } catch {
         // State parsing failed, continue without user ID
       }
@@ -52,6 +54,22 @@ export async function GET(request: Request) {
     // Encrypt tokens before storing
     const encryptedAccessToken = encrypt(tokens.access_token);
     const encryptedRefreshToken = tokens.refresh_token ? encrypt(tokens.refresh_token) : null;
+
+    // If re-authenticating a specific source, update just that source's tokens
+    if (reauthSourceId) {
+      await db
+        .update(calendarSources)
+        .set({
+          accessToken: encryptedAccessToken,
+          refreshToken: encryptedRefreshToken || undefined,
+          tokenExpiresAt,
+          syncErrors: null,
+          updatedAt: new Date(),
+        })
+        .where(eq(calendarSources.id, reauthSourceId));
+
+      return NextResponse.redirect(`${BASE_URL}/settings?success=google_reauth`);
+    }
 
     // Fetch calendars using the plaintext token (before we discard it)
     const calendars = await fetchCalendarList(tokens.access_token);
@@ -72,6 +90,7 @@ export async function GET(request: Request) {
             accessToken: encryptedAccessToken,
             refreshToken: encryptedRefreshToken || existing.refreshToken,
             tokenExpiresAt,
+            syncErrors: null,
             updatedAt: new Date(),
           })
           .where(eq(calendarSources.id, existing.id));

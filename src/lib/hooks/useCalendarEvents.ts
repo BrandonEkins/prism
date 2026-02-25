@@ -212,6 +212,7 @@ export function useCalendarSources() {
       groupName: string | null;
       groupColor: string | null;
       lastSynced: string | null;
+      syncErrors: { needsReauth?: boolean; lastError?: string; timestamp?: string } | null;
       user: { id: string; name: string; color: string } | null;
     }>
   >([]);

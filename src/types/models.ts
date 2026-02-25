@@ -65,7 +65,7 @@ export interface ShoppingItem {
   name: string;
   quantity?: number;
   unit?: string;
-  category?: 'produce' | 'dairy' | 'meat' | 'bakery' | 'frozen' | 'pantry' | 'household' | 'other';
+  category?: string;
   checked: boolean;
   notes?: string;
   addedBy?: {

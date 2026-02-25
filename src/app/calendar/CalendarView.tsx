@@ -13,6 +13,7 @@ import {
   CalendarDays,
   CalendarRange,
   LayoutGrid,
+  List,
   Plus,
   Home,
   Loader2,
@@ -21,7 +22,7 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { AddEventModal } from '@/components/modals';
 import { PageWrapper } from '@/components/layout';
-import { MonthView, WeekView, TwoWeekView, ThreeMonthView, DayViewSideBySide } from '@/components/calendar';
+import { MonthView, WeekView, TwoWeekView, ThreeMonthView, DayViewSideBySide, WeekVerticalView } from '@/components/calendar';
 import { useCalendarViewData } from './useCalendarViewData';
 import { useIsMobile, useSwipeNavigation } from '@/lib/hooks';
 import { useAuth } from '@/components/providers';
@@ -97,6 +98,9 @@ export function CalendarView() {
                 </Button>
                 <Button variant={viewType === 'week' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewType('week')} className="rounded-none border-x">
                   <CalendarRange className="h-4 w-4 mr-1" />Week
+                </Button>
+                <Button variant={viewType === 'weekVertical' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewType('weekVertical')} className="rounded-none border-r">
+                  <List className="h-4 w-4 mr-1" />List
                 </Button>
                 <Button variant={viewType === 'twoWeek' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewType('twoWeek')} className="rounded-none border-r">
                   <CalendarRange className="h-4 w-4 mr-1" />2 Weeks
@@ -174,6 +178,9 @@ export function CalendarView() {
           )}
           {!loading && !error && viewType === 'week' && (
             <WeekView currentDate={currentDate} events={events} onEventClick={setSelectedEvent} />
+          )}
+          {!loading && !error && viewType === 'weekVertical' && (
+            <WeekVerticalView currentDate={currentDate} events={events} onEventClick={setSelectedEvent} />
           )}
           {!loading && !error && viewType === 'twoWeek' && (
             <TwoWeekView currentDate={currentDate} events={events} onEventClick={setSelectedEvent} />

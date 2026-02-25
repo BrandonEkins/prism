@@ -5,6 +5,7 @@ import {
   fetchCalendarEvents,
   refreshAccessToken,
   convertGoogleEventToInternal,
+  TokenRevokedError,
   type GoogleCalendarEvent,
 } from '@/lib/integrations/google-calendar';
 import { decrypt, encrypt } from '@/lib/utils/crypto';
@@ -75,6 +76,21 @@ export async function syncGoogleCalendarSource(
         })
         .where(eq(calendarSources.id, sourceId));
     } catch (error) {
+      // If token is revoked/expired, mark as needing re-authentication
+      if (error instanceof TokenRevokedError) {
+        await db
+          .update(calendarSources)
+          .set({
+            syncErrors: {
+              needsReauth: true,
+              lastError: 'Token expired or revoked. Please re-authenticate.',
+              timestamp: new Date().toISOString(),
+            },
+            updatedAt: new Date(),
+          })
+          .where(eq(calendarSources.id, sourceId));
+        return { synced: 0, errors: ['Token expired or revoked. Re-authentication required.'] };
+      }
       return { synced: 0, errors: [`Failed to refresh token: ${error}`] };
     }
   }

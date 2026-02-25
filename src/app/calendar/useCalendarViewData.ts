@@ -15,7 +15,7 @@ import {
 import { useCalendarEvents, useCalendarSources } from '@/lib/hooks';
 import type { CalendarEvent } from '@/types/calendar';
 
-export type CalendarViewType = 'day' | 'week' | 'twoWeek' | 'month' | 'threeMonth';
+export type CalendarViewType = 'day' | 'week' | 'weekVertical' | 'twoWeek' | 'month' | 'threeMonth';
 
 export interface CalendarGroup {
   id: string;
@@ -121,6 +121,7 @@ export function useCalendarViewData() {
       switch (viewType) {
         case 'day': return subDays(prev, 1);
         case 'week': return subWeeks(prev, 1);
+        case 'weekVertical': return subWeeks(prev, 1);
         case 'twoWeek': return subWeeks(prev, 2);
         case 'month': return subMonths(prev, 1);
         case 'threeMonth': return subMonths(prev, 1);
@@ -133,6 +134,7 @@ export function useCalendarViewData() {
       switch (viewType) {
         case 'day': return addDays(prev, 1);
         case 'week': return addWeeks(prev, 1);
+        case 'weekVertical': return addWeeks(prev, 1);
         case 'twoWeek': return addWeeks(prev, 2);
         case 'month': return addMonths(prev, 1);
         case 'threeMonth': return addMonths(prev, 1);
@@ -144,7 +146,8 @@ export function useCalendarViewData() {
     switch (viewType) {
       case 'day':
         return format(currentDate, 'EEEE, MMMM d, yyyy');
-      case 'week': {
+      case 'week':
+      case 'weekVertical': {
         const ws = startOfWeek(currentDate);
         const we = endOfWeek(currentDate);
         return `${format(ws, 'MMM d')} - ${format(we, 'MMM d, yyyy')}`;
