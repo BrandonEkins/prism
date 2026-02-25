@@ -673,6 +673,8 @@ export function LayoutGridEditor({
                         const dt = Date.now() - tapStartRef.current.time;
                         tapStartRef.current = null;
                         if (dx < 10 && dy < 10 && dt < 500) {
+                          e.stopPropagation();
+                          e.preventDefault();
                           setSelectedWidget(w.i);
                         }
                       }}

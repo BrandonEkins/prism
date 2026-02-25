@@ -12,6 +12,10 @@ import { Cloud, CloudRain, CloudSnow, Sun, CloudSun, Droplets, Wind } from 'luci
 import { ResponsiveGridLayout as RGL, useContainerWidth, getCompactor } from 'react-grid-layout';
 import type { LayoutItem, Layout } from 'react-grid-layout';
 import type { WidgetConfig } from '@/lib/hooks/useLayouts';
+import { hexToRgba } from '@/lib/utils/color';
+import { WIDGET_REGISTRY } from '@/components/widgets/widgetRegistry';
+import { useDashboardData } from '@/components/dashboard/useDashboardData';
+import { buildWidgetProps } from '@/components/dashboard/useWidgetProps';
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
 
@@ -144,8 +148,17 @@ export function Screensaver() {
 }
 
 function ScreensaverGrid() {
-  const [layout, setLayout] = useState<WidgetConfig[]>(loadScreensaverLayout);
+  const layout = useMemo(() => loadScreensaverLayout(), []);
   const { width, containerRef, mounted } = useContainerWidth();
+  const data = useDashboardData();
+  const widgetProps = useMemo(() =>
+    buildWidgetProps(
+      data,
+      async () => null, // no auth in screensaver
+      { setShowAddTask: () => {}, setShowAddMessage: () => {}, setShowAddChore: () => {}, setShowAddShopping: () => {} },
+      '',
+    ),
+  [data]);
 
   const rowHeight = useMemo(() => {
     if (typeof window === 'undefined') return 60;
@@ -158,46 +171,44 @@ function ScreensaverGrid() {
   );
 
   const rglLayout: LayoutItem[] = useMemo(
-    () => visibleWidgets.map((w) => ({ i: w.i, x: w.x, y: w.y, w: w.w, h: w.h, minW: 2, minH: 1 })),
+    () => visibleWidgets.map((w) => ({ i: w.i, x: w.x, y: w.y, w: w.w, h: w.h, static: true })),
     [visibleWidgets]
   );
 
-  const layoutRef = useRef(layout);
-  layoutRef.current = layout;
-
-  const handleLayoutChange = useCallback((newLayout: Layout) => {
-    const updated = layoutRef.current.map((w) => {
-      const found = newLayout.find((l: LayoutItem) => l.i === w.i);
-      if (found) return { ...w, x: found.x, y: found.y, w: found.w, h: found.h };
-      return w;
-    });
-    setLayout(updated);
-    saveScreensaverLayout(updated);
-  }, []);
-
-  const getWidgetStyle = (w: WidgetConfig) => {
-    if (!w.backgroundColor) return undefined;
-    return {
-      backgroundColor: w.backgroundColor,
-      borderRadius: '0.5rem',
-      opacity: w.backgroundOpacity ?? 1,
-    };
+  const getWidgetStyle = (w: WidgetConfig): React.CSSProperties | undefined => {
+    if (!w.backgroundColor && !w.outlineColor && !w.textColor) return undefined;
+    const style: React.CSSProperties = { borderRadius: '0.5rem' };
+    if (w.backgroundColor && w.backgroundColor !== 'transparent') {
+      const opacity = w.backgroundOpacity ?? 1;
+      style.backgroundColor = opacity < 1
+        ? hexToRgba(w.backgroundColor, opacity)
+        : w.backgroundColor;
+    }
+    if (w.outlineColor) {
+      const olOpacity = w.outlineOpacity ?? 1;
+      style.border = `2px solid ${olOpacity < 1 ? hexToRgba(w.outlineColor, olOpacity) : w.outlineColor}`;
+    }
+    if (w.textColor) {
+      const txtOpacity = w.textOpacity ?? 1;
+      style.color = txtOpacity < 1
+        ? hexToRgba(w.textColor, txtOpacity)
+        : w.textColor;
+    }
+    return style;
   };
 
   const renderWidget = (w: WidgetConfig) => {
-    switch (w.i) {
-      case 'clock': return <ScreensaverClock />;
-      case 'weather': return <ScreensaverWeather />;
-      case 'messages': return <ScreensaverMessages />;
-      case 'calendar': return <ScreensaverCalendar gridH={w.h} />;
-      case 'birthdays': return <ScreensaverBirthdays />;
-      case 'tasks': return <ScreensaverTasks />;
-      case 'chores': return <ScreensaverChores />;
-      case 'shopping': return <ScreensaverShopping />;
-      case 'meals': return <ScreensaverMeals />;
-      case 'photos': return <ScreensaverPhotos />;
-      default: return null;
-    }
+    const reg = WIDGET_REGISTRY[w.i];
+    if (!reg) return null;
+    const Component = reg.component;
+    const props = { ...widgetProps[w.i] || {}, gridW: w.w, gridH: w.h };
+    return (
+      <React.Suspense fallback={<div className="flex items-center justify-center h-full text-white/50 text-sm">Loading...</div>}>
+        <div className="h-full w-full [&_*]:!bg-transparent [&_.bg-card]:!bg-white/10 [&_.border-border]:!border-white/20">
+          <Component {...props} />
+        </div>
+      </React.Suspense>
+    );
   };
 
   return (
@@ -207,15 +218,14 @@ function ScreensaverGrid() {
           className="layout"
           width={width}
           layouts={{ lg: rglLayout }}
-          breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480 }}
-          cols={{ lg: 12, md: 9, sm: 6, xs: 3 }}
+          breakpoints={{ lg: 0 }}
+          cols={{ lg: 12 }}
           rowHeight={rowHeight}
           compactor={overlapCompactor}
           dragConfig={{ enabled: false }}
           resizeConfig={{ enabled: false }}
-          onLayoutChange={handleLayoutChange}
           containerPadding={[12, 12]}
-          margin={[0, 0]}
+          margin={[4, 4]}
         >
           {visibleWidgets.map(w => (
             <div key={w.i} style={getWidgetStyle(w)}>
@@ -239,7 +249,7 @@ function ScreensaverClock() {
   }, []);
 
   return (
-    <div className="h-full flex flex-col justify-end text-white text-right p-2">
+    <div className="h-full flex flex-col justify-start text-white text-right p-2">
       <div className="text-7xl font-light tabular-nums">
         {format(time, 'h:mm')}
         <span className="text-3xl ml-2 opacity-70">{format(time, 'a')}</span>
@@ -258,7 +268,7 @@ function ScreensaverMessages() {
   if (recentMessages.length === 0) return null;
 
   return (
-    <div className="h-full flex flex-col justify-end text-right p-2 space-y-2">
+    <div className="h-full flex flex-col justify-start text-right p-2 space-y-2">
       <div className="text-[10px] uppercase tracking-wider text-white/40">
         Family Messages
       </div>
@@ -309,7 +319,7 @@ function ScreensaverWeather() {
   const icon = getWeatherIcon(weather.condition);
 
   return (
-    <div className="h-full flex items-end justify-end p-2">
+    <div className="h-full flex items-start justify-start p-2">
       <div className="flex items-center gap-4 text-white/80">
         <div className="text-4xl">{icon}</div>
         <div>
@@ -405,7 +415,7 @@ function ScreensaverCalendar({ gridH }: { gridH?: number }) {
 
   const displayEvents = events.slice(0, 3);
   return (
-    <div className="h-full flex flex-col justify-end text-right p-2 space-y-1">
+    <div className="h-full flex flex-col justify-start text-right p-2 space-y-1">
       <div className="text-[10px] uppercase tracking-wider text-white/40">Upcoming</div>
       {displayEvents.map((event) => (
         <div key={event.id} className="text-sm text-white/80">
@@ -438,7 +448,7 @@ function ScreensaverBirthdays() {
   if (birthdays.length === 0) return null;
 
   return (
-    <div className="h-full flex flex-col justify-end text-right p-2 space-y-1">
+    <div className="h-full flex flex-col justify-start text-right p-2 space-y-1">
       <div className="text-[10px] uppercase tracking-wider text-white/40">Birthdays</div>
       {birthdays.map((b) => (
         <div key={b.id} className="text-sm text-white/80">
@@ -484,7 +494,7 @@ function ScreensaverTasks() {
   if (taskList.length === 0) return null;
 
   return (
-    <div className="h-full flex flex-col justify-end text-right p-2 space-y-1">
+    <div className="h-full flex flex-col justify-start text-right p-2 space-y-1">
       <div className="text-[10px] uppercase tracking-wider text-white/40">Tasks</div>
       {taskList.map((task) => (
         <div key={task.id} className="text-sm text-white/80 flex items-center justify-end gap-2">
@@ -519,7 +529,7 @@ function ScreensaverChores() {
   if (choreList.length === 0) return null;
 
   return (
-    <div className="h-full flex flex-col justify-end text-right p-2 space-y-1">
+    <div className="h-full flex flex-col justify-start text-right p-2 space-y-1">
       <div className="text-[10px] uppercase tracking-wider text-white/40">Chores</div>
       {choreList.map((chore) => (
         <div key={chore.id} className="text-sm text-white/80 flex items-center justify-end gap-2">
@@ -568,7 +578,7 @@ function ScreensaverShopping() {
   if (items.length === 0) return null;
 
   return (
-    <div className="h-full flex flex-col justify-end text-right p-2 space-y-1">
+    <div className="h-full flex flex-col justify-start text-right p-2 space-y-1">
       <div className="text-[10px] uppercase tracking-wider text-white/40">
         {listName || 'Shopping'}
       </div>
@@ -615,7 +625,7 @@ function ScreensaverMeals() {
   const sorted = [...mealList].sort((a, b) => typeOrder.indexOf(a.mealType) - typeOrder.indexOf(b.mealType));
 
   return (
-    <div className="h-full flex flex-col justify-end text-right p-2 space-y-1">
+    <div className="h-full flex flex-col justify-start text-right p-2 space-y-1">
       <div className="text-[10px] uppercase tracking-wider text-white/40">Today&apos;s Meals</div>
       {sorted.map((meal) => (
         <div key={meal.id} className="text-sm text-white/80">

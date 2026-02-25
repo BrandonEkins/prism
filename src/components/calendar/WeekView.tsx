@@ -171,7 +171,7 @@ export function WeekView({
               {hours.map((hour) => (
                 <div
                   key={hour}
-                  className="text-[9px] text-muted-foreground text-right pr-0.5 border-t border-transparent flex items-start"
+                  className="text-[9px] text-muted-foreground text-right pl-0.5 pr-0.5 border-t border-transparent flex items-start"
                 >
                   {format(new Date().setHours(hour, 0), 'ha')}
                 </div>
@@ -188,7 +188,7 @@ export function WeekView({
               {hours.map((hour) => (
                 <div
                   key={hour}
-                  className="text-[9px] text-muted-foreground text-right pr-0.5 border-t border-transparent flex items-start"
+                  className="text-[9px] text-muted-foreground text-right pl-0.5 pr-0.5 border-t border-transparent flex items-start"
                 >
                   {format(new Date().setHours(hour, 0), 'ha')}
                 </div>
@@ -202,10 +202,11 @@ export function WeekView({
   }
 
   // Landscape: 7-column hourly grid
+  // Single scroll container with sticky header eliminates scrollbar width mismatch
   return (
-    <div className={cn('h-full flex flex-col rounded-md overflow-hidden', !transparentMode && 'bg-card/85 backdrop-blur-sm')}>
-      {/* Day headers row */}
-      <div className="flex shrink-0">
+    <div className={cn('h-full rounded-md overflow-auto', !transparentMode && 'bg-card/85 backdrop-blur-sm')}>
+      {/* Day headers row - sticky so it stays visible while scrolling hours */}
+      <div className={cn('flex sticky top-0 z-20', !transparentMode && 'bg-card')}>
         {/* Time column spacer with toggle button */}
         <div className="w-14 shrink-0 flex items-center justify-center">
           <button
@@ -257,13 +258,12 @@ export function WeekView({
         })}
       </div>
 
-      {/* Hourly schedule - scrollable when widget is small */}
-      <div className="flex-1 overflow-auto min-h-0">
-        <div className="flex min-h-full" style={{ minHeight: `${hours.length * 28}px` }}>
+      {/* Hourly grid */}
+      <div className="flex" style={{ minHeight: `${hours.length * 28}px` }}>
         {/* Time column */}
         <div className="w-14 shrink-0 grid" style={{ gridTemplateRows: `repeat(${hours.length}, minmax(28px, 1fr))` }}>
           {hours.map((hour) => (
-            <div key={hour} className="pr-1 text-right text-xs text-muted-foreground border-t border-border flex items-start pt-0.5 min-h-0">
+            <div key={hour} className="pl-1 pr-1 text-right text-xs text-muted-foreground border-t border-border flex items-start pt-0.5 min-h-0">
               {format(new Date().setHours(hour, 0), 'h a')}
             </div>
           ))}
@@ -306,7 +306,6 @@ export function WeekView({
             </div>
           );
         })}
-        </div>
       </div>
     </div>
   );

@@ -271,6 +271,44 @@ export function BackupSection() {
         Restoring a backup will overwrite all current data.
       </p>
 
+      {/* Cache Management */}
+      <div className="border border-border rounded-lg p-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h4 className="font-semibold flex items-center gap-2">
+              <RefreshCw className="h-4 w-4 text-primary" />
+              Clear Cache &amp; Reload
+            </h4>
+            <p className="text-sm text-muted-foreground mt-1">
+              Unregisters the service worker and clears cached assets. Use after an update if the app seems stale.
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={async () => {
+              try {
+                if ('serviceWorker' in navigator) {
+                  const registrations = await navigator.serviceWorker.getRegistrations();
+                  await Promise.all(registrations.map(r => r.unregister()));
+                }
+                if ('caches' in window) {
+                  const keys = await caches.keys();
+                  await Promise.all(keys.map(k => caches.delete(k)));
+                }
+                window.location.reload();
+              } catch {
+                window.location.reload();
+              }
+            }}
+            className="ml-4 flex-shrink-0"
+          >
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Refresh
+          </Button>
+        </div>
+      </div>
+
       {/* Danger Zone */}
       <div className="border border-red-200 dark:border-red-800 rounded-lg p-4 space-y-4">
         <h4 className="font-semibold text-red-600 dark:text-red-400 flex items-center gap-2">

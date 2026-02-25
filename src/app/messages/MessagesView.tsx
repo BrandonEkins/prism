@@ -119,9 +119,8 @@ export function MessagesView() {
         {/* ================================================================ */}
         {/* HEADER */}
         {/* ================================================================ */}
-        <header className="flex-shrink-0 border-b border-border bg-card/85 backdrop-blur-sm px-4 py-3 safe-area-top">
-          <div className="flex items-center justify-between">
-            {/* Left: Back and title */}
+        <header className="flex-shrink-0 border-b border-border bg-card/85 backdrop-blur-sm px-4 safe-area-top">
+          <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-4">
               <Button variant="ghost" size="icon" asChild className="hidden md:inline-flex">
                 <Link href="/" aria-label="Back to dashboard">
@@ -147,11 +146,10 @@ export function MessagesView() {
                 const user = await requireAuth("Who's posting?");
                 if (user) setShowAddModal(true);
               }}
-              size="icon"
-              className="rounded-full h-10 w-10"
+              size="sm"
             >
-              <Plus className="h-5 w-5" />
-              <span className="sr-only">Add Message</span>
+              <Plus className="h-4 w-4 mr-1" />
+              Add Message
             </Button>
           </div>
         </header>

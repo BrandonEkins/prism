@@ -142,7 +142,7 @@ export function DayViewSideBySide({
         {/* Time column */}
         <div className="w-16 flex-shrink-0 grid" style={{ gridTemplateRows: `repeat(${hours.length}, minmax(28px, 1fr))` }}>
           {hours.map((hour) => (
-            <div key={hour} className="pr-2 text-right text-xs text-muted-foreground border-t border-border flex items-start pt-0.5 min-h-0">
+            <div key={hour} className="pl-1 pr-2 text-right text-xs text-muted-foreground border-t border-border flex items-start pt-0.5 min-h-0">
               {format(new Date().setHours(hour, 0), 'h a')}
             </div>
           ))}

@@ -66,8 +66,8 @@ export function CalendarView() {
   return (
     <PageWrapper>
       <div className="h-screen flex flex-col">
-        <header className="flex-shrink-0 border-b border-border bg-card/85 backdrop-blur-sm px-4 py-3">
-          <div className="flex items-center justify-between mb-2">
+        <header className="flex-shrink-0 border-b border-border bg-card/85 backdrop-blur-sm px-4">
+          <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-4">
               <Button variant="ghost" size="icon" asChild>
                 <Link href="/" aria-label="Back to dashboard">
@@ -113,8 +113,10 @@ export function CalendarView() {
               </Button>
             </div>
           </div>
+        </header>
 
-          {calendarGroups.length > 0 && (
+        {calendarGroups.length > 0 && (
+          <div className="flex-shrink-0 border-b border-border bg-card/85 backdrop-blur-sm px-4 py-2">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-xs text-muted-foreground mr-1">Show:</span>
               <button
@@ -152,8 +154,8 @@ export function CalendarView() {
                 </button>
               ))}
             </div>
-          )}
-        </header>
+          </div>
+        )}
 
         <div ref={swipeRef} className="flex-1 overflow-hidden p-4">
           {loading && (

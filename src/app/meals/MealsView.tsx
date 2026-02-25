@@ -3,7 +3,9 @@
 import * as React from 'react';
 import { useState } from 'react';
 import { format, addDays, isBefore, startOfDay } from 'date-fns';
+import Link from 'next/link';
 import {
+  Home,
   UtensilsCrossed,
   Plus,
   ChevronLeft,
@@ -57,12 +59,17 @@ export function MealsView() {
   return (
     <PageWrapper>
       <div className="h-screen flex flex-col">
-        <header className="flex-shrink-0 border-b border-border bg-card/85 backdrop-blur-sm px-4 py-3 safe-area-top">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <UtensilsCrossed className="h-5 w-5 text-primary" />
-              <h1 className="text-xl font-bold">Meal Planner</h1>
-              <Badge variant="secondary">{cookedMeals}/{totalMeals} cooked</Badge>
+        <header className="flex-shrink-0 border-b border-border bg-card/85 backdrop-blur-sm px-4 safe-area-top">
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center gap-4">
+              <Button variant="ghost" size="icon" asChild className="hidden md:inline-flex">
+                <Link href="/" aria-label="Back to dashboard"><Home className="h-5 w-5" /></Link>
+              </Button>
+              <div className="flex items-center gap-2">
+                <UtensilsCrossed className="h-5 w-5 text-primary" />
+                <h1 className="text-xl font-bold">Meal Planner</h1>
+                <Badge variant="secondary">{cookedMeals}/{totalMeals} cooked</Badge>
+              </div>
             </div>
             <Button onClick={() => handleAddWithAuth()} size="sm">
               <Plus className="h-4 w-4 mr-1" />

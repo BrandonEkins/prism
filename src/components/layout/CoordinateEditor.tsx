@@ -190,13 +190,13 @@ export function CoordinateEditor({ widgets, onWidgetsChange, mode, onFocusedWidg
               strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
-              className={`transition-transform ${addOpen ? 'rotate-180' : ''}`}
+              className={`transition-transform ${addOpen ? '' : 'rotate-180'}`}
             >
               <path d="m6 9 6 6 6-6" />
             </svg>
           </button>
           {addOpen && (
-            <div className="absolute bottom-full left-0 mb-1 z-50 bg-popover border border-border rounded-md shadow-md py-1 min-w-[140px]">
+            <div className="mt-1 border border-border rounded-md py-1 max-h-[40vh] overflow-auto">
               {hiddenIds.map(id => {
                 const reg = WIDGET_REGISTRY[id];
                 const color = WIDGET_COLORS[id] || '#6B7280';

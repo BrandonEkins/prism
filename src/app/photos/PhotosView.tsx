@@ -2,7 +2,10 @@
 
 import * as React from 'react';
 import { useState, useCallback } from 'react';
-import { ImageIcon, Upload, Star } from 'lucide-react';
+import Link from 'next/link';
+import { Home, ImageIcon, Upload, Plus, Star } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { usePhotos } from '@/lib/hooks/usePhotos';
 import type { PhotoOrientation } from '@/lib/hooks/usePhotos';
@@ -81,22 +84,24 @@ export function PhotosView() {
     <PageWrapper>
       <div className="h-screen flex flex-col">
         {/* Header */}
-        <header className="flex-shrink-0 border-b border-border bg-card/85 backdrop-blur-sm px-4 py-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <ImageIcon className="h-5 w-5 text-primary" />
-              <h1 className="text-xl font-bold">Photos</h1>
-              {total > 0 && (
-                <span className="text-sm text-muted-foreground">({total})</span>
-              )}
+        <header className="flex-shrink-0 border-b border-border bg-card/85 backdrop-blur-sm px-4">
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center gap-4">
+              <Button variant="ghost" size="icon" asChild className="hidden md:inline-flex">
+                <Link href="/" aria-label="Back to dashboard"><Home className="h-5 w-5" /></Link>
+              </Button>
+              <div className="flex items-center gap-2">
+                <ImageIcon className="h-5 w-5 text-primary" />
+                <h1 className="text-xl font-bold">Photos</h1>
+                {total > 0 && (
+                  <Badge variant="secondary">{total}</Badge>
+                )}
+              </div>
             </div>
-            <button
-              onClick={handleUploadWithAuth}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-sm hover:bg-primary/90 transition-colors"
-            >
-              <Upload className="h-4 w-4" />
+            <Button size="sm" onClick={handleUploadWithAuth}>
+              <Upload className="h-4 w-4 mr-1" />
               Upload
-            </button>
+            </Button>
           </div>
         </header>
 

@@ -121,10 +121,10 @@ export function AddTaskModal({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           title: title.trim(),
-          description: description.trim() || null,
-          assignedTo: assignedTo || null,
-          dueDate: dueDate ? new Date(dueDate).toISOString() : null,
-          priority: priority || null,
+          description: description.trim() || undefined,
+          assignedTo: assignedTo || undefined,
+          dueDate: dueDate ? new Date(dueDate).toISOString() : undefined,
+          priority: priority || undefined,
         }),
       });
 
