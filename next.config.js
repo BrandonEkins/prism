@@ -63,7 +63,7 @@ const nextConfig = {
 
   env: {
     NEXT_PUBLIC_APP_NAME: 'Prism',
-    NEXT_PUBLIC_APP_VERSION: '1.0.0',
+    NEXT_PUBLIC_APP_VERSION: require('./package.json').version,
   },
 };
 

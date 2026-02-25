@@ -138,7 +138,7 @@ export function DayViewSideBySide({
 
       {/* Hourly schedule - scrollable when widget is small */}
       <div className={cn('flex-1 overflow-auto rounded-b-md min-h-0', !transparentMode && 'bg-card/85 backdrop-blur-sm')}>
-        <div className="flex min-h-full" style={{ minHeight: `${hours.length * 28}px` }}>
+        <div className="flex min-h-full">
         {/* Time column */}
         <div className="w-16 flex-shrink-0 grid" style={{ gridTemplateRows: `repeat(${hours.length}, minmax(28px, 1fr))` }}>
           {hours.map((hour) => (

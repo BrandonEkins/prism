@@ -3,7 +3,6 @@
 import { useState, useRef, useEffect, useCallback, KeyboardEvent, FocusEvent } from 'react';
 import { toast } from '@/components/ui/use-toast';
 import Link from 'next/link';
-import { getMonth } from 'date-fns';
 import {
   ShoppingCart,
   Plus,
@@ -74,28 +73,10 @@ export function ShoppingView() {
   // Manage categories modal
   const [showCategoryManager, setShowCategoryManager] = useState(false);
 
-  // Non-grocery column order (persisted in localStorage)
-  const NON_GROCERY_ORDER_KEY = 'prism:non-grocery-column-order';
-  const [columnOrder, setColumnOrder] = useState<[1, 2] | [2, 1]>([1, 2]);
-  const [draggedColumn, setDraggedColumn] = useState<1 | 2 | null>(null);
 
   // Touch drag state
   const touchStartRef = useRef<{ x: number; y: number; element: HTMLElement | null }>({ x: 0, y: 0, element: null });
 
-  // Load non-grocery column order from localStorage on mount
-  useEffect(() => {
-    try {
-      const savedColumns = localStorage.getItem(NON_GROCERY_ORDER_KEY);
-      if (savedColumns) {
-        const parsed = JSON.parse(savedColumns);
-        if (Array.isArray(parsed) && parsed.length === 2) {
-          setColumnOrder(parsed as [1, 2] | [2, 1]);
-        }
-      }
-    } catch {
-      // Use default order
-    }
-  }, []);
 
   // Save category order via settings
   const saveCategoryOrder = useCallback((order: string[]) => {
@@ -103,15 +84,6 @@ export function ShoppingView() {
     reorderCategories(reordered);
   }, [dynamicCategories, reorderCategories]);
 
-  // Save non-grocery column order
-  const saveColumnOrder = useCallback((order: [1, 2] | [2, 1]) => {
-    setColumnOrder(order);
-    try {
-      localStorage.setItem(NON_GROCERY_ORDER_KEY, JSON.stringify(order));
-    } catch {
-      // Ignore storage errors
-    }
-  }, []);
 
   // Drag and drop handlers for category reordering (mouse)
   const handleDragStart = useCallback((category: string) => {
@@ -179,57 +151,6 @@ export function ShoppingView() {
     touchStartRef.current = { x: 0, y: 0, element: null };
   }, []);
 
-  // Non-grocery column drag handlers (mouse)
-  const handleColumnDragStart = useCallback((col: 1 | 2) => {
-    setDraggedColumn(col);
-  }, []);
-
-  const handleColumnDragOver = useCallback((e: React.DragEvent, targetCol: 1 | 2) => {
-    e.preventDefault();
-    if (!draggedColumn || draggedColumn === targetCol) return;
-    // Swap columns - simply reverse the order
-    saveColumnOrder(columnOrder[0] === 1 ? [2, 1] : [1, 2]);
-  }, [draggedColumn, columnOrder, saveColumnOrder]);
-
-  const handleColumnDragEnd = useCallback(() => {
-    setDraggedColumn(null);
-  }, []);
-
-  // Touch handlers for non-grocery column reordering
-  const handleColumnTouchStart = useCallback((e: React.TouchEvent, col: 1 | 2) => {
-    const touch = e.touches[0];
-    if (!touch) return;
-    touchStartRef.current = {
-      x: touch.clientX,
-      y: touch.clientY,
-      element: e.currentTarget as HTMLElement,
-    };
-    setDraggedColumn(col);
-  }, []);
-
-  const handleColumnTouchMove = useCallback((e: React.TouchEvent) => {
-    if (!draggedColumn) return;
-    const touch = e.touches[0];
-    if (!touch) return;
-
-    const elements = document.elementsFromPoint(touch.clientX, touch.clientY);
-    for (const el of elements) {
-      const colAttr = el.getAttribute('data-column');
-      if (colAttr) {
-        const targetCol = parseInt(colAttr, 10) as 1 | 2;
-        if (targetCol !== draggedColumn) {
-          // Swap columns - simply reverse the order
-          saveColumnOrder(columnOrder[0] === 1 ? [2, 1] : [1, 2]);
-        }
-        break;
-      }
-    }
-  }, [draggedColumn, columnOrder, saveColumnOrder]);
-
-  const handleColumnTouchEnd = useCallback(() => {
-    setDraggedColumn(null);
-    touchStartRef.current = { x: 0, y: 0, element: null };
-  }, []);
 
   // Track inline input values for each category
   const [inlineInputs, setInlineInputs] = useState<Record<string, string>>({});
@@ -285,9 +206,7 @@ export function ShoppingView() {
   // Shopping mode - full screen list without filters
   const [shoppingMode, setShoppingMode] = useState(false);
 
-  // Get list type (default to grocery for now)
-  const listType = activeList?.listType || 'grocery';
-  const isGroceryLayout = listType === 'grocery';
+  // All list types now use the category grid layout
 
   // Add/remove extra rows from a category
   const addExtraRows = (category: string, count: number) => {
@@ -352,25 +271,6 @@ export function ShoppingView() {
     handleInlineAdd(category);
   };
 
-  // Handle non-grocery inline item add
-  const handleNonGroceryInlineAdd = async (colNum: 1 | 2) => {
-    const name = inlineInputs[`list${colNum}`]?.trim();
-    if (!name || !activeList) return;
-
-    const user = await requireAuth("Who's adding an item?");
-    if (!user) return;
-
-    try {
-      await apiAddItem(activeList.id, {
-        name,
-        category: 'other',
-      });
-      setInlineInputs(prev => ({ ...prev, [`list${colNum}`]: '' }));
-    } catch (err) {
-      console.error('Failed to add item:', err);
-      toast({ title: 'Failed to add item. Please try again.', variant: 'destructive' });
-    }
-  };
 
   // Handle new list creation
   const handleNewList = async () => {
@@ -449,8 +349,8 @@ export function ShoppingView() {
                   </Button>
                 </div>
                 <div className="flex gap-2">
-                  {activeList && isGroceryLayout && (
-                    <Button variant="ghost" size="sm" title="Manage grocery categories"
+                  {activeList && (
+                    <Button variant="ghost" size="sm" title="Manage categories"
                       onClick={() => setShowCategoryManager(true)}>
                       <Settings className="h-4 w-4 mr-1" />Categories
                     </Button>
@@ -520,8 +420,8 @@ export function ShoppingView() {
               <ShoppingCart className="h-12 w-12 mb-4 opacity-50" /><p className="text-lg">No shopping lists yet</p>
               <Button variant="outline" size="sm" className="mt-4" onClick={handleNewList}>Create your first list</Button>
             </div>
-          ) : isGroceryLayout ? (
-            /* Grocery-style grid layout - 3 cols landscape, 2 cols portrait */
+          ) : activeList ? (
+            /* Category grid layout - 3 cols landscape, 2 cols portrait */
             <div className="max-w-7xl mx-auto">
               <div className={cn(
                 'grid gap-2',
@@ -679,146 +579,7 @@ export function ShoppingView() {
                 </div>
               )}
             </div>
-          ) : (
-            /* Non-grocery layout - 2 columns matching grocery card style */
-            <div className="max-w-7xl mx-auto">
-              <div className="grid grid-cols-2 gap-2">
-                {columnOrder.map((colNum) => {
-                  const allItems = Object.values(filteredItems).flat() as ShoppingItem[];
-                  const columnItems = allItems.filter((_, i) => i % 2 === (colNum - 1));
-                  const columnColor = colNum === 1 ? '#3B82F6' : '#8B5CF6';
-                  const columnExtraRows = extraRows[`list${colNum}`] || 0;
-                  const totalEmptyLines = BASE_EMPTY_LINES + columnExtraRows;
-                  const emptyLinesNeeded = Math.max(0, totalEmptyLines - columnItems.length);
-                  const isDragging = draggedColumn === colNum;
-
-                  return (
-                    <div
-                      key={colNum}
-                      data-column={colNum}
-                      draggable
-                      onDragStart={() => handleColumnDragStart(colNum)}
-                      onDragOver={(e) => handleColumnDragOver(e, colNum)}
-                      onDragEnd={handleColumnDragEnd}
-                      onTouchStart={(e) => handleColumnTouchStart(e, colNum)}
-                      onTouchMove={handleColumnTouchMove}
-                      onTouchEnd={handleColumnTouchEnd}
-                      className={cn(
-                        'border-2 rounded-lg overflow-hidden bg-card/90 backdrop-blur-sm flex flex-col',
-                        'cursor-grab active:cursor-grabbing transition-all touch-none',
-                        isDragging && 'opacity-50 scale-95 ring-4 ring-primary/50'
-                      )}
-                      style={{ borderColor: columnColor }}
-                    >
-                      {/* Column header */}
-                      <div
-                        className="px-2 py-1 flex items-center gap-1 select-none"
-                        style={{ backgroundColor: columnColor + '20' }}
-                      >
-                        <GripVertical className="h-4 w-4 text-muted-foreground/50 shrink-0" />
-                        <span className="text-xl">📋</span>
-                        <h3
-                          className="text-base font-bold"
-                          style={{ color: columnColor }}
-                        >
-                          List {colNum}
-                        </h3>
-                        <Badge variant="outline" className="ml-auto text-xs">
-                          {columnItems.length}
-                        </Badge>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 px-1"
-                          onClick={() => handleAddItem()}
-                          style={{ color: columnColor }}
-                        >
-                          <Plus className="h-4 w-4" />
-                        </Button>
-                      </div>
-
-                      {/* Items with notebook lines */}
-                      <div className="flex-1 p-1">
-                        {columnItems.map((item) => (
-                          <div
-                            key={item.id}
-                            className="border-b border-muted-foreground/30"
-                            style={{ borderColor: columnColor + '40' }}
-                          >
-                            <ShoppingItemRow
-                              item={item}
-                              onToggle={() => toggleItem(item.id)}
-                              onEdit={() => handleEditItem(item)}
-                              onDelete={() => handleDeleteItem(item.id)}
-                            />
-                          </div>
-                        ))}
-
-                        {/* Inline input row */}
-                        <div
-                          className="border-b border-muted-foreground/30 py-1 px-2"
-                          style={{ borderColor: columnColor + '40' }}
-                        >
-                          <Input
-                            ref={(el) => { inputRefs.current[`list${colNum}`] = el; }}
-                            value={inlineInputs[`list${colNum}`] || ''}
-                            onChange={(e) => setInlineInputs(prev => ({ ...prev, [`list${colNum}`]: e.target.value }))}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') {
-                                e.preventDefault();
-                                handleNonGroceryInlineAdd(colNum);
-                              }
-                            }}
-                            onBlur={() => handleNonGroceryInlineAdd(colNum)}
-                            placeholder="Add item..."
-                            className="h-7 border-none bg-transparent shadow-none focus-visible:ring-0 placeholder:text-muted-foreground/50"
-                          />
-                        </div>
-
-                        {/* Empty underlined rows */}
-                        {Array.from({ length: emptyLinesNeeded }).map((_, i) => (
-                          <div
-                            key={`empty-${i}`}
-                            className="h-7 border-b border-muted-foreground/30"
-                            style={{ borderColor: columnColor + '40' }}
-                          />
-                        ))}
-
-                        {/* Add/remove rows buttons */}
-                        <div className="flex items-center justify-center gap-1 pt-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 px-2 text-xs text-muted-foreground"
-                            onClick={() => addExtraRows(`list${colNum}`, -1)}
-                          >
-                            -1
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 px-2 text-xs text-muted-foreground"
-                            onClick={() => addExtraRows(`list${colNum}`, 1)}
-                          >
-                            +1
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 px-2 text-xs text-muted-foreground"
-                            onClick={() => addExtraRows(`list${colNum}`, 5)}
-                          >
-                            +5
-                          </Button>
-                          <ChevronsDown className="h-3 w-3 text-muted-foreground/50" />
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
+          ) : null}
         </div>
 
         {showAddItemModal && activeList && (

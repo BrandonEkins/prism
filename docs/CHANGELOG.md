@@ -5,15 +5,17 @@ All notable changes to Prism are documented in this file.
 ## [1.0.1] - 2026-02-25
 
 ### Added
-- **Shopping Categories**: Custom grocery categories — add, remove, and reorder categories via "Manage Categories" modal. Stored in settings with auto-assigned emoji and color
+- **Shopping Categories**: Custom categories for all list types — add, remove, and reorder via "Manage Categories" modal. Stored in settings with auto-assigned emoji and color. Removed "hardware" list type
 - **Gallery Mode**: Full-screen photo slideshow from the Photos page. Respects active filters (orientation, usage, favorites). Tap to exit
 - **Inline Task Add**: Quick task creation via inline text input (type + ENTER) in Tasks view. Available in both grouped and flat list modes
 - **Babysitter Mode Toggle**: Activate Babysitter Mode directly from the /babysitter page header
-- **Vertical Week View**: New "List" calendar view — planner-style vertical layout with days as rows and color-coded events. Today highlighted, past days dimmed
+- **Vertical Week View**: New "List" calendar view — planner-style vertical layout with days as rows and color-coded events. Profile grouping columns when multiple calendars configured. Today highlighted, past days dimmed
 - **Calendar Re-auth Flow**: Detect expired/revoked Google Calendar tokens, show warning in Settings with "Re-authenticate" button that updates existing calendar source tokens
 
 ### Fixed
 - **Calendar Sync**: Token refresh failures now detect `invalid_grant` errors specifically and mark calendars as needing re-authentication instead of showing generic errors
+- **Task Creation**: Fixed "Failed to create task" error when using + button with list filter set to "none"
+- **Day View Hidden Hours**: Hour rows now expand to fill available space when hidden hours are enabled, instead of leaving blank space at the bottom
 
 ## [1.0.0] - 2026-02-22
 

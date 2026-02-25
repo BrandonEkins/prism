@@ -2,14 +2,14 @@
 
 import * as React from 'react';
 import { useState } from 'react';
-import { X, User, Trash2, ShoppingCart, Wrench, Package } from 'lucide-react';
+import { X, User, Trash2, ShoppingCart, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useConfirmDialog } from '@/lib/hooks/useConfirmDialog';
 import type { ShoppingList, FamilyMember } from '@/types';
 
-type ListType = 'grocery' | 'hardware' | 'other';
+type ListType = 'grocery' | 'other';
 
 export function ListModal({
   list,
@@ -102,7 +102,7 @@ export function ListModal({
           <div>
             <label className="text-sm font-medium">List Type</label>
             <p className="text-xs text-muted-foreground mb-2">
-              Grocery lists show category sections. Other types show a simple list.
+              All lists use category sections. Customize categories via the Categories button.
             </p>
             <div className="flex gap-2">
               <Button
@@ -114,16 +114,6 @@ export function ListModal({
               >
                 <ShoppingCart className="h-4 w-4" />
                 Grocery
-              </Button>
-              <Button
-                type="button"
-                variant={listType === 'hardware' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setListType('hardware')}
-                className="gap-1"
-              >
-                <Wrench className="h-4 w-4" />
-                Hardware
               </Button>
               <Button
                 type="button"

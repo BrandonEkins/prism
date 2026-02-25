@@ -180,7 +180,7 @@ export function CalendarView() {
             <WeekView currentDate={currentDate} events={events} onEventClick={setSelectedEvent} />
           )}
           {!loading && !error && viewType === 'weekVertical' && (
-            <WeekVerticalView currentDate={currentDate} events={events} onEventClick={setSelectedEvent} />
+            <WeekVerticalView currentDate={currentDate} events={events} calendarGroups={calendarGroups} selectedCalendarIds={selectedCalendarIds} onEventClick={setSelectedEvent} />
           )}
           {!loading && !error && viewType === 'twoWeek' && (
             <TwoWeekView currentDate={currentDate} events={events} onEventClick={setSelectedEvent} />

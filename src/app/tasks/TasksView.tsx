@@ -411,7 +411,7 @@ export function TasksView() {
             }}
             familyMembers={familyMembers}
             taskLists={taskLists}
-            defaultListId={filterList}
+            defaultListId={filterList === 'none' ? null : filterList}
           />
         )}
 

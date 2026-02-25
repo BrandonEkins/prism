@@ -183,7 +183,12 @@ export function CalendarsSection() {
         toast({ title: message, variant: 'success' });
         refreshCalendars();
       } else {
-        toast({ title: `Sync failed: ${data.error || data.message || 'Unknown error'}`, description: data.errors?.join('\n') || undefined, variant: 'destructive' });
+        const hasReauthError = data.errors?.some((e: string) => e.includes('Re-authentication required') || e.includes('Token expired'));
+        if (hasReauthError) {
+          toast({ title: 'Some calendars need re-authentication', description: 'Check the calendar list below for "Re-authenticate" buttons.', variant: 'warning' });
+        } else {
+          toast({ title: `Sync failed: ${data.error || data.message || 'Unknown error'}`, description: data.errors?.join('\n') || undefined, variant: 'destructive' });
+        }
       }
     } catch (error) {
       console.error('Failed to sync calendars:', error);

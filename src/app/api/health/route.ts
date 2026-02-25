@@ -66,7 +66,7 @@ export async function GET() {
     timestamp: new Date().toISOString(),
 
     // Application version (from environment, set in next.config.js)
-    version: process.env.NEXT_PUBLIC_APP_VERSION || '1.0.0',
+    version: process.env.NEXT_PUBLIC_APP_VERSION || '1.0.1',
 
     // Server uptime in seconds
     // process.uptime() returns seconds since Node.js process started
