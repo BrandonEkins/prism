@@ -55,7 +55,7 @@ export async function GET(request: Request) {
     const encryptedAccessToken = encrypt(tokens.access_token);
     const encryptedRefreshToken = tokens.refresh_token ? encrypt(tokens.refresh_token) : null;
 
-    // If re-authenticating a specific source, update just that source's tokens
+    // If re-authenticating, update ALL Google calendar sources (they share the same OAuth token)
     if (reauthSourceId) {
       await db
         .update(calendarSources)
@@ -66,7 +66,7 @@ export async function GET(request: Request) {
           syncErrors: null,
           updatedAt: new Date(),
         })
-        .where(eq(calendarSources.id, reauthSourceId));
+        .where(eq(calendarSources.provider, 'google'));
 
       return NextResponse.redirect(`${BASE_URL}/settings?success=google_reauth`);
     }
