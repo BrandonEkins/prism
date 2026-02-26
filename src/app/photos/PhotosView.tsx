@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { useState, useCallback } from 'react';
 import Link from 'next/link';
-import { Home, ImageIcon, Upload, Plus, Star } from 'lucide-react';
+import { Home, ImageIcon, Upload, Plus, Star, Play } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -12,6 +12,7 @@ import type { PhotoOrientation } from '@/lib/hooks/usePhotos';
 import { PhotoGallery } from '@/components/photos/PhotoGallery';
 import { PhotoUpload } from '@/components/photos/PhotoUpload';
 import { PhotoLightbox } from '@/components/photos/PhotoLightbox';
+import { SlideshowCore } from '@/components/photos/SlideshowCore';
 import { PageWrapper } from '@/components/layout';
 import { useAutoOrientationSetting } from '@/components/layout/WallpaperBackground';
 import { useAuth } from '@/components/providers';
@@ -20,6 +21,7 @@ export function PhotosView() {
   const { requireAuth } = useAuth();
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [showUpload, setShowUpload] = useState(false);
+  const [galleryMode, setGalleryMode] = useState(false);
   const { enabled: autoOrientationEnabled } = useAutoOrientationSetting();
 
   const handleUploadWithAuth = async () => {
@@ -98,10 +100,16 @@ export function PhotosView() {
                 )}
               </div>
             </div>
-            <Button size="sm" onClick={handleUploadWithAuth}>
-              <Upload className="h-4 w-4 mr-1" />
-              Upload
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={() => setGalleryMode(true)} disabled={photos.length === 0}>
+                <Play className="h-4 w-4 mr-1" />
+                Gallery
+              </Button>
+              <Button size="sm" onClick={handleUploadWithAuth}>
+                <Upload className="h-4 w-4 mr-1" />
+                Upload
+              </Button>
+            </div>
           </div>
         </header>
 
@@ -186,6 +194,16 @@ export function PhotosView() {
           )}
         </div>
       </div>
+
+      {/* Gallery slideshow overlay */}
+      {galleryMode && photos.length > 0 && (
+        <div
+          className="fixed inset-0 z-[9999] bg-black cursor-pointer"
+          onClick={() => setGalleryMode(false)}
+        >
+          <SlideshowCore photos={photos} interval={10} transition="fade" />
+        </div>
+      )}
 
       {/* Lightbox */}
       {lightboxIndex !== null && (

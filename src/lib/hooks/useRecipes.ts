@@ -172,8 +172,14 @@ export function useRecipes(options: UseRecipesOptions = {}) {
     });
 
     if (!res.ok) {
-      const data = await res.json();
-      throw new Error(data.error || 'Failed to import recipe');
+      let errorMsg = 'Failed to import recipe';
+      try {
+        const data = await res.json();
+        errorMsg = data.error || errorMsg;
+      } catch {
+        // Response wasn't JSON (e.g. HTML error page)
+      }
+      throw new Error(errorMsg);
     }
 
     const data = await res.json();

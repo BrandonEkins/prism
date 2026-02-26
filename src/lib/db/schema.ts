@@ -367,11 +367,14 @@ export const shoppingLists = pgTable('shopping_lists', {
 
   color: varchar('color', { length: 7 }),
 
-  // List type: 'grocery' | 'hardware' | 'other' - determines layout style
+  // List type: 'grocery' | 'hardware' | 'general' | 'other' - determines layout style
   listType: varchar('list_type', { length: 20 }).default('grocery').notNull()
-    .$type<'grocery' | 'hardware' | 'other'>(),
+    .$type<'grocery' | 'hardware' | 'general' | 'other'>(),
 
   sortOrder: integer('sort_order').default(0).notNull(),
+
+  // Per-list category visibility — null means show all categories
+  visibleCategories: jsonb('visible_categories').$type<string[] | null>(),
 
   // Null means anyone can check off items (family list)
   assignedTo: uuid('assigned_to').references(() => users.id, { onDelete: 'set null' }),

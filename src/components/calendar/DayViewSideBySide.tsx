@@ -3,6 +3,8 @@
 import {
   format,
   isSameDay,
+  isBefore,
+  startOfDay,
 } from 'date-fns';
 import { Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -15,6 +17,7 @@ export interface DayViewSideBySideProps {
   events: CalendarEvent[];
   calendarGroups: Array<{ id: string; name: string; color: string }>;
   selectedCalendarIds?: Set<string>;
+  mergedView?: boolean;
   onEventClick: (event: CalendarEvent) => void;
 }
 
@@ -23,6 +26,7 @@ export function DayViewSideBySide({
   events,
   calendarGroups,
   selectedCalendarIds,
+  mergedView = false,
   onEventClick,
 }: DayViewSideBySideProps) {
   const bgOverride = useWidgetBgOverride();
@@ -30,6 +34,14 @@ export function DayViewSideBySide({
 
   // Hidden hours hook
   const { settings: hiddenSettings, toggleHidden, getVisibleHours } = useHiddenHours();
+
+  // Time tracking
+  const now = new Date();
+  const isCurrentDay = isSameDay(currentDate, now);
+  const isPastDay = isBefore(startOfDay(currentDate), startOfDay(now)) && !isCurrentDay;
+  const currentHour = now.getHours();
+  // Snap to 15-min increments: 0%, 25%, 50%, 75%
+  const currentMinuteSnapped = Math.floor(now.getMinutes() / 15) * 25;
 
   // Get visible hours (filtered if hidden mode is enabled)
   const hours = getVisibleHours();
@@ -41,8 +53,8 @@ export function DayViewSideBySide({
   const allDayEvents = dayEvents.filter((e) => e.allDay);
   const timedEvents = dayEvents.filter((e) => !e.allDay);
 
-  // If there are no calendar groups configured, show all events in a single column
-  const showAllInOne = calendarGroups.length === 0;
+  // If there are no calendar groups configured or merged view is on, show all events in a single column
+  const showAllInOne = calendarGroups.length === 0 || mergedView;
 
   // Filter groups to only show selected ones (hide columns when filtered out)
   const filteredGroups = selectedCalendarIds && !selectedCalendarIds.has('all')
@@ -138,14 +150,25 @@ export function DayViewSideBySide({
 
       {/* Hourly schedule - scrollable when widget is small */}
       <div className={cn('flex-1 overflow-auto rounded-b-md min-h-0', !transparentMode && 'bg-card/85 backdrop-blur-sm')}>
-        <div className="flex min-h-full" style={{ minHeight: `${hours.length * 28}px` }}>
+        <div className="flex min-h-full">
         {/* Time column */}
         <div className="w-16 flex-shrink-0 grid" style={{ gridTemplateRows: `repeat(${hours.length}, minmax(28px, 1fr))` }}>
-          {hours.map((hour) => (
-            <div key={hour} className="pl-1 pr-2 text-right text-xs text-muted-foreground border-t border-border flex items-start pt-0.5 min-h-0">
-              {format(new Date().setHours(hour, 0), 'h a')}
-            </div>
-          ))}
+          {hours.map((hour) => {
+            const isPastHour = isPastDay || (isCurrentDay && hour < currentHour);
+            const isNowHour = isCurrentDay && hour === currentHour;
+            return (
+              <div key={hour} className={cn(
+                'pl-1 pr-2 text-right text-xs border-t border-border flex items-start pt-0.5 min-h-0 relative text-muted-foreground',
+                isPastHour && 'bg-muted/55',
+                isNowHour && 'text-primary font-semibold'
+              )}>
+                {format(new Date().setHours(hour, 0), 'h a')}
+                {isNowHour && (
+                  <div className="absolute left-0 right-0 border-t-2 border-t-primary z-20 pointer-events-none" style={{ top: `${currentMinuteSnapped}%` }} />
+                )}
+              </div>
+            );
+          })}
         </div>
         {/* Group columns */}
         {displayGroups.map((group) => {
@@ -179,9 +202,17 @@ export function DayViewSideBySide({
               {hours.map((hour) => {
                 const hourEvents = calEvents.filter((event) => event.startTime.getHours() === hour);
                 const sorted = sortEvents(hourEvents);
+                const isPastHour = isPastDay || (isCurrentDay && hour < currentHour);
+                const isNowHour = isCurrentDay && hour === currentHour;
 
                 return (
-                  <div key={hour} className="border-t border-border relative min-h-0">
+                  <div key={hour} className={cn(
+                    'border-t border-border relative min-h-0',
+                    isPastHour && 'bg-muted/55'
+                  )}>
+                    {isNowHour && (
+                      <div className="absolute left-0 right-0 border-t-2 border-t-primary z-20 pointer-events-none" style={{ top: `${currentMinuteSnapped}%` }} />
+                    )}
                     {sorted.map((event, idx) => {
                       const overlapIdx = getOverlapIndex(event, idx, sorted);
                       return (

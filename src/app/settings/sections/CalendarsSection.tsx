@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { toast } from '@/components/ui/use-toast';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useConfirmDialog } from '@/lib/hooks/useConfirmDialog';
-import { RefreshCw, ExternalLink, Plus, Trash2, Pencil, Check, X } from 'lucide-react';
+import { RefreshCw, ExternalLink, Plus, Trash2, Pencil, Check, X, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -183,7 +183,12 @@ export function CalendarsSection() {
         toast({ title: message, variant: 'success' });
         refreshCalendars();
       } else {
-        toast({ title: `Sync failed: ${data.error || data.message || 'Unknown error'}`, description: data.errors?.join('\n') || undefined, variant: 'destructive' });
+        const hasReauthError = data.errors?.some((e: string) => e.includes('Re-authentication required') || e.includes('Token expired'));
+        if (hasReauthError) {
+          toast({ title: 'Google token expired', description: 'Use the "Re-authenticate Google" button to refresh all calendars at once.', variant: 'warning' });
+        } else {
+          toast({ title: `Sync failed: ${data.error || data.message || 'Unknown error'}`, description: data.errors?.join('\n') || undefined, variant: 'destructive' });
+        }
       }
     } catch (error) {
       console.error('Failed to sync calendars:', error);
@@ -252,6 +257,29 @@ export function CalendarsSection() {
             </div>
           ) : (
             <div className="space-y-3">
+              {/* Single re-auth banner if any Google calendar needs it */}
+              {localCalendars.some((c) => c.provider === 'google' && c.syncErrors?.needsReauth) && (
+                <div className="flex items-center gap-3 p-3 rounded-md border border-orange-500/50 bg-orange-50 dark:bg-orange-950/30">
+                  <AlertTriangle className="h-5 w-5 text-orange-500 shrink-0" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-orange-700 dark:text-orange-400">Google token expired</p>
+                    <p className="text-xs text-orange-600 dark:text-orange-400/80">
+                      Re-authenticate once to refresh all Google calendars.
+                    </p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="border-orange-500/50 text-orange-600 hover:bg-orange-100 dark:hover:bg-orange-950"
+                    onClick={() => {
+                      const firstGoogle = localCalendars.find((c) => c.provider === 'google');
+                      if (firstGoogle) window.location.href = `/api/auth/google?reauth=${firstGoogle.id}`;
+                    }}
+                  >
+                    Re-authenticate Google
+                  </Button>
+                </div>
+              )}
               {localCalendars.map((cal) => (
                 <div
                   key={cal.id}
@@ -373,6 +401,14 @@ export function CalendarsSection() {
                             </span>
                           )}
                         </div>
+                        {cal.syncErrors?.needsReauth && (
+                          <div className="flex items-center gap-1 mt-1">
+                            <AlertTriangle className="h-3 w-3 text-orange-500 shrink-0" />
+                            <span className="text-xs text-orange-600 dark:text-orange-400">
+                              Token expired
+                            </span>
+                          </div>
+                        )}
                       </div>
                     </div>
                     <label className="flex items-center gap-2 cursor-pointer">

@@ -1,5 +1,5 @@
 export const APP_NAME = 'Prism';
-export const APP_VERSION = '1.0.0';
+export const APP_VERSION = '1.0.1';
 export const APP_DESCRIPTION = "Your family's digital home";
 
 /** Session duration in seconds, keyed by uppercase role */

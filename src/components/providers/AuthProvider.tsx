@@ -25,8 +25,9 @@
 'use client';
 
 import * as React from 'react';
-import { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import { QuickPinModal, type QuickPinMember } from '@/components/auth';
+import { useVisibilityPolling } from '@/lib/hooks/useVisibilityPolling';
 
 /**
  * AUTH CONTEXT TYPE
@@ -74,35 +75,58 @@ export function AuthProvider({ children }: AuthProviderProps) {
     resolve: (user: QuickPinMember | null) => void;
   } | null>(null);
 
+  // Reusable session check
+  const checkSession = useCallback(async (): Promise<QuickPinMember | null> => {
+    try {
+      const response = await fetch('/api/auth/me');
+      if (response.ok) {
+        const data = await response.json();
+        if (data.authenticated && data.user) {
+          const user: QuickPinMember = {
+            id: data.user.id,
+            name: data.user.name,
+            color: data.user.color,
+            avatarUrl: data.user.avatarUrl,
+            role: data.user.role,
+          };
+          setActiveUser(user);
+          return user;
+        }
+      }
+      // Session invalid — clear active user if one was set
+      setActiveUser((prev) => {
+        if (prev) console.log('Session expired, clearing active user');
+        return prev ? null : prev;
+      });
+    } catch (error) {
+      console.error('Failed to check session:', error);
+    }
+    return null;
+  }, []);
+
   // Check for existing session on mount
   useEffect(() => {
-    async function checkSession(): Promise<QuickPinMember | null> {
-      try {
-        const response = await fetch('/api/auth/me');
-        if (response.ok) {
-          const data = await response.json();
-          if (data.authenticated && data.user) {
-            const user: QuickPinMember = {
-              id: data.user.id,
-              name: data.user.name,
-              color: data.user.color,
-              avatarUrl: data.user.avatarUrl,
-              role: data.user.role,
-            };
-            setActiveUser(user);
-            return user;
-          }
-        }
-      } catch (error) {
-        console.error('Failed to check session:', error);
-      }
-      return null;
-    }
-
-    // Store the promise so requireAuth can wait for it
     sessionCheckPromiseRef.current = checkSession().finally(() => {
       setSessionChecked(true);
     });
+  }, [checkSession]);
+
+  // Periodic session validation (every 5 minutes)
+  const periodicCheck = useCallback(() => {
+    // Only check if we think we're logged in
+    if (activeUser) {
+      checkSession();
+    }
+  }, [activeUser, checkSession]);
+  useVisibilityPolling(periodicCheck, 5 * 60 * 1000);
+
+  // Listen for 401 auth-expired events from hooks
+  useEffect(() => {
+    const handleAuthExpired = () => {
+      setActiveUser(null);
+    };
+    window.addEventListener('prism:auth-expired', handleAuthExpired);
+    return () => window.removeEventListener('prism:auth-expired', handleAuthExpired);
   }, []);
 
   /**

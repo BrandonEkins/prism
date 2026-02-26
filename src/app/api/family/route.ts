@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth, requireRole } from '@/lib/auth';
 import { db } from '@/lib/db/client';
 import { users } from '@/lib/db/schema';
-import { desc } from 'drizzle-orm';
+
 import bcrypt from 'bcryptjs';
 import { getCached, invalidateCache } from '@/lib/cache/redis';
 
@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
           createdAt: users.createdAt,
         })
         .from(users)
-        .orderBy(desc(users.createdAt));
+        .orderBy(users.createdAt);
 
       let filteredResults = results;
       if (role && ['parent', 'child', 'guest'].includes(role)) {

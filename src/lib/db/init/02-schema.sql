@@ -330,6 +330,7 @@ CREATE TABLE IF NOT EXISTS public.shopping_lists (
     color character varying(7),
     list_type character varying(20) DEFAULT 'grocery'::character varying NOT NULL,
     sort_order integer DEFAULT 0 NOT NULL,
+    visible_categories jsonb,
     assigned_to uuid,
     created_by uuid,
     created_at timestamp without time zone DEFAULT now() NOT NULL,

@@ -3,7 +3,6 @@
 import { useState, useRef, useEffect, useCallback, KeyboardEvent, FocusEvent } from 'react';
 import { toast } from '@/components/ui/use-toast';
 import Link from 'next/link';
-import { getMonth } from 'date-fns';
 import {
   ShoppingCart,
   Plus,
@@ -23,44 +22,23 @@ import { ShoppingItemRow } from '@/app/shopping/ShoppingItemRow';
 import { ItemModal } from '@/app/shopping/ItemModal';
 import { ListModal } from '@/app/shopping/ListModal';
 import { ShoppingCelebration } from '@/app/shopping/ShoppingCelebration';
+import { CategoryManagerModal } from '@/app/shopping/CategoryManagerModal';
 import { useShoppingViewData } from './useShoppingViewData';
+import { useShoppingCategories } from '@/lib/hooks/useShoppingCategories';
 import { useOrientation } from '@/lib/hooks/useOrientation';
 import { cn } from '@/lib/utils';
 import type { ShoppingItem } from '@/types';
-
-// Default grocery categories in a logical store layout order
-const DEFAULT_GROCERY_CATEGORIES: GroceryCategory[] = ['produce', 'bakery', 'meat', 'dairy', 'frozen', 'pantry'];
-type GroceryCategory = 'produce' | 'bakery' | 'meat' | 'dairy' | 'frozen' | 'pantry';
-
-// LocalStorage key for category order
-const CATEGORY_ORDER_KEY = 'prism:grocery-category-order';
 
 // Base number of empty lines to show in each category
 const BASE_EMPTY_LINES = 6;
 
 export function getCategoryEmoji(category: string): string {
-  switch (category) {
-    case 'produce': return '🥬';
-    case 'dairy': return '🥛';
-    case 'meat': return '🥩';
-    case 'bakery': return '🥖';
-    case 'frozen': return '🧊';
-    case 'pantry': return '🥫';
-    case 'household': return '🧴';
-    default: return '🛒';
-  }
-}
-
-function getCategoryColor(category: string): string {
-  const colorMap: Record<string, string> = {
-    produce: '#22C55E', // green
-    bakery: '#F59E0B',  // amber
-    meat: '#EF4444',    // red
-    dairy: '#3B82F6',   // blue
-    frozen: '#8B5CF6',  // purple
-    pantry: '#F97316',  // orange
+  // Fallback function — components should prefer the hook's getCategoryEmoji
+  const defaults: Record<string, string> = {
+    produce: '🥬', dairy: '🥛', meat: '🥩', bakery: '🥖',
+    frozen: '🧊', pantry: '🥫', household: '🧴',
   };
-  return colorMap[category] || '#3B82F6';
+  return defaults[category] || '🛒';
 }
 
 export function ShoppingView() {
@@ -78,70 +56,44 @@ export function ShoppingView() {
     totalItems, checkedItems, progress,
   } = useShoppingViewData();
 
+  const {
+    categories: dynamicCategories,
+    addCategory, removeCategory, reorderCategories,
+    getCategoryEmoji: getDynCategoryEmoji,
+    getCategoryColor: getDynCategoryColor,
+  } = useShoppingCategories();
+
   // Track which category to default when opening modal
-  const [defaultCategory, setDefaultCategory] = useState<GroceryCategory | null>(null);
+  const [defaultCategory, setDefaultCategory] = useState<string | null>(null);
 
-  // Category order (persisted in localStorage)
-  const [categoryOrder, setCategoryOrder] = useState<GroceryCategory[]>(DEFAULT_GROCERY_CATEGORIES);
-  const [draggedCategory, setDraggedCategory] = useState<GroceryCategory | null>(null);
+  // Category order derived from dynamic categories, filtered by list visibility
+  const categoryOrder = dynamicCategories.map(c => c.id);
+  const effectiveCategoryOrder = activeList?.visibleCategories
+    ? categoryOrder.filter(id => activeList.visibleCategories!.includes(id))
+    : categoryOrder;
+  const [draggedCategory, setDraggedCategory] = useState<string | null>(null);
 
-  // Non-grocery column order (persisted in localStorage)
-  const NON_GROCERY_ORDER_KEY = 'prism:non-grocery-column-order';
-  const [columnOrder, setColumnOrder] = useState<[1, 2] | [2, 1]>([1, 2]);
-  const [draggedColumn, setDraggedColumn] = useState<1 | 2 | null>(null);
+  // Manage categories modal
+  const [showCategoryManager, setShowCategoryManager] = useState(false);
+
 
   // Touch drag state
   const touchStartRef = useRef<{ x: number; y: number; element: HTMLElement | null }>({ x: 0, y: 0, element: null });
 
-  // Load category order from localStorage on mount
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(CATEGORY_ORDER_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length === DEFAULT_GROCERY_CATEGORIES.length) {
-          setCategoryOrder(parsed as GroceryCategory[]);
-        }
-      }
-      // Load non-grocery column order
-      const savedColumns = localStorage.getItem(NON_GROCERY_ORDER_KEY);
-      if (savedColumns) {
-        const parsed = JSON.parse(savedColumns);
-        if (Array.isArray(parsed) && parsed.length === 2) {
-          setColumnOrder(parsed as [1, 2] | [2, 1]);
-        }
-      }
-    } catch {
-      // Use default order
-    }
-  }, []);
 
-  // Save category order to localStorage
-  const saveCategoryOrder = useCallback((order: GroceryCategory[]) => {
-    setCategoryOrder(order);
-    try {
-      localStorage.setItem(CATEGORY_ORDER_KEY, JSON.stringify(order));
-    } catch {
-      // Ignore storage errors
-    }
-  }, []);
+  // Save category order via settings
+  const saveCategoryOrder = useCallback((order: string[]) => {
+    const reordered = order.map(id => dynamicCategories.find(c => c.id === id)).filter(Boolean) as typeof dynamicCategories;
+    reorderCategories(reordered);
+  }, [dynamicCategories, reorderCategories]);
 
-  // Save non-grocery column order
-  const saveColumnOrder = useCallback((order: [1, 2] | [2, 1]) => {
-    setColumnOrder(order);
-    try {
-      localStorage.setItem(NON_GROCERY_ORDER_KEY, JSON.stringify(order));
-    } catch {
-      // Ignore storage errors
-    }
-  }, []);
 
   // Drag and drop handlers for category reordering (mouse)
-  const handleDragStart = useCallback((category: GroceryCategory) => {
+  const handleDragStart = useCallback((category: string) => {
     setDraggedCategory(category);
   }, []);
 
-  const handleDragOver = useCallback((e: React.DragEvent, targetCategory: GroceryCategory) => {
+  const handleDragOver = useCallback((e: React.DragEvent, targetCategory: string) => {
     e.preventDefault();
     if (!draggedCategory || draggedCategory === targetCategory) return;
 
@@ -161,7 +113,7 @@ export function ShoppingView() {
   }, []);
 
   // Touch handlers for category reordering
-  const handleTouchStart = useCallback((e: React.TouchEvent, category: GroceryCategory) => {
+  const handleTouchStart = useCallback((e: React.TouchEvent, category: string) => {
     const touch = e.touches[0];
     if (!touch) return;
     touchStartRef.current = {
@@ -182,7 +134,7 @@ export function ShoppingView() {
     for (const el of elements) {
       const categoryAttr = el.getAttribute('data-category');
       if (categoryAttr && categoryAttr !== draggedCategory) {
-        const targetCategory = categoryAttr as GroceryCategory;
+        const targetCategory = categoryAttr;
         const newOrder = [...categoryOrder];
         const draggedIndex = newOrder.indexOf(draggedCategory);
         const targetIndex = newOrder.indexOf(targetCategory);
@@ -202,57 +154,6 @@ export function ShoppingView() {
     touchStartRef.current = { x: 0, y: 0, element: null };
   }, []);
 
-  // Non-grocery column drag handlers (mouse)
-  const handleColumnDragStart = useCallback((col: 1 | 2) => {
-    setDraggedColumn(col);
-  }, []);
-
-  const handleColumnDragOver = useCallback((e: React.DragEvent, targetCol: 1 | 2) => {
-    e.preventDefault();
-    if (!draggedColumn || draggedColumn === targetCol) return;
-    // Swap columns - simply reverse the order
-    saveColumnOrder(columnOrder[0] === 1 ? [2, 1] : [1, 2]);
-  }, [draggedColumn, columnOrder, saveColumnOrder]);
-
-  const handleColumnDragEnd = useCallback(() => {
-    setDraggedColumn(null);
-  }, []);
-
-  // Touch handlers for non-grocery column reordering
-  const handleColumnTouchStart = useCallback((e: React.TouchEvent, col: 1 | 2) => {
-    const touch = e.touches[0];
-    if (!touch) return;
-    touchStartRef.current = {
-      x: touch.clientX,
-      y: touch.clientY,
-      element: e.currentTarget as HTMLElement,
-    };
-    setDraggedColumn(col);
-  }, []);
-
-  const handleColumnTouchMove = useCallback((e: React.TouchEvent) => {
-    if (!draggedColumn) return;
-    const touch = e.touches[0];
-    if (!touch) return;
-
-    const elements = document.elementsFromPoint(touch.clientX, touch.clientY);
-    for (const el of elements) {
-      const colAttr = el.getAttribute('data-column');
-      if (colAttr) {
-        const targetCol = parseInt(colAttr, 10) as 1 | 2;
-        if (targetCol !== draggedColumn) {
-          // Swap columns - simply reverse the order
-          saveColumnOrder(columnOrder[0] === 1 ? [2, 1] : [1, 2]);
-        }
-        break;
-      }
-    }
-  }, [draggedColumn, columnOrder, saveColumnOrder]);
-
-  const handleColumnTouchEnd = useCallback(() => {
-    setDraggedColumn(null);
-    touchStartRef.current = { x: 0, y: 0, element: null };
-  }, []);
 
   // Track inline input values for each category
   const [inlineInputs, setInlineInputs] = useState<Record<string, string>>({});
@@ -308,9 +209,7 @@ export function ShoppingView() {
   // Shopping mode - full screen list without filters
   const [shoppingMode, setShoppingMode] = useState(false);
 
-  // Get list type (default to grocery for now)
-  const listType = activeList?.listType || 'grocery';
-  const isGroceryLayout = listType === 'grocery';
+  // All list types now use the category grid layout
 
   // Add/remove extra rows from a category
   const addExtraRows = (category: string, count: number) => {
@@ -321,19 +220,19 @@ export function ShoppingView() {
     });
   };
 
-  // For grocery layout, organize items by the user's category order
-  const groceryCategoryItems = categoryOrder.map((cat) => ({
+  // For grocery layout, organize items by the effective (visible) category order
+  const groceryCategoryItems = effectiveCategoryOrder.map((cat) => ({
     category: cat,
     items: (filteredItems[cat] || []) as ShoppingItem[],
   }));
 
-  // For non-grocery, use the existing filteredItems
+  // For non-grocery, use the existing filteredItems (items in categories not in the effective order)
   const otherItems = Object.entries(filteredItems).filter(
-    ([cat]) => !categoryOrder.includes(cat as GroceryCategory)
+    ([cat]) => !effectiveCategoryOrder.includes(cat)
   );
 
   // Handle adding item with login prompt
-  const handleAddItem = async (category?: GroceryCategory) => {
+  const handleAddItem = async (category?: string) => {
     const user = await requireAuth("Who's adding an item?");
     if (!user) return;
 
@@ -344,7 +243,7 @@ export function ShoppingView() {
   };
 
   // Handle inline item add
-  const handleInlineAdd = async (category: GroceryCategory) => {
+  const handleInlineAdd = async (category: string) => {
     const name = inlineInputs[category]?.trim();
     if (!name || !activeList) return;
 
@@ -363,37 +262,18 @@ export function ShoppingView() {
     }
   };
 
-  const handleInlineKeyDown = (e: KeyboardEvent<HTMLInputElement>, category: GroceryCategory) => {
+  const handleInlineKeyDown = (e: KeyboardEvent<HTMLInputElement>, category: string) => {
     if (e.key === 'Enter') {
       e.preventDefault();
       handleInlineAdd(category);
     }
   };
 
-  const handleInlineBlur = (e: FocusEvent<HTMLInputElement>, category: GroceryCategory) => {
+  const handleInlineBlur = (e: FocusEvent<HTMLInputElement>, category: string) => {
     // Add item when user taps out of the input
     handleInlineAdd(category);
   };
 
-  // Handle non-grocery inline item add
-  const handleNonGroceryInlineAdd = async (colNum: 1 | 2) => {
-    const name = inlineInputs[`list${colNum}`]?.trim();
-    if (!name || !activeList) return;
-
-    const user = await requireAuth("Who's adding an item?");
-    if (!user) return;
-
-    try {
-      await apiAddItem(activeList.id, {
-        name,
-        category: 'other',
-      });
-      setInlineInputs(prev => ({ ...prev, [`list${colNum}`]: '' }));
-    } catch (err) {
-      console.error('Failed to add item:', err);
-      toast({ title: 'Failed to add item. Please try again.', variant: 'destructive' });
-    }
-  };
 
   // Handle new list creation
   const handleNewList = async () => {
@@ -473,6 +353,12 @@ export function ShoppingView() {
                 </div>
                 <div className="flex gap-2">
                   {activeList && (
+                    <Button variant="ghost" size="sm" title="Manage categories"
+                      onClick={() => setShowCategoryManager(true)}>
+                      <Settings className="h-4 w-4 mr-1" />Categories
+                    </Button>
+                  )}
+                  {activeList && (
                     <Button variant="ghost" size="sm" title="Edit list settings"
                       onClick={async () => {
                         const user = await requireAuth("Who's editing this list?");
@@ -537,15 +423,15 @@ export function ShoppingView() {
               <ShoppingCart className="h-12 w-12 mb-4 opacity-50" /><p className="text-lg">No shopping lists yet</p>
               <Button variant="outline" size="sm" className="mt-4" onClick={handleNewList}>Create your first list</Button>
             </div>
-          ) : isGroceryLayout ? (
-            /* Grocery-style grid layout - 3 cols landscape, 2 cols portrait */
+          ) : activeList ? (
+            /* Category grid layout - 3 cols landscape, 2 cols portrait */
             <div className="max-w-7xl mx-auto">
               <div className={cn(
                 'grid gap-2',
                 isPortrait ? 'grid-cols-2' : 'grid-cols-3'
               )}>
                 {groceryCategoryItems.map(({ category, items }) => {
-                  const categoryColor = getCategoryColor(category);
+                  const categoryColor = getDynCategoryColor(category);
                   const categoryExtraRows = extraRows[category] || 0;
                   const totalEmptyLines = BASE_EMPTY_LINES + categoryExtraRows;
                   const emptyLinesNeeded = Math.max(0, totalEmptyLines - items.length);
@@ -575,7 +461,7 @@ export function ShoppingView() {
                         style={{ backgroundColor: categoryColor + '20' }}
                       >
                         <GripVertical className="h-4 w-4 text-muted-foreground/50 shrink-0" />
-                        <span className="text-xl">{getCategoryEmoji(category)}</span>
+                        <span className="text-xl">{getDynCategoryEmoji(category)}</span>
                         <h3
                           className="text-base font-bold capitalize"
                           style={{ color: categoryColor }}
@@ -681,7 +567,7 @@ export function ShoppingView() {
                   {otherItems.map(([category, items]) => (
                     <div key={category} className="border rounded-lg p-3 bg-card/90 backdrop-blur-sm">
                       <h4 className="text-base font-semibold text-muted-foreground mb-2 capitalize flex items-center gap-2">
-                        <span>{getCategoryEmoji(category)}</span><span>{category}</span>
+                        <span>{getDynCategoryEmoji(category)}</span><span>{category}</span>
                       </h4>
                       <div className="space-y-1">
                         {(items as ShoppingItem[]).map((item) => (
@@ -696,146 +582,7 @@ export function ShoppingView() {
                 </div>
               )}
             </div>
-          ) : (
-            /* Non-grocery layout - 2 columns matching grocery card style */
-            <div className="max-w-7xl mx-auto">
-              <div className="grid grid-cols-2 gap-2">
-                {columnOrder.map((colNum) => {
-                  const allItems = Object.values(filteredItems).flat() as ShoppingItem[];
-                  const columnItems = allItems.filter((_, i) => i % 2 === (colNum - 1));
-                  const columnColor = colNum === 1 ? '#3B82F6' : '#8B5CF6';
-                  const columnExtraRows = extraRows[`list${colNum}`] || 0;
-                  const totalEmptyLines = BASE_EMPTY_LINES + columnExtraRows;
-                  const emptyLinesNeeded = Math.max(0, totalEmptyLines - columnItems.length);
-                  const isDragging = draggedColumn === colNum;
-
-                  return (
-                    <div
-                      key={colNum}
-                      data-column={colNum}
-                      draggable
-                      onDragStart={() => handleColumnDragStart(colNum)}
-                      onDragOver={(e) => handleColumnDragOver(e, colNum)}
-                      onDragEnd={handleColumnDragEnd}
-                      onTouchStart={(e) => handleColumnTouchStart(e, colNum)}
-                      onTouchMove={handleColumnTouchMove}
-                      onTouchEnd={handleColumnTouchEnd}
-                      className={cn(
-                        'border-2 rounded-lg overflow-hidden bg-card/90 backdrop-blur-sm flex flex-col',
-                        'cursor-grab active:cursor-grabbing transition-all touch-none',
-                        isDragging && 'opacity-50 scale-95 ring-4 ring-primary/50'
-                      )}
-                      style={{ borderColor: columnColor }}
-                    >
-                      {/* Column header */}
-                      <div
-                        className="px-2 py-1 flex items-center gap-1 select-none"
-                        style={{ backgroundColor: columnColor + '20' }}
-                      >
-                        <GripVertical className="h-4 w-4 text-muted-foreground/50 shrink-0" />
-                        <span className="text-xl">📋</span>
-                        <h3
-                          className="text-base font-bold"
-                          style={{ color: columnColor }}
-                        >
-                          List {colNum}
-                        </h3>
-                        <Badge variant="outline" className="ml-auto text-xs">
-                          {columnItems.length}
-                        </Badge>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 px-1"
-                          onClick={() => handleAddItem()}
-                          style={{ color: columnColor }}
-                        >
-                          <Plus className="h-4 w-4" />
-                        </Button>
-                      </div>
-
-                      {/* Items with notebook lines */}
-                      <div className="flex-1 p-1">
-                        {columnItems.map((item) => (
-                          <div
-                            key={item.id}
-                            className="border-b border-muted-foreground/30"
-                            style={{ borderColor: columnColor + '40' }}
-                          >
-                            <ShoppingItemRow
-                              item={item}
-                              onToggle={() => toggleItem(item.id)}
-                              onEdit={() => handleEditItem(item)}
-                              onDelete={() => handleDeleteItem(item.id)}
-                            />
-                          </div>
-                        ))}
-
-                        {/* Inline input row */}
-                        <div
-                          className="border-b border-muted-foreground/30 py-1 px-2"
-                          style={{ borderColor: columnColor + '40' }}
-                        >
-                          <Input
-                            ref={(el) => { inputRefs.current[`list${colNum}`] = el; }}
-                            value={inlineInputs[`list${colNum}`] || ''}
-                            onChange={(e) => setInlineInputs(prev => ({ ...prev, [`list${colNum}`]: e.target.value }))}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') {
-                                e.preventDefault();
-                                handleNonGroceryInlineAdd(colNum);
-                              }
-                            }}
-                            onBlur={() => handleNonGroceryInlineAdd(colNum)}
-                            placeholder="Add item..."
-                            className="h-7 border-none bg-transparent shadow-none focus-visible:ring-0 placeholder:text-muted-foreground/50"
-                          />
-                        </div>
-
-                        {/* Empty underlined rows */}
-                        {Array.from({ length: emptyLinesNeeded }).map((_, i) => (
-                          <div
-                            key={`empty-${i}`}
-                            className="h-7 border-b border-muted-foreground/30"
-                            style={{ borderColor: columnColor + '40' }}
-                          />
-                        ))}
-
-                        {/* Add/remove rows buttons */}
-                        <div className="flex items-center justify-center gap-1 pt-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 px-2 text-xs text-muted-foreground"
-                            onClick={() => addExtraRows(`list${colNum}`, -1)}
-                          >
-                            -1
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 px-2 text-xs text-muted-foreground"
-                            onClick={() => addExtraRows(`list${colNum}`, 1)}
-                          >
-                            +1
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 px-2 text-xs text-muted-foreground"
-                            onClick={() => addExtraRows(`list${colNum}`, 5)}
-                          >
-                            +5
-                          </Button>
-                          <ChevronsDown className="h-3 w-3 text-muted-foreground/50" />
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
+          ) : null}
         </div>
 
         {showAddItemModal && activeList && (
@@ -882,6 +629,7 @@ export function ShoppingView() {
                 });
                 if (!response.ok) throw new Error('Failed to update item');
                 setEditingItem(null);
+                refreshLists();
               } catch (err) {
                 console.error('Failed to update item:', err);
                 toast({ title: 'Failed to update item. Please try again.', variant: 'destructive' });
@@ -942,6 +690,27 @@ export function ShoppingView() {
                 toast({ title: err instanceof Error ? err.message : 'Failed to delete list. Please try again.', variant: 'destructive' });
               }
             } : undefined} />
+        )}
+
+        {showCategoryManager && (
+          <CategoryManagerModal
+            categories={dynamicCategories}
+            visibleCategories={activeList?.visibleCategories}
+            onUpdateVisibility={async (visibleIds) => {
+              if (!activeList) return;
+              try {
+                await fetch(`/api/shopping-lists/${activeList.id}`, {
+                  method: 'PATCH',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ visibleCategories: visibleIds }),
+                });
+                refreshLists();
+              } catch {
+                toast({ title: 'Failed to update category visibility', variant: 'destructive' });
+              }
+            }}
+            onClose={() => setShowCategoryManager(false)}
+          />
         )}
 
         {/* Celebration animation when all items checked */}

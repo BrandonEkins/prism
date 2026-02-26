@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import { useState, useMemo, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { toast } from '@/components/ui/use-toast';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useConfirmDialog } from '@/lib/hooks/useConfirmDialog';
@@ -53,6 +54,7 @@ type ViewMode = 'all' | 'favorites';
 export function RecipesView() {
   const { requireAuth } = useAuth();
   const { confirm, dialogProps: confirmDialogProps } = useConfirmDialog();
+  const searchParams = useSearchParams();
   const [search, setSearch] = useState('');
   const [viewMode, setViewMode] = useState<ViewMode>('all');
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
@@ -98,6 +100,17 @@ export function RecipesView() {
       }
     }
   }, [recipes, selectedRecipe]);
+
+  // Auto-open recipe from ?recipe=<id> search param (e.g. linked from meals page)
+  const recipeParam = searchParams.get('recipe');
+  const [paramHandled, setParamHandled] = useState(false);
+  useEffect(() => {
+    if (recipeParam && recipes.length > 0 && !paramHandled) {
+      const match = recipes.find((r) => r.id === recipeParam);
+      if (match) setSelectedRecipe(match);
+      setParamHandled(true);
+    }
+  }, [recipeParam, recipes, paramHandled]);
 
   // Get unique cuisines and categories for filters
   const cuisines = useMemo(() => {
@@ -961,9 +974,10 @@ function ImportUrlModal({ onClose, onImport }: ImportUrlModalProps) {
 
         <div className="space-y-4 py-4">
           <p className="text-sm text-muted-foreground">
-            Paste a recipe URL from most popular recipe sites (AllRecipes, Food
-            Network, Serious Eats, etc.). We&apos;ll automatically extract the
-            recipe details.
+            Paste a recipe URL and we&apos;ll extract the recipe details.
+            Works with Food.com, Bon App&eacute;tit, NYT Cooking, and most sites
+            with schema.org markup. Some sites (AllRecipes, Serious Eats) may
+            block automated access.
           </p>
 
           <div className="space-y-2">

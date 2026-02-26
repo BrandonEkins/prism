@@ -89,6 +89,7 @@ export function formatMealRow(row: {
   description: string | null;
   recipe: string | null;
   recipeUrl: string | null;
+  recipeId: string | null;
   prepTime: number | null;
   cookTime: number | null;
   servings: number | null;
@@ -115,6 +116,7 @@ export function formatMealRow(row: {
     description: row.description,
     recipe: row.recipe,
     recipeUrl: row.recipeUrl,
+    recipeId: row.recipeId,
     prepTime: row.prepTime,
     cookTime: row.cookTime,
     servings: row.servings,

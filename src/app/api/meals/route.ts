@@ -47,6 +47,7 @@ export async function GET(request: NextRequest) {
           description: meals.description,
           recipe: meals.recipe,
           recipeUrl: meals.recipeUrl,
+          recipeId: meals.recipeId,
           prepTime: meals.prepTime,
           cookTime: meals.cookTime,
           servings: meals.servings,

@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { X, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { getCategoryEmoji } from '@/app/shopping/ShoppingView';
+import { useShoppingCategories } from '@/lib/hooks/useShoppingCategories';
 import type { ShoppingItem, ShoppingList } from '@/types';
 
 export function ItemModal({
@@ -27,9 +27,10 @@ export function ItemModal({
   const [selectedListId, setSelectedListId] = useState(listId);
   const [quantity, setQuantity] = useState(item?.quantity?.toString() || '');
   const [unit, setUnit] = useState(item?.unit || '');
-  const [category, setCategory] = useState<ShoppingItem['category']>(item?.category || defaultCategory || 'other');
+  const [category, setCategory] = useState<string>(item?.category || defaultCategory || 'other');
   const [notes, setNotes] = useState(item?.notes || '');
   const [saving, setSaving] = useState(false);
+  const { categories: dynamicCategories, getCategoryEmoji } = useShoppingCategories();
 
   // Get current list name for display
   const currentList = lists?.find(l => l.id === selectedListId);
@@ -136,18 +137,25 @@ export function ItemModal({
           <div>
             <label className="text-sm font-medium">Category</label>
             <div className="flex gap-2 mt-1 flex-wrap">
-              {(['produce', 'dairy', 'meat', 'bakery', 'frozen', 'pantry', 'household', 'other'] as const).map((cat) => (
+              {dynamicCategories.map((cat) => (
                 <Button
-                  key={cat}
+                  key={cat.id}
                   type="button"
-                  variant={category === cat ? 'default' : 'outline'}
+                  variant={category === cat.id ? 'default' : 'outline'}
                   size="sm"
-                  onClick={() => setCategory(cat)}
-                  className="capitalize"
+                  onClick={() => setCategory(cat.id)}
                 >
-                  {getCategoryEmoji(cat)} {cat}
+                  {cat.emoji} {cat.name}
                 </Button>
               ))}
+              <Button
+                type="button"
+                variant={category === 'other' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setCategory('other')}
+              >
+                🛒 Other
+              </Button>
             </div>
           </div>
 

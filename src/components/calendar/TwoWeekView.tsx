@@ -58,7 +58,7 @@ export function TwoWeekView({
           'border border-border rounded-md h-full',
           !transparentMode && 'bg-card/85 backdrop-blur-sm',
           'flex flex-col overflow-hidden',
-          !transparentMode && isPast && 'bg-muted/50 text-muted-foreground',
+          !transparentMode && isPast && 'bg-muted/65 text-muted-foreground',
           isToday(date) && 'border-primary border-2'
         )}
       >
@@ -67,16 +67,16 @@ export function TwoWeekView({
           className={cn(
             'shrink-0 px-1',
             compact ? 'py-0.5' : 'py-1',
-            isToday(date) && 'bg-primary/10'
+            isToday(date) && 'bg-primary rounded-t-md'
           )}
         >
           <div className={cn(
             'font-medium flex items-center gap-1',
             compact ? 'text-sm' : 'text-sm',
-            isToday(date) && 'text-primary'
+            isToday(date) && 'text-primary-foreground'
           )}>
             <span className="font-bold">{format(date, 'd')}</span>
-            <span className="text-xs text-muted-foreground">{format(date, 'MMM')}</span>
+            <span className={cn('text-xs', isToday(date) ? 'text-primary-foreground/80' : 'text-muted-foreground')}>{format(date, 'MMM')}</span>
           </div>
         </div>
 

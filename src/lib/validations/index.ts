@@ -86,8 +86,9 @@ export const createShoppingListSchema = z.object({
   description: z.string().max(1000).optional(),
   icon: z.string().max(50).optional(),
   color: hexColorSchema.optional(),
-  listType: z.enum(['grocery', 'hardware', 'other']).optional(),
+  listType: z.enum(['grocery', 'hardware', 'general', 'other']).optional(),
   sortOrder: z.number().int().optional(),
+  visibleCategories: z.array(z.string().max(100)).nullable().optional(),
   // Who this list is assigned to (only they can check off items)
   // Null/undefined means anyone can check off items (family list)
   assignedTo: uuidSchema.optional(),

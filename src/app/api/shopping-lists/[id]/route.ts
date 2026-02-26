@@ -54,6 +54,7 @@ export async function GET(
       color: list.color,
       listType: list.listType,
       sortOrder: list.sortOrder,
+      visibleCategories: list.visibleCategories,
       assignedTo: list.assignedTo,
       createdAt: list.createdAt.toISOString(),
     });
@@ -111,6 +112,7 @@ export async function PATCH(
     if ('color' in validation.data) updateData.color = validation.data.color || null;
     if ('listType' in validation.data) updateData.listType = validation.data.listType || 'grocery';
     if ('sortOrder' in validation.data) updateData.sortOrder = validation.data.sortOrder || null;
+    if ('visibleCategories' in validation.data) updateData.visibleCategories = validation.data.visibleCategories;
     if ('assignedTo' in validation.data) updateData.assignedTo = validation.data.assignedTo || null;
 
     // Execute update
@@ -139,6 +141,7 @@ export async function PATCH(
       color: updatedList.color,
       listType: updatedList.listType,
       sortOrder: updatedList.sortOrder,
+      visibleCategories: updatedList.visibleCategories,
       assignedTo: updatedList.assignedTo,
       createdAt: updatedList.createdAt.toISOString(),
     });

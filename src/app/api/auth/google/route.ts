@@ -12,7 +12,11 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
-    const state = userId ? JSON.stringify({ userId }) : undefined;
+    const reauth = searchParams.get('reauth');
+    const stateObj: Record<string, string> = {};
+    if (userId) stateObj.userId = userId;
+    if (reauth) stateObj.reauth = reauth;
+    const state = Object.keys(stateObj).length > 0 ? JSON.stringify(stateObj) : undefined;
     const authUrl = getGoogleAuthUrl(state);
 
     return NextResponse.redirect(authUrl);

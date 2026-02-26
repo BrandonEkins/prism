@@ -140,6 +140,16 @@ export async function exchangeCodeForTokens(code: string): Promise<GoogleTokens>
 }
 
 /**
+ * Error thrown when a refresh token has been revoked or expired
+ */
+export class TokenRevokedError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'TokenRevokedError';
+  }
+}
+
+/**
  * Refresh access token using refresh token
  */
 export async function refreshAccessToken(refreshToken: string): Promise<GoogleTokens> {
@@ -159,8 +169,12 @@ export async function refreshAccessToken(refreshToken: string): Promise<GoogleTo
   });
 
   if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`Failed to refresh token: ${error}`);
+    const errorText = await response.text();
+    // Detect revoked/expired tokens
+    if (errorText.includes('invalid_grant') || errorText.includes('Token has been expired or revoked')) {
+      throw new TokenRevokedError(`Token expired or revoked: ${errorText}`);
+    }
+    throw new Error(`Failed to refresh token: ${errorText}`);
   }
 
   return response.json();

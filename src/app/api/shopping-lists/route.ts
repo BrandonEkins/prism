@@ -17,6 +17,7 @@ import { db } from '@/lib/db/client';
 import { shoppingLists, shoppingItems, users } from '@/lib/db/schema';
 import { asc, eq } from 'drizzle-orm';
 import { createShoppingListSchema, validateRequest } from '@/lib/validations';
+import { getPresetsForListType } from '@/lib/constants/shoppingPresets';
 
 /**
  * GET /api/shopping-lists
@@ -40,6 +41,7 @@ export async function GET(request: NextRequest) {
         color: shoppingLists.color,
         listType: shoppingLists.listType,
         sortOrder: shoppingLists.sortOrder,
+        visibleCategories: shoppingLists.visibleCategories,
         assignedTo: shoppingLists.assignedTo,
         createdAt: shoppingLists.createdAt,
       })
@@ -54,6 +56,7 @@ export async function GET(request: NextRequest) {
         color: list.color,
         listType: list.listType,
         sortOrder: list.sortOrder,
+        visibleCategories: list.visibleCategories,
         assignedTo: list.assignedTo,
         createdAt: list.createdAt.toISOString(),
       }));
@@ -97,6 +100,7 @@ export async function GET(request: NextRequest) {
       color: list.color,
       listType: list.listType,
       sortOrder: list.sortOrder,
+      visibleCategories: list.visibleCategories,
       assignedTo: list.assignedTo,
       createdAt: list.createdAt.toISOString(),
       items: (itemsByList.get(list.id) || []).map(item => ({
@@ -157,7 +161,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { name, icon, color, listType, sortOrder, description, assignedTo, createdBy } = validation.data;
+    const { name, icon, color, listType, sortOrder, description, assignedTo, createdBy, visibleCategories } = validation.data;
+
+    // Auto-populate visibleCategories from preset when not explicitly provided
+    const effectiveType = listType || 'grocery';
+    const effectiveVisibleCategories = visibleCategories !== undefined
+      ? visibleCategories
+      : getPresetsForListType(effectiveType);
 
     // Insert the list
     const [newList] = await db
@@ -167,8 +177,9 @@ export async function POST(request: NextRequest) {
         description: description || null,
         icon: icon || null,
         color: color || null,
-        listType: listType || 'grocery',
+        listType: effectiveType,
         sortOrder: sortOrder ?? 0,
+        visibleCategories: effectiveVisibleCategories,
         assignedTo: assignedTo || null,
         createdBy: createdBy || null,
       })
@@ -188,6 +199,7 @@ export async function POST(request: NextRequest) {
       color: newList.color,
       listType: newList.listType,
       sortOrder: newList.sortOrder,
+      visibleCategories: newList.visibleCategories,
       createdAt: newList.createdAt.toISOString(),
     }, { status: 201 });
   } catch (error) {

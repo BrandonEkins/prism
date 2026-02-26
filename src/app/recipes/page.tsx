@@ -1,5 +1,10 @@
+import { Suspense } from 'react';
 import { RecipesView } from './RecipesView';
 
 export default function RecipesPage() {
-  return <RecipesView />;
+  return (
+    <Suspense>
+      <RecipesView />
+    </Suspense>
+  );
 }

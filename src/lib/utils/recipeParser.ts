@@ -240,19 +240,51 @@ export async function parseRecipeFromUrl(url: string): Promise<ParsedRecipe | nu
     throw new Error('URL points to a blocked address');
   }
 
-  // Fetch the page
-  const response = await fetch(url, {
-    headers: {
-      'User-Agent': 'Mozilla/5.0 (compatible; PrismRecipeBot/1.0; +https://prism.family)',
-      Accept: 'text/html,application/xhtml+xml',
-    },
-  });
+  // Fetch the page — try plain fetch first, fall back to headless browser on 403
+  let html: string;
 
-  if (!response.ok) {
-    throw new Error(`Failed to fetch URL: ${response.status} ${response.statusText}`);
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15000);
+
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Accept-Encoding': 'gzip, deflate, br',
+        'Sec-Fetch-Dest': 'document',
+        'Sec-Fetch-Mode': 'navigate',
+        'Sec-Fetch-Site': 'none',
+        'Sec-Fetch-User': '?1',
+        'Upgrade-Insecure-Requests': '1',
+      },
+      signal: controller.signal,
+      redirect: 'follow',
+    });
+  } catch (err: unknown) {
+    if (err instanceof Error && err.name === 'AbortError') {
+      throw new Error('Failed to fetch URL: request timed out');
+    }
+    throw new Error(`Failed to fetch URL: ${err instanceof Error ? err.message : 'network error'}`);
+  } finally {
+    clearTimeout(timeout);
   }
 
-  const html = await response.text();
+  if (response.ok) {
+    html = await response.text();
+  } else if (response.status === 403) {
+    // Cloudflare bot protection — try headless browser fallback
+    const { browserFetch } = await import('./browserFetch');
+    const browserHtml = await browserFetch(url);
+    if (!browserHtml) {
+      throw new Error(`Failed to fetch URL: 403 Forbidden (headless browser not available)`);
+    }
+    html = browserHtml;
+  } else {
+    throw new Error(`Failed to fetch URL: ${response.status} ${response.statusText}`);
+  }
 
   // Find and parse recipe JSON-LD
   const recipeData = findRecipeJsonLd(html);
