@@ -66,8 +66,11 @@ export function ShoppingView() {
   // Track which category to default when opening modal
   const [defaultCategory, setDefaultCategory] = useState<string | null>(null);
 
-  // Category order derived from dynamic categories
+  // Category order derived from dynamic categories, filtered by list visibility
   const categoryOrder = dynamicCategories.map(c => c.id);
+  const effectiveCategoryOrder = activeList?.visibleCategories
+    ? categoryOrder.filter(id => activeList.visibleCategories!.includes(id))
+    : categoryOrder;
   const [draggedCategory, setDraggedCategory] = useState<string | null>(null);
 
   // Manage categories modal
@@ -217,15 +220,15 @@ export function ShoppingView() {
     });
   };
 
-  // For grocery layout, organize items by the user's category order
-  const groceryCategoryItems = categoryOrder.map((cat) => ({
+  // For grocery layout, organize items by the effective (visible) category order
+  const groceryCategoryItems = effectiveCategoryOrder.map((cat) => ({
     category: cat,
     items: (filteredItems[cat] || []) as ShoppingItem[],
   }));
 
-  // For non-grocery, use the existing filteredItems
+  // For non-grocery, use the existing filteredItems (items in categories not in the effective order)
   const otherItems = Object.entries(filteredItems).filter(
-    ([cat]) => !categoryOrder.includes(cat)
+    ([cat]) => !effectiveCategoryOrder.includes(cat)
   );
 
   // Handle adding item with login prompt
@@ -626,6 +629,7 @@ export function ShoppingView() {
                 });
                 if (!response.ok) throw new Error('Failed to update item');
                 setEditingItem(null);
+                refreshLists();
               } catch (err) {
                 console.error('Failed to update item:', err);
                 toast({ title: 'Failed to update item. Please try again.', variant: 'destructive' });
@@ -691,9 +695,20 @@ export function ShoppingView() {
         {showCategoryManager && (
           <CategoryManagerModal
             categories={dynamicCategories}
-            onAdd={addCategory}
-            onRemove={removeCategory}
-            onReorder={reorderCategories}
+            visibleCategories={activeList?.visibleCategories}
+            onUpdateVisibility={async (visibleIds) => {
+              if (!activeList) return;
+              try {
+                await fetch(`/api/shopping-lists/${activeList.id}`, {
+                  method: 'PATCH',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ visibleCategories: visibleIds }),
+                });
+                refreshLists();
+              } catch {
+                toast({ title: 'Failed to update category visibility', variant: 'destructive' });
+              }
+            }}
             onClose={() => setShowCategoryManager(false)}
           />
         )}

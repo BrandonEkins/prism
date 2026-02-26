@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
 
     if (!parsedRecipe) {
       return NextResponse.json(
-        { error: 'Could not find recipe data on this page. The site may not use schema.org markup.' },
+        { error: 'Could not find recipe data on this page. The site may not use schema.org markup, or may be blocking automated access.' },
         { status: 422 }
       );
     }
@@ -128,6 +128,12 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(
           { error: 'Only HTTP/HTTPS URLs are supported' },
           { status: 400 }
+        );
+      }
+      if (error.message.includes('403')) {
+        return NextResponse.json(
+          { error: 'This site blocks automated requests (Cloudflare). The headless browser fallback could not load the page. Try a different recipe site, or add the recipe manually.' },
+          { status: 502 }
         );
       }
       if (error.message.startsWith('Failed to fetch URL:')) {

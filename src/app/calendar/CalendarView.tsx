@@ -14,6 +14,7 @@ import {
   CalendarRange,
   LayoutGrid,
   List,
+  Merge,
   Plus,
   Home,
   Loader2,
@@ -38,6 +39,7 @@ export function CalendarView() {
     selectedCalendarIds,
     calendarGroups,
     toggleCalendar,
+    mergedView, setMergedView,
     events, loading, error, refreshEvents,
     goToToday, goToPrevious, goToNext, getDateRangeTitle,
   } = useCalendarViewData();
@@ -157,6 +159,18 @@ export function CalendarView() {
                   {group.name}
                 </button>
               ))}
+              {(viewType === 'weekVertical' || viewType === 'day') && calendarGroups.length > 1 && (
+                <Button
+                  variant={mergedView ? 'secondary' : 'ghost'}
+                  size="sm"
+                  onClick={() => setMergedView(!mergedView)}
+                  className="gap-1 ml-auto"
+                  title={mergedView ? 'Split by calendar' : 'Merge into one column'}
+                >
+                  <Merge className="h-3.5 w-3.5" />
+                  {mergedView ? 'Split' : 'Merge'}
+                </Button>
+              )}
             </div>
           </div>
         )}
@@ -180,7 +194,7 @@ export function CalendarView() {
             <WeekView currentDate={currentDate} events={events} onEventClick={setSelectedEvent} />
           )}
           {!loading && !error && viewType === 'weekVertical' && (
-            <WeekVerticalView currentDate={currentDate} events={events} calendarGroups={calendarGroups} selectedCalendarIds={selectedCalendarIds} onEventClick={setSelectedEvent} />
+            <WeekVerticalView currentDate={currentDate} events={events} calendarGroups={calendarGroups} selectedCalendarIds={selectedCalendarIds} mergedView={mergedView} onEventClick={setSelectedEvent} />
           )}
           {!loading && !error && viewType === 'twoWeek' && (
             <TwoWeekView currentDate={currentDate} events={events} onEventClick={setSelectedEvent} />
@@ -190,7 +204,7 @@ export function CalendarView() {
               onDateClick={(date) => { setCurrentDate(date); setViewType('month'); }} />
           )}
           {!loading && !error && viewType === 'day' && (
-            <DayViewSideBySide currentDate={currentDate} events={events} calendarGroups={calendarGroups} selectedCalendarIds={selectedCalendarIds} onEventClick={setSelectedEvent} />
+            <DayViewSideBySide currentDate={currentDate} events={events} calendarGroups={calendarGroups} selectedCalendarIds={selectedCalendarIds} mergedView={mergedView} onEventClick={setSelectedEvent} />
           )}
         </div>
 

@@ -51,11 +51,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Try the appropriate temp key
+    // Try the appropriate temp key (new format includes key type segment)
     const tempKey = newConnection || !taskListId
-      ? `ms-todo-temp:${auth.userId}:new`
-      : `ms-todo-temp:${auth.userId}:${taskListId}`;
-    const stored = await redis.get(tempKey);
+      ? `ms-todo-temp:${auth.userId}:task:new`
+      : `ms-todo-temp:${auth.userId}:task:${taskListId}`;
+    let stored = await redis.get(tempKey);
+
+    // Fallback for old key format (without key type segment)
+    if (!stored) {
+      const fallbackKey = newConnection || !taskListId
+        ? `ms-todo-temp:${auth.userId}:new`
+        : `ms-todo-temp:${auth.userId}:${taskListId}`;
+      stored = await redis.get(fallbackKey);
+    }
 
     if (!stored) {
       return NextResponse.json(

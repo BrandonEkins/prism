@@ -58,6 +58,9 @@ export function useCalendarEvents(
       );
 
       if (!response.ok) {
+        if (response.status === 401) {
+          window.dispatchEvent(new Event('prism:auth-expired'));
+        }
         throw new Error('Failed to fetch events');
       }
 

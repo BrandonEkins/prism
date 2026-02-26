@@ -46,6 +46,7 @@ export async function GET(
         description: meals.description,
         recipe: meals.recipe,
         recipeUrl: meals.recipeUrl,
+        recipeId: meals.recipeId,
         prepTime: meals.prepTime,
         cookTime: meals.cookTime,
         servings: meals.servings,
@@ -143,6 +144,7 @@ export async function PATCH(
     if ('description' in validation.data) updateData.description = validation.data.description || null;
     if ('recipe' in validation.data) updateData.recipe = validation.data.recipe || null;
     if ('recipeUrl' in validation.data) updateData.recipeUrl = validation.data.recipeUrl || null;
+    if ('recipeId' in validation.data) updateData.recipeId = validation.data.recipeId || null;
     if ('prepTime' in validation.data) updateData.prepTime = validation.data.prepTime || null;
     if ('cookTime' in validation.data) updateData.cookTime = validation.data.cookTime || null;
     if ('servings' in validation.data) updateData.servings = validation.data.servings || null;
@@ -173,6 +175,7 @@ export async function PATCH(
         description: meals.description,
         recipe: meals.recipe,
         recipeUrl: meals.recipeUrl,
+        recipeId: meals.recipeId,
         prepTime: meals.prepTime,
         cookTime: meals.cookTime,
         servings: meals.servings,

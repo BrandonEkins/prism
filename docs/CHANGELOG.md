@@ -2,6 +2,24 @@
 
 All notable changes to Prism are documented in this file.
 
+## [1.0.2] - 2026-02-25
+
+### Added
+- **Calendar Merge Toggle**: List view now has a "Merge/Split" button to collapse multi-calendar columns into a single chronological stream
+- **Past Time Dimming**: Day view dims past hour cells with grey background and highlights current hour in blue; List view dims past timed events with reduced opacity
+- **Per-List Category Visibility**: Each shopping list can now show/hide categories independently via the category manager
+- **General List Type**: New "General" shopping list type with preset categories (Clothes, Housewares, Gardening, Electronics, Office, Gifts)
+- **General Categories**: Added 6 general-purpose shopping categories alongside grocery categories
+- **Shopping Categories Settings**: New Settings section for global category management (add, remove, reorder, reset to defaults)
+- **Tasks Group by List**: Tasks view now supports grouping by Person, List, or None (flat list)
+- **Tasks Show/Hide Completed**: Quick eye toggle in the Tasks header to show/hide completed tasks
+- **Tasks Click-to-Complete**: All task view modes (flat list, grouped) now support clicking a row to toggle completion (like shopping)
+- **Tasks Inline Add with List**: Inline task creation now auto-assigns the active list filter or group list
+
+### Fixed
+- **Session Expiry Ghost Avatar**: Users no longer appear logged in after session expiry. Sliding window extends active sessions, 5-minute periodic checks detect stale sessions, and 401 responses immediately clear the avatar
+- **Shopping List/Item Creation**: Fixed "Failed to add item" error caused by importing client-only module in server API route
+
 ## [1.0.1] - 2026-02-25
 
 ### Added

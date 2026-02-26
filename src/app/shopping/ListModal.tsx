@@ -2,14 +2,14 @@
 
 import * as React from 'react';
 import { useState } from 'react';
-import { X, User, Trash2, ShoppingCart, Package } from 'lucide-react';
+import { X, User, Trash2, ShoppingCart, Package, Store } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useConfirmDialog } from '@/lib/hooks/useConfirmDialog';
 import type { ShoppingList, FamilyMember } from '@/types';
 
-type ListType = 'grocery' | 'other';
+type ListType = 'grocery' | 'general' | 'other';
 
 export function ListModal({
   list,
@@ -114,6 +114,16 @@ export function ListModal({
               >
                 <ShoppingCart className="h-4 w-4" />
                 Grocery
+              </Button>
+              <Button
+                type="button"
+                variant={listType === 'general' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setListType('general')}
+                className="gap-1"
+              >
+                <Store className="h-4 w-4" />
+                General
               </Button>
               <Button
                 type="button"

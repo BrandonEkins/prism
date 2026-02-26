@@ -16,6 +16,7 @@ import {
   ImageIcon,
   ListTodo,
   ShoppingCart,
+  Tags,
   Baby,
   Database,
 } from 'lucide-react';
@@ -34,6 +35,7 @@ import { TaskIntegrationsSection } from './sections/TaskIntegrationsSection';
 import { ShoppingIntegrationsSection } from './sections/ShoppingIntegrationsSection';
 import { BabysitterInfoSection } from './sections/BabysitterInfoSection';
 import { BackupSection } from './sections/BackupSection';
+import { ShoppingCategoriesSection } from './sections/ShoppingCategoriesSection';
 
 
 // Exported hooks (consumed by other components)
@@ -121,6 +123,7 @@ export function SettingsView() {
     { id: 'calendars', label: 'Calendars', icon: Calendar },
     { id: 'tasks', label: 'Task Integrations', icon: ListTodo },
     { id: 'shopping', label: 'Shopping Integrations', icon: ShoppingCart },
+    { id: 'shopping-categories', label: 'Shopping Categories', icon: Tags },
     { id: 'photos', label: 'Photos', icon: ImageIcon },
     { id: 'babysitter', label: 'Babysitter Info', icon: Baby },
     { id: 'display', label: 'Display', icon: Palette },
@@ -176,6 +179,7 @@ export function SettingsView() {
               {activeSection === 'calendars' && <CalendarsSection />}
               {activeSection === 'tasks' && <TaskIntegrationsSection />}
               {activeSection === 'shopping' && <ShoppingIntegrationsSection />}
+              {activeSection === 'shopping-categories' && <ShoppingCategoriesSection />}
               {activeSection === 'photos' && <PhotosSettingsSection />}
               {activeSection === 'babysitter' && <BabysitterInfoSection />}
               {activeSection === 'display' && <DisplaySection />}
@@ -219,10 +223,10 @@ export function SettingsView() {
                                 github.com/sandydargoport/prism/projects
                               </a>
                             </p>
-                            <p><strong>Version:</strong> 0.9.2</p>
+                            <p><strong>Version:</strong> 1.0.2</p>
                           </div>
                           <p className="pt-2 text-xs">
-                            Built with Claude Code. Currently in beta.
+                            Built with Claude Code.
                           </p>
                         </div>
                       </div>

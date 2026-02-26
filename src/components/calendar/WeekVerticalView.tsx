@@ -17,6 +17,7 @@ export interface WeekVerticalViewProps {
   events: CalendarEvent[];
   calendarGroups?: Array<{ id: string; name: string; color: string }>;
   selectedCalendarIds?: Set<string>;
+  mergedView?: boolean;
   onEventClick: (event: CalendarEvent) => void;
 }
 
@@ -25,19 +26,22 @@ export function WeekVerticalView({
   events,
   calendarGroups = [],
   selectedCalendarIds,
+  mergedView = false,
   onEventClick,
 }: WeekVerticalViewProps) {
   const weekStart = startOfWeek(currentDate);
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
-  const today = startOfDay(new Date());
+  const now = new Date();
+  const today = startOfDay(now);
+  const currentHour = now.getHours();
 
   // Determine display groups (same logic as DayViewSideBySide)
-  const showAllInOne = calendarGroups.length === 0;
+  const showAllInOne = calendarGroups.length === 0 || mergedView;
   const filteredGroups = selectedCalendarIds && !selectedCalendarIds.has('all')
     ? calendarGroups.filter((g) => selectedCalendarIds.has(g.id))
     : calendarGroups;
   const displayGroups = showAllInOne || filteredGroups.length === 0
-    ? [{ id: 'all', name: 'All Events', color: '#3B82F6' }]
+    ? [{ id: 'all', name: 'All Calendars', color: '#3B82F6' }]
     : filteredGroups;
 
   const getEventsForGroup = (dayEvents: CalendarEvent[], groupId: string) => {
@@ -92,30 +96,33 @@ export function WeekVerticalView({
             key={day.toISOString()}
             className={cn(
               'flex border-b border-border',
-              isCurrentDay && 'bg-primary/5',
-              isPast && !isCurrentDay && 'opacity-60'
+              isPast && !isCurrentDay && 'bg-muted/55'
             )}
           >
             {/* Day label */}
             <div
               className={cn(
                 'w-20 md:w-28 shrink-0 p-2 md:p-3 border-r border-border flex flex-col items-center justify-start',
-                isCurrentDay && 'bg-primary/10'
+                isPast && !isCurrentDay && 'bg-muted/45',
+                isCurrentDay && 'bg-primary text-primary-foreground',
               )}
             >
               <span className={cn(
                 'text-xs font-medium uppercase tracking-wide',
-                isCurrentDay ? 'text-primary' : 'text-muted-foreground'
+                isCurrentDay ? 'text-primary-foreground' : 'text-muted-foreground'
               )}>
                 {format(day, 'EEE')}
               </span>
               <span className={cn(
                 'text-2xl font-bold leading-tight',
-                isCurrentDay ? 'text-primary' : 'text-foreground'
+                isCurrentDay ? 'text-primary-foreground' : 'text-foreground'
               )}>
                 {format(day, 'd')}
               </span>
-              <span className="text-[10px] text-muted-foreground">
+              <span className={cn(
+                'text-[10px]',
+                isCurrentDay ? 'text-primary-foreground/80' : 'text-muted-foreground'
+              )}>
                 {format(day, 'MMM')}
               </span>
             </div>
@@ -132,6 +139,9 @@ export function WeekVerticalView({
                         allDayEvents={groupAllDay}
                         timedEvents={groupTimed}
                         onEventClick={onEventClick}
+                        isPastDay={isPast && !isCurrentDay}
+                        isCurrentDay={isCurrentDay}
+                        currentHour={currentHour}
                       />
                     </div>
                   );
@@ -143,6 +153,9 @@ export function WeekVerticalView({
                   allDayEvents={allDayEvents}
                   timedEvents={timedEvents}
                   onEventClick={onEventClick}
+                  isPastDay={isPast && !isCurrentDay}
+                  isCurrentDay={isCurrentDay}
+                  currentHour={currentHour}
                 />
               </div>
             )}
@@ -158,10 +171,16 @@ function DayEventList({
   allDayEvents,
   timedEvents,
   onEventClick,
+  isPastDay = false,
+  isCurrentDay = false,
+  currentHour = 0,
 }: {
   allDayEvents: CalendarEvent[];
   timedEvents: CalendarEvent[];
   onEventClick: (event: CalendarEvent) => void;
+  isPastDay?: boolean;
+  isCurrentDay?: boolean;
+  currentHour?: number;
 }) {
   if (allDayEvents.length === 0 && timedEvents.length === 0) {
     return <span className="text-[11px] text-muted-foreground/30 italic px-1 py-0.5 block">—</span>;
@@ -179,17 +198,20 @@ function DayEventList({
           <span className="font-medium" style={{ color: event.color }}>{event.title}</span>
         </button>
       ))}
-      {timedEvents.map((event) => (
-        <button
-          key={event.id}
-          onClick={() => onEventClick(event)}
-          className="w-full text-left text-xs px-1.5 py-1 rounded hover:opacity-80 transition-opacity truncate block"
-          style={{ backgroundColor: event.color + '20', borderLeft: `3px solid ${event.color}` }}
-        >
-          <span className="text-muted-foreground mr-1">{format(new Date(event.startTime), 'h:mm a')}</span>
-          <span className="font-medium" style={{ color: event.color }}>{event.title}</span>
-        </button>
-      ))}
+      {timedEvents.map((event) => {
+        const isPastEvent = isPastDay || (isCurrentDay && new Date(event.startTime).getHours() < currentHour);
+        return (
+          <button
+            key={event.id}
+            onClick={() => onEventClick(event)}
+            className={cn('w-full text-left text-xs px-1.5 py-1 rounded hover:opacity-80 transition-opacity truncate block', isPastEvent && 'opacity-40')}
+            style={{ backgroundColor: event.color + '20', borderLeft: `3px solid ${event.color}` }}
+          >
+            <span className="text-muted-foreground mr-1">{format(new Date(event.startTime), 'h:mm a')}</span>
+            <span className="font-medium" style={{ color: event.color }}>{event.title}</span>
+          </button>
+        );
+      })}
     </div>
   );
 }

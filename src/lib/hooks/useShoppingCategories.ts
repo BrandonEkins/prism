@@ -1,22 +1,11 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { ALL_DEFAULT_CATEGORIES, type ShoppingCategoryPreset } from '@/lib/constants/shoppingPresets';
 
-export interface ShoppingCategoryDef {
-  id: string;
-  name: string;
-  emoji: string;
-  color: string;
-}
-
-const DEFAULT_CATEGORIES: ShoppingCategoryDef[] = [
-  { id: 'produce', name: 'Produce', emoji: '🥬', color: '#22C55E' },
-  { id: 'bakery', name: 'Bakery', emoji: '🥖', color: '#F59E0B' },
-  { id: 'meat', name: 'Meat', emoji: '🥩', color: '#EF4444' },
-  { id: 'dairy', name: 'Dairy', emoji: '🥛', color: '#3B82F6' },
-  { id: 'frozen', name: 'Frozen', emoji: '🧊', color: '#8B5CF6' },
-  { id: 'pantry', name: 'Pantry', emoji: '🥫', color: '#F97316' },
-];
+// Re-export shared types and helpers for consumers
+export type ShoppingCategoryDef = ShoppingCategoryPreset;
+export { GROCERY_PRESET_IDS, GENERAL_PRESET_IDS, getPresetsForListType } from '@/lib/constants/shoppingPresets';
 
 const EMOJI_POOL = ['🧴', '🥤', '🍿', '🧀', '🥚', '🍕', '🧹', '💊', '🐾', '🎁', '🍬', '🧃', '🥜', '🫒', '🌶️', '🍯'];
 
@@ -36,7 +25,7 @@ const COLOR_POOL = [
 ];
 
 export function useShoppingCategories() {
-  const [categories, setCategories] = useState<ShoppingCategoryDef[]>(DEFAULT_CATEGORIES);
+  const [categories, setCategories] = useState<ShoppingCategoryDef[]>(ALL_DEFAULT_CATEGORIES);
   const [loading, setLoading] = useState(true);
 
   const fetchCategories = useCallback(async () => {

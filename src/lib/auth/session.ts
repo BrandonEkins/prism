@@ -81,6 +81,17 @@ export async function validateSession(token: string): Promise<SessionData | null
       return null;
     }
 
+    // Sliding window: refresh TTL on each successful validation
+    try {
+      const durationKey = sessionData.role.toUpperCase() as keyof typeof SESSION_DURATION;
+      const duration = SESSION_DURATION[durationKey];
+      const newExpiresAt = Date.now() + duration * 1000;
+      sessionData.expiresAt = newExpiresAt;
+      await client.setEx(sessionKey, duration, JSON.stringify(sessionData));
+    } catch {
+      // Non-critical — don't block response if refresh fails
+    }
+
     return sessionData;
   } catch (error) {
     console.error('Failed to validate session:', error instanceof Error ? error.message : 'Unknown error');

@@ -19,6 +19,7 @@ import {
   ExternalLink,
   ChefHat,
   Search,
+  BookOpen,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -32,6 +33,16 @@ import { useMealsViewData } from './useMealsViewData';
 import { useRecipes, type Recipe } from '@/lib/hooks/useRecipes';
 import { useAuth } from '@/components/providers';
 import type { Meal } from '@/types';
+
+function getMealTypeEmoji(mealType: string): string {
+  switch (mealType) {
+    case 'breakfast': return '\u{1F305}';
+    case 'lunch': return '\u{1F32E}';
+    case 'dinner': return '\u{1F37D}\uFE0F';
+    case 'snack': return '\u{1F37F}';
+    default: return '\u{1F374}';
+  }
+}
 
 export function MealsView() {
   const { requireAuth } = useAuth();
@@ -48,6 +59,7 @@ export function MealsView() {
   } = useMealsViewData();
 
   const { recipes } = useRecipes({ limit: 100 });
+  const [filterMealTypes, setFilterMealTypes] = useState<Set<Meal['mealType']>>(new Set());
 
   const handleAddWithAuth = async (day?: Meal['dayOfWeek']) => {
     const user = await requireAuth('Add Meal', 'Please log in to add a meal');
@@ -91,6 +103,29 @@ export function MealsView() {
             </div>
             <Button variant="ghost" size="icon" onClick={goToNextWeek} aria-label="Next week"><ChevronRight className="h-5 w-5" /></Button>
           </div>
+          <div className="flex items-center justify-center gap-2 mt-2">
+            {(['breakfast', 'lunch', 'dinner', 'snack'] as const).map((type) => {
+              const isActive = filterMealTypes.has(type);
+              return (
+                <Button
+                  key={type}
+                  variant={isActive ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => {
+                    setFilterMealTypes(prev => {
+                      const next = new Set(prev);
+                      if (next.has(type)) next.delete(type);
+                      else next.add(type);
+                      return next;
+                    });
+                  }}
+                  className="text-xs h-7"
+                >
+                  {getMealTypeEmoji(type)} {type.charAt(0).toUpperCase() + type.slice(1)}
+                </Button>
+              );
+            })}
+          </div>
         </div>
 
         <div className="flex-1 overflow-y-auto p-4">
@@ -102,7 +137,8 @@ export function MealsView() {
             <div className="max-w-6xl mx-auto space-y-3">
               {(['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const).map((day, index) => {
                 const dayDate = addDays(currentWeek, index);
-                const dayMeals = mealsByDay[day] || [];
+                const allDayMeals = mealsByDay[day] || [];
+                const dayMeals = filterMealTypes.size > 0 ? allDayMeals.filter(m => filterMealTypes.has(m.mealType)) : allDayMeals;
                 const isDayToday = format(dayDate, 'yyyy-MM-dd') === format(today, 'yyyy-MM-dd');
                 const isPast = isBefore(dayDate, startOfDay(new Date())) && !isDayToday;
                 return (
@@ -144,7 +180,7 @@ function DayRow({ day, date, meals, isToday, isPast, onAddMeal, onMarkCooked, on
       className={cn(
         'border border-border rounded-lg p-4 bg-card/85 backdrop-blur-sm transition-colors',
         isToday && 'bg-accent/80 dark:bg-accent/50 border-primary',
-        isPast && !isToday && 'bg-muted/60 dark:bg-muted/40',
+        isPast && !isToday && 'bg-muted/70 dark:bg-muted/55',
         dragOver && 'border-primary border-2',
       )}
       onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
@@ -195,7 +231,12 @@ function MealCard({ meal, onMarkCooked, onUnmarkCooked, onEdit, onDelete }: {
           <span className={cn('text-sm font-medium', isCooked && 'line-through text-muted-foreground')}>{meal.name}</span>
           <Badge variant="outline" className="text-xs capitalize">{meal.mealType}</Badge>
           {totalTime > 0 && <div className="flex items-center gap-1 text-xs text-muted-foreground"><Clock className="h-3 w-3" /><span>{totalTime}m</span></div>}
-          {meal.recipeUrl && (
+          {meal.recipeId && (
+            <Link href={`/recipes?recipe=${meal.recipeId}`} className="text-primary hover:underline text-xs flex items-center gap-1">
+              Recipe <BookOpen className="h-3 w-3" />
+            </Link>
+          )}
+          {meal.recipeUrl && !meal.recipeId && (
             <a href={meal.recipeUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline text-xs flex items-center gap-1">
               Recipe <ExternalLink className="h-3 w-3" />
             </a>
@@ -221,17 +262,6 @@ function MealCard({ meal, onMarkCooked, onUnmarkCooked, onEdit, onDelete }: {
       </div>
     </div>
   );
-}
-
-
-function getMealTypeEmoji(mealType: string): string {
-  switch (mealType) {
-    case 'breakfast': return '\u{1F305}';
-    case 'lunch': return '\u{1F32E}';
-    case 'dinner': return '\u{1F37D}\uFE0F';
-    case 'snack': return '\u{1F37F}';
-    default: return '\u{1F374}';
-  }
 }
 
 

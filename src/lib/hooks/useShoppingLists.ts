@@ -57,6 +57,9 @@ export function useShoppingLists(options: UseShoppingListsOptions = {}): UseShop
       const response = await fetch('/api/shopping-lists?includeItems=true');
 
       if (!response.ok) {
+        if (response.status === 401) {
+          window.dispatchEvent(new Event('prism:auth-expired'));
+        }
         throw new Error('Failed to fetch shopping lists');
       }
 
@@ -66,8 +69,9 @@ export function useShoppingLists(options: UseShoppingListsOptions = {}): UseShop
         id: string;
         name: string;
         description: string | null;
-        listType: 'grocery' | 'hardware' | 'other' | null;
+        listType: 'grocery' | 'hardware' | 'general' | 'other' | null;
         sortOrder: number;
+        visibleCategories: string[] | null;
         assignedTo: string | null;
         createdBy: {
           id: string;
@@ -97,6 +101,7 @@ export function useShoppingLists(options: UseShoppingListsOptions = {}): UseShop
         description: list.description || undefined,
         listType: list.listType || 'grocery',
         sortOrder: list.sortOrder,
+        visibleCategories: list.visibleCategories ?? undefined,
         items: (list.items || []).map((item) => ({
           id: item.id,
           listId: item.listId,

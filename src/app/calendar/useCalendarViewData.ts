@@ -30,6 +30,7 @@ export function useCalendarViewData() {
   const [showAddEvent, setShowAddEvent] = useState(false);
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
   const [selectedCalendarIds, setSelectedCalendarIds] = useState<Set<string>>(new Set(['all']));
+  const [mergedView, setMergedView] = useState(false);
 
   const { calendars: calendarSources } = useCalendarSources();
   const filterableCalendars = calendarSources.filter((cal) => cal.enabled);
@@ -172,6 +173,7 @@ export function useCalendarViewData() {
     selectedCalendarIds,
     calendarGroups,
     toggleCalendar,
+    mergedView, setMergedView,
     events, loading, error, refreshEvents,
     goToToday, goToPrevious, goToNext, getDateRangeTitle,
   };

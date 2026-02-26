@@ -102,7 +102,7 @@ export function MonthView({
                 !transparentMode && 'bg-card/85 backdrop-blur-sm',
                 'flex flex-col min-h-0',
                 !isSameMonth(date, currentDate) && 'opacity-50 text-muted-foreground',
-                !transparentMode && isPast && isSameMonth(date, currentDate) && 'bg-muted/50 text-muted-foreground',
+                !transparentMode && isPast && isSameMonth(date, currentDate) && 'bg-muted/65 text-muted-foreground',
                 isToday(date) && 'border-primary border-2'
               )}
             >

@@ -82,7 +82,8 @@ export interface ShoppingList {
   description?: string;
   icon?: string | null;
   color?: string | null;
-  listType?: 'grocery' | 'hardware' | 'other';
+  listType?: 'grocery' | 'hardware' | 'general' | 'other';
+  visibleCategories?: string[] | null;
   sortOrder: number;
   assignedTo?: string;
   items: ShoppingItem[];
@@ -100,6 +101,7 @@ export interface Meal {
   description?: string | null;
   recipe?: string | null;
   recipeUrl?: string | null;
+  recipeId?: string | null;
   prepTime?: number | null;
   cookTime?: number | null;
   servings?: number | null;

@@ -366,7 +366,10 @@ export function AddEventModal({
 
           {/* Event Color */}
           <div className="space-y-2">
-            <Label htmlFor="event-color">Event Color</Label>
+            <div className="flex items-center gap-2">
+              <Label htmlFor="event-color">Event Color</Label>
+              <span className="text-sm text-muted-foreground">Defaults to your profile color</span>
+            </div>
             <div className="flex items-center gap-3">
               <input
                 type="color"
@@ -403,9 +406,6 @@ export function AddEventModal({
                 )}
               </div>
             </div>
-            <p className="text-xs text-muted-foreground">
-              Defaults to your profile color
-            </p>
           </div>
 
           {/* Description */}
