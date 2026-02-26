@@ -38,6 +38,7 @@ export function useChoresViewData() {
   const [filterPerson, setFilterPerson] = useState<string | null>(null);
   const [filterCategory, setFilterCategory] = useState<string | null>(null);
   const [showDisabled, setShowDisabled] = useState(false);
+  const [hideCompleted, setHideCompleted] = useState(false);
   const [showCompletions, setShowCompletions] = useState(false);
   const [completions, setCompletions] = useState<ChoreCompletion[]>([]);
   const [completionsLoading, setCompletionsLoading] = useState(false);
@@ -87,6 +88,13 @@ export function useChoresViewData() {
     if (!showDisabled) {
       result = result.filter((chore) => chore.enabled);
     }
+    if (hideCompleted) {
+      const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
+      result = result.filter((chore) => {
+        if (!chore.lastCompleted) return true;
+        return new Date(chore.lastCompleted).getTime() <= oneDayAgo;
+      });
+    }
     result.sort((a, b) => {
       switch (sortBy) {
         case 'nextDue':
@@ -105,7 +113,7 @@ export function useChoresViewData() {
       }
     });
     return result;
-  }, [chores, filterPerson, filterCategory, showDisabled, sortBy]);
+  }, [chores, filterPerson, filterCategory, showDisabled, hideCompleted, sortBy]);
 
   const completeChore = async (choreId: string): Promise<boolean> => {
     const chore = chores.find((c) => c.id === choreId);
@@ -211,6 +219,38 @@ export function useChoresViewData() {
     setEditingChore(chore);
   };
 
+  const inlineAddChore = async (title: string, assignedToId?: string): Promise<boolean> => {
+    if (!title.trim()) return false;
+    const user = await requireAuth('Add Chore', 'Please log in to add a chore');
+    if (!user) return false;
+    if (user.role !== 'parent') {
+      toast({ title: 'Only parents can add chores', variant: 'warning' });
+      return false;
+    }
+    try {
+      const response = await fetch('/api/chores', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: title.trim(),
+          category: 'other',
+          frequency: 'weekly',
+          assignedTo: assignedToId || undefined,
+        }),
+      });
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || 'Failed to create chore');
+      }
+      refreshChores();
+      return true;
+    } catch (err) {
+      console.error('Error creating chore:', err);
+      toast({ title: err instanceof Error ? err.message : 'Failed to create chore', variant: 'destructive' });
+      return false;
+    }
+  };
+
   const enabledCount = chores.filter((c) => c.enabled).length;
   const dueCount = chores.filter(
     (c) => c.enabled && c.nextDue && isPast(parseISO(c.nextDue))
@@ -226,6 +266,7 @@ export function useChoresViewData() {
     filterPerson, setFilterPerson,
     filterCategory, setFilterCategory,
     showDisabled, setShowDisabled,
+    hideCompleted, setHideCompleted,
     showCompletions, setShowCompletions,
     completions, completionsLoading,
     sortBy, setSortBy,
@@ -233,6 +274,7 @@ export function useChoresViewData() {
     editingChore, setEditingChore,
     filteredChores,
     completeChore, toggleEnabled, deleteChore, editChore,
+    inlineAddChore,
     enabledCount, dueCount,
     confirmDialogProps,
   };

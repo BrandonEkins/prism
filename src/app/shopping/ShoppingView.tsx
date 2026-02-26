@@ -22,7 +22,6 @@ import { ShoppingItemRow } from '@/app/shopping/ShoppingItemRow';
 import { ItemModal } from '@/app/shopping/ItemModal';
 import { ListModal } from '@/app/shopping/ListModal';
 import { ShoppingCelebration } from '@/app/shopping/ShoppingCelebration';
-import { CategoryManagerModal } from '@/app/shopping/CategoryManagerModal';
 import { useShoppingViewData } from './useShoppingViewData';
 import { useShoppingCategories } from '@/lib/hooks/useShoppingCategories';
 import { useOrientation } from '@/lib/hooks/useOrientation';
@@ -72,10 +71,6 @@ export function ShoppingView() {
     ? categoryOrder.filter(id => activeList.visibleCategories!.includes(id))
     : categoryOrder;
   const [draggedCategory, setDraggedCategory] = useState<string | null>(null);
-
-  // Manage categories modal
-  const [showCategoryManager, setShowCategoryManager] = useState(false);
-
 
   // Touch drag state
   const touchStartRef = useRef<{ x: number; y: number; element: HTMLElement | null }>({ x: 0, y: 0, element: null });
@@ -352,12 +347,6 @@ export function ShoppingView() {
                   </Button>
                 </div>
                 <div className="flex gap-2">
-                  {activeList && (
-                    <Button variant="ghost" size="sm" title="Manage categories"
-                      onClick={() => setShowCategoryManager(true)}>
-                      <Settings className="h-4 w-4 mr-1" />Categories
-                    </Button>
-                  )}
                   {activeList && (
                     <Button variant="ghost" size="sm" title="Edit list settings"
                       onClick={async () => {
@@ -638,9 +627,9 @@ export function ShoppingView() {
         )}
 
         {showListModal && (
-          <ListModal list={editingList} familyMembers={familyMembers}
+          <ListModal list={editingList} familyMembers={familyMembers} categories={dynamicCategories}
             onClose={() => { setShowListModal(false); setEditingList(null); }}
-            onSave={async (listData) => {
+            onSave={async (listData: { name: string; description?: string; assignedTo?: string; listType?: string; visibleCategories?: string[] | null }) => {
               try {
                 if (editingList) {
                   const response = await fetch(`/api/shopping-lists/${editingList.id}`, {
@@ -690,27 +679,6 @@ export function ShoppingView() {
                 toast({ title: err instanceof Error ? err.message : 'Failed to delete list. Please try again.', variant: 'destructive' });
               }
             } : undefined} />
-        )}
-
-        {showCategoryManager && (
-          <CategoryManagerModal
-            categories={dynamicCategories}
-            visibleCategories={activeList?.visibleCategories}
-            onUpdateVisibility={async (visibleIds) => {
-              if (!activeList) return;
-              try {
-                await fetch(`/api/shopping-lists/${activeList.id}`, {
-                  method: 'PATCH',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ visibleCategories: visibleIds }),
-                });
-                refreshLists();
-              } catch {
-                toast({ title: 'Failed to update category visibility', variant: 'destructive' });
-              }
-            }}
-            onClose={() => setShowCategoryManager(false)}
-          />
         )}
 
         {/* Celebration animation when all items checked */}

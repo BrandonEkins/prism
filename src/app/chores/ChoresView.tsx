@@ -18,12 +18,15 @@ import {
   Users,
   CalendarDays,
   Settings,
+  EyeOff,
+  Eye,
 } from 'lucide-react';
 import { useOrientation } from '@/lib/hooks/useOrientation';
 import { PlaneCelebration } from '@/components/ui/PlaneCelebration';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
+import { Input } from '@/components/ui/input';
 import { UserAvatar } from '@/components/ui/avatar';
 import { PageWrapper } from '@/components/layout';
 import { ChoreItem, getCategoryEmoji } from '@/app/chores/ChoreItem';
@@ -39,6 +42,7 @@ export function ChoresView() {
     filterPerson, setFilterPerson,
     filterCategory, setFilterCategory,
     showDisabled, setShowDisabled,
+    hideCompleted, setHideCompleted,
     showCompletions, setShowCompletions,
     completions, completionsLoading,
     sortBy, setSortBy,
@@ -46,6 +50,7 @@ export function ChoresView() {
     editingChore, setEditingChore,
     filteredChores,
     completeChore, toggleEnabled, deleteChore, editChore,
+    inlineAddChore,
     enabledCount, dueCount,
     confirmDialogProps,
   } = useChoresViewData();
@@ -55,6 +60,10 @@ export function ChoresView() {
 
   // Celebration state
   const [celebratingUser, setCelebratingUser] = useState<{ id: string; name: string } | null>(null);
+
+  // Inline add state
+  const [inlineChore, setInlineChore] = useState('');
+  const [inlineChoreByUser, setInlineChoreByUser] = useState<Record<string, string>>({});
 
   // Group chores by assigned user
   const choresByUser = useMemo(() => {
@@ -144,8 +153,24 @@ export function ChoresView() {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">Show disabled:</span>
-              <Switch checked={showDisabled} onCheckedChange={setShowDisabled} />
+              <Button
+                variant={hideCompleted ? 'secondary' : 'ghost'}
+                size="sm"
+                onClick={() => setHideCompleted(!hideCompleted)}
+                className="gap-1"
+              >
+                {hideCompleted ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                Done
+              </Button>
+              <Button
+                variant={showDisabled ? 'secondary' : 'ghost'}
+                size="sm"
+                onClick={() => setShowDisabled(!showDisabled)}
+                className="gap-1"
+                title="Show chores that have been disabled"
+              >
+                Disabled
+              </Button>
             </div>
             <div className="flex items-center gap-2">
               <Button
@@ -291,6 +316,27 @@ export function ChoresView() {
                     </div>
                     {/* Scrollable chores list */}
                     <div className="flex-1 overflow-y-auto p-2 space-y-1">
+                      {/* Inline add input */}
+                      <div className="pb-1">
+                        <Input
+                          placeholder="Add chore..."
+                          value={inlineChoreByUser[user?.id || 'unassigned'] || ''}
+                          onChange={(e) => setInlineChoreByUser(prev => ({ ...prev, [user?.id || 'unassigned']: e.target.value }))}
+                          onKeyDown={async (e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              const key = user?.id || 'unassigned';
+                              const value = inlineChoreByUser[key]?.trim();
+                              if (!value) return;
+                              const success = await inlineAddChore(value, user?.id);
+                              if (success) {
+                                setInlineChoreByUser(prev => ({ ...prev, [key]: '' }));
+                              }
+                            }
+                          }}
+                          className="h-8 text-sm"
+                        />
+                      </div>
                       {chores.map((chore) => {
                         const nextDue = chore.nextDue ? new Date(chore.nextDue) : null;
                         const isOverdue = nextDue && isPast(nextDue);
@@ -376,6 +422,20 @@ export function ChoresView() {
             </div>
           ) : (
             <div className="space-y-2 max-w-4xl mx-auto">
+              <Input
+                placeholder="Add chore..."
+                value={inlineChore}
+                onChange={(e) => setInlineChore(e.target.value)}
+                onKeyDown={async (e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (!inlineChore.trim()) return;
+                    const success = await inlineAddChore(inlineChore.trim());
+                    if (success) setInlineChore('');
+                  }
+                }}
+                className="h-9 mb-2"
+              />
               {filteredChores.map((chore) => (
                 <ChoreItem key={chore.id} chore={chore}
                   onComplete={() => completeChore(chore.id)}

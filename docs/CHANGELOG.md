@@ -2,7 +2,7 @@
 
 All notable changes to Prism are documented in this file.
 
-## [1.0.2] - 2026-02-25
+## [1.0.2] - 2026-02-26
 
 ### Added
 - **Calendar Merge Toggle**: List view now has a "Merge/Split" button to collapse multi-calendar columns into a single chronological stream
@@ -11,14 +11,20 @@ All notable changes to Prism are documented in this file.
 - **General List Type**: New "General" shopping list type with preset categories (Clothes, Housewares, Gardening, Electronics, Office, Gifts)
 - **General Categories**: Added 6 general-purpose shopping categories alongside grocery categories
 - **Shopping Categories Settings**: New Settings section for global category management (add, remove, reorder, reset to defaults)
+- **Inline Category Editing in List Modal**: Category chips in the create/edit list dialog are now interactive toggles — select a preset (Grocery, General, All, Custom) then fine-tune by toggling individual categories on/off. Replaces the separate "Categories" button.
 - **Tasks Group by List**: Tasks view now supports grouping by Person, List, or None (flat list)
 - **Tasks Show/Hide Completed**: Quick eye toggle in the Tasks header to show/hide completed tasks
 - **Tasks Click-to-Complete**: All task view modes (flat list, grouped) now support clicking a row to toggle completion (like shopping)
 - **Tasks Inline Add with List**: Inline task creation now auto-assigns the active list filter or group list
+- **Headless Browser Recipe Import**: Recipes from Cloudflare-protected sites (AllRecipes, Serious Eats) now fetched via Puppeteer headless browser fallback
+- **Meal Type Multi-Select Filter**: Meal type filter pills now support multi-select (like calendar profile pills)
+- **Recipe Link from Meals**: Meals linked to a Prism recipe show a direct link to open the recipe modal
 
 ### Fixed
 - **Session Expiry Ghost Avatar**: Users no longer appear logged in after session expiry. Sliding window extends active sessions, 5-minute periodic checks detect stale sessions, and 401 responses immediately clear the avatar
 - **Shopping List/Item Creation**: Fixed "Failed to add item" error caused by importing client-only module in server API route
+- **Recipe Modal Close Loop**: Fixed recipe modal reopening immediately after closing when navigated via URL param
+- **Past Day Dimming**: Increased opacity of past-day dimming across all calendar views for better contrast
 
 ## [1.0.1] - 2026-02-25
 
