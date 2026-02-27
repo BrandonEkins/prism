@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect } from 'react';
-import Link from 'next/link';
 import { format } from 'date-fns';
 import { toast } from '@/components/ui/use-toast';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
@@ -16,13 +15,12 @@ import {
   List,
   Merge,
   Plus,
-  Home,
   Loader2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { AddEventModal } from '@/components/modals';
-import { PageWrapper } from '@/components/layout';
+import { PageWrapper, SubpageHeader, FilterBar } from '@/components/layout';
 import { MonthView, WeekView, TwoWeekView, ThreeMonthView, DayViewSideBySide, WeekVerticalView } from '@/components/calendar';
 import { useCalendarViewData } from './useCalendarViewData';
 import { useIsMobile, useSwipeNavigation } from '@/lib/hooks';
@@ -69,110 +67,89 @@ export function CalendarView() {
   return (
     <PageWrapper>
       <div className="h-screen flex flex-col">
-        <header className="flex-shrink-0 border-b border-border bg-card/85 backdrop-blur-sm px-4">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-4">
-              <Button variant="ghost" size="icon" asChild>
-                <Link href="/" aria-label="Back to dashboard">
-                  <Home className="h-5 w-5" />
-                </Link>
+        <SubpageHeader
+          icon={<Calendar className="h-5 w-5 text-primary" />}
+          title={getDateRangeTitle()}
+          actions={<>
+            <Button variant="outline" size="sm" onClick={goToToday}>Today</Button>
+            <div className="flex items-center">
+              <Button variant="ghost" size="icon" onClick={goToPrevious} aria-label="Previous">
+                <ChevronLeft className="h-5 w-5" />
               </Button>
-              <div className="flex items-center gap-2">
-                <Calendar className="h-5 w-5 text-primary" />
-                <h1 className="text-xl font-bold">{getDateRangeTitle()}</h1>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={goToToday}>Today</Button>
-              <div className="flex items-center">
-                <Button variant="ghost" size="icon" onClick={goToPrevious} aria-label="Previous">
-                  <ChevronLeft className="h-5 w-5" />
-                </Button>
-                <Button variant="ghost" size="icon" onClick={goToNext} aria-label="Next">
-                  <ChevronRight className="h-5 w-5" />
-                </Button>
-              </div>
-              {/* View switcher - hidden on mobile (mobile always shows day/agenda view) */}
-              <div className="hidden md:flex items-center border rounded-md">
-                <Button variant={viewType === 'day' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewType('day')} className="rounded-r-none">
-                  <CalendarDays className="h-4 w-4 mr-1" />Day
-                </Button>
-                <Button variant={viewType === 'week' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewType('week')} className="rounded-none border-x">
-                  <CalendarRange className="h-4 w-4 mr-1" />Week
-                </Button>
-                <Button variant={viewType === 'weekVertical' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewType('weekVertical')} className="rounded-none border-r">
-                  <List className="h-4 w-4 mr-1" />List
-                </Button>
-                <Button variant={viewType === 'twoWeek' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewType('twoWeek')} className="rounded-none border-r">
-                  <CalendarRange className="h-4 w-4 mr-1" />2 Weeks
-                </Button>
-                <Button variant={viewType === 'month' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewType('month')} className="rounded-none border-r">
-                  <LayoutGrid className="h-4 w-4 mr-1" />Month
-                </Button>
-                <Button variant={viewType === 'threeMonth' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewType('threeMonth')} className="rounded-l-none">
-                  <LayoutGrid className="h-4 w-4 mr-1" />3 Mo
-                </Button>
-              </div>
-              <Button size="sm" onClick={handleAddWithAuth}>
-                <Plus className="h-4 w-4 mr-1" />Add Event
+              <Button variant="ghost" size="icon" onClick={goToNext} aria-label="Next">
+                <ChevronRight className="h-5 w-5" />
               </Button>
             </div>
-          </div>
-        </header>
+            {/* View switcher - hidden on mobile (mobile always shows day/agenda view) */}
+            <div className="hidden md:flex items-center border rounded-md">
+              <Button variant={viewType === 'day' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewType('day')} className="rounded-r-none">
+                <CalendarDays className="h-4 w-4 mr-1" />Day
+              </Button>
+              <Button variant={viewType === 'week' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewType('week')} className="rounded-none border-x">
+                <CalendarRange className="h-4 w-4 mr-1" />Week
+              </Button>
+              <Button variant={viewType === 'weekVertical' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewType('weekVertical')} className="rounded-none border-r">
+                <List className="h-4 w-4 mr-1" />List
+              </Button>
+              <Button variant={viewType === 'twoWeek' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewType('twoWeek')} className="rounded-none border-r">
+                <CalendarRange className="h-4 w-4 mr-1" />2 Weeks
+              </Button>
+              <Button variant={viewType === 'month' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewType('month')} className="rounded-none border-r">
+                <LayoutGrid className="h-4 w-4 mr-1" />Month
+              </Button>
+              <Button variant={viewType === 'threeMonth' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewType('threeMonth')} className="rounded-l-none">
+                <LayoutGrid className="h-4 w-4 mr-1" />3 Mo
+              </Button>
+            </div>
+            <Button size="sm" onClick={handleAddWithAuth}>
+              <Plus className="h-4 w-4 mr-1" />Add Event
+            </Button>
+          </>}
+        />
 
         {calendarGroups.length > 0 && (
-          <div className="flex-shrink-0 border-b border-border bg-card/85 backdrop-blur-sm px-4 py-2">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-xs text-muted-foreground mr-1">Show:</span>
-              <button
-                onClick={() => toggleCalendar('all')}
-                className={cn(
-                  'px-3 py-1.5 rounded-full text-xs font-medium transition-colors leading-none',
-                  selectedCalendarIds.has('all')
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-muted text-muted-foreground hover:bg-accent'
-                )}
-              >
-                All
-              </button>
-              {calendarGroups.map((group) => (
-                <button
+          <FilterBar>
+            <span className="text-sm text-muted-foreground shrink-0">Show:</span>
+            <Button
+              variant={selectedCalendarIds.has('all') ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => toggleCalendar('all')}
+              className="h-7 text-xs"
+            >
+              All
+            </Button>
+            {calendarGroups.map((group) => {
+              const isSelected = selectedCalendarIds.has(group.id) || selectedCalendarIds.has('all');
+              return (
+                <Button
                   key={group.id}
+                  variant={isSelected ? 'default' : 'outline'}
+                  size="sm"
                   onClick={() => toggleCalendar(group.id)}
-                  className={cn(
-                    'px-3 py-1.5 rounded-full text-xs font-medium transition-colors inline-flex items-center gap-1.5 leading-none',
-                    selectedCalendarIds.has(group.id) || selectedCalendarIds.has('all')
-                      ? 'text-white'
-                      : 'bg-muted text-muted-foreground hover:bg-accent'
-                  )}
-                  style={
-                    selectedCalendarIds.has(group.id) || selectedCalendarIds.has('all')
-                      ? { backgroundColor: group.color }
-                      : undefined
-                  }
+                  className={cn('h-7 text-xs gap-1.5', isSelected && 'text-white border-transparent')}
+                  style={isSelected ? { backgroundColor: group.color } : undefined}
                 >
                   <span
-                    className="w-2 h-2 rounded-full border border-white/60 dark:border-white/80"
-                    style={{ backgroundColor: group.color }}
+                    className="w-2 h-2 rounded-full shrink-0"
+                    style={{ backgroundColor: group.color, border: isSelected ? '1px solid rgba(255,255,255,0.6)' : undefined }}
                   />
                   {group.name}
-                </button>
-              ))}
-              {(viewType === 'weekVertical' || viewType === 'day') && calendarGroups.length > 1 && (
-                <Button
-                  variant={mergedView ? 'secondary' : 'ghost'}
-                  size="sm"
-                  onClick={() => setMergedView(!mergedView)}
-                  className="gap-1 ml-auto"
-                  title={mergedView ? 'Split by calendar' : 'Merge into one column'}
-                >
-                  <Merge className="h-3.5 w-3.5" />
-                  {mergedView ? 'Split' : 'Merge'}
                 </Button>
-              )}
-            </div>
-          </div>
+              );
+            })}
+            {(viewType === 'weekVertical' || viewType === 'day') && calendarGroups.length > 1 && (
+              <Button
+                variant={mergedView ? 'secondary' : 'ghost'}
+                size="sm"
+                onClick={() => setMergedView(!mergedView)}
+                className="gap-1 ml-auto"
+                title={mergedView ? 'Split by calendar' : 'Merge into one column'}
+              >
+                <Merge className="h-3.5 w-3.5" />
+                {mergedView ? 'Split' : 'Merge'}
+              </Button>
+            )}
+          </FilterBar>
         )}
 
         <div ref={swipeRef} className="flex-1 overflow-hidden p-4">

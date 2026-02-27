@@ -2,10 +2,9 @@
 
 import * as React from 'react';
 import { useState } from 'react';
-import { format, addDays, isBefore, startOfDay } from 'date-fns';
 import Link from 'next/link';
+import { format, addDays, isBefore, startOfDay } from 'date-fns';
 import {
-  Home,
   UtensilsCrossed,
   Plus,
   ChevronLeft,
@@ -26,7 +25,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { UserAvatar } from '@/components/ui/avatar';
-import { PageWrapper } from '@/components/layout';
+import { PageWrapper, SubpageHeader, FilterBar } from '@/components/layout';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useMealsViewData } from './useMealsViewData';
@@ -71,62 +70,56 @@ export function MealsView() {
   return (
     <PageWrapper>
       <div className="h-screen flex flex-col">
-        <header className="flex-shrink-0 border-b border-border bg-card/85 backdrop-blur-sm px-4 safe-area-top">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-4">
-              <Button variant="ghost" size="icon" asChild className="hidden md:inline-flex">
-                <Link href="/" aria-label="Back to dashboard"><Home className="h-5 w-5" /></Link>
-              </Button>
-              <div className="flex items-center gap-2">
-                <UtensilsCrossed className="h-5 w-5 text-primary" />
-                <h1 className="text-xl font-bold">Meal Planner</h1>
-                <Badge variant="secondary">{cookedMeals}/{totalMeals} cooked</Badge>
-              </div>
-            </div>
+        <SubpageHeader
+          icon={<UtensilsCrossed className="h-5 w-5 text-primary" />}
+          title="Meal Planner"
+          badge={<Badge variant="secondary">{cookedMeals}/{totalMeals}</Badge>}
+          actions={
             <Button onClick={() => handleAddWithAuth()} size="sm">
               <Plus className="h-4 w-4 mr-1" />
               Add Meal
             </Button>
-          </div>
-        </header>
+          }
+        />
 
-        <div className="flex-shrink-0 border-b border-border bg-card/85 backdrop-blur-sm px-4 py-3">
-          <div className="flex items-center justify-center gap-4">
-            <Button variant="ghost" size="icon" onClick={goToPreviousWeek} aria-label="Previous week"><ChevronLeft className="h-5 w-5" /></Button>
-            <div className="text-center">
-              <h2 className="text-lg font-semibold">
-                {format(currentWeek, 'MMM d')} - {format(addDays(currentWeek, 6), 'MMM d, yyyy')}
-              </h2>
-              {!isCurrentWeek && (
-                <Button variant="link" size="sm" onClick={goToThisWeek} className="h-auto p-0 text-xs">Go to this week</Button>
-              )}
-            </div>
-            <Button variant="ghost" size="icon" onClick={goToNextWeek} aria-label="Next week"><ChevronRight className="h-5 w-5" /></Button>
+        <FilterBar>
+          <Button variant="ghost" size="icon" onClick={goToPreviousWeek} aria-label="Previous week" className="shrink-0 h-8 w-8">
+            <ChevronLeft className="h-5 w-5" />
+          </Button>
+          <div className="text-center shrink-0">
+            <span className="text-sm font-semibold">
+              {format(currentWeek, 'MMM d')} - {format(addDays(currentWeek, 6), 'MMM d, yyyy')}
+            </span>
+            {!isCurrentWeek && (
+              <Button variant="link" size="sm" onClick={goToThisWeek} className="h-auto p-0 text-xs ml-2">This week</Button>
+            )}
           </div>
-          <div className="flex items-center justify-center gap-2 mt-2">
-            {(['breakfast', 'lunch', 'dinner', 'snack'] as const).map((type) => {
-              const isActive = filterMealTypes.has(type);
-              return (
-                <Button
-                  key={type}
-                  variant={isActive ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => {
-                    setFilterMealTypes(prev => {
-                      const next = new Set(prev);
-                      if (next.has(type)) next.delete(type);
-                      else next.add(type);
-                      return next;
-                    });
-                  }}
-                  className="text-xs h-7"
-                >
-                  {getMealTypeEmoji(type)} {type.charAt(0).toUpperCase() + type.slice(1)}
-                </Button>
-              );
-            })}
-          </div>
-        </div>
+          <Button variant="ghost" size="icon" onClick={goToNextWeek} aria-label="Next week" className="shrink-0 h-8 w-8">
+            <ChevronRight className="h-5 w-5" />
+          </Button>
+          <div className="w-px h-5 bg-border shrink-0" />
+          {(['breakfast', 'lunch', 'dinner', 'snack'] as const).map((type) => {
+            const isActive = filterMealTypes.has(type);
+            return (
+              <Button
+                key={type}
+                variant={isActive ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => {
+                  setFilterMealTypes(prev => {
+                    const next = new Set(prev);
+                    if (next.has(type)) next.delete(type);
+                    else next.add(type);
+                    return next;
+                  });
+                }}
+                className="text-xs h-7 shrink-0"
+              >
+                {getMealTypeEmoji(type)} {type.charAt(0).toUpperCase() + type.slice(1)}
+              </Button>
+            );
+          })}
+        </FilterBar>
 
         <div className="flex-1 overflow-y-auto p-4">
           {loading ? (

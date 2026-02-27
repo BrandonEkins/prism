@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { format, parseISO, formatDistanceToNow, isPast, differenceInDays } from 'date-fns';
 import { useState, useMemo } from 'react';
 import { toast } from '@/components/ui/use-toast';
@@ -8,9 +7,7 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import {
   ClipboardList,
   Plus,
-  Home,
   AlertCircle,
-  SortAsc,
   Clock,
   History,
   CheckCircle2,
@@ -18,22 +15,30 @@ import {
   Users,
   CalendarDays,
   Settings,
-  EyeOff,
-  Eye,
+  X,
 } from 'lucide-react';
 import { useOrientation } from '@/lib/hooks/useOrientation';
 import { PlaneCelebration } from '@/components/ui/PlaneCelebration';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Switch } from '@/components/ui/switch';
 import { Input } from '@/components/ui/input';
 import { UserAvatar } from '@/components/ui/avatar';
-import { PageWrapper } from '@/components/layout';
+import { PageWrapper, SubpageHeader, FilterBar, SortSelect, FilterDropdown, PersonFilter } from '@/components/layout';
+import type { OverflowItem } from '@/components/layout';
 import { ChoreItem, getCategoryEmoji } from '@/app/chores/ChoreItem';
 import { ChoreModal } from '@/app/chores/ChoreModal';
 import { useChoresViewData } from './useChoresViewData';
 import { useAuth } from '@/components/providers';
 import { cn } from '@/lib/utils';
+
+const CHORE_CATEGORIES = [
+  { value: 'cleaning', label: 'Cleaning' },
+  { value: 'laundry', label: 'Laundry' },
+  { value: 'dishes', label: 'Dishes' },
+  { value: 'yard', label: 'Yard' },
+  { value: 'pets', label: 'Pets' },
+  { value: 'trash', label: 'Trash' },
+];
 
 export function ChoresView() {
   const { requireAuth } = useAuth();
@@ -65,28 +70,45 @@ export function ChoresView() {
   const [inlineChore, setInlineChore] = useState('');
   const [inlineChoreByUser, setInlineChoreByUser] = useState<Record<string, string>>({});
 
+  // Category multi-select state (adapter: hook uses string | null, dropdown uses Set<string>)
+  const [categoryFilters, setCategoryFilters] = useState<Set<string>>(new Set());
+
+  // Sync multi-select back to hook's single-select (for filtering logic)
+  // Since the hook expects string | null, we adapt: multi-select filtering done client-side
+  const effectiveFilteredChores = useMemo(() => {
+    if (categoryFilters.size === 0) return filteredChores;
+    return filteredChores.filter((chore) => categoryFilters.has(chore.category));
+  }, [filteredChores, categoryFilters]);
+
+  // Check if any non-default filters active
+  const hasActiveFilters = filterPerson !== null || categoryFilters.size > 0;
+
+  const clearFilters = () => {
+    setFilterPerson(null);
+    setCategoryFilters(new Set());
+    setFilterCategory(null);
+  };
+
   // Group chores by assigned user
   const choresByUser = useMemo(() => {
     if (!groupByUser) return null;
 
-    const groups: { user: { id: string; name: string; color: string } | null; chores: typeof filteredChores }[] = [];
+    const groups: { user: { id: string; name: string; color: string } | null; chores: typeof effectiveFilteredChores }[] = [];
 
-    // Group by each family member
     familyMembers.forEach((member) => {
-      const userChores = filteredChores.filter((c) => c.assignedTo?.id === member.id);
+      const userChores = effectiveFilteredChores.filter((c) => c.assignedTo?.id === member.id);
       if (userChores.length > 0) {
         groups.push({ user: member, chores: userChores });
       }
     });
 
-    // Unassigned chores
-    const unassigned = filteredChores.filter((c) => !c.assignedTo);
+    const unassigned = effectiveFilteredChores.filter((c) => !c.assignedTo);
     if (unassigned.length > 0) {
       groups.push({ user: null, chores: unassigned });
     }
 
     return groups;
-  }, [groupByUser, filteredChores, familyMembers]);
+  }, [groupByUser, effectiveFilteredChores, familyMembers]);
 
   const handleAddWithAuth = async () => {
     const user = await requireAuth('Add Chore', 'Please log in to add a chore');
@@ -97,103 +119,74 @@ export function ChoresView() {
   return (
     <PageWrapper>
       <div className="h-screen flex flex-col">
-        <header className="flex-shrink-0 border-b border-border bg-card/85 backdrop-blur-sm px-4 safe-area-top">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-4">
-              <Button variant="ghost" size="icon" asChild className="hidden md:inline-flex">
-                <Link href="/" aria-label="Back to dashboard"><Home className="h-5 w-5" /></Link>
-              </Button>
-              <div className="flex items-center gap-2">
-                <ClipboardList className="h-5 w-5 text-primary" />
-                <h1 className="text-xl font-bold">Chores</h1>
-                <Badge variant="secondary">{enabledCount} active</Badge>
-                {dueCount > 0 && <Badge variant="destructive">{dueCount} due</Badge>}
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant={showCompletions ? 'secondary' : 'outline'}
-                size="sm"
-                onClick={() => setShowCompletions(!showCompletions)}
-              >
-                <History className="h-4 w-4 mr-1" />
-                History
-              </Button>
-              <Button onClick={handleAddWithAuth} size="sm">
-                <Plus className="h-4 w-4 mr-1" />
-                Add Chore
-              </Button>
-            </div>
-          </div>
-        </header>
+        <SubpageHeader
+          icon={<ClipboardList className="h-5 w-5 text-primary" />}
+          title="Chores"
+          badge={<>
+            <Badge variant="secondary">{enabledCount} active</Badge>
+            {dueCount > 0 && <Badge variant="destructive">{dueCount} due</Badge>}
+          </>}
+          actions={<>
+            <Button
+              variant={showCompletions ? 'secondary' : 'outline'}
+              size="sm"
+              onClick={() => setShowCompletions(!showCompletions)}
+            >
+              <History className="h-4 w-4 mr-1" />
+              History
+            </Button>
+            <Button onClick={handleAddWithAuth} size="sm">
+              <Plus className="h-4 w-4 mr-1" />
+              Add Chore
+            </Button>
+          </>}
+          overflow={[
+            { label: 'Hide Completed', checked: hideCompleted, onClick: () => setHideCompleted(!hideCompleted) },
+            { label: 'Show Disabled', checked: showDisabled, onClick: () => setShowDisabled(!showDisabled) },
+          ] as OverflowItem[]}
+        />
 
-        <div className="hidden md:block flex-shrink-0 border-b border-border bg-card/85 backdrop-blur-sm px-4 py-2">
-          <div className="flex items-center gap-4 flex-wrap">
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">Person:</span>
-              <div className="flex gap-1">
-                <Button variant={filterPerson === null ? 'secondary' : 'ghost'} size="sm" onClick={() => setFilterPerson(null)}>All</Button>
-                {familyMembers.map((member) => (
-                  <Button key={member.id} variant={filterPerson === member.id ? 'secondary' : 'ghost'} size="sm"
-                    onClick={() => setFilterPerson(member.id)} className="gap-1">
-                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: member.color }} />
-                    {member.name}
-                  </Button>
-                ))}
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">Category:</span>
-              <div className="flex gap-1">
-                <Button variant={filterCategory === null ? 'secondary' : 'ghost'} size="sm" onClick={() => setFilterCategory(null)}>All</Button>
-                {['cleaning', 'laundry', 'dishes', 'yard', 'pets', 'trash'].map((category) => (
-                  <Button key={category} variant={filterCategory === category ? 'secondary' : 'ghost'} size="sm"
-                    onClick={() => setFilterCategory(category)} className="capitalize">{category}</Button>
-                ))}
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant={hideCompleted ? 'secondary' : 'ghost'}
-                size="sm"
-                onClick={() => setHideCompleted(!hideCompleted)}
-                className="gap-1"
-              >
-                {hideCompleted ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                Done
-              </Button>
-              <Button
-                variant={showDisabled ? 'secondary' : 'ghost'}
-                size="sm"
-                onClick={() => setShowDisabled(!showDisabled)}
-                className="gap-1"
-                title="Show chores that have been disabled"
-              >
-                Disabled
-              </Button>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant={groupByUser ? 'secondary' : 'ghost'}
-                size="sm"
-                onClick={() => setGroupByUser(!groupByUser)}
-                className="gap-1"
-              >
-                <Users className="h-4 w-4" />
-                Group by Person
-              </Button>
-            </div>
-            <div className="flex items-center gap-2 ml-auto">
-              <SortAsc className="h-4 w-4 text-muted-foreground" />
-              <select value={sortBy} onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
-                className="text-sm bg-card text-foreground border border-border rounded px-2 py-1 [&>option]:bg-card [&>option]:text-foreground">
-                <option value="nextDue">Next Due</option>
-                <option value="category">Category</option>
-                <option value="frequency">Frequency</option>
-              </select>
-            </div>
-          </div>
-        </div>
+        <FilterBar>
+          <PersonFilter
+            members={familyMembers}
+            selected={filterPerson}
+            onSelect={setFilterPerson}
+          />
+          <div className="w-px h-5 bg-border shrink-0" />
+          <FilterDropdown
+            label="Category"
+            options={CHORE_CATEGORIES}
+            selected={categoryFilters}
+            onSelectionChange={setCategoryFilters}
+            mode="multi"
+          />
+          <Button
+            variant={groupByUser ? 'secondary' : 'ghost'}
+            size="sm"
+            onClick={() => setGroupByUser(!groupByUser)}
+            className="gap-1 shrink-0 h-8"
+          >
+            <Users className="h-4 w-4" />
+            <span className="hidden sm:inline">Group by Person</span>
+          </Button>
+          <SortSelect
+            value={sortBy}
+            onValueChange={(v) => setSortBy(v as typeof sortBy)}
+            options={[
+              { value: 'nextDue', label: 'Next Due' },
+              { value: 'category', label: 'Category' },
+              { value: 'frequency', label: 'Frequency' },
+            ]}
+            showSortIcon
+            className="ml-auto"
+          />
+          {hasActiveFilters && (
+            <Button variant="ghost" size="sm" onClick={clearFilters} className="shrink-0 text-muted-foreground h-8">
+              <X className="h-3 w-3 mr-1" />
+              Clear
+            </Button>
+          )}
+        </FilterBar>
 
         <div className="flex-1 overflow-y-auto p-4">
           {showCompletions ? (
@@ -277,7 +270,7 @@ export function ChoresView() {
               <AlertCircle className="h-12 w-12 mb-4 opacity-50" /><p>{error}</p>
               <Button variant="outline" size="sm" className="mt-4" onClick={() => refreshChores()}>Try Again</Button>
             </div>
-          ) : filteredChores.length === 0 ? (
+          ) : effectiveFilteredChores.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
               <ClipboardList className="h-12 w-12 mb-4 opacity-50" /><p>No chores found</p>
               <Button variant="outline" size="sm" className="mt-4" onClick={handleAddWithAuth}>Add your first chore</Button>
@@ -297,7 +290,6 @@ export function ChoresView() {
                     className="flex flex-col border-2 rounded-lg overflow-hidden bg-card/90 backdrop-blur-sm"
                     style={{ borderColor: userColor }}
                   >
-                    {/* User header */}
                     <div
                       className="flex items-center gap-2 px-3 py-2 shrink-0"
                       style={{ backgroundColor: userColor + '20' }}
@@ -314,9 +306,7 @@ export function ChoresView() {
                         {chores.length}
                       </Badge>
                     </div>
-                    {/* Scrollable chores list */}
                     <div className="flex-1 overflow-y-auto p-2 space-y-1">
-                      {/* Inline add input */}
                       <div className="pb-1">
                         <Input
                           placeholder="Add chore..."
@@ -354,7 +344,6 @@ export function ChoresView() {
                             )}
                             onClick={async () => {
                               const success = await completeChore(chore.id);
-                              // Only celebrate if chore was actually completed
                               if (success && user) {
                                 const otherChores = chores.filter((c) => c.id !== chore.id);
                                 const allOthersCompleted = otherChores.every((c) =>
@@ -436,7 +425,7 @@ export function ChoresView() {
                 }}
                 className="h-9 mb-2"
               />
-              {filteredChores.map((chore) => (
+              {effectiveFilteredChores.map((chore) => (
                 <ChoreItem key={chore.id} chore={chore}
                   onComplete={() => completeChore(chore.id)}
                   onToggleEnabled={() => toggleEnabled(chore.id)}

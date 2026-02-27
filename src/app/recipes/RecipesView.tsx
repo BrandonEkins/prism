@@ -6,7 +6,6 @@ import { useSearchParams } from 'next/navigation';
 import { toast } from '@/components/ui/use-toast';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useConfirmDialog } from '@/lib/hooks/useConfirmDialog';
-import Link from 'next/link';
 import {
   ChefHat,
   Plus,
@@ -22,8 +21,6 @@ import {
   FileUp,
   Star,
   Check,
-  Home,
-  Filter,
   ShoppingCart,
   Minus,
   ChevronDown,
@@ -44,7 +41,8 @@ import {
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { PageWrapper } from '@/components/layout';
+import { PageWrapper, SubpageHeader, FilterBar, FilterDropdown } from '@/components/layout';
+import type { OverflowItem } from '@/components/layout';
 import { useRecipes, type Recipe } from '@/lib/hooks/useRecipes';
 import { useShoppingLists } from '@/lib/hooks/useShoppingLists';
 import { useAuth } from '@/components/providers';
@@ -161,109 +159,85 @@ export function RecipesView() {
   return (
     <PageWrapper>
       <div className="h-screen flex flex-col">
-        {/* Header */}
-        <header className="flex-shrink-0 border-b border-border bg-card/85 backdrop-blur-sm px-4">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-4">
-              <Button variant="ghost" size="icon" asChild>
-                <Link href="/" aria-label="Back to dashboard">
-                  <Home className="h-5 w-5" />
-                </Link>
-              </Button>
-              <div className="flex items-center gap-2">
-                <ChefHat className="h-5 w-5 text-primary" />
-                <h1 className="text-xl font-bold">Recipes</h1>
-                <Badge variant="secondary">{recipes.length} recipes</Badge>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={handleImportUrlWithAuth}>
-                <Link2 className="h-4 w-4 mr-1" />
-                Import URL
-              </Button>
-              <Button variant="outline" size="sm" onClick={handleImportPaprikaWithAuth}>
-                <FileUp className="h-4 w-4 mr-1" />
-                Import Paprika
-              </Button>
-              <Button size="sm" onClick={handleAddWithAuth}>
-                <Plus className="h-4 w-4 mr-1" />
-                Add Recipe
-              </Button>
-            </div>
-          </div>
-        </header>
+        <SubpageHeader
+          icon={<ChefHat className="h-5 w-5 text-primary" />}
+          title="Recipes"
+          badge={<Badge variant="secondary">{recipes.length}</Badge>}
+          actions={
+            <Button size="sm" onClick={handleAddWithAuth}>
+              <Plus className="h-4 w-4 mr-1" />
+              Add Recipe
+            </Button>
+          }
+          overflow={[
+            { label: 'Import URL', icon: Link2, onClick: handleImportUrlWithAuth },
+            { label: 'Import Paprika', icon: FileUp, onClick: handleImportPaprikaWithAuth },
+          ] as OverflowItem[]}
+        />
 
-        {/* Filters */}
-        <div className="flex-shrink-0 border-b border-border bg-card/85 backdrop-blur-sm px-4 py-3">
-          <div className="flex items-center gap-4 flex-wrap">
-            <div className="relative flex-1 max-w-md min-w-[200px]">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search recipes..."
-                className="pl-9"
-              />
-            </div>
-            <div className="flex items-center gap-1">
-              <Button
-                variant={viewMode === 'all' ? 'secondary' : 'ghost'}
-                size="sm"
-                onClick={() => setViewMode('all')}
-              >
-                All
-              </Button>
-              <Button
-                variant={viewMode === 'favorites' ? 'secondary' : 'ghost'}
-                size="sm"
-                onClick={() => setViewMode('favorites')}
-              >
-                <Heart className="h-4 w-4 mr-1" />
-                Favorites
-              </Button>
-            </div>
-            {cuisines.length > 0 && (
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">Cuisine:</span>
-                <select
-                  value={filterCuisine || ''}
-                  onChange={(e) => setFilterCuisine(e.target.value || null)}
-                  className="text-sm bg-card text-foreground border border-border rounded px-2 py-1"
-                >
-                  <option value="">All</option>
-                  {cuisines.map((c) => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
-                </select>
-              </div>
-            )}
-            {categories.length > 0 && (
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">Category:</span>
-                <select
-                  value={filterCategory || ''}
-                  onChange={(e) => setFilterCategory(e.target.value || null)}
-                  className="text-sm bg-card text-foreground border border-border rounded px-2 py-1"
-                >
-                  <option value="">All</option>
-                  {categories.map((c) => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
-                </select>
-              </div>
-            )}
-            {(filterCuisine || filterCategory) && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => { setFilterCuisine(null); setFilterCategory(null); }}
-              >
-                <X className="h-3 w-3 mr-1" />
-                Clear filters
-              </Button>
-            )}
+        <FilterBar>
+          <div className="relative min-w-[180px] max-w-md shrink-0">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search recipes..."
+              className="pl-9 h-8"
+            />
           </div>
-        </div>
+          <div className="w-px h-5 bg-border shrink-0" />
+          <div className="flex items-center gap-1 shrink-0">
+            <Button
+              variant={viewMode === 'all' ? 'secondary' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('all')}
+              className="h-8"
+            >
+              All
+            </Button>
+            <Button
+              variant={viewMode === 'favorites' ? 'secondary' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('favorites')}
+              className="h-8"
+            >
+              <Heart className="h-4 w-4 mr-1" />
+              Favorites
+            </Button>
+          </div>
+          {cuisines.length > 0 && (
+            <>
+              <div className="w-px h-5 bg-border shrink-0" />
+              <FilterDropdown
+                label="Cuisine"
+                options={cuisines.map((c) => ({ value: c, label: c }))}
+                selected={filterCuisine ? new Set([filterCuisine]) : new Set()}
+                onSelectionChange={(s) => setFilterCuisine(s.size > 0 ? [...s][0]! : null)}
+                mode="single"
+              />
+            </>
+          )}
+          {categories.length > 0 && (
+            <FilterDropdown
+              label="Category"
+              options={categories.map((c) => ({ value: c, label: c }))}
+              selected={filterCategory ? new Set([filterCategory]) : new Set()}
+              onSelectionChange={(s) => setFilterCategory(s.size > 0 ? [...s][0]! : null)}
+              mode="single"
+            />
+          )}
+          {(filterCuisine || filterCategory) && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => { setFilterCuisine(null); setFilterCategory(null); }}
+              className="shrink-0 text-muted-foreground h-8"
+            >
+              <X className="h-3 w-3 mr-1" />
+              Clear
+            </Button>
+          )}
+        </FilterBar>
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-4">
