@@ -3,13 +3,10 @@
 import { useState, useMemo } from 'react';
 import { toast } from '@/components/ui/use-toast';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import Link from 'next/link';
 import { format, isPast, differenceInDays, formatDistanceToNow } from 'date-fns';
 import {
   CheckSquare,
   Plus,
-  SortAsc,
-  Home,
   AlertCircle,
   Clock,
   RefreshCw,
@@ -17,6 +14,7 @@ import {
   CalendarDays,
   Settings,
   List,
+  X,
 } from 'lucide-react';
 import { PlaneCelebration } from '@/components/ui/PlaneCelebration';
 import { UserAvatar } from '@/components/ui/avatar';
@@ -24,7 +22,8 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { PageWrapper } from '@/components/layout';
+import { PageWrapper, SubpageHeader, FilterBar, SortSelect, FilterDropdown, PersonFilter } from '@/components/layout';
+import type { OverflowItem } from '@/components/layout';
 import { TaskModal } from '@/app/tasks/TaskModal';
 import { useTasksViewData } from './useTasksViewData';
 import { useAuth } from '@/components/providers';
@@ -165,7 +164,6 @@ function GroupedTaskGrid({
             className="flex flex-col border-2 rounded-lg overflow-hidden bg-card/90 backdrop-blur-sm"
             style={{ borderColor: group.color }}
           >
-            {/* Group header */}
             <div
               className="flex items-center gap-2 px-3 py-2 shrink-0"
               style={{ backgroundColor: group.color + '20' }}
@@ -178,9 +176,7 @@ function GroupedTaskGrid({
                 {completedCount}/{group.tasks.length}
               </Badge>
             </div>
-            {/* Scrollable tasks list */}
             <div className="flex-1 overflow-y-auto p-2 space-y-1">
-              {/* Inline add input */}
               <div className="pb-1">
                 <Input
                   placeholder="Add a task..."
@@ -233,7 +229,7 @@ export function TasksView() {
     loading, error, refreshTasks, familyMembers,
     filterPerson, setFilterPerson,
     filterPriority, setFilterPriority,
-    filterCompleted, setFilterCompleted,
+    showCompleted, setShowCompleted,
     filterList, setFilterList,
     sortBy, setSortBy,
     showAddModal, setShowAddModal,
@@ -257,13 +253,21 @@ export function TasksView() {
   // Celebration state
   const [celebratingUser, setCelebratingUser] = useState<{ id: string; name: string } | null>(null);
 
+  // Check if any non-default filters are active
+  const hasActiveFilters = filterPerson !== null || filterPriority !== null || filterList !== null;
+
+  const clearFilters = () => {
+    setFilterPerson(null);
+    setFilterPriority(null);
+    setFilterList(null);
+  };
+
   // Group tasks by assigned user
   const tasksByUser = useMemo(() => {
     if (groupMode !== 'person') return null;
 
     const groups: { user: { id: string; name: string; color: string } | null; tasks: typeof filteredTasks }[] = [];
 
-    // Group by each family member
     familyMembers.forEach((member) => {
       const userTasks = filteredTasks.filter((t) => t.assignedTo?.id === member.id);
       if (userTasks.length > 0) {
@@ -271,7 +275,6 @@ export function TasksView() {
       }
     });
 
-    // Unassigned tasks
     const unassigned = filteredTasks.filter((t) => !t.assignedTo);
     if (unassigned.length > 0) {
       groups.push({ user: null, tasks: unassigned });
@@ -286,7 +289,6 @@ export function TasksView() {
 
     const groups: { list: { id: string; name: string; color: string } | null; tasks: typeof filteredTasks }[] = [];
 
-    // Group by each task list
     taskLists.forEach((list) => {
       const listTasks = filteredTasks.filter((t) => (t as typeof t & { listId?: string }).listId === list.id);
       if (listTasks.length > 0) {
@@ -294,7 +296,6 @@ export function TasksView() {
       }
     });
 
-    // Tasks with no list
     const noList = filteredTasks.filter((t) => !(t as typeof t & { listId?: string }).listId);
     if (noList.length > 0) {
       groups.push({ list: null, tasks: noList });
@@ -320,7 +321,6 @@ export function TasksView() {
     try {
       const body: Record<string, string> = { title: value };
       if (assignedTo) body.assignedTo = assignedTo;
-      // Include listId from explicit param, or from active filter
       const effectiveListId = listId || (filterList && filterList !== 'none' ? filterList : undefined);
       if (effectiveListId) body.listId = effectiveListId;
       const response = await fetch('/api/tasks', {
@@ -349,109 +349,114 @@ export function TasksView() {
     handleAddClick();
   };
 
+  // Build overflow items
+  const overflowItems: OverflowItem[] = [
+    { label: 'Show Completed', checked: showCompleted, onClick: () => setShowCompleted(!showCompleted) },
+  ];
+
+  // Build list filter options for dropdown
+  const listOptions = useMemo(() => {
+    const opts = [{ value: 'none', label: 'No List' }];
+    taskLists.forEach((list) => {
+      opts.push({
+        value: list.id,
+        label: list.name,
+      });
+    });
+    return opts;
+  }, [taskLists]);
+
+  // Build group mode options for dropdown
+  const groupOptions = useMemo(() => {
+    const opts = [
+      { value: 'none', label: 'None' },
+      { value: 'person', label: 'Person' },
+    ];
+    if (taskLists.length > 0) {
+      opts.push({ value: 'list', label: 'List' });
+    }
+    return opts;
+  }, [taskLists]);
+
   return (
     <PageWrapper>
       <div className="h-screen flex flex-col">
-        <header className="flex-shrink-0 border-b border-border bg-card/85 backdrop-blur-sm px-4 safe-area-top">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-4">
-              <Button variant="ghost" size="icon" asChild className="hidden md:inline-flex">
-                <Link href="/" aria-label="Back to dashboard"><Home className="h-5 w-5" /></Link>
-              </Button>
-              <div className="flex items-center gap-2">
-                <CheckSquare className="h-5 w-5 text-primary" />
-                <h1 className="text-xl font-bold">Tasks</h1>
-                <Badge variant="secondary">{completedCount}/{totalCount}</Badge>
-                {autoSyncing && (
-                  <RefreshCw className="h-4 w-4 text-muted-foreground animate-spin" />
-                )}
-              </div>
-            </div>
+        <SubpageHeader
+          icon={<CheckSquare className="h-5 w-5 text-primary" />}
+          title="Tasks"
+          badge={<>
+            <Badge variant="secondary">{completedCount}/{totalCount}</Badge>
+            {autoSyncing && (
+              <RefreshCw className="h-4 w-4 text-muted-foreground animate-spin" />
+            )}
+          </>}
+          actions={
             <Button onClick={handleAddWithAuth} size="sm">
               <Plus className="h-4 w-4 mr-1" />
               Add Task
             </Button>
-          </div>
-        </header>
+          }
+          overflow={overflowItems}
+        />
 
-        <div className="hidden md:block flex-shrink-0 border-b border-border bg-card/85 backdrop-blur-sm px-4 py-2">
-          <div className="flex items-center gap-4 flex-wrap">
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">Person:</span>
-              <div className="flex gap-1">
-                <Button variant={filterPerson === null ? 'secondary' : 'ghost'} size="sm" onClick={() => setFilterPerson(null)}>All</Button>
-                {familyMembers.map((member) => (
-                  <Button key={member.id} variant={filterPerson === member.id ? 'secondary' : 'ghost'} size="sm"
-                    onClick={() => setFilterPerson(member.id)} className="gap-1">
-                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: member.color }} />
-                    {member.name}
-                  </Button>
-                ))}
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">Priority:</span>
-              <div className="flex gap-1">
-                <Button variant={filterPriority === null ? 'secondary' : 'ghost'} size="sm" onClick={() => setFilterPriority(null)}>All</Button>
-                {['high', 'medium', 'low'].map((priority) => (
-                  <Button key={priority} variant={filterPriority === priority ? 'secondary' : 'ghost'} size="sm"
-                    onClick={() => setFilterPriority(priority)} className="capitalize">{priority}</Button>
-                ))}
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">Status:</span>
-              <div className="flex gap-1">
-                <Button variant={filterCompleted === null ? 'secondary' : 'ghost'} size="sm" onClick={() => setFilterCompleted(null)}>All</Button>
-                <Button variant={filterCompleted === false ? 'secondary' : 'ghost'} size="sm" onClick={() => setFilterCompleted(false)}>Active</Button>
-                <Button variant={filterCompleted === true ? 'secondary' : 'ghost'} size="sm" onClick={() => setFilterCompleted(true)}>Completed</Button>
-              </div>
-            </div>
-            {taskLists.length > 0 && (
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">List:</span>
-                <div className="flex gap-1 flex-wrap">
-                  <Button variant={filterList === null ? 'secondary' : 'ghost'} size="sm" onClick={() => setFilterList(null)}>All</Button>
-                  <Button variant={filterList === 'none' ? 'secondary' : 'ghost'} size="sm" onClick={() => setFilterList('none')}>None</Button>
-                  {taskLists.map((list) => (
-                    <Button key={list.id} variant={filterList === list.id ? 'secondary' : 'ghost'} size="sm"
-                      onClick={() => setFilterList(list.id)} className="gap-1">
-                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: list.color || '#6B7280' }} />
-                      {list.name}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-            )}
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">Group:</span>
-              <div className="flex gap-1">
-                <Button variant={groupMode === 'none' ? 'secondary' : 'ghost'} size="sm" onClick={() => setGroupMode('none')}>
-                  None
-                </Button>
-                <Button variant={groupMode === 'person' ? 'secondary' : 'ghost'} size="sm" onClick={() => setGroupMode('person')} className="gap-1">
-                  <Users className="h-4 w-4" />
-                  Person
-                </Button>
-                {taskLists.length > 0 && (
-                  <Button variant={groupMode === 'list' ? 'secondary' : 'ghost'} size="sm" onClick={() => setGroupMode('list')} className="gap-1">
-                    <List className="h-4 w-4" />
-                    List
-                  </Button>
-                )}
-              </div>
-            </div>
-            <div className="flex items-center gap-2 ml-auto">
-              <SortAsc className="h-4 w-4 text-muted-foreground" />
-              <select value={sortBy} onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
-                className="text-sm bg-card text-foreground border border-border rounded px-2 py-1 [&>option]:bg-card [&>option]:text-foreground">
-                <option value="dueDate">Due Date</option>
-                <option value="priority">Priority</option>
-                <option value="title">Title</option>
-              </select>
-            </div>
+        <FilterBar>
+          <PersonFilter
+            members={familyMembers}
+            selected={filterPerson}
+            onSelect={setFilterPerson}
+          />
+          <div className="w-px h-5 bg-border shrink-0" />
+          {/* Priority: inline 3-button group (too few options for a dropdown) */}
+          <div className="flex gap-1 shrink-0">
+            <Button variant={filterPriority === null ? 'secondary' : 'ghost'} size="sm" onClick={() => setFilterPriority(null)} className="h-8">All</Button>
+            {(['high', 'medium', 'low'] as const).map((priority) => (
+              <Button key={priority} variant={filterPriority === priority ? 'secondary' : 'ghost'} size="sm"
+                onClick={() => setFilterPriority(priority)} className="capitalize h-8">{priority}</Button>
+            ))}
           </div>
-        </div>
+          {taskLists.length > 0 && (
+            <>
+              <div className="w-px h-5 bg-border shrink-0" />
+              <FilterDropdown
+                label="List"
+                options={listOptions}
+                selected={filterList ? new Set([filterList]) : new Set()}
+                onSelectionChange={(s) => setFilterList(s.size > 0 ? [...s][0]! : null)}
+                mode="single"
+                icon={<List className="h-3.5 w-3.5" />}
+              />
+            </>
+          )}
+          <div className="w-px h-5 bg-border shrink-0" />
+          <FilterDropdown
+            label="Group"
+            options={groupOptions}
+            selected={new Set([groupMode])}
+            onSelectionChange={(s) => {
+              const val = s.size > 0 ? [...s][0] : 'none';
+              setGroupMode(val as 'none' | 'person' | 'list');
+            }}
+            mode="single"
+            icon={<Users className="h-3.5 w-3.5" />}
+          />
+          <SortSelect
+            value={sortBy}
+            onValueChange={(v) => setSortBy(v as typeof sortBy)}
+            options={[
+              { value: 'dueDate', label: 'Due Date' },
+              { value: 'priority', label: 'Priority' },
+              { value: 'title', label: 'Title' },
+            ]}
+            showSortIcon
+            className="ml-auto"
+          />
+          {hasActiveFilters && (
+            <Button variant="ghost" size="sm" onClick={clearFilters} className="shrink-0 text-muted-foreground h-8">
+              <X className="h-3 w-3 mr-1" />
+              Clear
+            </Button>
+          )}
+        </FilterBar>
 
         <div className="flex-1 overflow-y-auto p-4">
           {loading ? (

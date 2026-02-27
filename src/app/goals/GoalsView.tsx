@@ -1,11 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
 import {
   Trophy,
   Plus,
-  Home,
   Pencil,
   Trash2,
   Check,
@@ -35,7 +33,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { PageWrapper } from '@/components/layout';
+import { PageWrapper, SubpageHeader } from '@/components/layout';
 import { useGoals, type Goal } from '@/lib/hooks/useGoals';
 import { usePoints } from '@/lib/hooks/usePoints';
 import { useAuth } from '@/components/providers';
@@ -143,26 +141,16 @@ export function GoalsView() {
   return (
     <PageWrapper>
       <div className="h-screen flex flex-col">
-        {/* Header */}
-        <header className="flex-shrink-0 border-b border-border bg-card/85 backdrop-blur-sm px-4 safe-area-top">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-4">
-              <Button variant="ghost" size="icon" asChild className="hidden md:inline-flex">
-                <Link href="/" aria-label="Back to dashboard"><Home className="h-5 w-5" /></Link>
-              </Button>
-              <div className="flex items-center gap-2">
-                <Trophy className="h-5 w-5 text-primary" />
-                <h1 className="text-xl font-bold">Goals & Points</h1>
-              </div>
-            </div>
-            {isParent && (
-              <Button onClick={openAddModal} size="sm">
-                <Plus className="h-4 w-4 mr-1" />
-                Add Goal
-              </Button>
-            )}
-          </div>
-        </header>
+        <SubpageHeader
+          icon={<Trophy className="h-5 w-5 text-primary" />}
+          title="Goals & Points"
+          actions={isParent ? (
+            <Button onClick={openAddModal} size="sm">
+              <Plus className="h-4 w-4 mr-1" />
+              Add Goal
+            </Button>
+          ) : undefined}
+        />
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-4 space-y-6">

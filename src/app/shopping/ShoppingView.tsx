@@ -2,11 +2,9 @@
 
 import { useState, useRef, useEffect, useCallback, KeyboardEvent, FocusEvent } from 'react';
 import { toast } from '@/components/ui/use-toast';
-import Link from 'next/link';
 import {
   ShoppingCart,
   Plus,
-  Home,
   Settings,
   ChevronsDown,
   Maximize2,
@@ -17,7 +15,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Input } from '@/components/ui/input';
-import { PageWrapper } from '@/components/layout';
+import { PageWrapper, SubpageHeader } from '@/components/layout';
+import type { OverflowItem } from '@/components/layout';
 import { ShoppingItemRow } from '@/app/shopping/ShoppingItemRow';
 import { ItemModal } from '@/app/shopping/ItemModal';
 import { ListModal } from '@/app/shopping/ListModal';
@@ -301,33 +300,36 @@ export function ShoppingView() {
         {/* Collapsible header - hidden in shopping mode */}
         {!shoppingMode && (
           <>
-            <header className="flex-shrink-0 border-b border-border bg-card/85 backdrop-blur-sm px-4 safe-area-top">
-              <div className="flex items-center justify-between h-16">
-                <div className="flex items-center gap-4">
-                  <Button variant="ghost" size="icon" asChild className="hidden md:inline-flex">
-                    <Link href="/" aria-label="Back to dashboard"><Home className="h-5 w-5" /></Link>
-                  </Button>
-                  <div className="flex items-center gap-2">
-                    <ShoppingCart className="h-5 w-5 text-primary" />
-                    <h1 className="text-xl font-bold">Shopping Lists</h1>
-                    {activeList && <Badge variant="secondary">{checkedItems}/{totalItems} checked</Badge>}
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button variant="ghost" size="icon" onClick={() => setShoppingMode(true)} title="Enter shopping mode">
-                    <Maximize2 className="h-4 w-4" />
-                  </Button>
-                  <Button onClick={handleNewList} size="sm">
-                    <Plus className="h-4 w-4 mr-1" />
-                    Add List
-                  </Button>
-                </div>
-              </div>
-            </header>
+            <SubpageHeader
+              icon={<ShoppingCart className="h-5 w-5 text-primary" />}
+              title="Shopping"
+              badge={activeList ? <Badge variant="secondary">{checkedItems}/{totalItems}</Badge> : undefined}
+              actions={<>
+                <Button variant="ghost" size="icon" onClick={() => setShoppingMode(true)} title="Enter shopping mode">
+                  <Maximize2 className="h-4 w-4" />
+                </Button>
+                <Button onClick={handleNewList} size="sm">
+                  <Plus className="h-4 w-4 mr-1" />
+                  Add List
+                </Button>
+              </>}
+              overflow={[
+                ...(activeList ? [{
+                  label: 'Edit List',
+                  icon: Settings,
+                  onClick: async () => {
+                    const user = await requireAuth("Who's editing this list?");
+                    if (user && user.role === 'parent') { setEditingList(activeList); setShowListModal(true); }
+                    else if (user) toast({ title: 'Only parents can edit list settings', variant: 'warning' });
+                  },
+                }] : []),
+                { label: showChecked ? 'Hide Checked Items' : 'Show Checked Items', checked: showChecked, onClick: () => setShowChecked(!showChecked) },
+              ] as OverflowItem[]}
+            />
 
             <div className="flex-shrink-0 border-b border-border bg-card/85 backdrop-blur-sm px-3 py-1">
-              <div className="flex items-center justify-between">
-                <div className="flex gap-1 items-center flex-wrap">
+              <div className="overflow-x-auto">
+                <div className="flex gap-1 items-center min-w-max">
                   {lists.map((list) => {
                     const assignedMember = list.assignedTo ? familyMembers.find(m => m.id === list.assignedTo) : null;
                     return (
@@ -344,21 +346,6 @@ export function ShoppingView() {
                   })}
                   <Button variant="outline" size="sm" className="border-dashed" onClick={handleNewList}>
                     <Plus className="h-3 w-3 mr-1" />New List
-                  </Button>
-                </div>
-                <div className="flex gap-2">
-                  {activeList && (
-                    <Button variant="ghost" size="sm" title="Edit list settings"
-                      onClick={async () => {
-                        const user = await requireAuth("Who's editing this list?");
-                        if (user && user.role === 'parent') { setEditingList(activeList); setShowListModal(true); }
-                        else if (user) toast({ title: 'Only parents can edit list settings', variant: 'warning' });
-                      }}>
-                      <Settings className="h-4 w-4 mr-1" />Edit List
-                    </Button>
-                  )}
-                  <Button variant="ghost" size="sm" onClick={() => setShowChecked(!showChecked)}>
-                    {showChecked ? 'Hide' : 'Show'} checked items
                   </Button>
                 </div>
               </div>

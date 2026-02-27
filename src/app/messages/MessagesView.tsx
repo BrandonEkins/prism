@@ -18,12 +18,10 @@ import { useState, useMemo } from 'react';
 import { toast } from '@/components/ui/use-toast';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useConfirmDialog } from '@/lib/hooks/useConfirmDialog';
-import Link from 'next/link';
 import { formatDistanceToNow, format } from 'date-fns';
 import {
   MessageSquare,
   Plus,
-  Home,
   Pin,
   AlertTriangle,
   Trash2,
@@ -32,7 +30,7 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { UserAvatar } from '@/components/ui/avatar';
-import { PageWrapper } from '@/components/layout';
+import { PageWrapper, SubpageHeader, FilterBar, PersonFilter } from '@/components/layout';
 import { useMessages } from '@/lib/hooks';
 import { useAuth } from '@/components/providers';
 import { AddMessageModal } from '@/components/modals/AddMessageModal';
@@ -116,31 +114,19 @@ export function MessagesView() {
   return (
     <PageWrapper>
       <div className="h-screen flex flex-col">
-        {/* ================================================================ */}
-        {/* HEADER */}
-        {/* ================================================================ */}
-        <header className="flex-shrink-0 border-b border-border bg-card/85 backdrop-blur-sm px-4 safe-area-top">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-4">
-              <Button variant="ghost" size="icon" asChild className="hidden md:inline-flex">
-                <Link href="/" aria-label="Back to dashboard">
-                  <Home className="h-5 w-5" />
-                </Link>
-              </Button>
-
-              <div className="flex items-center gap-2">
-                <MessageSquare className="h-5 w-5 text-primary" />
-                <h1 className="text-xl font-bold">Messages</h1>
-                <Badge variant="secondary">{messages.length}</Badge>
-                {pinnedCount > 0 && (
-                  <Badge variant="outline" className="gap-1">
-                    <Pin className="h-3 w-3" />
-                    {pinnedCount}
-                  </Badge>
-                )}
-              </div>
-            </div>
-
+        <SubpageHeader
+          icon={<MessageSquare className="h-5 w-5 text-primary" />}
+          title="Messages"
+          badge={<>
+            <Badge variant="secondary">{messages.length}</Badge>
+            {pinnedCount > 0 && (
+              <Badge variant="outline" className="gap-1">
+                <Pin className="h-3 w-3" />
+                {pinnedCount}
+              </Badge>
+            )}
+          </>}
+          actions={
             <Button
               onClick={async () => {
                 const user = await requireAuth("Who's posting?");
@@ -151,45 +137,17 @@ export function MessagesView() {
               <Plus className="h-4 w-4 mr-1" />
               Add Message
             </Button>
-          </div>
-        </header>
+          }
+        />
 
-        {/* ================================================================== */}
-        {/* FILTERS - hidden on mobile */}
-        {/* ================================================================== */}
         {authors.length > 1 && (
-          <div className="hidden md:block flex-shrink-0 border-b border-border bg-card/85 backdrop-blur-sm px-4 py-2">
-            <div className="flex items-center gap-4 flex-wrap">
-              {/* Filter by author */}
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">Author:</span>
-                <div className="flex gap-1">
-                  <Button
-                    variant={filterAuthor === null ? 'secondary' : 'ghost'}
-                    size="sm"
-                    onClick={() => setFilterAuthor(null)}
-                  >
-                    All
-                  </Button>
-                  {authors.map((author) => (
-                    <Button
-                      key={author.id}
-                      variant={filterAuthor === author.id ? 'secondary' : 'ghost'}
-                      size="sm"
-                      onClick={() => setFilterAuthor(author.id)}
-                      className="gap-1"
-                    >
-                      <div
-                        className="w-3 h-3 rounded-full"
-                        style={{ backgroundColor: author.color }}
-                      />
-                      {author.name}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
+          <FilterBar>
+            <PersonFilter
+              members={authors}
+              selected={filterAuthor}
+              onSelect={setFilterAuthor}
+            />
+          </FilterBar>
         )}
 
         {/* ================================================================== */}

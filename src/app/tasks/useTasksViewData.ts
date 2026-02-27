@@ -29,7 +29,7 @@ export function useTasksViewData() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [filterPerson, setFilterPerson] = useState<string | null>(null);
   const [filterPriority, setFilterPriority] = useState<string | null>(null);
-  const [filterCompleted, setFilterCompleted] = useState<boolean | null>(false);
+  const [showCompleted, setShowCompleted] = useState(false);
   const [filterList, setFilterList] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<'dueDate' | 'priority' | 'title'>('dueDate');
   const [showAddModal, setShowAddModal] = useState(false);
@@ -115,8 +115,8 @@ export function useTasksViewData() {
     if (filterPriority) {
       result = result.filter((task) => task.priority === filterPriority);
     }
-    if (filterCompleted !== null) {
-      result = result.filter((task) => task.completed === filterCompleted);
+    if (!showCompleted) {
+      result = result.filter((task) => !task.completed);
     }
     if (filterList !== null) {
       if (filterList === 'none') {
@@ -143,7 +143,7 @@ export function useTasksViewData() {
       }
     });
     return result;
-  }, [tasks, filterPerson, filterPriority, filterCompleted, filterList, sortBy]);
+  }, [tasks, filterPerson, filterPriority, showCompleted, filterList, sortBy]);
 
   const toggleTask = async (taskId: string): Promise<boolean> => {
     const task = tasks.find((t) => t.id === taskId);
@@ -203,7 +203,7 @@ export function useTasksViewData() {
     loading: loading || listsLoading, error, refreshTasks, familyMembers,
     filterPerson, setFilterPerson,
     filterPriority, setFilterPriority,
-    filterCompleted, setFilterCompleted,
+    showCompleted, setShowCompleted,
     filterList, setFilterList,
     sortBy, setSortBy,
     showAddModal, setShowAddModal,
