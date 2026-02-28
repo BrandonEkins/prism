@@ -183,6 +183,39 @@ export const createBirthdaySchema = z.object({
   sendCardDaysBefore: z.number().int().min(0).max(30).optional().default(7),
 });
 
+// WISH ITEM SCHEMAS
+
+export const createWishItemSchema = z.object({
+  memberId: uuidSchema,
+  name: z.string().min(1, 'Name is required').max(255),
+  url: z.string().url().or(z.literal('')).optional(),
+  notes: z.string().max(1000).optional(),
+  addedBy: uuidSchema.optional(),
+});
+
+export const updateWishItemSchema = createWishItemSchema.partial();
+
+// WISH ITEM SOURCE SCHEMAS
+
+export const createWishItemSourceSchema = z.object({
+  memberId: uuidSchema,
+  provider: z.string().min(1).max(50),
+  externalListId: z.string().min(1).max(255),
+  externalListName: z.string().max(255).optional(),
+  syncEnabled: z.boolean().optional().default(true),
+});
+
+export const updateWishItemSourceSchema = z.object({
+  syncEnabled: z.boolean().optional(),
+  externalListName: z.string().max(255).optional(),
+});
+
+export const finalizeWishItemSourceSchema = z.object({
+  memberId: uuidSchema,
+  externalListId: z.string().min(1).max(255),
+  externalListName: z.string().max(255).optional(),
+});
+
 // GOAL SCHEMAS
 
 export const createGoalSchema = z.object({

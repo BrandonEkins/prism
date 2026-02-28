@@ -26,11 +26,13 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const taskListId = searchParams.get('taskListId'); // Optional - if not provided, user picks/creates list later
     const shoppingListId = searchParams.get('shoppingListId'); // For shopping list integrations
-    const returnSection = searchParams.get('returnSection') || 'tasks'; // 'tasks' or 'shopping'
+    const wishMemberId = searchParams.get('wishMemberId'); // For wish list integrations
+    const returnSection = searchParams.get('returnSection') || 'tasks'; // 'tasks', 'shopping', or 'wish'
 
     const state = JSON.stringify({
       taskListId: taskListId || null,
       shoppingListId: shoppingListId || null,
+      wishMemberId: wishMemberId || null,
       returnSection,
     });
 

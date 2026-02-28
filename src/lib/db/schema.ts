@@ -726,6 +726,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   calendarSources: many(calendarSources),
   taskSources: many(taskSources),
   shoppingListSources: many(shoppingListSources),
+  wishItemSources: many(wishItemSources),
   tasks: many(tasks),
   chores: many(chores),
   choreCompletions: many(choreCompletions),
@@ -1074,4 +1075,112 @@ export const goalAchievementsRelations = relations(goalAchievements, ({ one }) =
     fields: [goalAchievements.userId],
     references: [users.id],
   }),
+}));
+
+
+export const wishItems = pgTable('wish_items', {
+  id: uuid('id').defaultRandom().primaryKey(),
+
+  // Whose wish list this item belongs to
+  memberId: uuid('member_id')
+    .references(() => users.id, { onDelete: 'cascade' })
+    .notNull(),
+
+  name: varchar('name', { length: 255 }).notNull(),
+  url: text('url'),
+  notes: text('notes'),
+
+  sortOrder: integer('sort_order').default(0).notNull(),
+
+  // Claim tracking (hidden from the list owner for gift surprises)
+  claimed: boolean('claimed').default(false).notNull(),
+  claimedBy: uuid('claimed_by').references(() => users.id, { onDelete: 'set null' }),
+  claimedAt: timestamp('claimed_at'),
+
+  addedBy: uuid('added_by').references(() => users.id, { onDelete: 'set null' }),
+
+  // External sync tracking
+  wishItemSourceId: uuid('wish_item_source_id').references(() => wishItemSources.id, { onDelete: 'set null' }),
+  externalId: varchar('external_id', { length: 255 }),
+  externalUpdatedAt: timestamp('external_updated_at'),
+
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => ({
+  memberIdIdx: index('wish_items_member_id_idx').on(table.memberId),
+  claimedIdx: index('wish_items_claimed_idx').on(table.claimed),
+  wishItemSourceIdx: index('wish_items_source_idx').on(table.wishItemSourceId),
+  externalIdIdx: index('wish_items_external_id_idx').on(table.externalId),
+}));
+
+export const wishItemsRelations = relations(wishItems, ({ one }) => ({
+  member: one(users, {
+    fields: [wishItems.memberId],
+    references: [users.id],
+    relationName: 'wishItemsMember',
+  }),
+  addedByUser: one(users, {
+    fields: [wishItems.addedBy],
+    references: [users.id],
+    relationName: 'wishItemsAddedBy',
+  }),
+  claimedByUser: one(users, {
+    fields: [wishItems.claimedBy],
+    references: [users.id],
+    relationName: 'wishItemsClaimedBy',
+  }),
+  wishItemSource: one(wishItemSources, {
+    fields: [wishItems.wishItemSourceId],
+    references: [wishItemSources.id],
+  }),
+}));
+
+
+export const wishItemSources = pgTable('wish_item_sources', {
+  id: uuid('id').defaultRandom().primaryKey(),
+
+  // Which user connected this source
+  userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+
+  // Provider: "microsoft_todo", etc.
+  provider: varchar('provider', { length: 50 }).notNull(),
+
+  // External list ID in the provider's system
+  externalListId: varchar('external_list_id', { length: 255 }).notNull(),
+
+  // External list name (for display/debugging)
+  externalListName: varchar('external_list_name', { length: 255 }),
+
+  // Which family member's wish list this syncs to
+  memberId: uuid('member_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+
+  // Sync enabled/disabled
+  syncEnabled: boolean('sync_enabled').default(true).notNull(),
+
+  // OAuth tokens (encrypted in application layer)
+  accessToken: text('access_token'),
+  refreshToken: text('refresh_token'),
+  tokenExpiresAt: timestamp('token_expires_at'),
+
+  lastSyncAt: timestamp('last_sync_at'),
+  lastSyncError: text('last_sync_error'),
+
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => ({
+  userProviderIdx: index('wish_item_sources_user_provider_idx').on(table.userId, table.provider),
+  memberIdx: index('wish_item_sources_member_idx').on(table.memberId),
+}));
+
+export const wishItemSourcesRelations = relations(wishItemSources, ({ one, many }) => ({
+  user: one(users, {
+    fields: [wishItemSources.userId],
+    references: [users.id],
+  }),
+  member: one(users, {
+    fields: [wishItemSources.memberId],
+    references: [users.id],
+    relationName: 'wishItemSourcesMember',
+  }),
+  items: many(wishItems),
 }));

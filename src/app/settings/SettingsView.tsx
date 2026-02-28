@@ -16,7 +16,7 @@ import {
   ImageIcon,
   ListTodo,
   ShoppingCart,
-
+  Gift,
   Baby,
   Database,
   Link2,
@@ -34,6 +34,7 @@ import { SecuritySection } from './sections/SecuritySection';
 import { PhotosSettingsSection } from './sections/PhotosSettingsSection';
 import { TaskIntegrationsSection } from './sections/TaskIntegrationsSection';
 import { ShoppingIntegrationsSection } from './sections/ShoppingIntegrationsSection';
+import { WishListIntegrationsSection } from './sections/WishListIntegrationsSection';
 import { BabysitterInfoSection } from './sections/BabysitterInfoSection';
 import { BackupSection } from './sections/BackupSection';
 
@@ -126,6 +127,7 @@ export function SettingsView() {
     { id: 'calendars', label: 'Calendars', icon: Calendar },
     { id: 'tasks', label: 'Task Sync', icon: ListTodo },
     { id: 'shopping', label: 'Shopping Sync', icon: ShoppingCart },
+    { id: 'wish', label: 'Wish List Sync', icon: Gift },
     { id: 'photos', label: 'Photos', icon: ImageIcon },
     { id: 'babysitter', label: 'Babysitter Info', icon: Baby },
     { id: 'display', label: 'Display', icon: Palette },
@@ -182,7 +184,7 @@ export function SettingsView() {
               {activeSection === 'calendars' && <CalendarsSection />}
               {activeSection === 'tasks' && <TaskIntegrationsSection />}
               {activeSection === 'shopping' && <ShoppingIntegrationsSection />}
-
+              {activeSection === 'wish' && <WishListIntegrationsSection />}
               {activeSection === 'photos' && <PhotosSettingsSection />}
               {activeSection === 'babysitter' && <BabysitterInfoSection />}
               {activeSection === 'display' && <DisplaySection />}

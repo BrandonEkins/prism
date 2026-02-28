@@ -22,11 +22,12 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const taskListId = searchParams.get('taskListId');
   const shoppingListId = searchParams.get('shoppingListId');
+  const wishMemberId = searchParams.get('wishMemberId');
   const newConnection = searchParams.get('newConnection') === 'true';
 
-  if (!taskListId && !shoppingListId && !newConnection) {
+  if (!taskListId && !shoppingListId && !wishMemberId && !newConnection) {
     return NextResponse.json(
-      { error: 'taskListId, shoppingListId, or newConnection is required' },
+      { error: 'taskListId, shoppingListId, wishMemberId, or newConnection is required' },
       { status: 400 }
     );
   }
@@ -42,7 +43,9 @@ export async function GET(request: NextRequest) {
 
     // Determine the temp key based on what type of connection this is
     let tempKey: string;
-    if (shoppingListId) {
+    if (wishMemberId) {
+      tempKey = `ms-todo-temp:${auth.userId}:wish:${wishMemberId}`;
+    } else if (shoppingListId) {
       tempKey = `ms-todo-temp:${auth.userId}:shopping:${shoppingListId}`;
     } else if (taskListId) {
       tempKey = `ms-todo-temp:${auth.userId}:task:${taskListId}`;

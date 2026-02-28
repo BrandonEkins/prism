@@ -1,0 +1,120 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { db } from '@/lib/db/client';
+import { wishItemSources } from '@/lib/db/schema';
+import { eq } from 'drizzle-orm';
+import { requireAuth, requireRole } from '@/lib/auth';
+import { invalidateCache } from '@/lib/cache/redis';
+
+interface RouteParams {
+  params: Promise<{ id: string }>;
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: RouteParams
+) {
+  const auth = await requireAuth();
+  if (auth instanceof NextResponse) return auth;
+
+  const forbidden = requireRole(auth, 'canManageIntegrations');
+  if (forbidden) return forbidden;
+
+  const { id } = await params;
+
+  try {
+    const [source] = await db
+      .select()
+      .from(wishItemSources)
+      .where(eq(wishItemSources.id, id));
+
+    if (!source) {
+      return NextResponse.json(
+        { error: 'Wish item source not found' },
+        { status: 404 }
+      );
+    }
+
+    await db
+      .delete(wishItemSources)
+      .where(eq(wishItemSources.id, id));
+
+    await invalidateCache('wish-item-sources:*');
+    await invalidateCache('wish:*');
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting wish item source:', error);
+    return NextResponse.json(
+      { error: 'Failed to delete wish item source' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PATCH(
+  request: NextRequest,
+  { params }: RouteParams
+) {
+  const auth = await requireAuth();
+  if (auth instanceof NextResponse) return auth;
+
+  const forbidden = requireRole(auth, 'canManageIntegrations');
+  if (forbidden) return forbidden;
+
+  const { id } = await params;
+
+  try {
+    const body = await request.json();
+
+    const [source] = await db
+      .select()
+      .from(wishItemSources)
+      .where(eq(wishItemSources.id, id));
+
+    if (!source) {
+      return NextResponse.json(
+        { error: 'Wish item source not found' },
+        { status: 404 }
+      );
+    }
+
+    const updates: Record<string, unknown> = {
+      updatedAt: new Date(),
+    };
+
+    if (typeof body.syncEnabled === 'boolean') {
+      updates.syncEnabled = body.syncEnabled;
+    }
+
+    if (body.externalListName !== undefined) {
+      updates.externalListName = body.externalListName;
+    }
+
+    const [updated] = await db
+      .update(wishItemSources)
+      .set(updates)
+      .where(eq(wishItemSources.id, id))
+      .returning();
+
+    await invalidateCache('wish-item-sources:*');
+
+    return NextResponse.json({
+      id: updated!.id,
+      userId: updated!.userId,
+      provider: updated!.provider,
+      externalListId: updated!.externalListId,
+      externalListName: updated!.externalListName,
+      memberId: updated!.memberId,
+      syncEnabled: updated!.syncEnabled,
+      lastSyncAt: updated!.lastSyncAt,
+      lastSyncError: updated!.lastSyncError,
+      createdAt: updated!.createdAt,
+    });
+  } catch (error) {
+    console.error('Error updating wish item source:', error);
+    return NextResponse.json(
+      { error: 'Failed to update wish item source' },
+      { status: 500 }
+    );
+  }
+}

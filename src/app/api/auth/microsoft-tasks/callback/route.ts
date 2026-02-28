@@ -58,12 +58,14 @@ export async function GET(request: Request) {
 
   let taskListId: string | null = null;
   let shoppingListId: string | null = null;
+  let wishMemberId: string | null = null;
   let returnSection = 'tasks';
   if (state) {
     try {
       const parsed = JSON.parse(state);
       taskListId = parsed.taskListId || null;
       shoppingListId = parsed.shoppingListId || null;
+      wishMemberId = parsed.wishMemberId || null;
       returnSection = parsed.returnSection || 'tasks';
     } catch {
       // Ignore parse errors
@@ -106,9 +108,9 @@ export async function GET(request: Request) {
       );
     }
 
-    // Use appropriate key based on whether this is for tasks or shopping
-    const listId = shoppingListId || taskListId;
-    const keyType = shoppingListId ? 'shopping' : 'task';
+    // Use appropriate key based on whether this is for tasks, shopping, or wish
+    const listId = wishMemberId || shoppingListId || taskListId;
+    const keyType = wishMemberId ? 'wish' : shoppingListId ? 'shopping' : 'task';
     const tempKey = listId
       ? `ms-todo-temp:${auth.userId}:${keyType}:${listId}`
       : `ms-todo-temp:${auth.userId}:${keyType}:new`;
@@ -126,7 +128,9 @@ export async function GET(request: Request) {
 
     // Redirect to settings with flag to show MS list picker
     let redirectUrl: string;
-    if (shoppingListId) {
+    if (wishMemberId) {
+      redirectUrl = `${BASE_URL}/settings?section=wish&selectMsList=true&wishMemberId=${wishMemberId}`;
+    } else if (shoppingListId) {
       redirectUrl = `${BASE_URL}/settings?section=shopping&selectMsList=true&shoppingListId=${shoppingListId}`;
     } else if (taskListId) {
       redirectUrl = `${BASE_URL}/settings?section=tasks&selectMsList=true&taskListId=${taskListId}`;
