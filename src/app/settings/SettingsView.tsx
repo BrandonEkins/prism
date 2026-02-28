@@ -16,9 +16,10 @@ import {
   ImageIcon,
   ListTodo,
   ShoppingCart,
-  Tags,
+
   Baby,
   Database,
+  Link2,
 } from 'lucide-react';
 import { PrismIcon } from '@/components/ui/PrismIcon';
 import { cn } from '@/lib/utils';
@@ -35,7 +36,8 @@ import { TaskIntegrationsSection } from './sections/TaskIntegrationsSection';
 import { ShoppingIntegrationsSection } from './sections/ShoppingIntegrationsSection';
 import { BabysitterInfoSection } from './sections/BabysitterInfoSection';
 import { BackupSection } from './sections/BackupSection';
-import { ShoppingCategoriesSection } from './sections/ShoppingCategoriesSection';
+
+import { ConnectedAccountsSection } from './sections/ConnectedAccountsSection';
 
 
 // Exported hooks (consumed by other components)
@@ -120,10 +122,10 @@ export function SettingsView() {
   const sections = [
     { id: 'account', label: 'Account', icon: User },
     { id: 'family', label: 'Family Members', icon: Users },
+    { id: 'connections', label: 'Connected Accounts', icon: Link2 },
     { id: 'calendars', label: 'Calendars', icon: Calendar },
-    { id: 'tasks', label: 'Task Integrations', icon: ListTodo },
-    { id: 'shopping', label: 'Shopping Integrations', icon: ShoppingCart },
-    { id: 'shopping-categories', label: 'Shopping Categories', icon: Tags },
+    { id: 'tasks', label: 'Task Sync', icon: ListTodo },
+    { id: 'shopping', label: 'Shopping Sync', icon: ShoppingCart },
     { id: 'photos', label: 'Photos', icon: ImageIcon },
     { id: 'babysitter', label: 'Babysitter Info', icon: Baby },
     { id: 'display', label: 'Display', icon: Palette },
@@ -176,10 +178,11 @@ export function SettingsView() {
             <div className="max-w-2xl">
               {activeSection === 'account' && <AccountSection />}
               {activeSection === 'family' && <FamilySection />}
+              {activeSection === 'connections' && <ConnectedAccountsSection />}
               {activeSection === 'calendars' && <CalendarsSection />}
               {activeSection === 'tasks' && <TaskIntegrationsSection />}
               {activeSection === 'shopping' && <ShoppingIntegrationsSection />}
-              {activeSection === 'shopping-categories' && <ShoppingCategoriesSection />}
+
               {activeSection === 'photos' && <PhotosSettingsSection />}
               {activeSection === 'babysitter' && <BabysitterInfoSection />}
               {activeSection === 'display' && <DisplaySection />}

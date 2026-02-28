@@ -7,7 +7,6 @@ import { useConfirmDialog } from '@/lib/hooks/useConfirmDialog';
 import { useSearchParams } from 'next/navigation';
 import {
   RefreshCw,
-  ExternalLink,
   Plus,
   Trash2,
   CheckCircle2,
@@ -268,10 +267,6 @@ export function TaskIntegrationsSection() {
   const [editListName, setEditListName] = useState('');
   const [savingList, setSavingList] = useState(false);
   const [deletingListId, setDeletingListId] = useState<string | null>(null);
-
-  // Connect provider modal
-  const [showConnectModal, setShowConnectModal] = useState(false);
-  const [selectedProvider, setSelectedProvider] = useState<string | null>(null);
 
   // Select list for provider modal
   const [showSelectListModal, setShowSelectListModal] = useState(false);
@@ -537,17 +532,6 @@ export function TaskIntegrationsSection() {
     }
   };
 
-  const handleConnectProvider = (provider: string) => {
-    setSelectedProvider(provider);
-
-    if (provider === 'microsoft_todo') {
-      // Go directly to OAuth - user will pick/create Prism list after selecting MS list
-      window.location.href = '/api/auth/microsoft-tasks';
-    } else {
-      setShowConnectModal(true);
-    }
-  };
-
   const handleSelectListAndConnect = (listId: string) => {
     setShowSelectListModal(false);
 
@@ -581,9 +565,9 @@ export function TaskIntegrationsSection() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold">Task Integrations</h2>
+        <h2 className="text-2xl font-bold">Task Sync</h2>
         <p className="text-muted-foreground">
-          Connect external task apps to sync with Prism
+          Manage task list sync with external apps
         </p>
       </div>
 
@@ -646,7 +630,13 @@ export function TaskIntegrationsSection() {
               <Link2 className="h-12 w-12 mx-auto mb-3 opacity-50" />
               <p>No task sources connected yet</p>
               <p className="text-sm mt-1">
-                Connect a provider below to start syncing tasks
+                Connect Microsoft To-Do from your task list below, or set up your account in{' '}
+                <button
+                  onClick={() => { window.location.href = '/settings?section=connections'; }}
+                  className="text-primary hover:underline font-medium"
+                >
+                  Connected Accounts
+                </button>
               </p>
             </div>
           ) : (
@@ -765,47 +755,6 @@ export function TaskIntegrationsSection() {
               })}
             </div>
           )}
-        </CardContent>
-      </Card>
-
-      {/* Connect Provider */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Connect Task Provider</CardTitle>
-          <CardDescription>
-            Link an external task app to sync tasks bidirectionally
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            <Button
-              onClick={() => handleConnectProvider('microsoft_todo')}
-              variant="outline"
-              className="w-full justify-start"
-            >
-              <svg className="h-5 w-5" viewBox="0 0 24 24" fill="#0078D4">
-                <path d="M0 0h11.377v11.377H0zm12.623 0H24v11.377H12.623zM0 12.623h11.377V24H0zm12.623 0H24V24H12.623z" />
-              </svg>
-              <span className="ml-3">Connect Microsoft To-Do</span>
-              <ExternalLink className="h-4 w-4 ml-auto" />
-            </Button>
-
-            <Button variant="outline" className="w-full justify-start" disabled>
-              <svg className="h-5 w-5" viewBox="0 0 24 24" fill="#E44332">
-                <path d="M21 7.5L12 2 3 7.5v9l9 5.5 9-5.5v-9zM12 4l7 4.3v7.4l-7 4.3-7-4.3V8.3L12 4z" />
-              </svg>
-              <span className="ml-3">Connect Todoist</span>
-              <span className="text-xs text-muted-foreground ml-2">(Coming soon)</span>
-            </Button>
-
-            <Button variant="outline" className="w-full justify-start" disabled>
-              <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z" />
-              </svg>
-              <span className="ml-3">Connect Apple Reminders</span>
-              <span className="text-xs text-muted-foreground ml-2">(Coming soon)</span>
-            </Button>
-          </div>
         </CardContent>
       </Card>
 
@@ -1028,23 +977,6 @@ export function TaskIntegrationsSection() {
             >
               {savingList ? 'Saving...' : 'Save'}
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Connect Provider Info Modal */}
-      <Dialog open={showConnectModal} onOpenChange={setShowConnectModal}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Connect {selectedProvider}</DialogTitle>
-          </DialogHeader>
-          <div className="py-4">
-            <p className="text-muted-foreground">
-              This integration is coming soon. Check back later!
-            </p>
-          </div>
-          <DialogFooter>
-            <Button onClick={() => setShowConnectModal(false)}>Close</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

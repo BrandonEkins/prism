@@ -351,9 +351,9 @@ export function ShoppingIntegrationsSection() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold">Shopping List Integrations</h2>
+        <h2 className="text-2xl font-bold">Shopping Sync</h2>
         <p className="text-muted-foreground">
-          Sync shopping lists with external apps like Microsoft To-Do
+          Manage shopping list sync with external apps
         </p>
       </div>
 

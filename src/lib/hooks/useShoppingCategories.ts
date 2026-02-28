@@ -78,6 +78,13 @@ export function useShoppingCategories() {
     return newCat;
   }, [categories, saveCategories]);
 
+  const updateCategory = useCallback(async (categoryId: string, updates: Partial<Omit<ShoppingCategoryDef, 'id'>>) => {
+    const updated = categories.map(c =>
+      c.id === categoryId ? { ...c, ...updates } : c
+    );
+    await saveCategories(updated);
+  }, [categories, saveCategories]);
+
   const removeCategory = useCallback(async (categoryId: string) => {
     const updated = categories.filter(c => c.id !== categoryId);
     await saveCategories(updated);
@@ -99,6 +106,7 @@ export function useShoppingCategories() {
     categories,
     loading,
     addCategory,
+    updateCategory,
     removeCategory,
     reorderCategories,
     getCategoryEmoji,

@@ -10,6 +10,7 @@ import {
   Maximize2,
   Minimize2,
   GripVertical,
+  Tags,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -21,6 +22,7 @@ import { ShoppingItemRow } from '@/app/shopping/ShoppingItemRow';
 import { ItemModal } from '@/app/shopping/ItemModal';
 import { ListModal } from '@/app/shopping/ListModal';
 import { ShoppingCelebration } from '@/app/shopping/ShoppingCelebration';
+import { ManageCategoriesModal } from '@/app/shopping/ManageCategoriesModal';
 import { useShoppingViewData } from './useShoppingViewData';
 import { useShoppingCategories } from '@/lib/hooks/useShoppingCategories';
 import { useOrientation } from '@/lib/hooks/useOrientation';
@@ -63,6 +65,9 @@ export function ShoppingView() {
 
   // Track which category to default when opening modal
   const [defaultCategory, setDefaultCategory] = useState<string | null>(null);
+
+  // Manage categories modal
+  const [showCategoriesModal, setShowCategoriesModal] = useState(false);
 
   // Category order derived from dynamic categories, filtered by list visibility
   const categoryOrder = dynamicCategories.map(c => c.id);
@@ -323,6 +328,7 @@ export function ShoppingView() {
                     else if (user) toast({ title: 'Only parents can edit list settings', variant: 'warning' });
                   },
                 }] : []),
+                { label: 'Manage Categories', icon: Tags, onClick: () => setShowCategoriesModal(true) },
                 { label: showChecked ? 'Hide Checked Items' : 'Show Checked Items', checked: showChecked, onClick: () => setShowChecked(!showChecked) },
               ] as OverflowItem[]}
             />
@@ -667,6 +673,9 @@ export function ShoppingView() {
               }
             } : undefined} />
         )}
+
+        {/* Manage categories modal */}
+        <ManageCategoriesModal open={showCategoriesModal} onOpenChange={setShowCategoriesModal} />
 
         {/* Celebration animation when all items checked */}
         <ShoppingCelebration
