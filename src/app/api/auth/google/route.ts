@@ -13,10 +13,11 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
     const reauth = searchParams.get('reauth');
-    const stateObj: Record<string, string> = {};
+    const returnSection = searchParams.get('returnSection') || 'connections';
+    const stateObj: Record<string, string> = { returnSection };
     if (userId) stateObj.userId = userId;
     if (reauth) stateObj.reauth = reauth;
-    const state = Object.keys(stateObj).length > 0 ? JSON.stringify(stateObj) : undefined;
+    const state = JSON.stringify(stateObj);
     const authUrl = getGoogleAuthUrl(state);
 
     return NextResponse.redirect(authUrl);

@@ -24,25 +24,36 @@ export async function GET(request: Request) {
     const error = searchParams.get('error');
     const state = searchParams.get('state');
 
+    // Parse state early to get returnSection for error redirects
+    let earlyReturnSection = 'connections';
+    if (state) {
+      try {
+        const parsed = JSON.parse(state);
+        earlyReturnSection = parsed.returnSection || 'connections';
+      } catch { /* ignore */ }
+    }
+
     // Check for errors from Google
     if (error) {
       console.error('Google OAuth error:', error);
-      return NextResponse.redirect(`${BASE_URL}/settings?error=google_auth_denied`);
+      return NextResponse.redirect(`${BASE_URL}/settings?section=${earlyReturnSection}&error=google_auth_denied`);
     }
 
     // Ensure we have an authorization code
     if (!code) {
-      return NextResponse.redirect(`${BASE_URL}/settings?error=missing_code`);
+      return NextResponse.redirect(`${BASE_URL}/settings?section=${earlyReturnSection}&error=missing_code`);
     }
 
-    // Parse state to get user ID and reauth source ID
+    // Parse state to get user ID, reauth source ID, and return section
     let userId: string | null = null;
     let reauthSourceId: string | null = null;
+    let returnSection = 'connections';
     if (state) {
       try {
         const parsed = JSON.parse(state);
         userId = parsed.userId || null;
         reauthSourceId = parsed.reauth || null;
+        returnSection = parsed.returnSection || 'connections';
       } catch {
         // State parsing failed, continue without user ID
       }
@@ -68,7 +79,26 @@ export async function GET(request: Request) {
         })
         .where(eq(calendarSources.provider, 'google'));
 
-      return NextResponse.redirect(`${BASE_URL}/settings?success=google_reauth`);
+      // Also update showInEventModal based on current accessRole
+      const reAuthCalendars = await fetchCalendarList(tokens.access_token);
+      for (const calendar of reAuthCalendars) {
+        const isWritable = calendar.accessRole === 'writer' || calendar.accessRole === 'owner';
+        const existing = await db.query.calendarSources.findFirst({
+          where: (cs, { and, eq }) =>
+            and(
+              eq(cs.provider, 'google'),
+              eq(cs.sourceCalendarId, calendar.id)
+            ),
+        });
+        if (existing) {
+          await db
+            .update(calendarSources)
+            .set({ showInEventModal: isWritable, updatedAt: new Date() })
+            .where(eq(calendarSources.id, existing.id));
+        }
+      }
+
+      return NextResponse.redirect(`${BASE_URL}/settings?section=${returnSection}&success=google_reauth`);
     }
 
     // Fetch calendars using the plaintext token (before we discard it)
@@ -96,6 +126,7 @@ export async function GET(request: Request) {
           .where(eq(calendarSources.id, existing.id));
       } else {
         const calendarName = (calendar.summary || 'Untitled Calendar').slice(0, 255);
+        const isWritable = calendar.accessRole === 'writer' || calendar.accessRole === 'owner';
 
         await db.insert(calendarSources).values({
           userId: userId || undefined,
@@ -105,6 +136,7 @@ export async function GET(request: Request) {
           displayName: calendarName,
           color: calendar.backgroundColor || undefined,
           enabled: true,
+          showInEventModal: isWritable,
           accessToken: encryptedAccessToken,
           refreshToken: encryptedRefreshToken,
           tokenExpiresAt,
@@ -113,9 +145,16 @@ export async function GET(request: Request) {
     }
 
     // Redirect back to settings with success message
-    return NextResponse.redirect(`${BASE_URL}/settings?success=google_connected`);
+    return NextResponse.redirect(`${BASE_URL}/settings?section=${returnSection}&success=google_connected`);
   } catch (error) {
     console.error('Google OAuth callback error:', error);
-    return NextResponse.redirect(`${BASE_URL}/settings?error=google_auth_failed`);
+    // returnSection may not be in scope if parsing failed early; parse state again
+    let fallbackSection = 'connections';
+    try {
+      const { searchParams } = new URL(request.url);
+      const s = searchParams.get('state');
+      if (s) fallbackSection = JSON.parse(s).returnSection || 'connections';
+    } catch { /* ignore */ }
+    return NextResponse.redirect(`${BASE_URL}/settings?section=${fallbackSection}&error=google_auth_failed`);
   }
 }
