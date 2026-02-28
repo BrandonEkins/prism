@@ -95,6 +95,20 @@ export interface ShoppingList {
   createdAt: Date | string;
 }
 
+export interface WishItem {
+  id: string;
+  memberId: string;
+  name: string;
+  url?: string | null;
+  notes?: string | null;
+  sortOrder: number;
+  claimed: boolean;
+  claimedBy?: { id: string; name: string; color: string } | null;
+  claimedAt?: string | null;
+  addedBy?: { id: string; name: string; color: string } | null;
+  createdAt: string;
+}
+
 export interface Meal {
   id: string;
   name: string;

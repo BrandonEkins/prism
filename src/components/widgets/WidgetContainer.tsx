@@ -240,13 +240,16 @@ export function WidgetContainer({
           const hsl = hexToHslValues(overrideTextColor);
           // When text opacity < 1, append alpha to HSL values so Tailwind's hsl() picks it up
           const hslVal = overrideTextOpacity < 1 ? `${hsl} / ${overrideTextOpacity}` : hsl;
+          // Muted text gets 60% of the main text opacity to preserve visual hierarchy
+          const mutedOpacity = (overrideTextOpacity < 1 ? overrideTextOpacity : 1) * 0.6;
+          const mutedHslVal = `${hsl} / ${mutedOpacity}`;
           return {
             color: overrideTextOpacity < 1 ? hexToRgba(overrideTextColor, overrideTextOpacity) : overrideTextColor,
             // Override Tailwind CSS custom properties so text-foreground, text-muted-foreground,
             // text-card-foreground, text-primary, text-seasonal-accent etc. all resolve to the chosen color
             '--foreground': hslVal,
             '--card-foreground': hslVal,
-            '--muted-foreground': hslVal,
+            '--muted-foreground': mutedHslVal,
             '--primary': hslVal,
             '--seasonal-accent': hslVal,
             // Override border colors so Select/dropdown outlines pick up the custom color

@@ -13,6 +13,7 @@ import { ResponsiveGridLayout as RGL, useContainerWidth, getCompactor } from 're
 import type { LayoutItem, Layout } from 'react-grid-layout';
 import type { WidgetConfig } from '@/lib/hooks/useLayouts';
 import { hexToRgba } from '@/lib/utils/color';
+import { WidgetBgOverrideProvider } from '@/components/widgets/WidgetContainer';
 import { WIDGET_REGISTRY } from '@/components/widgets/widgetRegistry';
 import { useDashboardData } from '@/components/dashboard/useDashboardData';
 import { buildWidgetProps } from '@/components/dashboard/useWidgetProps';
@@ -203,7 +204,7 @@ function ScreensaverGrid() {
     const Component = reg.component;
     const props = { ...widgetProps[w.i] || {}, gridW: w.w, gridH: w.h };
     return (
-      <React.Suspense fallback={<div className="flex items-center justify-center h-full text-white/50 text-sm">Loading...</div>}>
+      <React.Suspense fallback={<div className="flex items-center justify-center h-full opacity-50 text-sm">Loading...</div>}>
         <div className="h-full w-full [&_*]:!bg-transparent [&_.bg-card]:!bg-white/10 [&_.border-border]:!border-white/20">
           <Component {...props} />
         </div>
@@ -227,11 +228,18 @@ function ScreensaverGrid() {
           containerPadding={[12, 12]}
           margin={[4, 4]}
         >
-          {visibleWidgets.map(w => (
-            <div key={w.i} style={getWidgetStyle(w)}>
-              {renderWidget(w)}
-            </div>
-          ))}
+          {visibleWidgets.map(w => {
+            const hasCustomBg = !!w.backgroundColor;
+            const textColor = w.textColor || '#FFFFFF';
+            const textOpacity = w.textOpacity ?? (w.textColor ? 1 : 0.9);
+            return (
+              <div key={w.i} style={getWidgetStyle(w)}>
+                <WidgetBgOverrideProvider value={{ hasCustomBg, textColor, textOpacity }}>
+                  {renderWidget(w)}
+                </WidgetBgOverrideProvider>
+              </div>
+            );
+          })}
         </RGL>
       )}
     </div>
