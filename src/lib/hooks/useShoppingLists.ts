@@ -225,7 +225,6 @@ export function useShoppingLists(options: UseShoppingListsOptions = {}): UseShop
   const deleteItem = useCallback(
     async (itemId: string) => {
       // Optimistically remove from UI immediately
-      const previousLists = lists;
       setLists((prev) =>
         prev.map((list) => ({
           ...list,
@@ -243,11 +242,11 @@ export function useShoppingLists(options: UseShoppingListsOptions = {}): UseShop
         }
       } catch (err) {
         console.error('Error deleting item:', err);
-        // Revert optimistic update on failure
-        setLists(previousLists);
+        // Revert by re-fetching true state from server
+        await fetchLists();
       }
     },
-    [lists]
+    [fetchLists]
   );
 
   // Initial fetch

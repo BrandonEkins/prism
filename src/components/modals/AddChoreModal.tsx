@@ -39,7 +39,7 @@ export interface CreatedChore {
   title: string;
   description: string | null;
   category: 'cleaning' | 'laundry' | 'dishes' | 'yard' | 'pets' | 'trash' | 'other';
-  frequency: 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'custom';
+  frequency: 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'quarterly' | 'semi-annually' | 'annually' | 'custom';
   customIntervalDays?: number | null;
   pointValue: number;
   requiresApproval: boolean;
@@ -58,7 +58,7 @@ export interface ChoreToEdit {
   title: string;
   description?: string;
   category: 'cleaning' | 'laundry' | 'dishes' | 'yard' | 'pets' | 'trash' | 'other';
-  frequency: 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'custom';
+  frequency: 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'quarterly' | 'semi-annually' | 'annually' | 'custom';
   customIntervalDays?: number;
   pointValue: number;
   requiresApproval: boolean;
@@ -113,7 +113,7 @@ export function AddChoreModal({
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState<'cleaning' | 'laundry' | 'dishes' | 'yard' | 'pets' | 'trash' | 'other'>('cleaning');
-  const [frequency, setFrequency] = useState<'daily' | 'weekly' | 'biweekly' | 'monthly' | 'custom'>('weekly');
+  const [frequency, setFrequency] = useState<'daily' | 'weekly' | 'biweekly' | 'monthly' | 'quarterly' | 'semi-annually' | 'annually' | 'custom'>('weekly');
   const [customIntervalDays, setCustomIntervalDays] = useState<number>(7);
   const [pointValue, setPointValue] = useState(5);
   const [requiresApproval, setRequiresApproval] = useState(false);
@@ -264,7 +264,7 @@ export function AddChoreModal({
           <div className="space-y-2">
             <Label>Frequency</Label>
             <div className="flex gap-2 flex-wrap">
-              {(['daily', 'weekly', 'biweekly', 'monthly'] as const).map((freq) => (
+              {(['daily', 'weekly', 'biweekly', 'monthly', 'quarterly', 'semi-annually', 'annually'] as const).map((freq) => (
                 <Button
                   key={freq}
                   type="button"
@@ -273,7 +273,7 @@ export function AddChoreModal({
                   onClick={() => setFrequency(freq)}
                   className="capitalize"
                 >
-                  {freq}
+                  {freq === 'semi-annually' ? 'Semi-Annual' : freq}
                 </Button>
               ))}
             </div>

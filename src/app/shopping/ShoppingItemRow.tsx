@@ -29,7 +29,6 @@ export function ShoppingItemRow({
         item.checked && 'opacity-60'
       )}
       onClick={onToggle}
-      onTouchEnd={(e) => { e.preventDefault(); onToggle(); }}
     >
       {/* Content - tap to toggle */}
       <div className="flex-1 min-w-0">

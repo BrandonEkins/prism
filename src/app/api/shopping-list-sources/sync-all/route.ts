@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db/client';
 import { shoppingListSources } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
@@ -14,7 +14,7 @@ import type { ShoppingProviderTokens, SyncResult } from '@/lib/integrations/shop
  * Syncs all enabled shopping list sources.
  * Used for background sync.
  */
-export async function POST() {
+export async function POST(request: NextRequest) {
   const auth = await requireAuth();
   if (auth instanceof NextResponse) return auth;
 
@@ -115,7 +115,7 @@ export async function POST() {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              Cookie: `prism-session=${auth.userId}`, // Pass session for auth
+              Cookie: request.headers.get('cookie') || '',
             },
           }
         );
