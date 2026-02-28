@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { useState } from 'react';
-import { X } from 'lucide-react';
+import { X, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
@@ -13,11 +13,15 @@ export function ChoreModal({
   chore,
   onClose,
   onSave,
+  onDelete,
+  onToggleEnabled,
   familyMembers,
 }: {
   chore?: Chore;
   onClose: () => void;
   onSave: (chore: Omit<Chore, 'id' | 'createdAt'>) => void;
+  onDelete?: () => void;
+  onToggleEnabled?: () => void;
   familyMembers: FamilyMember[];
 }) {
   const [title, setTitle] = useState(chore?.title || '');
@@ -26,6 +30,7 @@ export function ChoreModal({
   const [frequency, setFrequency] = useState<Chore['frequency']>(chore?.frequency || 'weekly');
   const [pointValue, setPointValue] = useState(chore?.pointValue || 5);
   const [requiresApproval, setRequiresApproval] = useState(chore?.requiresApproval || false);
+  const [enabled, setEnabled] = useState(chore?.enabled ?? true);
   const [assignedTo, setAssignedTo] = useState(chore?.assignedTo?.id || '');
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -42,7 +47,7 @@ export function ChoreModal({
       pointValue,
       requiresApproval,
       assignedTo: selectedMember || undefined,
-      enabled: chore?.enabled ?? true,
+      enabled,
       lastCompleted: chore?.lastCompleted,
       nextDue: chore?.nextDue,
     });
@@ -141,6 +146,18 @@ export function ChoreModal({
             <label className="text-sm font-medium">Requires approval</label>
           </div>
 
+          {chore && (
+            <div className="flex items-center gap-2">
+              <Switch
+                checked={enabled}
+                onCheckedChange={setEnabled}
+              />
+              <label className="text-sm font-medium">
+                {enabled ? 'Enabled' : 'Disabled'}
+              </label>
+            </div>
+          )}
+
           <div>
             <label className="text-sm font-medium">Assign To</label>
             <div className="flex gap-2 mt-1 flex-wrap">
@@ -171,7 +188,19 @@ export function ChoreModal({
             </div>
           </div>
 
-          <div className="flex justify-end gap-2 pt-4">
+          <div className="flex items-center gap-2 pt-4">
+            {chore && onDelete && (
+              <Button
+                type="button"
+                variant="ghost"
+                className="text-destructive hover:text-destructive hover:bg-destructive/10 gap-1"
+                onClick={onDelete}
+              >
+                <Trash2 className="h-4 w-4" />
+                Delete
+              </Button>
+            )}
+            <div className="flex-1" />
             <Button type="button" variant="outline" onClick={onClose}>
               Cancel
             </Button>

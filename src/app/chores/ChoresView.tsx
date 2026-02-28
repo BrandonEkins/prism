@@ -15,6 +15,7 @@ import {
   Users,
   CalendarDays,
   Settings,
+  Trash2,
   X,
 } from 'lucide-react';
 import { useOrientation } from '@/lib/hooks/useOrientation';
@@ -338,7 +339,7 @@ export function ChoresView() {
                           <div
                             key={chore.id}
                             className={cn(
-                              'p-2 rounded-md border cursor-pointer hover:bg-muted/50 transition-colors',
+                              'p-2 rounded-md border cursor-pointer hover:bg-muted/50 transition-colors group',
                               isCompletedToday ? 'opacity-60 bg-green-50/50 dark:bg-green-950/20 border-green-500/30' :
                               isOverdue ? 'border-red-500/50 bg-red-50/50 dark:bg-red-950/20' : 'border-border'
                             )}
@@ -395,6 +396,17 @@ export function ChoresView() {
                                   }}
                                 >
                                   <Settings className="h-3 w-3" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 text-destructive hover:text-destructive"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    deleteChore(chore.id);
+                                  }}
+                                >
+                                  <Trash2 className="h-3 w-3" />
                                 </Button>
                               </div>
                             </div>
@@ -469,6 +481,10 @@ export function ChoresView() {
           <ChoreModal
             chore={editingChore}
             onClose={() => setEditingChore(null)}
+            onDelete={async () => {
+              setEditingChore(null);
+              deleteChore(editingChore.id);
+            }}
             onSave={async (updatedChore) => {
               try {
                 const response = await fetch(`/api/chores/${editingChore.id}`, {
