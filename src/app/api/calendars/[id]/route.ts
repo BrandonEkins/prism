@@ -12,7 +12,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
 import { db } from '@/lib/db/client';
-import { calendarSources, events } from '@/lib/db/schema';
+import { calendarSources, events, settings } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 
 interface RouteParams {
@@ -113,6 +113,19 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
     if (typeof body.enabled === 'boolean') {
       updates.enabled = body.enabled;
+
+      // When user manually re-enables a calendar, set userOverride flag
+      // so sync won't auto-disable it again, and clear failure counters
+      if (body.enabled) {
+        const prevErrors = (existing.syncErrors as Record<string, unknown>) || {};
+        if (prevErrors.autoDisabled || prevErrors.consecutiveFailures || prevErrors.consecutiveNotFound) {
+          updates.syncErrors = {
+            userOverride: true,
+            previousError: prevErrors.lastError || null,
+            restoredAt: new Date().toISOString(),
+          };
+        }
+      }
     }
 
     if (body.dashboardCalendarName && typeof body.dashboardCalendarName === 'string') {
@@ -212,6 +225,22 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
 
     // Delete the calendar (events will be cascade deleted)
     await db.delete(calendarSources).where(eq(calendarSources.id, id));
+
+    // If it's a Google calendar, add to dismissed list so it won't be recreated on re-connect
+    if (existing.provider === 'google' && existing.sourceCalendarId) {
+      const [dismissedSetting] = await db.select().from(settings)
+        .where(eq(settings.key, 'dismissedGoogleCalendarIds'));
+      const dismissed: string[] = (dismissedSetting?.value as string[]) || [];
+      if (!dismissed.includes(existing.sourceCalendarId)) {
+        dismissed.push(existing.sourceCalendarId);
+        if (dismissedSetting) {
+          await db.update(settings).set({ value: dismissed, updatedAt: new Date() })
+            .where(eq(settings.key, 'dismissedGoogleCalendarIds'));
+        } else {
+          await db.insert(settings).values({ key: 'dismissedGoogleCalendarIds', value: dismissed });
+        }
+      }
+    }
 
     return NextResponse.json({
       message: 'Calendar deleted successfully',

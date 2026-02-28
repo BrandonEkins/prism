@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { eq } from 'drizzle-orm';
 import { requireAuth, requireRole } from '@/lib/auth';
 import { db } from '@/lib/db/client';
-import { calendarSources } from '@/lib/db/schema';
+import { calendarSources, settings } from '@/lib/db/schema';
 import {
   exchangeCodeForTokens,
   fetchCalendarList,
@@ -68,16 +68,20 @@ export async function GET(request: Request) {
 
     // If re-authenticating, update ALL Google calendar sources (they share the same OAuth token)
     if (reauthSourceId) {
-      await db
-        .update(calendarSources)
-        .set({
+      // Per-source update to preserve userOverride flag in syncErrors
+      const existingSources = await db.select().from(calendarSources)
+        .where(eq(calendarSources.provider, 'google'));
+
+      for (const source of existingSources) {
+        const prev = (source.syncErrors as Record<string, unknown>) || {};
+        await db.update(calendarSources).set({
           accessToken: encryptedAccessToken,
           refreshToken: encryptedRefreshToken || undefined,
           tokenExpiresAt,
-          syncErrors: null,
+          syncErrors: prev.userOverride ? { userOverride: true } : null,
           updatedAt: new Date(),
-        })
-        .where(eq(calendarSources.provider, 'google'));
+        }).where(eq(calendarSources.id, source.id));
+      }
 
       // Also update showInEventModal based on current accessRole
       const reAuthCalendars = await fetchCalendarList(tokens.access_token);
@@ -104,7 +108,14 @@ export async function GET(request: Request) {
     // Fetch calendars using the plaintext token (before we discard it)
     const calendars = await fetchCalendarList(tokens.access_token);
 
+    // Fetch dismissed Google calendar IDs so we don't recreate user-deleted calendars
+    const [dismissedSetting] = await db.select().from(settings)
+      .where(eq(settings.key, 'dismissedGoogleCalendarIds'));
+    const dismissedIds: string[] = (dismissedSetting?.value as string[]) || [];
+
     for (const calendar of calendars) {
+      // Skip calendars the user has previously deleted from Prism
+      if (dismissedIds.includes(calendar.id)) continue;
       const existing = await db.query.calendarSources.findFirst({
         where: (cs, { and, eq }) =>
           and(
@@ -114,13 +125,14 @@ export async function GET(request: Request) {
       });
 
       if (existing) {
+        const prev = (existing.syncErrors as Record<string, unknown>) || {};
         await db
           .update(calendarSources)
           .set({
             accessToken: encryptedAccessToken,
             refreshToken: encryptedRefreshToken || existing.refreshToken,
             tokenExpiresAt,
-            syncErrors: null,
+            syncErrors: prev.userOverride ? { userOverride: true } : null,
             updatedAt: new Date(),
           })
           .where(eq(calendarSources.id, existing.id));

@@ -113,15 +113,28 @@ export async function syncGoogleCalendarSource(
     const errorStr = String(error);
     const is404 = errorStr.includes('404') || errorStr.includes('Not Found');
 
-    // Store sync error; disable stale calendars that return 404
+    // Track consecutive failures instead of immediately disabling
+    const prevErrors = (source.syncErrors as Record<string, unknown>) || {};
+    const prevFailures = (typeof prevErrors.consecutiveFailures === 'number' ? prevErrors.consecutiveFailures : 0);
+    const consecutiveFailures = prevFailures + 1;
+    const DISABLE_THRESHOLD = 3; // Only auto-disable after 3 consecutive 404s
+
+    const shouldAutoDisable = is404
+      && consecutiveFailures >= DISABLE_THRESHOLD
+      && !prevErrors.userOverride; // Never auto-disable if user manually re-enabled
+
     await db
       .update(calendarSources)
       .set({
-        ...(is404 ? { enabled: false, showInEventModal: false } : {}),
+        ...(shouldAutoDisable ? { enabled: false, showInEventModal: false } : {}),
         syncErrors: {
           lastError: is404
-            ? 'Calendar no longer found in Google (404). It may have been deleted or unsubscribed.'
+            ? `Calendar not found in Google (404). Failure ${consecutiveFailures}/${DISABLE_THRESHOLD}.`
             : errorStr,
+          consecutiveFailures,
+          is404,
+          ...(shouldAutoDisable ? { autoDisabled: true, autoDisabledAt: new Date().toISOString() } : {}),
+          ...(prevErrors.userOverride ? { userOverride: true } : {}),
           timestamp: new Date().toISOString(),
         },
         updatedAt: new Date(),
@@ -195,12 +208,13 @@ export async function syncGoogleCalendarSource(
     }
   }
 
-  // Update last synced timestamp
+  // Update last synced timestamp (preserve userOverride so sync won't auto-disable)
+  const currentErrors = (source.syncErrors as Record<string, unknown>) || {};
   await db
     .update(calendarSources)
     .set({
       lastSynced: new Date(),
-      syncErrors: null,
+      syncErrors: currentErrors.userOverride ? { userOverride: true } : null,
       updatedAt: new Date(),
     })
     .where(eq(calendarSources.id, sourceId));
@@ -244,19 +258,39 @@ export async function syncAllGoogleCalendars(
       for (const source of sources) {
         const role = roleMap.get(source.sourceCalendarId);
         if (role === undefined) {
-          // Calendar no longer in Google — disable it to prevent 404 sync errors
-          if (source.enabled) {
-            await db
-              .update(calendarSources)
-              .set({
-                enabled: false,
-                showInEventModal: false,
-                syncErrors: { lastError: 'Calendar no longer found in Google. It may have been deleted or unsubscribed.', timestamp: new Date().toISOString() },
-                updatedAt: new Date(),
-              })
-              .where(eq(calendarSources.id, source.id));
-          }
+          // Calendar no longer in Google — track failure, don't immediately disable
+          const prevErrors = (source.syncErrors as Record<string, unknown>) || {};
+          const prevFailures = (typeof prevErrors.consecutiveNotFound === 'number' ? prevErrors.consecutiveNotFound : 0);
+          const consecutiveNotFound = prevFailures + 1;
+          const DISABLE_THRESHOLD = 3;
+          const shouldAutoDisable = consecutiveNotFound >= DISABLE_THRESHOLD && !prevErrors.userOverride;
+
+          await db
+            .update(calendarSources)
+            .set({
+              ...(shouldAutoDisable ? { enabled: false, showInEventModal: false } : {}),
+              syncErrors: {
+                lastError: `Calendar not found in Google. Check ${consecutiveNotFound}/${DISABLE_THRESHOLD}.`,
+                consecutiveNotFound,
+                ...(shouldAutoDisable ? { autoDisabled: true, autoDisabledAt: new Date().toISOString() } : {}),
+                ...(prevErrors.userOverride ? { userOverride: true } : {}),
+                timestamp: new Date().toISOString(),
+              },
+              updatedAt: new Date(),
+            })
+            .where(eq(calendarSources.id, source.id));
           continue;
+        }
+        // Calendar found — clear any not-found counters (preserve userOverride)
+        const prevErrors = (source.syncErrors as Record<string, unknown>) || {};
+        if (prevErrors.consecutiveNotFound) {
+          await db
+            .update(calendarSources)
+            .set({
+              syncErrors: prevErrors.userOverride ? { userOverride: true } : null,
+              updatedAt: new Date(),
+            })
+            .where(eq(calendarSources.id, source.id));
         }
         const isWritable = role === 'writer' || role === 'owner';
         if (source.showInEventModal !== isWritable) {
