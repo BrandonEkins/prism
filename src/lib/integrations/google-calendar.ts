@@ -278,6 +278,12 @@ export async function createCalendarEvent(
 
   if (!response.ok) {
     const error = await response.text();
+    if (response.status === 404) {
+      throw new Error(
+        `Calendar not found (404). The calendar may have been deleted or unsubscribed in Google. ` +
+        `Please remove it in Settings and re-sync your calendars.`
+      );
+    }
     throw new Error(`Failed to create event: ${error}`);
   }
 

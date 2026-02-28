@@ -1,7 +1,7 @@
 /**
  *
  * A modal dialog for creating and editing calendar events.
- * Includes form fields for title, date/time, location, and settings.
+ * Simplified design inspired by Google Calendar's quick-add modal.
  *
  * USAGE:
  *   <AddEventModal
@@ -16,17 +16,15 @@
 
 import * as React from 'react';
 import { useState, useEffect, useMemo } from 'react';
-import { format } from 'date-fns';
-import { Loader2 } from 'lucide-react';
+import { Loader2, MapPin, AlignLeft, ChevronDown, ChevronUp } from 'lucide-react';
 import { useCalendarSources } from '@/lib/hooks';
-import { useAuth } from '@/components/providers';
+import { toast } from '@/components/ui/use-toast';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogDescription,
-  DialogFooter,
   Button,
   Input,
   Label,
@@ -91,10 +89,21 @@ export interface AddEventModalProps {
 }
 
 /**
+ * Recurrence presets
+ */
+const RECURRENCE_OPTIONS = [
+  { value: '', label: 'Does not repeat' },
+  { value: 'FREQ=DAILY', label: 'Daily' },
+  { value: 'FREQ=WEEKLY', label: 'Weekly' },
+  { value: 'FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR', label: 'Every weekday' },
+  { value: 'FREQ=MONTHLY', label: 'Monthly' },
+  { value: 'FREQ=YEARLY', label: 'Yearly' },
+];
+
+/**
  * Reminder options (minutes before event)
  */
 const REMINDER_OPTIONS = [
-  { value: 0, label: 'At time of event' },
   { value: 5, label: '5 minutes before' },
   { value: 10, label: '10 minutes before' },
   { value: 15, label: '15 minutes before' },
@@ -103,47 +112,26 @@ const REMINDER_OPTIONS = [
   { value: 1440, label: '1 day before' },
 ];
 
-/**
- * Format date for datetime-local input
- */
+/** Format date for datetime-local input (YYYY-MM-DDTHH:mm) */
 function formatDateTimeLocal(date: Date | string | undefined): string {
-  if (!date) {
-    // Return current time as fallback
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
-    const hours = String(now.getHours()).padStart(2, '0');
-    const minutes = String(now.getMinutes()).padStart(2, '0');
-    return `${year}-${month}-${day}T${hours}:${minutes}`;
-  }
+  const d = date ? (typeof date === 'string' ? new Date(date) : date) : new Date();
+  if (isNaN(d.getTime())) return formatDateTimeLocal(undefined);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  const hours = String(d.getHours()).padStart(2, '0');
+  const minutes = String(d.getMinutes()).padStart(2, '0');
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+}
 
-  try {
-    const d = typeof date === 'string' ? new Date(date) : date;
-
-    // Check if date is valid
-    if (isNaN(d.getTime())) {
-      throw new Error('Invalid date');
-    }
-
-    // Format: YYYY-MM-DDTHH:mm
-    const year = d.getFullYear();
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    const hours = String(d.getHours()).padStart(2, '0');
-    const minutes = String(d.getMinutes()).padStart(2, '0');
-    return `${year}-${month}-${day}T${hours}:${minutes}`;
-  } catch (error) {
-    console.error('Error formatting date:', error, date);
-    // Return current time as fallback
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
-    const hours = String(now.getHours()).padStart(2, '0');
-    const minutes = String(now.getMinutes()).padStart(2, '0');
-    return `${year}-${month}-${day}T${hours}:${minutes}`;
-  }
+/** Format date for date input (YYYY-MM-DD) */
+function formatDateLocal(date: Date | string | undefined): string {
+  const d = date ? (typeof date === 'string' ? new Date(date) : date) : new Date();
+  if (isNaN(d.getTime())) return formatDateLocal(undefined);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 /**
@@ -158,17 +146,10 @@ export function AddEventModal({
 }: AddEventModalProps) {
   const isEditMode = !!event;
 
-  // Get active user for default color
-  const { activeUser } = useAuth();
-  const defaultEventColor = activeUser?.color || '#3B82F6';
-
   // Fetch available calendars
   const { calendars } = useCalendarSources();
 
-  // Filter to only show calendars that:
-  // 1. Are enabled
-  // 2. Support writing (Google or local)
-  // 3. Have showInEventModal enabled (not hidden in settings)
+  // Filter to only writable, non-read-only calendars with showInEventModal enabled
   const writableCalendars = useMemo(() => {
     return calendars.filter(
       (cal) => cal.enabled &&
@@ -177,6 +158,11 @@ export function AddEventModal({
     );
   }, [calendars]);
 
+  // Default to first writable calendar (or 'local' if none)
+  const defaultCalendarId = useMemo(() => {
+    return writableCalendars.length > 0 ? writableCalendars[0]!.id : 'local';
+  }, [writableCalendars]);
+
   // Form state
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -184,15 +170,44 @@ export function AddEventModal({
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
   const [allDay, setAllDay] = useState(false);
-  const [recurring, setRecurring] = useState(false);
   const [recurrenceRule, setRecurrenceRule] = useState('');
   const [reminderMinutes, setReminderMinutes] = useState<number | ''>('');
-  const [calendarSourceId, setCalendarSourceId] = useState<string>('local');
-  const [eventColor, setEventColor] = useState<string>('');
+  const [calendarSourceId, setCalendarSourceId] = useState<string>('');
+  const [showMore, setShowMore] = useState(false);
 
   // Loading/error state
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Resolve color from selected calendar's group
+  const selectedCalendar = useMemo(() => {
+    if (calendarSourceId === 'local') return null;
+    return writableCalendars.find((c) => c.id === calendarSourceId) ?? null;
+  }, [calendarSourceId, writableCalendars]);
+
+  const eventColor = useMemo(() => {
+    if (!selectedCalendar) return undefined;
+    // Priority: group color > calendar source color > user color
+    return selectedCalendar.groupColor || selectedCalendar.color || selectedCalendar.user?.color || undefined;
+  }, [selectedCalendar]);
+
+  // Handle all-day toggle: convert between date and datetime formats
+  function handleAllDayChange(checked: boolean) {
+    setAllDay(checked);
+    if (checked && startTime) {
+      // datetime-local → date: strip time portion
+      setStartTime(startTime.split('T')[0] || startTime);
+      if (endTime) {
+        setEndTime(endTime.split('T')[0] || endTime);
+      }
+    } else if (!checked && startTime) {
+      // date → datetime-local: add default times
+      setStartTime(`${startTime}T09:00`);
+      if (endTime) {
+        setEndTime(`${endTime}T10:00`);
+      }
+    }
+  }
 
   // Populate form when editing
   useEffect(() => {
@@ -200,31 +215,29 @@ export function AddEventModal({
       setTitle(event.title);
       setDescription(event.description || '');
       setLocation(event.location || '');
-      setStartTime(formatDateTimeLocal(event.startTime));
-      setEndTime(formatDateTimeLocal(event.endTime));
-      setAllDay(event.allDay || false);
-      setRecurring(event.recurring || false);
+      const isAllDay = event.allDay || false;
+      setAllDay(isAllDay);
+      setStartTime(isAllDay ? formatDateLocal(event.startTime) : formatDateTimeLocal(event.startTime));
+      setEndTime(isAllDay ? formatDateLocal(event.endTime) : formatDateTimeLocal(event.endTime));
+      // Match recurrence rule to a preset, or use raw value
       setRecurrenceRule(event.recurrenceRule || '');
       setReminderMinutes(event.reminderMinutes ?? '');
-      // Set calendar source - use 'local' if no calendarSourceId
-      setCalendarSourceId(event.calendarSourceId || 'local');
-      // Set color from event or use user's default
-      setEventColor(event.color || defaultEventColor);
+      setCalendarSourceId(event.calendarSourceId || defaultCalendarId);
+      // Show more options if editing event has description, location, reminder, or recurrence
+      setShowMore(!!(event.description || event.location || event.reminderMinutes || event.recurrenceRule));
     } else if (open && defaultDate) {
-      // Pre-fill with default date
       const start = new Date(defaultDate);
-      start.setHours(9, 0, 0, 0); // Default to 9:00 AM
+      start.setHours(9, 0, 0, 0);
       const end = new Date(start);
-      end.setHours(10, 0, 0, 0); // Default to 10:00 AM (1 hour)
+      end.setHours(10, 0, 0, 0);
       setStartTime(formatDateTimeLocal(start));
       setEndTime(formatDateTimeLocal(end));
-      // Default to user's profile color for new events
-      setEventColor(defaultEventColor);
-    } else if (open) {
-      // New event without default date - still set the default color
-      setEventColor(defaultEventColor);
     }
-  }, [open, event, defaultDate, defaultEventColor]);
+    // Set default calendar when opening (for new events without explicit calendar)
+    if (open && !event) {
+      setCalendarSourceId(defaultCalendarId);
+    }
+  }, [open, event, defaultDate, defaultCalendarId]);
 
   // Reset form when modal closes
   useEffect(() => {
@@ -235,24 +248,32 @@ export function AddEventModal({
       setStartTime('');
       setEndTime('');
       setAllDay(false);
-      setRecurring(false);
       setRecurrenceRule('');
       setReminderMinutes('');
-      setCalendarSourceId('local');
-      setEventColor('');
+      setCalendarSourceId(defaultCalendarId);
+      setShowMore(false);
       setError(null);
     }
-  }, [open]);
+  }, [open, defaultCalendarId]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!title.trim() || !startTime || !endTime) return;
 
-    // Validate end time is after start time
-    const start = new Date(startTime);
-    const end = new Date(endTime);
-    if (end < start) {
-      setError('End time must be after start time');
+    // For all-day, only require date; for timed, require full datetime
+    const hasStart = allDay ? !!startTime : !!startTime;
+    const hasEnd = allDay ? !!endTime : !!endTime;
+    if (!title.trim() || !hasStart || !hasEnd) return;
+
+    // Build full ISO dates
+    const startISO = allDay
+      ? new Date(`${startTime}T00:00:00`).toISOString()
+      : new Date(startTime).toISOString();
+    const endISO = allDay
+      ? new Date(`${endTime}T23:59:59`).toISOString()
+      : new Date(endTime).toISOString();
+
+    if (new Date(endISO) < new Date(startISO)) {
+      setError('End must be after start');
       return;
     }
 
@@ -260,15 +281,16 @@ export function AddEventModal({
     setError(null);
 
     try {
+      const recurring = !!recurrenceRule;
       const payload: Record<string, unknown> = {
         title: title.trim(),
         description: description.trim() || undefined,
         location: location.trim() || undefined,
-        startTime: new Date(startTime).toISOString(),
-        endTime: new Date(endTime).toISOString(),
+        startTime: startISO,
+        endTime: endISO,
         allDay,
         recurring,
-        recurrenceRule: recurring && recurrenceRule.trim() ? recurrenceRule.trim() : undefined,
+        recurrenceRule: recurring ? recurrenceRule : undefined,
         reminderMinutes: reminderMinutes !== '' ? Number(reminderMinutes) : undefined,
         calendarSourceId: calendarSourceId !== 'local' ? calendarSourceId : undefined,
         color: eventColor || undefined,
@@ -290,6 +312,14 @@ export function AddEventModal({
 
       const savedEvent = await response.json();
 
+      if (savedEvent.warning) {
+        toast({
+          title: 'Event saved locally',
+          description: savedEvent.warning,
+          variant: 'warning',
+        });
+      }
+
       if (onEventCreated) {
         onEventCreated(savedEvent);
       }
@@ -305,214 +335,190 @@ export function AddEventModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>{isEditMode ? 'Edit Event' : 'Add Event'}</DialogTitle>
-          <DialogDescription>
-            {isEditMode ? 'Update event details and timing.' : 'Create a new calendar event.'}
+          <DialogTitle>{isEditMode ? 'Edit Event' : 'New Event'}</DialogTitle>
+          <DialogDescription className="sr-only">
+            {isEditMode ? 'Update event details.' : 'Create a new calendar event.'}
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-3">
           {/* Title */}
+          <Input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Add title"
+            className="text-base border-0 border-b rounded-none px-0 focus-visible:ring-0 focus-visible:border-primary"
+            autoFocus
+            required
+          />
+
+          {/* Date & Time */}
           <div className="space-y-2">
-            <Label htmlFor="event-title">Title</Label>
-            <Input
-              id="event-title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Event title..."
-              autoFocus
-              required
-            />
+            {allDay ? (
+              <div className="flex items-center gap-2">
+                <Input
+                  type="date"
+                  value={startTime}
+                  onChange={(e) => setStartTime(e.target.value)}
+                  className="flex-1 text-sm"
+                  required
+                />
+                <span className="text-muted-foreground text-sm shrink-0">to</span>
+                <Input
+                  type="date"
+                  value={endTime}
+                  onChange={(e) => setEndTime(e.target.value)}
+                  className="flex-1 text-sm"
+                  required
+                />
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Start</Label>
+                  <Input
+                    type="datetime-local"
+                    value={startTime}
+                    onChange={(e) => setStartTime(e.target.value)}
+                    className="text-xs px-2"
+                    required
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">End</Label>
+                  <Input
+                    type="datetime-local"
+                    value={endTime}
+                    onChange={(e) => setEndTime(e.target.value)}
+                    className="text-xs px-2"
+                    required
+                  />
+                </div>
+              </div>
+            )}
+            <div className="flex items-center gap-2">
+              <Switch
+                id="event-all-day"
+                checked={allDay}
+                onCheckedChange={handleAllDayChange}
+              />
+              <Label htmlFor="event-all-day" className="text-sm cursor-pointer">
+                All day
+              </Label>
+            </div>
           </div>
 
           {/* Calendar Selection */}
-          <div className="space-y-2">
-            <Label htmlFor="event-calendar">Calendar</Label>
-            <Select value={calendarSourceId} onValueChange={setCalendarSourceId}>
-              <SelectTrigger id="event-calendar">
-                <SelectValue placeholder="Select a calendar" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="local">
+          <Select value={calendarSourceId} onValueChange={setCalendarSourceId}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Select a calendar" />
+            </SelectTrigger>
+            <SelectContent>
+              {writableCalendars.map((cal) => (
+                <SelectItem key={cal.id} value={cal.id}>
                   <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-gray-400" />
-                    Local Only
+                    <div
+                      className="w-2.5 h-2.5 rounded-full shrink-0"
+                      style={{ backgroundColor: cal.groupColor || cal.color || '#3B82F6' }}
+                    />
+                    <span className="truncate">{cal.displayName || cal.dashboardCalendarName}</span>
+                    {cal.groupName && (
+                      <span
+                        className="text-xs font-medium shrink-0 px-1.5 py-0.5 rounded-full"
+                        style={{
+                          backgroundColor: (cal.groupColor || '#3B82F6') + '20',
+                          color: cal.groupColor || '#3B82F6',
+                        }}
+                      >
+                        {cal.groupName}
+                      </span>
+                    )}
+                    {cal.provider === 'google' && (
+                      <span className="text-xs text-muted-foreground shrink-0">Google</span>
+                    )}
                   </div>
                 </SelectItem>
-                {writableCalendars.map((cal) => (
-                  <SelectItem key={cal.id} value={cal.id}>
-                    <div className="flex items-center gap-2">
-                      <div
-                        className="w-3 h-3 rounded-full"
-                        style={{ backgroundColor: cal.color || '#3B82F6' }}
-                      />
-                      {cal.displayName || cal.dashboardCalendarName}
-                      {cal.provider === 'google' && (
-                        <span className="text-xs text-muted-foreground">(Google)</span>
-                      )}
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {calendarSourceId !== 'local' && (
-              <p className="text-xs text-muted-foreground">
-                Event will be synced to the selected Google Calendar
-              </p>
-            )}
-          </div>
+              ))}
+              <SelectItem value="local">
+                <div className="flex items-center gap-2">
+                  <div className="w-2.5 h-2.5 rounded-full bg-muted-foreground/40 shrink-0" />
+                  <span className="text-muted-foreground">Local only (no sync)</span>
+                </div>
+              </SelectItem>
+            </SelectContent>
+          </Select>
 
-          {/* Event Color */}
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <Label htmlFor="event-color">Event Color</Label>
-              <span className="text-sm text-muted-foreground">Defaults to your profile color</span>
-            </div>
-            <div className="flex items-center gap-3">
-              <input
-                type="color"
-                id="event-color"
-                value={eventColor || defaultEventColor}
-                onChange={(e) => setEventColor(e.target.value)}
-                className="w-10 h-10 rounded-md border border-border cursor-pointer"
-              />
-              <div className="flex gap-1 flex-wrap">
-                {['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#6B7280'].map((color) => (
-                  <button
-                    key={color}
-                    type="button"
-                    onClick={() => setEventColor(color)}
-                    className={`w-6 h-6 rounded-full border-2 transition-transform hover:scale-110 ${
-                      (eventColor || defaultEventColor) === color ? 'border-foreground scale-110' : 'border-transparent'
-                    }`}
-                    style={{ backgroundColor: color }}
-                    title={color}
-                    aria-label={`Select color ${color}`}
-                  />
-                ))}
-                {activeUser?.color && !['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#6B7280'].includes(activeUser.color) && (
-                  <button
-                    type="button"
-                    onClick={() => setEventColor(activeUser.color!)}
-                    className={`w-6 h-6 rounded-full border-2 transition-transform hover:scale-110 ${
-                      (eventColor || defaultEventColor) === activeUser.color ? 'border-foreground scale-110' : 'border-transparent'
-                    }`}
-                    style={{ backgroundColor: activeUser.color }}
-                    title={`Your color (${activeUser.color})`}
-                    aria-label={`Select your color ${activeUser.color}`}
-                  />
-                )}
+          {/* More options toggle */}
+          <button
+            type="button"
+            onClick={() => setShowMore(!showMore)}
+            className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            {showMore ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+            {showMore ? 'Less options' : 'More options'}
+          </button>
+
+          {showMore && (
+            <div className="space-y-3">
+              {/* Location */}
+              <div className="flex items-center gap-2">
+                <MapPin className="h-4 w-4 text-muted-foreground shrink-0" />
+                <Input
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  placeholder="Add location"
+                  className="flex-1"
+                />
               </div>
-            </div>
-          </div>
 
-          {/* Description */}
-          <div className="space-y-2">
-            <Label htmlFor="event-description">Description (optional)</Label>
-            <Textarea
-              id="event-description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Event details..."
-              rows={3}
-            />
-          </div>
+              {/* Description */}
+              <div className="flex items-start gap-2">
+                <AlignLeft className="h-4 w-4 text-muted-foreground shrink-0 mt-2.5" />
+                <Textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Add description"
+                  rows={2}
+                  className="flex-1"
+                />
+              </div>
 
-          {/* Location */}
-          <div className="space-y-2">
-            <Label htmlFor="event-location">Location (optional)</Label>
-            <Input
-              id="event-location"
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-              placeholder="Event location..."
-            />
-          </div>
+              {/* Recurrence */}
+              <Select
+                value={recurrenceRule || '__none__'}
+                onValueChange={(v) => setRecurrenceRule(v === '__none__' ? '' : v)}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Does not repeat" />
+                </SelectTrigger>
+                <SelectContent>
+                  {RECURRENCE_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value || '__none__'} value={opt.value || '__none__'}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
 
-          {/* Start Time */}
-          <div className="space-y-2">
-            <Label htmlFor="event-start">Start Time</Label>
-            <Input
-              id="event-start"
-              type="datetime-local"
-              value={startTime}
-              onChange={(e) => setStartTime(e.target.value)}
-              required
-            />
-          </div>
-
-          {/* End Time */}
-          <div className="space-y-2">
-            <Label htmlFor="event-end">End Time</Label>
-            <Input
-              id="event-end"
-              type="datetime-local"
-              value={endTime}
-              onChange={(e) => setEndTime(e.target.value)}
-              required
-            />
-          </div>
-
-          {/* All Day */}
-          <div className="flex items-center gap-2">
-            <Switch
-              id="event-all-day"
-              checked={allDay}
-              onCheckedChange={setAllDay}
-            />
-            <Label htmlFor="event-all-day" className="cursor-pointer">
-              All-day event
-            </Label>
-          </div>
-
-          {/* Reminder */}
-          <div className="space-y-2">
-            <Label htmlFor="event-reminder">Reminder (optional)</Label>
-            <Select
-              value={reminderMinutes !== '' ? String(reminderMinutes) : 'none'}
-              onValueChange={(value) => setReminderMinutes(value === 'none' ? '' : Number(value))}
-            >
-              <SelectTrigger id="event-reminder">
-                <SelectValue placeholder="No reminder" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">No reminder</SelectItem>
-                {REMINDER_OPTIONS.map((option) => (
-                  <SelectItem key={option.value} value={String(option.value)}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Recurring */}
-          <div className="flex items-center gap-2">
-            <Switch
-              id="event-recurring"
-              checked={recurring}
-              onCheckedChange={setRecurring}
-            />
-            <Label htmlFor="event-recurring" className="cursor-pointer">
-              Recurring event
-            </Label>
-          </div>
-
-          {/* Recurrence Rule (only show if recurring) */}
-          {recurring && (
-            <div className="space-y-2">
-              <Label htmlFor="event-recurrence">Recurrence Rule</Label>
-              <Input
-                id="event-recurrence"
-                value={recurrenceRule}
-                onChange={(e) => setRecurrenceRule(e.target.value)}
-                placeholder="e.g., FREQ=WEEKLY;BYDAY=MO,WE,FR"
-              />
-              <p className="text-xs text-muted-foreground">
-                Use iCalendar RRULE format
-              </p>
+              {/* Reminder */}
+              <Select
+                value={reminderMinutes !== '' ? String(reminderMinutes) : 'none'}
+                onValueChange={(value) => setReminderMinutes(value === 'none' ? '' : Number(value))}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="No reminder" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">No reminder</SelectItem>
+                  {REMINDER_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={String(option.value)}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           )}
 
@@ -523,11 +529,11 @@ export function AddEventModal({
             </div>
           )}
 
-          {/* Footer */}
-          <DialogFooter>
+          {/* Actions */}
+          <div className="flex justify-end gap-2 pt-1">
             <Button
               type="button"
-              variant="outline"
+              variant="ghost"
               onClick={() => onOpenChange(false)}
               disabled={isSubmitting}
             >
@@ -537,13 +543,13 @@ export function AddEventModal({
               {isSubmitting ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  {isEditMode ? 'Saving...' : 'Creating...'}
+                  Saving...
                 </>
               ) : (
-                isEditMode ? 'Save Changes' : 'Add Event'
+                isEditMode ? 'Save' : 'Save'
               )}
             </Button>
-          </DialogFooter>
+          </div>
         </form>
       </DialogContent>
     </Dialog>

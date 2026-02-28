@@ -341,6 +341,7 @@ export async function POST(request: NextRequest) {
     const endTime = new Date(endTimeStr);
 
     let externalEventId: string | null = null;
+    let googleWarning: string | null = null;
     let calendarSource = null;
 
     // Validate calendarSourceId if provided and push to external calendar
@@ -408,10 +409,7 @@ export async function POST(request: NextRequest) {
           externalEventId = googleEvent.id;
         } catch (error) {
           console.error('Failed to create event on Google Calendar:', error);
-          return NextResponse.json(
-            { error: `Failed to create event on Google Calendar: ${error instanceof Error ? error.message : 'Unknown error'}` },
-            { status: 500 }
-          );
+          googleWarning = `Event was saved locally but could not be synced to Google Calendar: ${error instanceof Error ? error.message : 'Unknown error'}`;
         }
       }
     }
@@ -502,7 +500,10 @@ export async function POST(request: NextRequest) {
     // Invalidate events cache
     await invalidateCache('events:*');
 
-    return NextResponse.json(response, { status: 201 });
+    return NextResponse.json(
+      googleWarning ? { ...response, warning: googleWarning } : response,
+      { status: 201 }
+    );
   } catch (error) {
     console.error('Error creating event:', error);
     return NextResponse.json(

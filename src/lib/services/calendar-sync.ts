@@ -3,6 +3,7 @@ import { calendarSources, events } from '@/lib/db/schema';
 import { eq, and, gte, lte, sql } from 'drizzle-orm';
 import {
   fetchCalendarEvents,
+  fetchCalendarList,
   refreshAccessToken,
   convertGoogleEventToInternal,
   TokenRevokedError,
@@ -109,11 +110,20 @@ export async function syncGoogleCalendarSource(
       orderBy: 'startTime',
     });
   } catch (error) {
-    // Store sync error
+    const errorStr = String(error);
+    const is404 = errorStr.includes('404') || errorStr.includes('Not Found');
+
+    // Store sync error; disable stale calendars that return 404
     await db
       .update(calendarSources)
       .set({
-        syncErrors: { lastError: String(error), timestamp: new Date().toISOString() },
+        ...(is404 ? { enabled: false, showInEventModal: false } : {}),
+        syncErrors: {
+          lastError: is404
+            ? 'Calendar no longer found in Google (404). It may have been deleted or unsubscribed.'
+            : errorStr,
+          timestamp: new Date().toISOString(),
+        },
         updatedAt: new Date(),
       })
       .where(eq(calendarSources.id, sourceId));
@@ -217,6 +227,50 @@ export async function syncAllGoogleCalendars(
       eq(calendarSources.enabled, true)
     ),
   });
+
+  // Update showInEventModal based on actual Google accessRole.
+  // Use the first source with a valid token to fetch the calendar list.
+  const tokenSource = sources.find((s) => s.accessToken);
+  if (tokenSource) {
+    try {
+      let accessToken = decrypt(tokenSource.accessToken!);
+      if (tokenNeedsRefresh(tokenSource.tokenExpiresAt) && tokenSource.refreshToken) {
+        const refreshToken = decrypt(tokenSource.refreshToken);
+        const newTokens = await refreshAccessToken(refreshToken);
+        accessToken = newTokens.access_token;
+      }
+      const googleCalendars = await fetchCalendarList(accessToken);
+      const roleMap = new Map(googleCalendars.map((c) => [c.id, c.accessRole]));
+      for (const source of sources) {
+        const role = roleMap.get(source.sourceCalendarId);
+        if (role === undefined) {
+          // Calendar no longer in Google — disable it to prevent 404 sync errors
+          if (source.enabled) {
+            await db
+              .update(calendarSources)
+              .set({
+                enabled: false,
+                showInEventModal: false,
+                syncErrors: { lastError: 'Calendar no longer found in Google. It may have been deleted or unsubscribed.', timestamp: new Date().toISOString() },
+                updatedAt: new Date(),
+              })
+              .where(eq(calendarSources.id, source.id));
+          }
+          continue;
+        }
+        const isWritable = role === 'writer' || role === 'owner';
+        if (source.showInEventModal !== isWritable) {
+          await db
+            .update(calendarSources)
+            .set({ showInEventModal: isWritable, updatedAt: new Date() })
+            .where(eq(calendarSources.id, source.id));
+        }
+      }
+    } catch (error) {
+      // Non-fatal: log and continue with event sync
+      console.error('[Sync] Failed to update calendar access roles:', error);
+    }
+  }
 
   // Sync each source (catch errors per-source so one bad calendar doesn't crash all)
   for (const source of sources) {

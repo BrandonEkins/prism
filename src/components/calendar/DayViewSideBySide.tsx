@@ -10,6 +10,7 @@ import { Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useWidgetBgOverride } from '@/components/widgets/WidgetContainer';
 import { useHiddenHours } from '@/lib/hooks/useHiddenHours';
+import { calculateEventPositions, positionToCSS } from '@/lib/utils/eventLayout';
 import type { CalendarEvent } from '@/types/calendar';
 
 export interface DayViewSideBySideProps {
@@ -174,25 +175,6 @@ export function DayViewSideBySide({
         {displayGroups.map((group) => {
           const calEvents = getEventsForGroup(group.id);
 
-          // Sort by start time, then longest duration first
-          const sortEvents = (hourEvents: CalendarEvent[]) => [...hourEvents].sort((a, b) => {
-            const timeDiff = a.startTime.getTime() - b.startTime.getTime();
-            if (timeDiff !== 0) return timeDiff;
-            const aDur = (a.endTime?.getTime() ?? a.startTime.getTime()) - a.startTime.getTime();
-            const bDur = (b.endTime?.getTime() ?? b.startTime.getTime()) - b.startTime.getTime();
-            return bDur - aDur;
-          });
-
-          // Detect overlaps: if event B starts before event A ends
-          const getOverlapIndex = (event: CalendarEvent, idx: number, sorted: CalendarEvent[]) => {
-            for (let i = 0; i < idx; i++) {
-              const prev = sorted[i]!;
-              const prevEnd = prev.endTime ?? new Date(prev.startTime.getTime() + 3600000);
-              if (event.startTime < prevEnd) return 1; // overlapping
-            }
-            return 0;
-          };
-
           return (
             <div
               key={group.id}
@@ -201,7 +183,7 @@ export function DayViewSideBySide({
             >
               {hours.map((hour) => {
                 const hourEvents = calEvents.filter((event) => event.startTime.getHours() === hour);
-                const sorted = sortEvents(hourEvents);
+                const positions = calculateEventPositions(hourEvents);
                 const isPastHour = isPastDay || (isCurrentDay && hour < currentHour);
                 const isNowHour = isCurrentDay && hour === currentHour;
 
@@ -213,8 +195,10 @@ export function DayViewSideBySide({
                     {isNowHour && (
                       <div className="absolute left-0 right-0 border-t-2 border-t-primary z-20 pointer-events-none" style={{ top: `${currentMinuteSnapped}%` }} />
                     )}
-                    {sorted.map((event, idx) => {
-                      const overlapIdx = getOverlapIndex(event, idx, sorted);
+                    {hourEvents.map((event) => {
+                      const pos = positions.get(event.id);
+                      if (!pos) return null;
+                      const css = positionToCSS(pos);
                       return (
                         <button
                           key={event.id}
@@ -224,8 +208,8 @@ export function DayViewSideBySide({
                             backgroundColor: event.color + '20',
                             borderLeft: `2px solid ${event.color}`,
                             top: `${(event.startTime.getMinutes() / 60) * 100}%`,
-                            left: overlapIdx > 0 ? '50%' : '2px',
-                            width: overlapIdx > 0 ? 'calc(50% - 4px)' : 'calc(100% - 4px)',
+                            left: css.left,
+                            width: css.width,
                           }}
                         >
                           <div className="font-medium truncate text-[11px]">{event.title}</div>

@@ -14,21 +14,13 @@ import { cn } from '@/lib/utils';
 import { useWidgetBgOverride } from '@/components/widgets/WidgetContainer';
 import { useOrientation } from '@/lib/hooks/useOrientation';
 import { useHiddenHours } from '@/lib/hooks/useHiddenHours';
+import { calculateEventPositions, positionToCSS } from '@/lib/utils/eventLayout';
 import type { CalendarEvent } from '@/types/calendar';
 
 export interface WeekViewProps {
   currentDate: Date;
   events: CalendarEvent[];
   onEventClick: (event: CalendarEvent) => void;
-}
-
-// Calculate horizontal position for overlapping events (cycles: 0, 50%, 0, 50%, ...)
-function getEventPosition(index: number): { left: string; width: string } {
-  const position = index % 2;
-  if (position === 0) {
-    return { left: '2px', width: 'calc(100% - 4px)' };
-  }
-  return { left: '50%', width: 'calc(50% - 4px)' };
 }
 
 export function WeekView({
@@ -112,10 +104,13 @@ export function WeekView({
         >
           {hours.map((hour) => {
             const hourEvents = getHourEvents(date, hour);
+            const positions = calculateEventPositions(hourEvents);
             return (
               <div key={hour} className="border-t border-border/50 relative min-h-0">
-                {hourEvents.map((event, idx) => {
-                  const pos = getEventPosition(idx);
+                {hourEvents.map((event) => {
+                  const pos = positions.get(event.id);
+                  if (!pos) return null;
+                  const css = positionToCSS(pos);
                   return (
                     <button
                       key={event.id}
@@ -125,8 +120,8 @@ export function WeekView({
                         backgroundColor: event.color + '20',
                         borderLeft: `2px solid ${event.color}`,
                         top: `${(event.startTime.getMinutes() / 60) * 100}%`,
-                        left: pos.left,
-                        width: pos.width,
+                        left: css.left,
+                        width: css.width,
                       }}
                     >
                       <span className="text-[10px] text-muted-foreground mr-1">
@@ -279,10 +274,13 @@ export function WeekView({
             >
               {hours.map((hour) => {
                 const hourEvents = getHourEvents(date, hour);
+                const positions = calculateEventPositions(hourEvents);
                 return (
                   <div key={hour} className="border-t border-border relative min-h-0">
-                    {hourEvents.map((event, idx) => {
-                      const pos = getEventPosition(idx);
+                    {hourEvents.map((event) => {
+                      const pos = positions.get(event.id);
+                      if (!pos) return null;
+                      const css = positionToCSS(pos);
                       return (
                         <button
                           key={event.id}
@@ -292,8 +290,8 @@ export function WeekView({
                             backgroundColor: event.color + '20',
                             borderLeft: `2px solid ${event.color}`,
                             top: `${(event.startTime.getMinutes() / 60) * 100}%`,
-                            left: pos.left,
-                            width: pos.width,
+                            left: css.left,
+                            width: css.width,
                           }}
                         >
                           <div className="font-medium truncate text-[10px]">{event.title}</div>
