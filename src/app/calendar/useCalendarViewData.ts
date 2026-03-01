@@ -88,7 +88,7 @@ export function useCalendarViewData() {
   const { events: apiEvents, loading, error, refresh: refreshEvents } = useCalendarEvents({ daysToShow: 60 });
 
   const events: CalendarEvent[] = useMemo(() => {
-    return apiEvents
+    const filtered = apiEvents
       .map((event) => ({
         id: event.id,
         title: event.title,
@@ -113,6 +113,20 @@ export function useCalendarViewData() {
         if (calSource.user && selectedCalendarIds.has(calSource.user.id)) return true;
         return false;
       });
+
+    // Runtime deduplication: collapse events that share the same title and
+    // exact start/end times across different calendars. The events still
+    // exist in each calendar (nothing is deleted) — we just display one.
+    // Which one survives depends on which calendars are active (pill state),
+    // since filtering above already removed events from inactive calendars.
+    const seen = new Map<string, CalendarEvent>();
+    for (const event of filtered) {
+      const key = `${event.title}|${event.startTime.getTime()}|${event.endTime.getTime()}`;
+      if (!seen.has(key)) {
+        seen.set(key, event);
+      }
+    }
+    return Array.from(seen.values());
   }, [apiEvents, selectedCalendarIds, filterableCalendars, calendarGroups]);
 
   const goToToday = useCallback(() => setCurrentDate(new Date()), []);
