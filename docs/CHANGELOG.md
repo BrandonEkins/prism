@@ -2,6 +2,29 @@
 
 All notable changes to Prism are documented in this file.
 
+## [1.0.3] - 2026-03-01
+
+### Added
+- **Wish Lists**: New wish list feature with per-family-member lists, UI page, dashboard widget, and bidirectional sync with Microsoft To-Do
+- **Feature Toggles**: Hide/show individual pages from navigation via Settings
+- **Message Expiration**: Preset duration options for auto-expiring messages
+- **Audit Log**: Activity audit log with settings PIN gate for parent access
+- **Connected Accounts**: New settings section showing integration status with disconnect capability
+- **Chore Management**: Delete button and enabled toggle added to chore modal and list view
+
+### Changed
+- **Calendar Event Layout**: Improved overlap handling and simplified AddEventModal
+- **Calendar Deduplication**: Runtime deduplication for cross-calendar and widget events
+- **Code Quality**: Deduplicated code, extracted shared utilities, and decomposed large components
+- **Shopping Categories**: Moved to Shopping page; renamed Settings sections
+
+### Fixed
+- **CI Lint**: Fixed unescaped apostrophe in WishListIntegrationsSection that broke the build-only CI job
+- **Calendar Sync**: Fixed settings getting wiped during sync and re-auth; fixed multi-account sync
+- **Calendar Toggle Styling**: Fixed toggle styling, screensaver interactivity, and shopping modal issues
+- **E2E Test Cleanup**: Added global Playwright teardown to sweep stale test data; fixed per-test cleanup deleting only the first match instead of all duplicates
+- **Architecture Review**: Fixed 5 bugs found during architecture review
+
 ## [1.0.2] - 2026-02-26
 
 ### Added
