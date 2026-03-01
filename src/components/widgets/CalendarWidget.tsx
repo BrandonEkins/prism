@@ -18,6 +18,7 @@ import {
 } from 'date-fns';
 import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { deduplicateEvents } from '@/lib/utils/calendarDedup';
 import { WidgetContainer, WidgetEmpty, useWidgetBgOverride } from './WidgetContainer';
 import {
   Badge,
@@ -102,17 +103,7 @@ export function CalendarWidget({
   const error = externalError ?? apiError;
   const rawEvents = externalEvents ?? apiEvents;
   const events = useMemo(() => {
-    const filtered = filterEvents(rawEvents);
-    // Runtime dedup: collapse events with the same title and exact start/end
-    // times across different calendars — display only one.
-    const seen = new Map<string, CalendarEvent>();
-    for (const event of filtered) {
-      const key = `${event.title}|${event.startTime.getTime()}|${event.endTime.getTime()}`;
-      if (!seen.has(key)) {
-        seen.set(key, event);
-      }
-    }
-    return Array.from(seen.values());
+    return deduplicateEvents(filterEvents(rawEvents));
   }, [filterEvents, rawEvents]);
 
   // Size awareness

@@ -27,37 +27,14 @@ import { createEventSchema, validateRequest } from '@/lib/validations';
 import { getCached, invalidateCache } from '@/lib/cache/redis';
 import { createCalendarEvent, refreshAccessToken } from '@/lib/integrations/google-calendar';
 import { decrypt, encrypt } from '@/lib/utils/crypto';
+import { formatEventRow } from '@/lib/utils/formatters';
 import { logActivity } from '@/lib/services/auditLog';
 
 // Cache events for 5 minutes
 const EVENTS_CACHE_TTL = 5 * 60;
 
 
-/**
- * EVENT RESPONSE TYPE
- * The shape of event data returned by the API.
- */
-interface EventResponse {
-  id: string;
-  title: string;
-  description: string | null;
-  location: string | null;
-  startTime: string;
-  endTime: string;
-  allDay: boolean;
-  recurring: boolean;
-  recurrenceRule: string | null;
-  color: string | null;
-  reminderMinutes: number | null;
-  calendarSource: {
-    id: string;
-    name: string;
-    color: string | null;
-    provider: string;
-  } | null;
-  createdAt: string;
-  updatedAt: string;
-}
+import type { CalendarEventResponse as EventResponse } from '@/types/calendar';
 
 
 /**
@@ -204,47 +181,7 @@ export async function GET(request: NextRequest) {
 
       // Format response
       // Color priority: event color > user color > calendar color > default
-      const formattedEvents: EventResponse[] = results.map((row) => {
-        // Determine the color to use
-        // Priority: event color > group color > user color > calendar color > default
-        let eventColor = row.color;
-        if (!eventColor && row.groupColor) {
-          eventColor = row.groupColor;
-        }
-        if (!eventColor && row.userColor) {
-          eventColor = row.userColor;
-        }
-        if (!eventColor && row.calendarSourceColor) {
-          eventColor = row.calendarSourceColor;
-        }
-        if (!eventColor && row.calendarSourceIsFamily) {
-          eventColor = '#F59E0B';
-        }
-
-        return {
-          id: row.id,
-          title: row.title,
-          description: row.description,
-          location: row.location,
-          startTime: row.startTime.toISOString(),
-          endTime: row.endTime.toISOString(),
-          allDay: row.allDay,
-          recurring: row.recurring,
-          recurrenceRule: row.recurrenceRule,
-          color: eventColor,
-          reminderMinutes: row.reminderMinutes,
-          calendarSource: row.calendarSourceId
-            ? {
-                id: row.calendarSourceId,
-                name: row.calendarSourceName!,
-                color: row.userColor || row.calendarSourceColor,
-                provider: row.calendarSourceProvider!,
-              }
-            : null,
-          createdAt: row.createdAt.toISOString(),
-          updatedAt: row.updatedAt.toISOString(),
-        };
-      });
+      const formattedEvents: EventResponse[] = results.map((row) => formatEventRow(row));
 
       return {
         events: formattedEvents,
@@ -309,6 +246,10 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const auth = await requireAuth();
   if (auth instanceof NextResponse) return auth;
+
+  const { rateLimitGuard } = await import('@/lib/cache/rateLimit');
+  const limited = await rateLimitGuard(auth.userId, 'events', 30, 60);
+  if (limited) return limited;
 
   try {
     const body = await request.json();
@@ -474,29 +415,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const response: EventResponse = {
-      id: eventWithSource.id,
-      title: eventWithSource.title,
-      description: eventWithSource.description,
-      location: eventWithSource.location,
-      startTime: eventWithSource.startTime.toISOString(),
-      endTime: eventWithSource.endTime.toISOString(),
-      allDay: eventWithSource.allDay,
-      recurring: eventWithSource.recurring,
-      recurrenceRule: eventWithSource.recurrenceRule,
-      color: eventWithSource.color || eventWithSource.calendarSourceColor,
-      reminderMinutes: eventWithSource.reminderMinutes,
-      calendarSource: eventWithSource.calendarSourceId
-        ? {
-            id: eventWithSource.calendarSourceId,
-            name: eventWithSource.calendarSourceName!,
-            color: eventWithSource.calendarSourceColor,
-            provider: eventWithSource.calendarSourceProvider!,
-          }
-        : null,
-      createdAt: eventWithSource.createdAt.toISOString(),
-      updatedAt: eventWithSource.updatedAt.toISOString(),
-    };
+    const response: EventResponse = formatEventRow(eventWithSource);
 
     // Invalidate events cache
     await invalidateCache('events:*');

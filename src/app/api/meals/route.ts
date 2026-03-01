@@ -114,6 +114,10 @@ export async function POST(request: NextRequest) {
   const auth = await requireAuth();
   if (auth instanceof NextResponse) return auth;
 
+  const { rateLimitGuard } = await import('@/lib/cache/rateLimit');
+  const limited = await rateLimitGuard(auth.userId, 'meals', 30, 60);
+  if (limited) return limited;
+
   try {
     const body = await request.json();
 
@@ -183,6 +187,9 @@ export async function POST(request: NextRequest) {
       summary: `Added meal: ${newMeal.name} (${newMeal.dayOfWeek} ${newMeal.mealType})`,
     });
 
+    // Note: Cannot use formatMealRow here because the insert().returning() result
+    // lacks joined user fields (createdByName, createdByColor, cookedByUserName,
+    // cookedByUserColor) that formatMealRow expects from the joined query in GET.
     return NextResponse.json({
       id: newMeal.id,
       name: newMeal.name,

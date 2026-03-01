@@ -7,6 +7,7 @@ import { createGoalSchema, validateRequest } from '@/lib/validations';
 import { getCached, invalidateCache } from '@/lib/cache/redis';
 import { rateLimitGuard } from '@/lib/cache/rateLimit';
 import { computeWaterfall, getGoalPeriodKey } from '@/lib/utils/pointWaterfall';
+import { formatGoalRow } from '@/lib/utils/formatters';
 
 export async function GET(request: NextRequest) {
   const auth = await getDisplayAuth();
@@ -107,20 +108,7 @@ export async function GET(request: NextRequest) {
       }
 
       return {
-        goals: goalRows.map((g) => ({
-          id: g.id,
-          name: g.name,
-          description: g.description,
-          pointCost: g.pointCost,
-          emoji: g.emoji,
-          priority: g.priority,
-          recurring: g.recurring,
-          recurrencePeriod: g.recurrencePeriod,
-          active: g.active,
-          lastResetAt: g.lastResetAt.toISOString(),
-          createdAt: g.createdAt.toISOString(),
-          fullyAchieved: fullyAchieved[g.id] || false,
-        })),
+        goals: goalRows.map((g) => formatGoalRow(g, fullyAchieved[g.id] || false)),
         progress,
         children: children.map((c) => ({
           userId: c.id,

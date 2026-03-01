@@ -21,6 +21,7 @@ import { eq, and, asc } from 'drizzle-orm';
 import { createShoppingItemSchema, validateRequest } from '@/lib/validations';
 import { invalidateCache } from '@/lib/cache/redis';
 import { logActivity } from '@/lib/services/auditLog';
+import { formatShoppingItemRow } from '@/lib/utils/formatters';
 
 /**
  * GET /api/shopping-items
@@ -71,24 +72,7 @@ export async function GET(request: NextRequest) {
       : await query;
 
     // Format response
-    const formattedItems = results.map(item => ({
-      id: item.id,
-      name: item.name,
-      quantity: item.quantity,
-      unit: item.unit,
-      category: item.category,
-      checked: item.checked,
-      recurring: item.recurring,
-      recurrenceInterval: item.recurrenceInterval,
-      notes: item.notes,
-      listId: item.listId,
-      createdAt: item.createdAt.toISOString(),
-      addedBy: item.addedById ? {
-        id: item.addedById,
-        name: item.addedByName,
-        color: item.addedByColor,
-      } : null,
-    }));
+    const formattedItems = results.map(item => formatShoppingItemRow(item));
 
     return NextResponse.json({ items: formattedItems });
   } catch (error) {

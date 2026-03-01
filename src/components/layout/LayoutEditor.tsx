@@ -14,6 +14,9 @@ import { CoordinateEditor } from './CoordinateEditor';
 import { validateCommunityLayout } from '@/lib/community/validateLayout';
 import type { WidgetConfig } from '@/lib/hooks/useLayouts';
 import { useScreenSafeZones } from '@/lib/hooks/useScreenSafeZones';
+import { LayoutEditorShareDialog } from './LayoutEditorShareDialog';
+import { LayoutEditorImportDialog } from './LayoutEditorImportExport';
+import { CreateDashboardDialog } from './LayoutEditorDashboardManager';
 
 export interface SavedLayout {
   id: string;
@@ -96,23 +99,6 @@ interface LayoutExportV2 {
   widgets: ExportWidget[];
 }
 
-function validateImport(data: unknown): LayoutExportV2 | null {
-  if (!data || typeof data !== 'object') return null;
-  const obj = data as Record<string, unknown>;
-  if (obj.type !== 'prism-layout') return null;
-  if (typeof obj.version !== 'number') return null;
-  if (obj.mode !== 'dashboard' && obj.mode !== 'screensaver') return null;
-  if (!Array.isArray(obj.widgets)) return null;
-  for (const w of obj.widgets) {
-    if (!w || typeof w !== 'object') return null;
-    const wObj = w as Record<string, unknown>;
-    if (typeof wObj.i !== 'string' || typeof wObj.x !== 'number' ||
-        typeof wObj.y !== 'number' || typeof wObj.w !== 'number' ||
-        typeof wObj.h !== 'number') return null;
-  }
-  return obj as unknown as LayoutExportV2;
-}
-
 type ActivePopover = 'dashboard' | 'widgets' | 'templates' | 'community' | 'preview' | 'more' | 'save' | null;
 
 export function LayoutEditor({
@@ -158,22 +144,10 @@ export function LayoutEditor({
 
   const [activePopover, setActivePopover] = useState<ActivePopover>(null);
   const [showImportDialog, setShowImportDialog] = useState(false);
-  const [importText, setImportText] = useState('');
-  const [importError, setImportError] = useState('');
   const [exportFeedback, setExportFeedback] = useState('');
   const [saveFeedback, setSaveFeedback] = useState('');
   const [showShareDialog, setShowShareDialog] = useState(false);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [createForm, setCreateForm] = useState({ name: '', startFrom: 'template' as 'blank' | 'template' | 'copy' });
-  const [shareForm, setShareForm] = useState({
-    name: '',
-    description: '',
-    author: '',
-    screenSizes: [] as string[],
-    orientation: 'landscape' as 'landscape' | 'portrait',
-    tags: '',
-  });
-  const [shareErrors, setShareErrors] = useState<string[]>([]);
   const [focusedWidget, setFocusedWidget] = useState<string | null>(null);
   const toolbarRef = useRef<HTMLDivElement>(null);
 
@@ -306,43 +280,15 @@ export function LayoutEditor({
   };
 
   const handleImportOpen = () => {
-    setImportText('');
-    setImportError('');
     setShowImportDialog(true);
     setActivePopover(null);
   };
 
-  const handleImportApply = () => {
-    try {
-      const parsed = JSON.parse(importText);
-      const validated = validateImport(parsed);
-      if (!validated) {
-        setImportError('Invalid layout format. Expected a Prism layout export.');
-        return;
-      }
-      const expectedMode = editingScreensaver ? 'screensaver' : 'dashboard';
-      if (validated.mode !== expectedMode) {
-        setImportError(`This is a ${validated.mode} layout, but you're editing the ${expectedMode}. Switch modes first.`);
-        return;
-      }
-      const importedWidgets = validated.widgets.map(w => ({
-        i: w.i,
-        x: w.x,
-        y: w.y,
-        w: w.w,
-        h: w.h,
-        visible: true,
-        ...(w.backgroundColor && { backgroundColor: w.backgroundColor }),
-        ...(w.backgroundOpacity !== undefined && { backgroundOpacity: w.backgroundOpacity }),
-      }));
-      if (editingScreensaver && onSelectScreensaverPreset) {
-        onSelectScreensaverPreset(importedWidgets);
-      } else {
-        onWidgetsChange(importedWidgets);
-      }
-      setShowImportDialog(false);
-    } catch {
-      setImportError('Invalid JSON. Please paste a valid layout export.');
+  const handleImportApply = (importedWidgets: WidgetConfig[]) => {
+    if (editingScreensaver && onSelectScreensaverPreset) {
+      onSelectScreensaverPreset(importedWidgets);
+    } else {
+      onWidgetsChange(importedWidgets);
     }
   };
 
@@ -357,47 +303,8 @@ export function LayoutEditor({
   };
 
   const handleShareOpen = () => {
-    setShareForm({
-      name: layoutName || '',
-      description: '',
-      author: '',
-      screenSizes: [],
-      orientation: 'landscape',
-      tags: '',
-    });
-    setShareErrors([]);
     setShowShareDialog(true);
     setActivePopover(null);
-  };
-
-  const handleShareSubmit = () => {
-    const exportData = buildExportData();
-    const submissionData = {
-      ...exportData,
-      name: shareForm.name,
-      description: shareForm.description,
-      author: shareForm.author,
-      screenSizes: shareForm.screenSizes,
-      orientation: shareForm.orientation,
-      tags: shareForm.tags.split(',').map(t => t.trim()).filter(Boolean),
-    };
-
-    const result = validateCommunityLayout(submissionData, { communitySubmission: true });
-    if (!result.valid) {
-      setShareErrors(result.errors);
-      return;
-    }
-
-    const title = encodeURIComponent(`Community Layout: ${shareForm.name}`);
-    const body = encodeURIComponent(
-      '```json\n' + JSON.stringify(submissionData, null, 2) + '\n```\n\n' +
-      `**Author:** ${shareForm.author}\n` +
-      `**Screen Sizes:** ${shareForm.screenSizes.join(', ')}\n` +
-      `**Orientation:** ${shareForm.orientation}\n`
-    );
-    const url = `https://github.com/sandydargoport/prism/issues/new?labels=layout-submission&title=${title}&body=${body}`;
-    window.open(url, '_blank');
-    setShowShareDialog(false);
   };
 
   const handleRename = () => {
@@ -423,15 +330,8 @@ export function LayoutEditor({
   };
 
   const handleCreateOpen = () => {
-    setCreateForm({ name: '', startFrom: 'template' });
     setShowCreateDialog(true);
     setActivePopover(null);
-  };
-
-  const handleCreateSubmit = () => {
-    if (!createForm.name.trim()) return;
-    onCreateDashboard?.(createForm.name.trim(), createForm.startFrom);
-    setShowCreateDialog(false);
   };
 
   const btnClass = "px-2 py-1.5 text-xs rounded-md whitespace-nowrap transition-colors";
@@ -748,241 +648,26 @@ export function LayoutEditor({
         </div>
       </div>
 
-      {/* Create Dashboard modal */}
-      {showCreateDialog && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50" onClick={() => setShowCreateDialog(false)}>
-          <div className="bg-popover border border-border rounded-lg shadow-xl p-4 max-w-sm w-full mx-4 space-y-3" onClick={e => e.stopPropagation()}>
-            <div className="text-sm font-medium">New Dashboard</div>
-            <div>
-              <label className="text-xs text-muted-foreground">Name</label>
-              <input
-                type="text"
-                value={createForm.name}
-                onChange={e => setCreateForm(f => ({ ...f, name: e.target.value }))}
-                placeholder="e.g. Kitchen Display"
-                className="w-full px-2 py-1.5 text-sm bg-muted border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                maxLength={100}
-                autoFocus
-                onKeyDown={e => { if (e.key === 'Enter') handleCreateSubmit(); }}
-              />
-            </div>
-            <div>
-              <label className="text-xs text-muted-foreground block mb-1">Start from</label>
-              <div className="flex gap-2">
-                {([
-                  { value: 'template' as const, label: 'Default Template' },
-                  { value: 'copy' as const, label: 'Copy Current' },
-                  { value: 'blank' as const, label: 'Blank' },
-                ]).map(opt => (
-                  <button
-                    key={opt.value}
-                    onClick={() => setCreateForm(f => ({ ...f, startFrom: opt.value }))}
-                    className={`px-2 py-1 text-xs rounded-md border transition-colors ${
-                      createForm.startFrom === opt.value
-                        ? 'bg-primary text-primary-foreground border-primary'
-                        : 'bg-muted border-border hover:bg-accent'
-                    }`}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="flex gap-2 justify-end">
-              <button
-                onClick={() => setShowCreateDialog(false)}
-                className="px-3 py-1.5 text-sm rounded-md bg-muted hover:bg-accent transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleCreateSubmit}
-                disabled={!createForm.name.trim()}
-                className="px-3 py-1.5 text-sm rounded-md bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
-              >
-                Create
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <CreateDashboardDialog
+        open={showCreateDialog}
+        onClose={() => setShowCreateDialog(false)}
+        onCreate={(name, startFrom) => { onCreateDashboard?.(name, startFrom); setShowCreateDialog(false); }}
+      />
 
-      {/* Import modal */}
-      {showImportDialog && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50" onClick={() => setShowImportDialog(false)}>
-          <div className="bg-popover border border-border rounded-lg shadow-xl p-4 max-w-lg w-full mx-4 space-y-3" onClick={e => e.stopPropagation()}>
-            <div className="text-sm font-medium">Import Layout</div>
-            <textarea
-              className="w-full h-32 text-xs font-mono bg-muted text-foreground border border-border rounded-md p-2 resize-none focus:outline-none focus:ring-2 focus:ring-primary"
-              placeholder='Paste exported layout JSON here...'
-              value={importText}
-              onChange={(e) => { setImportText(e.target.value); setImportError(''); }}
-            />
-            {importError && (
-              <p className="text-xs text-destructive">{importError}</p>
-            )}
-            <div className="flex gap-2 justify-end">
-              <button
-                onClick={() => setShowImportDialog(false)}
-                className="px-3 py-1.5 text-sm rounded-md bg-muted hover:bg-accent transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleImportApply}
-                disabled={!importText.trim()}
-                className="px-3 py-1.5 text-sm rounded-md bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
-              >
-                Apply
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <LayoutEditorImportDialog
+        open={showImportDialog}
+        onClose={() => setShowImportDialog(false)}
+        editingScreensaver={editingScreensaver}
+        onApply={handleImportApply}
+      />
 
-      {/* Share to Community modal */}
-      {showShareDialog && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50" onClick={() => setShowShareDialog(false)}>
-          <div className="bg-popover border border-border rounded-lg shadow-xl p-4 max-w-2xl w-full mx-4 space-y-3" onClick={e => e.stopPropagation()}>
-            <div className="text-sm font-medium">Share to Community</div>
-            <p className="text-xs text-muted-foreground">
-              Submit your layout to the Prism community gallery. This opens a GitHub Issue with your layout data.
-            </p>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-xs text-muted-foreground">Layout Name *</label>
-                <input
-                  type="text"
-                  value={shareForm.name}
-                  onChange={e => setShareForm(f => ({ ...f, name: e.target.value }))}
-                  className="w-full px-2 py-1 text-sm bg-muted border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-primary"
-                  maxLength={100}
-                />
-              </div>
-              <div>
-                <label className="text-xs text-muted-foreground">Author Name *</label>
-                <input
-                  type="text"
-                  value={shareForm.author}
-                  onChange={e => setShareForm(f => ({ ...f, author: e.target.value }))}
-                  className="w-full px-2 py-1 text-sm bg-muted border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-primary"
-                  maxLength={50}
-                />
-              </div>
-            </div>
-            <div>
-              <label className="text-xs text-muted-foreground">Description *</label>
-              <input
-                type="text"
-                value={shareForm.description}
-                onChange={e => setShareForm(f => ({ ...f, description: e.target.value }))}
-                className="w-full px-2 py-1 text-sm bg-muted border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-primary"
-              />
-            </div>
-            <div className="flex items-center gap-4">
-              <div>
-                <label className="text-xs text-muted-foreground block mb-1">Target Resolutions *</label>
-                <div className="flex gap-1 flex-wrap items-center">
-                  {['1920x1080', '2560x1440', '3840x2160', '2560x1600', '2048x1536', '1366x768'].map(size => (
-                    <button
-                      key={size}
-                      onClick={() => setShareForm(f => ({
-                        ...f,
-                        screenSizes: f.screenSizes.includes(size)
-                          ? f.screenSizes.filter(s => s !== size)
-                          : [...f.screenSizes, size],
-                      }))}
-                      className={`px-2 py-0.5 text-xs rounded-full border transition-colors ${
-                        shareForm.screenSizes.includes(size)
-                          ? 'bg-primary text-primary-foreground border-primary'
-                          : 'bg-muted border-border hover:bg-accent'
-                      }`}
-                    >
-                      {size}
-                    </button>
-                  ))}
-                  <input
-                    type="text"
-                    placeholder="Custom (e.g. 2736x1824)"
-                    className="px-2 py-0.5 text-xs bg-muted border border-border rounded-full w-[155px] focus:outline-none focus:ring-1 focus:ring-primary"
-                    onKeyDown={e => {
-                      if (e.key === 'Enter') {
-                        const val = (e.target as HTMLInputElement).value.trim();
-                        if (/^\d{3,5}x\d{3,5}$/.test(val) && !shareForm.screenSizes.includes(val)) {
-                          setShareForm(f => ({ ...f, screenSizes: [...f.screenSizes, val] }));
-                          (e.target as HTMLInputElement).value = '';
-                        }
-                      }
-                    }}
-                  />
-                </div>
-                {shareForm.screenSizes.filter(s => !['1920x1080', '2560x1440', '3840x2160', '2560x1600', '2048x1536', '1366x768'].includes(s)).length > 0 && (
-                  <div className="flex gap-1 flex-wrap mt-1">
-                    {shareForm.screenSizes.filter(s => !['1920x1080', '2560x1440', '3840x2160', '2560x1600', '2048x1536', '1366x768'].includes(s)).map(size => (
-                      <button
-                        key={size}
-                        onClick={() => setShareForm(f => ({ ...f, screenSizes: f.screenSizes.filter(s => s !== size) }))}
-                        className="px-2 py-0.5 text-xs rounded-full border bg-primary text-primary-foreground border-primary transition-colors"
-                      >
-                        {size} &times;
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-              <div>
-                <label className="text-xs text-muted-foreground block mb-1">Orientation *</label>
-                <div className="flex gap-1">
-                  {(['landscape', 'portrait'] as const).map(orient => (
-                    <button
-                      key={orient}
-                      onClick={() => setShareForm(f => ({ ...f, orientation: orient }))}
-                      className={`px-2 py-0.5 text-xs rounded-full border transition-colors ${
-                        shareForm.orientation === orient
-                          ? 'bg-primary text-primary-foreground border-primary'
-                          : 'bg-muted border-border hover:bg-accent'
-                      }`}
-                    >
-                      {orient}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-            <div>
-              <label className="text-xs text-muted-foreground">Tags (comma-separated)</label>
-              <input
-                type="text"
-                value={shareForm.tags}
-                onChange={e => setShareForm(f => ({ ...f, tags: e.target.value }))}
-                placeholder="e.g. family, minimal, kitchen"
-                className="w-full px-2 py-1 text-sm bg-muted border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-primary"
-              />
-            </div>
-            {shareErrors.length > 0 && (
-              <div className="bg-destructive/10 border border-destructive/30 rounded-md p-2">
-                {shareErrors.map((err, i) => (
-                  <p key={i} className="text-xs text-destructive">{err}</p>
-                ))}
-              </div>
-            )}
-            <div className="flex gap-2 justify-end">
-              <button
-                onClick={() => setShowShareDialog(false)}
-                className="px-3 py-1.5 text-sm rounded-md bg-muted hover:bg-accent transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleShareSubmit}
-                className="px-3 py-1.5 text-sm rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-              >
-                Open GitHub Issue
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <LayoutEditorShareDialog
+        open={showShareDialog}
+        onClose={() => setShowShareDialog(false)}
+        layoutName={layoutName}
+        mode={mode}
+        currentWidgets={currentWidgets}
+      />
       <ConfirmDialog {...confirmDialogProps} />
     </>
   );

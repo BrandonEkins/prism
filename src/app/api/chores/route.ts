@@ -22,6 +22,7 @@ import { createChoreSchema, validateRequest } from '@/lib/validations';
 import { format } from 'date-fns';
 import { getCached, invalidateCache } from '@/lib/cache/redis';
 import { logActivity } from '@/lib/services/auditLog';
+import { formatChoreRow } from '@/lib/utils/formatters';
 
 /**
  * GET /api/chores
@@ -123,31 +124,7 @@ export async function GET(request: NextRequest) {
 
       const formattedChores = filteredResults.map(row => {
         const pendingCompletion = pendingMap.get(row.id);
-        return {
-          id: row.id,
-          title: row.title,
-          description: row.description,
-          category: row.category,
-          frequency: row.frequency,
-          customIntervalDays: row.customIntervalDays,
-          startDay: row.startDay || null,
-          lastCompleted: row.lastCompleted?.toISOString() || null,
-          nextDue: row.nextDue || null,
-          pointValue: row.pointValue,
-          requiresApproval: row.requiresApproval,
-          enabled: row.enabled,
-          createdAt: row.createdAt.toISOString(),
-          assignedTo: row.assignedToId ? {
-            id: row.assignedToId,
-            name: row.assignedToName,
-            color: row.assignedToColor,
-          } : null,
-          pendingApproval: pendingCompletion ? {
-            completionId: pendingCompletion.completionId,
-            completedAt: pendingCompletion.completedAt,
-            completedBy: pendingCompletion.completedBy,
-          } : null,
-        };
+        return formatChoreRow(row, pendingCompletion);
       });
 
       return { chores: formattedChores };

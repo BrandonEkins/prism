@@ -18,6 +18,7 @@ import { eq, asc, sql } from 'drizzle-orm';
 import { createWishItemSchema, validateRequest } from '@/lib/validations';
 import { invalidateCache } from '@/lib/cache/redis';
 import { logActivity } from '@/lib/services/auditLog';
+import { formatWishItemRow } from '@/lib/utils/formatters';
 
 // Alias for claimedBy user join
 import { alias } from 'drizzle-orm/pg-core';
@@ -67,28 +68,7 @@ export async function GET(request: NextRequest) {
 
     const formattedItems = results.map(item => {
       const isOwnerViewing = viewerId === item.memberId;
-      return {
-        id: item.id,
-        memberId: item.memberId,
-        name: item.name,
-        url: item.url,
-        notes: item.notes,
-        sortOrder: item.sortOrder,
-        // Secret claims: hide claim info from the list owner
-        ...(isOwnerViewing
-          ? { claimed: false, claimedBy: null, claimedAt: null }
-          : {
-              claimed: item.claimed,
-              claimedBy: item.claimedById
-                ? { id: item.claimedById, name: item.claimedByName, color: item.claimedByColor }
-                : null,
-              claimedAt: item.claimedAt?.toISOString() || null,
-            }),
-        addedBy: item.addedById
-          ? { id: item.addedById, name: item.addedByName, color: item.addedByColor }
-          : null,
-        createdAt: item.createdAt.toISOString(),
-      };
+      return formatWishItemRow(item, isOwnerViewing);
     });
 
     return NextResponse.json({ items: formattedItems });

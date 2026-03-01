@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import {
   format,
   startOfWeek,
@@ -12,16 +12,13 @@ import {
   subWeeks,
   subDays,
 } from 'date-fns';
-import { useCalendarEvents, useCalendarSources } from '@/lib/hooks';
+import { useCalendarEvents, useCalendarFilter } from '@/lib/hooks';
+import { deduplicateEvents } from '@/lib/utils/calendarDedup';
 import type { CalendarEvent } from '@/types/calendar';
 
 export type CalendarViewType = 'day' | 'week' | 'weekVertical' | 'twoWeek' | 'month' | 'threeMonth';
 
-export interface CalendarGroup {
-  id: string;
-  name: string;
-  color: string;
-}
+export type { CalendarGroup } from '@/lib/hooks';
 
 export function useCalendarViewData() {
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -29,105 +26,25 @@ export function useCalendarViewData() {
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [showAddEvent, setShowAddEvent] = useState(false);
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
-  const [selectedCalendarIds, setSelectedCalendarIds] = useState<Set<string>>(new Set(['all']));
   const [mergedView, setMergedView] = useState(false);
 
-  const { calendars: calendarSources } = useCalendarSources();
-  const filterableCalendars = calendarSources.filter((cal) => cal.enabled);
-
-  const [calendarGroups, setCalendarGroups] = useState<CalendarGroup[]>([]);
-
-  useEffect(() => {
-    async function fetchGroups() {
-      try {
-        const res = await fetch('/api/calendar-groups');
-        if (res.ok) {
-          const data = await res.json();
-          setCalendarGroups((data.groups || []).map((g: CalendarGroup) => ({
-            id: g.id, name: g.name, color: g.color,
-          })));
-        }
-      } catch { /* ignore */ }
-    }
-    fetchGroups();
-  }, [calendarSources]);
-
-  const toggleCalendar = useCallback((id: string) => {
-    setSelectedCalendarIds((prev) => {
-      const newSet = new Set(prev);
-      if (id === 'all') {
-        if (newSet.has('all')) return new Set();
-        const all = new Set(['all']);
-        calendarGroups.forEach((g) => all.add(g.id));
-        return all;
-      }
-      newSet.delete('all');
-      if (newSet.has(id)) {
-        newSet.delete(id);
-      } else {
-        newSet.add(id);
-      }
-      if (newSet.size === calendarGroups.length) {
-        newSet.add('all');
-      }
-      return newSet;
-    });
-  }, [calendarGroups]);
-
-  // Only expand 'all' on initial load (when calendarGroups first populates)
-  const [initializedCalendars, setInitializedCalendars] = useState(false);
-  useEffect(() => {
-    if (!initializedCalendars && calendarGroups.length > 0) {
-      const all = new Set(['all']);
-      calendarGroups.forEach((g) => all.add(g.id));
-      setSelectedCalendarIds(all);
-      setInitializedCalendars(true);
-    }
-  }, [calendarGroups, initializedCalendars]);
-
+  const { selectedCalendarIds, toggleCalendar, filterEvents, calendarGroups } = useCalendarFilter();
   const { events: apiEvents, loading, error, refresh: refreshEvents } = useCalendarEvents({ daysToShow: 60 });
 
   const events: CalendarEvent[] = useMemo(() => {
-    const filtered = apiEvents
-      .map((event) => ({
-        id: event.id,
-        title: event.title,
-        startTime: event.startTime,
-        endTime: event.endTime,
-        allDay: event.allDay,
-        color: event.color,
-        location: event.location,
-        calendarName: event.calendarName,
-        calendarId: event.calendarId,
-      }))
-      .filter((event) => {
-        if (selectedCalendarIds.has('all')) return true;
-        if (selectedCalendarIds.size === 0) return false;
-        const calSource = filterableCalendars.find((c) => c.id === event.calendarId);
-        if (!calSource) return false;
-        if (calSource.groupId && selectedCalendarIds.has(calSource.groupId)) return true;
-        if ((calSource as { isFamily?: boolean }).isFamily) {
-          const familyGroup = calendarGroups.find((g) => g.name === 'Family');
-          if (familyGroup && selectedCalendarIds.has(familyGroup.id)) return true;
-        }
-        if (calSource.user && selectedCalendarIds.has(calSource.user.id)) return true;
-        return false;
-      });
-
-    // Runtime deduplication: collapse events that share the same title and
-    // exact start/end times across different calendars. The events still
-    // exist in each calendar (nothing is deleted) — we just display one.
-    // Which one survives depends on which calendars are active (pill state),
-    // since filtering above already removed events from inactive calendars.
-    const seen = new Map<string, CalendarEvent>();
-    for (const event of filtered) {
-      const key = `${event.title}|${event.startTime.getTime()}|${event.endTime.getTime()}`;
-      if (!seen.has(key)) {
-        seen.set(key, event);
-      }
-    }
-    return Array.from(seen.values());
-  }, [apiEvents, selectedCalendarIds, filterableCalendars, calendarGroups]);
+    const mapped = apiEvents.map((event) => ({
+      id: event.id,
+      title: event.title,
+      startTime: event.startTime,
+      endTime: event.endTime,
+      allDay: event.allDay,
+      color: event.color,
+      location: event.location,
+      calendarName: event.calendarName,
+      calendarId: event.calendarId,
+    }));
+    return deduplicateEvents(filterEvents(mapped));
+  }, [apiEvents, filterEvents]);
 
   const goToToday = useCallback(() => setCurrentDate(new Date()), []);
 

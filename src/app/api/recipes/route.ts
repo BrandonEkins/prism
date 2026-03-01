@@ -4,6 +4,7 @@ import { recipes, users } from '@/lib/db/schema';
 import { eq, desc, ilike, or, sql } from 'drizzle-orm';
 import { requireAuth, requireRole, getDisplayAuth } from '@/lib/auth';
 import { invalidateCache, getCached } from '@/lib/cache/redis';
+import { formatRecipeRow } from '@/lib/utils/formatters';
 
 async function fetchRecipes(
   search: string | null,
@@ -85,7 +86,7 @@ async function fetchRecipes(
   const totalCount = countResult[0]?.count ?? 0;
 
   return {
-    recipes: recipeList,
+    recipes: recipeList.map(row => formatRecipeRow(row)),
     total: totalCount,
     limit,
     offset,
@@ -137,6 +138,10 @@ export async function POST(request: NextRequest) {
   const forbidden = requireRole(auth, 'canManageRecipes');
   if (forbidden) return forbidden;
 
+  const { rateLimitGuard } = await import('@/lib/cache/rateLimit');
+  const limited = await rateLimitGuard(auth.userId, 'recipes', 30, 60);
+  if (limited) return limited;
+
   try {
     const body = await request.json();
 
@@ -172,7 +177,45 @@ export async function POST(request: NextRequest) {
 
     await invalidateCache('recipes:*');
 
-    return NextResponse.json(newRecipe, { status: 201 });
+    // Re-query with user join to get createdByName for the formatter
+    const [fullRecipe] = await db
+      .select({
+        id: recipes.id,
+        name: recipes.name,
+        description: recipes.description,
+        url: recipes.url,
+        sourceType: recipes.sourceType,
+        ingredients: recipes.ingredients,
+        instructions: recipes.instructions,
+        notes: recipes.notes,
+        prepTime: recipes.prepTime,
+        cookTime: recipes.cookTime,
+        servings: recipes.servings,
+        tags: recipes.tags,
+        cuisine: recipes.cuisine,
+        category: recipes.category,
+        imageUrl: recipes.imageUrl,
+        rating: recipes.rating,
+        timesMade: recipes.timesMade,
+        lastMadeAt: recipes.lastMadeAt,
+        isFavorite: recipes.isFavorite,
+        createdBy: recipes.createdBy,
+        createdByName: users.name,
+        createdAt: recipes.createdAt,
+        updatedAt: recipes.updatedAt,
+      })
+      .from(recipes)
+      .leftJoin(users, eq(recipes.createdBy, users.id))
+      .where(eq(recipes.id, newRecipe!.id));
+
+    if (!fullRecipe) {
+      return NextResponse.json(
+        { error: 'Recipe created but could not be retrieved' },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json(formatRecipeRow(fullRecipe), { status: 201 });
   } catch (error) {
     console.error('Error creating recipe:', error);
     return NextResponse.json(
