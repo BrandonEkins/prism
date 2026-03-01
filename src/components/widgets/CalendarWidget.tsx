@@ -101,7 +101,19 @@ export function CalendarWidget({
   const loading = externalLoading ?? apiLoading;
   const error = externalError ?? apiError;
   const rawEvents = externalEvents ?? apiEvents;
-  const events = useMemo(() => filterEvents(rawEvents), [filterEvents, rawEvents]);
+  const events = useMemo(() => {
+    const filtered = filterEvents(rawEvents);
+    // Runtime dedup: collapse events with the same title and exact start/end
+    // times across different calendars — display only one.
+    const seen = new Map<string, CalendarEvent>();
+    for (const event of filtered) {
+      const key = `${event.title}|${event.startTime.getTime()}|${event.endTime.getTime()}`;
+      if (!seen.has(key)) {
+        seen.set(key, event);
+      }
+    }
+    return Array.from(seen.values());
+  }, [filterEvents, rawEvents]);
 
   // Size awareness
   const availableViews = useMemo(() => getAvailableViews(gridW, gridH), [gridW, gridH]);
