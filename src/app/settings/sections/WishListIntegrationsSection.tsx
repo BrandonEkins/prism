@@ -24,7 +24,7 @@ export function WishListIntegrationsSection() {
       <div>
         <h2 className="text-2xl font-bold">Wish List Sync</h2>
         <p className="text-muted-foreground">
-          Sync family members' wish lists with Microsoft To-Do
+          Sync family members&apos; wish lists with Microsoft To-Do
         </p>
       </div>
 
