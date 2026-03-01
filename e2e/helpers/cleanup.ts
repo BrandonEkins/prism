@@ -57,17 +57,19 @@ export async function deleteShoppingList(page: Page, id: string): Promise<boolea
 }
 
 /**
- * Delete a chore by its title via API lookup.
+ * Delete all chores matching a title via API lookup.
  */
 export async function deleteChoreByTitle(page: Page, title: string): Promise<boolean> {
   const res = await page.request.get('/api/chores');
   if (!res.ok()) return false;
   const data = await res.json();
   const chores = data.chores || data || [];
-  const match = chores.find((c: { title: string }) => c.title === title);
-  if (!match) return false;
-  const delRes = await page.request.delete(`/api/chores/${match.id}`);
-  return delRes.ok();
+  const matches = chores.filter((c: { title: string }) => c.title === title);
+  if (matches.length === 0) return false;
+  const results = await Promise.all(
+    matches.map((c: { id: string }) => page.request.delete(`/api/chores/${c.id}`))
+  );
+  return results.every(r => r.ok());
 }
 
 /**
