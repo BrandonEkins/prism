@@ -231,6 +231,27 @@ export const createGoalSchema = z.object({
 
 export const updateGoalSchema = createGoalSchema.partial();
 
+// BUS ROUTE SCHEMAS
+
+export const createBusRouteSchema = z.object({
+  studentName: z.string().min(1, 'Student name is required').max(100),
+  userId: uuidSchema.optional(),
+  tripId: z.string().min(1, 'Trip ID is required').max(50),
+  direction: z.enum(['AM', 'PM']),
+  label: z.string().min(1, 'Label is required').max(255),
+  scheduledTime: z.string().regex(/^\d{2}:\d{2}$/, 'Must be HH:mm format'),
+  activeDays: z.array(z.number().int().min(0).max(6)).optional().default([1, 2, 3, 4, 5]),
+  checkpoints: z.array(z.object({
+    name: z.string().min(1).max(255),
+    sortOrder: z.number().int().min(0),
+  })).optional().default([]),
+  stopName: z.string().max(255).optional(),
+  schoolName: z.string().max(255).optional(),
+  enabled: z.boolean().optional().default(true),
+});
+
+export const updateBusRouteSchema = createBusRouteSchema.partial();
+
 // API TOKEN SCHEMAS
 
 export const createApiTokenSchema = z.object({

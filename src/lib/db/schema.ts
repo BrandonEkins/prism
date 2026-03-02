@@ -1196,6 +1196,98 @@ export const wishItemSources = pgTable('wish_item_sources', {
   memberIdx: index('wish_item_sources_member_idx').on(table.memberId),
 }));
 
+// Bus Tracking
+
+export const busRoutes = pgTable('bus_routes', {
+  id: uuid('id').defaultRandom().primaryKey(),
+
+  studentName: varchar('student_name', { length: 100 }).notNull(),
+
+  // Optional link to a family member
+  userId: uuid('user_id').references(() => users.id, { onDelete: 'set null' }),
+
+  // FirstView trip ID (e.g., "28-C")
+  tripId: varchar('trip_id', { length: 50 }).notNull(),
+
+  direction: varchar('direction', { length: 10 }).notNull()
+    .$type<'AM' | 'PM'>(),
+
+  // Human-readable label (e.g., "Emma Morning Pickup")
+  label: varchar('label', { length: 255 }).notNull(),
+
+  // Expected arrival time (HH:mm format)
+  scheduledTime: varchar('scheduled_time', { length: 5 }).notNull(),
+
+  // Days of the week this route is active (1=Mon, 5=Fri)
+  activeDays: jsonb('active_days').default([1, 2, 3, 4, 5]).notNull()
+    .$type<number[]>(),
+
+  // Ordered geofence checkpoint labels (configured in settings)
+  checkpoints: jsonb('checkpoints').default([]).notNull()
+    .$type<{ name: string; sortOrder: number }[]>(),
+
+  // Final implicit checkpoints
+  stopName: varchar('stop_name', { length: 255 }),
+  schoolName: varchar('school_name', { length: 255 }),
+
+  enabled: boolean('enabled').default(true).notNull(),
+
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => ({
+  tripDirectionIdx: uniqueIndex('bus_routes_trip_direction_idx').on(table.tripId, table.direction),
+  enabledIdx: index('bus_routes_enabled_idx').on(table.enabled),
+}));
+
+
+export const busGeofenceLog = pgTable('bus_geofence_log', {
+  id: uuid('id').defaultRandom().primaryKey(),
+
+  routeId: uuid('route_id')
+    .references(() => busRoutes.id, { onDelete: 'cascade' })
+    .notNull(),
+
+  eventType: varchar('event_type', { length: 30 }).notNull()
+    .$type<'distance_based' | 'arrived_at_stop' | 'arrived_at_school'>(),
+
+  checkpointName: varchar('checkpoint_name', { length: 255 }).notNull(),
+  checkpointIndex: integer('checkpoint_index').notNull(),
+
+  eventTime: timestamp('event_time').notNull(),
+  dayOfWeek: integer('day_of_week').notNull(), // 0=Sun, 6=Sat
+  tripDate: date('trip_date').notNull(),
+
+  // Gmail message ID for deduplication
+  gmailMessageId: varchar('gmail_message_id', { length: 255 }).notNull(),
+
+  // Raw parsed data for debugging
+  rawData: jsonb('raw_data'),
+
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (table) => ({
+  routeIdIdx: index('bus_geofence_log_route_id_idx').on(table.routeId),
+  gmailMessageIdIdx: uniqueIndex('bus_geofence_log_gmail_message_id_idx').on(table.gmailMessageId),
+  tripDateIdx: index('bus_geofence_log_trip_date_idx').on(table.tripDate),
+  eventTimeIdx: index('bus_geofence_log_event_time_idx').on(table.eventTime),
+}));
+
+
+export const busRoutesRelations = relations(busRoutes, ({ one, many }) => ({
+  user: one(users, {
+    fields: [busRoutes.userId],
+    references: [users.id],
+  }),
+  geofenceLogs: many(busGeofenceLog),
+}));
+
+export const busGeofenceLogRelations = relations(busGeofenceLog, ({ one }) => ({
+  route: one(busRoutes, {
+    fields: [busGeofenceLog.routeId],
+    references: [busRoutes.id],
+  }),
+}));
+
+
 export const wishItemSourcesRelations = relations(wishItemSources, ({ one, many }) => ({
   user: one(users, {
     fields: [wishItemSources.userId],

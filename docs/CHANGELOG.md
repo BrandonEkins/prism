@@ -2,6 +2,18 @@
 
 All notable changes to Prism are documented in this file.
 
+## [Unreleased]
+
+### Added
+- **Bus Tracking**: Track school bus arrivals via FirstView email notifications
+  - Gmail integration for polling FirstView geofence notification emails
+  - Bus routes configuration with ordered geofence checkpoints
+  - Historical arrival time prediction using rolling median transit times
+  - Dashboard widget with progress dots, ETA, and adaptive color states
+  - Settings UI for Gmail connection, route management, and checkpoint ordering
+  - Adaptive polling: scales from 60s down to 10s as bus approaches
+  - API routes for status, sync, routes CRUD, connection management, and history
+
 ## [1.0.3] - 2026-03-01
 
 ### Added

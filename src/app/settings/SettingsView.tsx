@@ -22,6 +22,7 @@ import {
   Link2,
   ToggleLeft,
   ClipboardList,
+  Bus,
 } from 'lucide-react';
 import { PrismIcon } from '@/components/ui/PrismIcon';
 import { cn } from '@/lib/utils';
@@ -39,6 +40,7 @@ import { ShoppingIntegrationsSection } from './sections/ShoppingIntegrationsSect
 import { WishListIntegrationsSection } from './sections/WishListIntegrationsSection';
 import { BabysitterInfoSection } from './sections/BabysitterInfoSection';
 import { BackupSection } from './sections/BackupSection';
+import { BusTrackingSection } from './sections/BusTrackingSection';
 import { FeaturesSection } from './sections/FeaturesSection';
 import { ActivityLogSection } from './sections/ActivityLogSection';
 
@@ -133,6 +135,7 @@ export function SettingsView() {
     { id: 'shopping', label: 'Shopping Sync', icon: ShoppingCart },
     { id: 'wish', label: 'Wish List Sync', icon: Gift },
     { id: 'photos', label: 'Photos', icon: ImageIcon },
+    { id: 'bus', label: 'Bus Tracking', icon: Bus },
     { id: 'babysitter', label: 'Babysitter Info', icon: Baby },
     { id: 'display', label: 'Display', icon: Palette },
     { id: 'features', label: 'Features', icon: ToggleLeft },
@@ -192,6 +195,7 @@ export function SettingsView() {
               {activeSection === 'shopping' && <ShoppingIntegrationsSection />}
               {activeSection === 'wish' && <WishListIntegrationsSection />}
               {activeSection === 'photos' && <PhotosSettingsSection />}
+              {activeSection === 'bus' && <BusTrackingSection />}
               {activeSection === 'babysitter' && <BabysitterInfoSection />}
               {activeSection === 'display' && <DisplaySection />}
               {activeSection === 'features' && <FeaturesSection />}
