@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { requireAuth } from '@/lib/auth';
+import { getDisplayAuth } from '@/lib/auth';
 import { eq } from 'drizzle-orm';
 import { db } from '@/lib/db/client';
 import { busRoutes } from '@/lib/db/schema';
@@ -8,8 +8,10 @@ import { predictArrival } from '@/lib/services/bus-arrival-predictor';
 import { isGmailConnected } from '@/lib/services/bus-tracking-sync';
 
 export async function GET() {
-  const auth = await requireAuth();
-  if (auth instanceof NextResponse) return auth;
+  const auth = await getDisplayAuth();
+  if (!auth) {
+    return NextResponse.json({ routes: [], connected: false });
+  }
 
   try {
     const data = await getCached('bus:status', async () => {
