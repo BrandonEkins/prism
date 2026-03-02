@@ -27,8 +27,8 @@ test.describe('Dashboard', () => {
     // The main content area should be present
     await expect(page.locator('main').first()).toBeVisible();
 
-    // react-grid-layout renders items with class "react-grid-item"
-    const widgets = page.locator('.react-grid-item');
+    // CSS Grid dashboard renders widget cells with data-widget attribute
+    const widgets = page.locator('[data-widget]');
     await expect(widgets.first()).toBeVisible({ timeout: 10000 });
     expect(await widgets.count()).toBeGreaterThan(0);
   });

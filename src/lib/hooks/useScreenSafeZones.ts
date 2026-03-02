@@ -51,8 +51,8 @@ export const RESOLUTION_PRESETS: { label: string; width: number; height: number 
 const STORAGE_KEY = 'prism:screen-safe-zones';
 
 // --- Computation ---
-// The grid is responsive with react-grid-layout breakpoints:
-//   lg (>=1200px): 12 cols, md (>=996px): 9 cols, sm (>=768px): 6 cols, xs (<768px): 3 cols
+// The grid uses a 12-column CSS Grid layout.
+// On narrower screens, fewer columns may be used:
 // Cell size = screenWidth / cols, cells are square.
 // Visible rows = screenHeight / cellSize = cols * screenHeight / screenWidth.
 // In landscape, all reasonable screens are >=1200px → 12 cols.

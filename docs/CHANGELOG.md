@@ -4,6 +4,14 @@ All notable changes to Prism are documented in this file.
 
 ## [Unreleased]
 
+### Changed
+- **Dashboard Grid**: Replaced react-grid-layout with native CSS Grid + dnd-kit
+  - Display mode uses pure CSS Grid (SSR-safe, zero JS layout overhead)
+  - Edit mode uses dnd-kit for drag-to-move with grid snapping, pointer events for resize
+  - Custom snap modifier adapts to dynamic cell sizes across screen resolutions
+  - Touch support via dnd-kit TouchSensor
+  - Removes 5 packages from bundle (react-grid-layout and dependencies)
+
 ### Added
 - **Bus Tracking**: Track school bus arrivals via FirstView email notifications
   - Gmail OAuth integration for polling FirstView geofence notification emails
