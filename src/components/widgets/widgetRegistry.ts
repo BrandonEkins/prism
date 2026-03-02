@@ -13,6 +13,7 @@ const BirthdaysWidget = lazy(() => import('./BirthdaysWidget').then(m => ({ defa
 const PhotoWidget = lazy(() => import('./PhotoWidget').then(m => ({ default: m.PhotoWidget })));
 const PointsWidget = lazy(() => import('./PointsWidget').then(m => ({ default: m.PointsWidget })));
 const WishesWidget = lazy(() => import('./WishesWidget').then(m => ({ default: m.WishesWidget })));
+const BusTrackingWidget = lazy(() => import('./BusTrackingWidget').then(m => ({ default: m.BusTrackingWidget })));
 
 export interface WidgetProps {
   className?: string;
@@ -144,6 +145,15 @@ export const WIDGET_REGISTRY: Record<string, WidgetRegistryEntry> = {
     defaultW: 3,
     defaultH: 4,
   },
+  busTracking: {
+    component: BusTrackingWidget,
+    label: 'Bus Tracker',
+    icon: 'Bus',
+    minW: 2,
+    minH: 2,
+    defaultW: 3,
+    defaultH: 3,
+  },
 };
 
 export const ALL_WIDGET_TYPES = Object.keys(WIDGET_REGISTRY);
@@ -160,4 +170,5 @@ export const SCREENSAVER_WIDGETS = [
   { id: 'meals', label: 'Meals' },
   { id: 'photos', label: 'Photos' },
   { id: 'wishes', label: 'Wishes' },
+  { id: 'busTracking', label: 'Bus Tracker' },
 ];
