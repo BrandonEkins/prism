@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS public.api_credentials (
+CREATE TABLE IF NOT EXISTS api_credentials (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     service character varying(100) NOT NULL,
     encrypted_credentials text NOT NULL,
@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS public.api_credentials (
     updated_at timestamp without time zone DEFAULT now() NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS public.api_tokens (
+CREATE TABLE IF NOT EXISTS api_tokens (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     name character varying(100) NOT NULL,
     token_hash character varying(64) NOT NULL,
@@ -16,7 +16,18 @@ CREATE TABLE IF NOT EXISTS public.api_tokens (
     created_at timestamp without time zone DEFAULT now() NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS public.babysitter_info (
+CREATE TABLE IF NOT EXISTS audit_logs (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    user_id uuid,
+    action character varying(50) NOT NULL,
+    entity_type character varying(50) NOT NULL,
+    entity_id character varying(255),
+    summary character varying(500) NOT NULL,
+    metadata jsonb,
+    created_at timestamp without time zone DEFAULT now() NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS babysitter_info (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     section character varying(50) NOT NULL,
     sort_order integer DEFAULT 0 NOT NULL,
@@ -26,7 +37,7 @@ CREATE TABLE IF NOT EXISTS public.babysitter_info (
     updated_at timestamp without time zone DEFAULT now() NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS public.birthdays (
+CREATE TABLE IF NOT EXISTS birthdays (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     name character varying(100) NOT NULL,
     birth_date date NOT NULL,
@@ -38,7 +49,38 @@ CREATE TABLE IF NOT EXISTS public.birthdays (
     created_at timestamp without time zone DEFAULT now() NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS public.calendar_groups (
+CREATE TABLE IF NOT EXISTS bus_geofence_log (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    route_id uuid NOT NULL,
+    event_type character varying(30) NOT NULL,
+    checkpoint_name character varying(255) NOT NULL,
+    checkpoint_index integer NOT NULL,
+    event_time timestamp without time zone NOT NULL,
+    day_of_week integer NOT NULL,
+    trip_date date NOT NULL,
+    gmail_message_id character varying(255) NOT NULL,
+    raw_data jsonb,
+    created_at timestamp without time zone DEFAULT now() NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS bus_routes (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    student_name character varying(100) NOT NULL,
+    user_id uuid,
+    trip_id character varying(50) NOT NULL,
+    direction character varying(10) NOT NULL,
+    label character varying(255) NOT NULL,
+    scheduled_time character varying(5) NOT NULL,
+    active_days jsonb DEFAULT '[1, 2, 3, 4, 5]'::jsonb NOT NULL,
+    checkpoints jsonb DEFAULT '[]'::jsonb NOT NULL,
+    stop_name character varying(255),
+    school_name character varying(255),
+    enabled boolean DEFAULT true NOT NULL,
+    created_at timestamp without time zone DEFAULT now() NOT NULL,
+    updated_at timestamp without time zone DEFAULT now() NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS calendar_groups (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     name character varying(255) NOT NULL,
     color character varying(7) DEFAULT '#3B82F6'::character varying NOT NULL,
@@ -49,7 +91,7 @@ CREATE TABLE IF NOT EXISTS public.calendar_groups (
     updated_at timestamp without time zone DEFAULT now() NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS public.calendar_sources (
+CREATE TABLE IF NOT EXISTS calendar_sources (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     user_id uuid,
     provider character varying(50) NOT NULL,
@@ -70,7 +112,7 @@ CREATE TABLE IF NOT EXISTS public.calendar_sources (
     updated_at timestamp without time zone DEFAULT now() NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS public.chore_completions (
+CREATE TABLE IF NOT EXISTS chore_completions (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     chore_id uuid NOT NULL,
     completed_by uuid NOT NULL,
@@ -82,7 +124,7 @@ CREATE TABLE IF NOT EXISTS public.chore_completions (
     notes text
 );
 
-CREATE TABLE IF NOT EXISTS public.chores (
+CREATE TABLE IF NOT EXISTS chores (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     title character varying(255) NOT NULL,
     description text,
@@ -101,7 +143,7 @@ CREATE TABLE IF NOT EXISTS public.chores (
     updated_at timestamp without time zone DEFAULT now() NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS public.events (
+CREATE TABLE IF NOT EXISTS events (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     calendar_source_id uuid,
     external_event_id character varying(255),
@@ -121,7 +163,7 @@ CREATE TABLE IF NOT EXISTS public.events (
     updated_at timestamp without time zone DEFAULT now() NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS public.family_messages (
+CREATE TABLE IF NOT EXISTS family_messages (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     message text NOT NULL,
     author_id uuid NOT NULL,
@@ -132,7 +174,7 @@ CREATE TABLE IF NOT EXISTS public.family_messages (
     updated_at timestamp without time zone DEFAULT now() NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS public.goal_achievements (
+CREATE TABLE IF NOT EXISTS goal_achievements (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     goal_id uuid NOT NULL,
     user_id uuid NOT NULL,
@@ -140,7 +182,7 @@ CREATE TABLE IF NOT EXISTS public.goal_achievements (
     achieved_at timestamp without time zone DEFAULT now() NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS public.goals (
+CREATE TABLE IF NOT EXISTS goals (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     name character varying(255) NOT NULL,
     description text,
@@ -155,7 +197,7 @@ CREATE TABLE IF NOT EXISTS public.goals (
     updated_at timestamp without time zone DEFAULT now() NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS public.layouts (
+CREATE TABLE IF NOT EXISTS layouts (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     name character varying(100) NOT NULL,
     is_default boolean DEFAULT false NOT NULL,
@@ -169,7 +211,7 @@ CREATE TABLE IF NOT EXISTS public.layouts (
     orientation character varying(20) DEFAULT 'landscape'::character varying
 );
 
-CREATE TABLE IF NOT EXISTS public.maintenance_completions (
+CREATE TABLE IF NOT EXISTS maintenance_completions (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     reminder_id uuid NOT NULL,
     completed_at timestamp without time zone DEFAULT now() NOT NULL,
@@ -179,7 +221,7 @@ CREATE TABLE IF NOT EXISTS public.maintenance_completions (
     notes text
 );
 
-CREATE TABLE IF NOT EXISTS public.maintenance_reminders (
+CREATE TABLE IF NOT EXISTS maintenance_reminders (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     title character varying(255) NOT NULL,
     category character varying(50) NOT NULL,
@@ -195,7 +237,7 @@ CREATE TABLE IF NOT EXISTS public.maintenance_reminders (
     updated_at timestamp without time zone DEFAULT now() NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS public.meals (
+CREATE TABLE IF NOT EXISTS meals (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     name character varying(255) NOT NULL,
     description text,
@@ -218,7 +260,7 @@ CREATE TABLE IF NOT EXISTS public.meals (
     updated_at timestamp without time zone DEFAULT now() NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS public.photo_sources (
+CREATE TABLE IF NOT EXISTS photo_sources (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     type character varying(20) NOT NULL,
     name character varying(255) NOT NULL,
@@ -233,7 +275,7 @@ CREATE TABLE IF NOT EXISTS public.photo_sources (
     updated_at timestamp without time zone DEFAULT now() NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS public.photos (
+CREATE TABLE IF NOT EXISTS photos (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     source_id uuid NOT NULL,
     filename character varying(255) NOT NULL,
@@ -251,7 +293,7 @@ CREATE TABLE IF NOT EXISTS public.photos (
     created_at timestamp without time zone DEFAULT now() NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS public.recipes (
+CREATE TABLE IF NOT EXISTS recipes (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     name character varying(255) NOT NULL,
     description text,
@@ -276,14 +318,14 @@ CREATE TABLE IF NOT EXISTS public.recipes (
     updated_at timestamp without time zone DEFAULT now() NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS public.settings (
+CREATE TABLE IF NOT EXISTS settings (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     key character varying(100) NOT NULL,
     value jsonb NOT NULL,
     updated_at timestamp without time zone DEFAULT now() NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS public.shopping_items (
+CREATE TABLE IF NOT EXISTS shopping_items (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     list_id uuid NOT NULL,
     name character varying(255) NOT NULL,
@@ -305,7 +347,7 @@ CREATE TABLE IF NOT EXISTS public.shopping_items (
     updated_at timestamp without time zone DEFAULT now() NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS public.shopping_list_sources (
+CREATE TABLE IF NOT EXISTS shopping_list_sources (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     user_id uuid NOT NULL,
     provider character varying(50) NOT NULL,
@@ -322,7 +364,7 @@ CREATE TABLE IF NOT EXISTS public.shopping_list_sources (
     updated_at timestamp without time zone DEFAULT now() NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS public.shopping_lists (
+CREATE TABLE IF NOT EXISTS shopping_lists (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     name character varying(100) NOT NULL,
     description text,
@@ -330,14 +372,14 @@ CREATE TABLE IF NOT EXISTS public.shopping_lists (
     color character varying(7),
     list_type character varying(20) DEFAULT 'grocery'::character varying NOT NULL,
     sort_order integer DEFAULT 0 NOT NULL,
-    visible_categories jsonb,
     assigned_to uuid,
     created_by uuid,
     created_at timestamp without time zone DEFAULT now() NOT NULL,
-    updated_at timestamp without time zone DEFAULT now() NOT NULL
+    updated_at timestamp without time zone DEFAULT now() NOT NULL,
+    visible_categories jsonb
 );
 
-CREATE TABLE IF NOT EXISTS public.task_lists (
+CREATE TABLE IF NOT EXISTS task_lists (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     name character varying(255) NOT NULL,
     color character varying(7),
@@ -347,7 +389,7 @@ CREATE TABLE IF NOT EXISTS public.task_lists (
     updated_at timestamp without time zone DEFAULT now() NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS public.task_sources (
+CREATE TABLE IF NOT EXISTS task_sources (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     user_id uuid NOT NULL,
     provider character varying(50) NOT NULL,
@@ -364,7 +406,7 @@ CREATE TABLE IF NOT EXISTS public.task_sources (
     updated_at timestamp without time zone DEFAULT now() NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS public.tasks (
+CREATE TABLE IF NOT EXISTS tasks (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     title character varying(255) NOT NULL,
     description text,
@@ -385,7 +427,7 @@ CREATE TABLE IF NOT EXISTS public.tasks (
     updated_at timestamp without time zone DEFAULT now() NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS public.users (
+CREATE TABLE IF NOT EXISTS users (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     name character varying(100) NOT NULL,
     role character varying(20) NOT NULL,
@@ -398,396 +440,502 @@ CREATE TABLE IF NOT EXISTS public.users (
     updated_at timestamp without time zone DEFAULT now() NOT NULL
 );
 
-ALTER TABLE ONLY public.api_credentials
+CREATE TABLE IF NOT EXISTS wish_item_sources (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    user_id uuid NOT NULL,
+    provider character varying(50) NOT NULL,
+    external_list_id character varying(255) NOT NULL,
+    external_list_name character varying(255),
+    member_id uuid NOT NULL,
+    sync_enabled boolean DEFAULT true NOT NULL,
+    access_token text,
+    refresh_token text,
+    token_expires_at timestamp without time zone,
+    last_sync_at timestamp without time zone,
+    last_sync_error text,
+    created_at timestamp without time zone DEFAULT now() NOT NULL,
+    updated_at timestamp without time zone DEFAULT now() NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS wish_items (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    member_id uuid NOT NULL,
+    name character varying(255) NOT NULL,
+    url text,
+    notes text,
+    sort_order integer DEFAULT 0 NOT NULL,
+    claimed boolean DEFAULT false NOT NULL,
+    claimed_by uuid,
+    claimed_at timestamp without time zone,
+    added_by uuid,
+    wish_item_source_id uuid,
+    external_id character varying(255),
+    external_updated_at timestamp without time zone,
+    created_at timestamp without time zone DEFAULT now() NOT NULL,
+    updated_at timestamp without time zone DEFAULT now() NOT NULL
+);
+
+ALTER TABLE ONLY api_credentials
     ADD CONSTRAINT api_credentials_pkey PRIMARY KEY (id);
 
-ALTER TABLE ONLY public.api_credentials
+ALTER TABLE ONLY api_credentials
     ADD CONSTRAINT api_credentials_service_unique UNIQUE (service);
 
-ALTER TABLE ONLY public.api_tokens
+ALTER TABLE ONLY api_tokens
     ADD CONSTRAINT api_tokens_pkey PRIMARY KEY (id);
 
-ALTER TABLE ONLY public.babysitter_info
+ALTER TABLE ONLY audit_logs
+    ADD CONSTRAINT audit_logs_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY babysitter_info
     ADD CONSTRAINT babysitter_info_pkey PRIMARY KEY (id);
 
-ALTER TABLE ONLY public.birthdays
+ALTER TABLE ONLY birthdays
     ADD CONSTRAINT birthdays_pkey PRIMARY KEY (id);
 
-ALTER TABLE ONLY public.calendar_groups
+ALTER TABLE ONLY bus_geofence_log
+    ADD CONSTRAINT bus_geofence_log_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY bus_routes
+    ADD CONSTRAINT bus_routes_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY calendar_groups
     ADD CONSTRAINT calendar_groups_pkey PRIMARY KEY (id);
 
-ALTER TABLE ONLY public.calendar_sources
+ALTER TABLE ONLY calendar_sources
     ADD CONSTRAINT calendar_sources_pkey PRIMARY KEY (id);
 
-ALTER TABLE ONLY public.chore_completions
+ALTER TABLE ONLY chore_completions
     ADD CONSTRAINT chore_completions_pkey PRIMARY KEY (id);
 
-ALTER TABLE ONLY public.chores
+ALTER TABLE ONLY chores
     ADD CONSTRAINT chores_pkey PRIMARY KEY (id);
 
-ALTER TABLE ONLY public.events
+ALTER TABLE ONLY events
     ADD CONSTRAINT events_pkey PRIMARY KEY (id);
 
-ALTER TABLE ONLY public.family_messages
+ALTER TABLE ONLY family_messages
     ADD CONSTRAINT family_messages_pkey PRIMARY KEY (id);
 
-ALTER TABLE ONLY public.goal_achievements
+ALTER TABLE ONLY goal_achievements
     ADD CONSTRAINT goal_achievements_pkey PRIMARY KEY (id);
 
-ALTER TABLE ONLY public.goals
+ALTER TABLE ONLY goals
     ADD CONSTRAINT goals_pkey PRIMARY KEY (id);
 
-ALTER TABLE ONLY public.layouts
+ALTER TABLE ONLY layouts
     ADD CONSTRAINT layouts_pkey PRIMARY KEY (id);
 
-ALTER TABLE ONLY public.layouts
+ALTER TABLE ONLY layouts
     ADD CONSTRAINT layouts_slug_key UNIQUE (slug);
 
-ALTER TABLE ONLY public.maintenance_completions
+ALTER TABLE ONLY maintenance_completions
     ADD CONSTRAINT maintenance_completions_pkey PRIMARY KEY (id);
 
-ALTER TABLE ONLY public.maintenance_reminders
+ALTER TABLE ONLY maintenance_reminders
     ADD CONSTRAINT maintenance_reminders_pkey PRIMARY KEY (id);
 
-ALTER TABLE ONLY public.meals
+ALTER TABLE ONLY meals
     ADD CONSTRAINT meals_pkey PRIMARY KEY (id);
 
-ALTER TABLE ONLY public.photo_sources
+ALTER TABLE ONLY photo_sources
     ADD CONSTRAINT photo_sources_pkey PRIMARY KEY (id);
 
-ALTER TABLE ONLY public.photos
+ALTER TABLE ONLY photos
     ADD CONSTRAINT photos_pkey PRIMARY KEY (id);
 
-ALTER TABLE ONLY public.recipes
+ALTER TABLE ONLY recipes
     ADD CONSTRAINT recipes_pkey PRIMARY KEY (id);
 
-ALTER TABLE ONLY public.settings
+ALTER TABLE ONLY settings
     ADD CONSTRAINT settings_key_unique UNIQUE (key);
 
-ALTER TABLE ONLY public.settings
+ALTER TABLE ONLY settings
     ADD CONSTRAINT settings_pkey PRIMARY KEY (id);
 
-ALTER TABLE ONLY public.shopping_items
+ALTER TABLE ONLY shopping_items
     ADD CONSTRAINT shopping_items_pkey PRIMARY KEY (id);
 
-ALTER TABLE ONLY public.shopping_list_sources
+ALTER TABLE ONLY shopping_list_sources
     ADD CONSTRAINT shopping_list_sources_pkey PRIMARY KEY (id);
 
-ALTER TABLE ONLY public.shopping_lists
+ALTER TABLE ONLY shopping_lists
     ADD CONSTRAINT shopping_lists_pkey PRIMARY KEY (id);
 
-ALTER TABLE ONLY public.task_lists
+ALTER TABLE ONLY task_lists
     ADD CONSTRAINT task_lists_pkey PRIMARY KEY (id);
 
-ALTER TABLE ONLY public.task_sources
+ALTER TABLE ONLY task_sources
     ADD CONSTRAINT task_sources_pkey PRIMARY KEY (id);
 
-ALTER TABLE ONLY public.tasks
+ALTER TABLE ONLY tasks
     ADD CONSTRAINT tasks_pkey PRIMARY KEY (id);
 
-ALTER TABLE ONLY public.users
+ALTER TABLE ONLY users
     ADD CONSTRAINT users_pkey PRIMARY KEY (id);
 
-CREATE INDEX IF NOT EXISTS api_tokens_created_by_idx ON public.api_tokens USING btree (created_by);
+ALTER TABLE ONLY wish_item_sources
+    ADD CONSTRAINT wish_item_sources_pkey PRIMARY KEY (id);
 
-CREATE UNIQUE INDEX IF NOT EXISTS api_tokens_token_hash_idx ON public.api_tokens USING btree (token_hash);
+ALTER TABLE ONLY wish_items
+    ADD CONSTRAINT wish_items_pkey PRIMARY KEY (id);
 
-CREATE INDEX IF NOT EXISTS babysitter_info_section_idx ON public.babysitter_info USING btree (section);
+CREATE INDEX IF NOT EXISTS api_tokens_created_by_idx ON api_tokens USING btree (created_by);
 
-CREATE INDEX IF NOT EXISTS babysitter_info_sort_order_idx ON public.babysitter_info USING btree (sort_order);
+CREATE UNIQUE INDEX IF NOT EXISTS api_tokens_token_hash_idx ON api_tokens USING btree (token_hash);
 
-CREATE UNIQUE INDEX IF NOT EXISTS birthdays_name_event_type_idx ON public.birthdays USING btree (name, event_type);
+CREATE INDEX IF NOT EXISTS audit_logs_created_at_idx ON audit_logs USING btree (created_at);
 
-CREATE INDEX IF NOT EXISTS calendar_groups_type_idx ON public.calendar_groups USING btree (type);
+CREATE INDEX IF NOT EXISTS audit_logs_entity_type_idx ON audit_logs USING btree (entity_type);
 
-CREATE INDEX IF NOT EXISTS calendar_sources_enabled_idx ON public.calendar_sources USING btree (enabled);
+CREATE INDEX IF NOT EXISTS audit_logs_user_id_idx ON audit_logs USING btree (user_id);
 
-CREATE INDEX IF NOT EXISTS calendar_sources_user_id_idx ON public.calendar_sources USING btree (user_id);
+CREATE INDEX IF NOT EXISTS babysitter_info_section_idx ON babysitter_info USING btree (section);
 
-CREATE INDEX IF NOT EXISTS chore_completions_approved_by_idx ON public.chore_completions USING btree (approved_by);
+CREATE INDEX IF NOT EXISTS babysitter_info_sort_order_idx ON babysitter_info USING btree (sort_order);
 
-CREATE INDEX IF NOT EXISTS chore_completions_chore_approved_by_idx ON public.chore_completions USING btree (chore_id, approved_by);
+CREATE UNIQUE INDEX IF NOT EXISTS birthdays_name_event_type_idx ON birthdays USING btree (name, event_type);
 
-CREATE INDEX IF NOT EXISTS chore_completions_chore_id_idx ON public.chore_completions USING btree (chore_id);
+CREATE INDEX IF NOT EXISTS bus_geofence_log_event_time_idx ON bus_geofence_log USING btree (event_time);
 
-CREATE INDEX IF NOT EXISTS chore_completions_completed_at_idx ON public.chore_completions USING btree (completed_at);
+CREATE UNIQUE INDEX IF NOT EXISTS bus_geofence_log_gmail_message_id_idx ON bus_geofence_log USING btree (gmail_message_id);
 
-CREATE INDEX IF NOT EXISTS chores_assigned_to_idx ON public.chores USING btree (assigned_to);
+CREATE INDEX IF NOT EXISTS bus_geofence_log_route_id_idx ON bus_geofence_log USING btree (route_id);
 
-CREATE INDEX IF NOT EXISTS chores_next_due_idx ON public.chores USING btree (next_due);
+CREATE INDEX IF NOT EXISTS bus_geofence_log_trip_date_idx ON bus_geofence_log USING btree (trip_date);
 
-CREATE INDEX IF NOT EXISTS events_calendar_source_idx ON public.events USING btree (calendar_source_id);
+CREATE INDEX IF NOT EXISTS bus_routes_enabled_idx ON bus_routes USING btree (enabled);
 
-CREATE INDEX IF NOT EXISTS events_end_time_idx ON public.events USING btree (end_time);
+CREATE UNIQUE INDEX IF NOT EXISTS bus_routes_trip_direction_idx ON bus_routes USING btree (trip_id, direction);
 
-CREATE UNIQUE INDEX IF NOT EXISTS events_source_external_unique ON public.events USING btree (calendar_source_id, external_event_id);
+CREATE INDEX IF NOT EXISTS calendar_groups_type_idx ON calendar_groups USING btree (type);
 
-CREATE INDEX IF NOT EXISTS events_start_time_idx ON public.events USING btree (start_time);
+CREATE INDEX IF NOT EXISTS calendar_sources_enabled_idx ON calendar_sources USING btree (enabled);
 
-CREATE INDEX IF NOT EXISTS family_messages_created_at_idx ON public.family_messages USING btree (created_at);
+CREATE INDEX IF NOT EXISTS calendar_sources_user_id_idx ON calendar_sources USING btree (user_id);
 
-CREATE INDEX IF NOT EXISTS family_messages_expires_at_idx ON public.family_messages USING btree (expires_at);
+CREATE INDEX IF NOT EXISTS chore_completions_approved_by_idx ON chore_completions USING btree (approved_by);
 
-CREATE INDEX IF NOT EXISTS goal_achievements_goal_id_idx ON public.goal_achievements USING btree (goal_id);
+CREATE INDEX IF NOT EXISTS chore_completions_chore_approved_by_idx ON chore_completions USING btree (chore_id, approved_by);
 
-CREATE UNIQUE INDEX IF NOT EXISTS goal_achievements_goal_user_period_idx ON public.goal_achievements USING btree (goal_id, user_id, period_start);
+CREATE INDEX IF NOT EXISTS chore_completions_chore_id_idx ON chore_completions USING btree (chore_id);
 
-CREATE INDEX IF NOT EXISTS goal_achievements_user_id_idx ON public.goal_achievements USING btree (user_id);
+CREATE INDEX IF NOT EXISTS chore_completions_completed_at_idx ON chore_completions USING btree (completed_at);
 
-CREATE INDEX IF NOT EXISTS goals_active_idx ON public.goals USING btree (active);
+CREATE INDEX IF NOT EXISTS chores_assigned_to_idx ON chores USING btree (assigned_to);
 
-CREATE INDEX IF NOT EXISTS goals_active_priority_idx ON public.goals USING btree (active, priority);
+CREATE INDEX IF NOT EXISTS chores_next_due_idx ON chores USING btree (next_due);
 
-CREATE INDEX IF NOT EXISTS maintenance_reminders_next_due_idx ON public.maintenance_reminders USING btree (next_due);
+CREATE INDEX IF NOT EXISTS events_calendar_source_idx ON events USING btree (calendar_source_id);
 
-CREATE INDEX IF NOT EXISTS meals_day_of_week_idx ON public.meals USING btree (day_of_week);
+CREATE INDEX IF NOT EXISTS events_end_time_idx ON events USING btree (end_time);
 
-CREATE INDEX IF NOT EXISTS meals_week_of_idx ON public.meals USING btree (week_of);
+CREATE UNIQUE INDEX IF NOT EXISTS events_source_external_unique ON events USING btree (calendar_source_id, external_event_id);
 
-CREATE INDEX IF NOT EXISTS photos_favorite_idx ON public.photos USING btree (favorite);
+CREATE INDEX IF NOT EXISTS events_start_time_idx ON events USING btree (start_time);
 
-CREATE INDEX IF NOT EXISTS photos_source_id_idx ON public.photos USING btree (source_id);
+CREATE INDEX IF NOT EXISTS family_messages_created_at_idx ON family_messages USING btree (created_at);
 
-CREATE INDEX IF NOT EXISTS photos_taken_at_idx ON public.photos USING btree (taken_at);
+CREATE INDEX IF NOT EXISTS family_messages_expires_at_idx ON family_messages USING btree (expires_at);
 
-CREATE INDEX IF NOT EXISTS photos_usage_idx ON public.photos USING btree (usage);
+CREATE INDEX IF NOT EXISTS goal_achievements_goal_id_idx ON goal_achievements USING btree (goal_id);
 
-CREATE INDEX IF NOT EXISTS recipes_favorite_idx ON public.recipes USING btree (is_favorite);
+CREATE UNIQUE INDEX IF NOT EXISTS goal_achievements_goal_user_period_idx ON goal_achievements USING btree (goal_id, user_id, period_start);
 
-CREATE INDEX IF NOT EXISTS recipes_name_idx ON public.recipes USING btree (name);
+CREATE INDEX IF NOT EXISTS goal_achievements_user_id_idx ON goal_achievements USING btree (user_id);
 
-CREATE INDEX IF NOT EXISTS recipes_source_type_idx ON public.recipes USING btree (source_type);
+CREATE INDEX IF NOT EXISTS goals_active_idx ON goals USING btree (active);
 
-CREATE INDEX IF NOT EXISTS shopping_items_category_idx ON public.shopping_items USING btree (category);
+CREATE INDEX IF NOT EXISTS goals_active_priority_idx ON goals USING btree (active, priority);
 
-CREATE INDEX IF NOT EXISTS shopping_items_checked_idx ON public.shopping_items USING btree (checked);
+CREATE INDEX IF NOT EXISTS maintenance_reminders_next_due_idx ON maintenance_reminders USING btree (next_due);
 
-CREATE INDEX IF NOT EXISTS shopping_items_external_id_idx ON public.shopping_items USING btree (external_id);
+CREATE INDEX IF NOT EXISTS meals_day_of_week_idx ON meals USING btree (day_of_week);
 
-CREATE INDEX IF NOT EXISTS shopping_items_list_id_idx ON public.shopping_items USING btree (list_id);
+CREATE INDEX IF NOT EXISTS meals_week_of_idx ON meals USING btree (week_of);
 
-CREATE INDEX IF NOT EXISTS shopping_items_source_idx ON public.shopping_items USING btree (shopping_list_source_id);
+CREATE INDEX IF NOT EXISTS photos_favorite_idx ON photos USING btree (favorite);
 
-CREATE INDEX IF NOT EXISTS shopping_list_sources_shopping_list_idx ON public.shopping_list_sources USING btree (shopping_list_id);
+CREATE INDEX IF NOT EXISTS photos_source_id_idx ON photos USING btree (source_id);
 
-CREATE INDEX IF NOT EXISTS shopping_list_sources_user_provider_idx ON public.shopping_list_sources USING btree (user_id, provider);
+CREATE INDEX IF NOT EXISTS photos_taken_at_idx ON photos USING btree (taken_at);
 
-CREATE INDEX IF NOT EXISTS task_sources_task_list_idx ON public.task_sources USING btree (task_list_id);
+CREATE INDEX IF NOT EXISTS photos_usage_idx ON photos USING btree (usage);
 
-CREATE INDEX IF NOT EXISTS task_sources_user_provider_idx ON public.task_sources USING btree (user_id, provider);
+CREATE INDEX IF NOT EXISTS recipes_favorite_idx ON recipes USING btree (is_favorite);
 
-CREATE INDEX IF NOT EXISTS tasks_assigned_to_idx ON public.tasks USING btree (assigned_to);
+CREATE INDEX IF NOT EXISTS recipes_name_idx ON recipes USING btree (name);
 
-CREATE INDEX IF NOT EXISTS tasks_completed_idx ON public.tasks USING btree (completed);
+CREATE INDEX IF NOT EXISTS recipes_source_type_idx ON recipes USING btree (source_type);
 
-CREATE INDEX IF NOT EXISTS tasks_due_date_idx ON public.tasks USING btree (due_date);
+CREATE INDEX IF NOT EXISTS shopping_items_category_idx ON shopping_items USING btree (category);
 
-CREATE INDEX IF NOT EXISTS tasks_external_id_idx ON public.tasks USING btree (external_id);
+CREATE INDEX IF NOT EXISTS shopping_items_checked_idx ON shopping_items USING btree (checked);
 
-CREATE INDEX IF NOT EXISTS tasks_list_id_idx ON public.tasks USING btree (list_id);
+CREATE INDEX IF NOT EXISTS shopping_items_external_id_idx ON shopping_items USING btree (external_id);
 
-CREATE INDEX IF NOT EXISTS tasks_task_source_idx ON public.tasks USING btree (task_source_id);
+CREATE INDEX IF NOT EXISTS shopping_items_list_id_idx ON shopping_items USING btree (list_id);
 
-CREATE INDEX IF NOT EXISTS users_email_idx ON public.users USING btree (email);
+CREATE INDEX IF NOT EXISTS shopping_items_source_idx ON shopping_items USING btree (shopping_list_source_id);
 
-ALTER TABLE ONLY public.api_tokens
-    ADD CONSTRAINT api_tokens_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id) ON DELETE CASCADE;
+CREATE INDEX IF NOT EXISTS shopping_list_sources_shopping_list_idx ON shopping_list_sources USING btree (shopping_list_id);
 
-ALTER TABLE ONLY public.birthdays
-    ADD CONSTRAINT birthdays_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS shopping_list_sources_user_provider_idx ON shopping_list_sources USING btree (user_id, provider);
 
-ALTER TABLE ONLY public.birthdays
-    ADD CONSTRAINT birthdays_user_id_users_id_fk FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS task_sources_task_list_idx ON task_sources USING btree (task_list_id);
 
-ALTER TABLE ONLY public.calendar_groups
-    ADD CONSTRAINT calendar_groups_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+CREATE INDEX IF NOT EXISTS task_sources_user_provider_idx ON task_sources USING btree (user_id, provider);
 
-ALTER TABLE ONLY public.calendar_groups
-    ADD CONSTRAINT calendar_groups_user_id_users_id_fk FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+CREATE INDEX IF NOT EXISTS tasks_assigned_to_idx ON tasks USING btree (assigned_to);
 
-ALTER TABLE ONLY public.calendar_sources
-    ADD CONSTRAINT calendar_sources_group_id_calendar_groups_id_fk FOREIGN KEY (group_id) REFERENCES public.calendar_groups(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS tasks_completed_idx ON tasks USING btree (completed);
 
-ALTER TABLE ONLY public.calendar_sources
-    ADD CONSTRAINT calendar_sources_group_id_fkey FOREIGN KEY (group_id) REFERENCES public.calendar_groups(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS tasks_due_date_idx ON tasks USING btree (due_date);
 
-ALTER TABLE ONLY public.calendar_sources
-    ADD CONSTRAINT calendar_sources_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+CREATE INDEX IF NOT EXISTS tasks_external_id_idx ON tasks USING btree (external_id);
 
-ALTER TABLE ONLY public.calendar_sources
-    ADD CONSTRAINT calendar_sources_user_id_users_id_fk FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+CREATE INDEX IF NOT EXISTS tasks_list_id_idx ON tasks USING btree (list_id);
 
-ALTER TABLE ONLY public.chore_completions
-    ADD CONSTRAINT chore_completions_approved_by_fkey FOREIGN KEY (approved_by) REFERENCES public.users(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS tasks_task_source_idx ON tasks USING btree (task_source_id);
 
-ALTER TABLE ONLY public.chore_completions
-    ADD CONSTRAINT chore_completions_approved_by_users_id_fk FOREIGN KEY (approved_by) REFERENCES public.users(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS users_email_idx ON users USING btree (email);
 
-ALTER TABLE ONLY public.chore_completions
-    ADD CONSTRAINT chore_completions_chore_id_chores_id_fk FOREIGN KEY (chore_id) REFERENCES public.chores(id) ON DELETE CASCADE;
+CREATE INDEX IF NOT EXISTS wish_item_sources_member_idx ON wish_item_sources USING btree (member_id);
 
-ALTER TABLE ONLY public.chore_completions
-    ADD CONSTRAINT chore_completions_chore_id_fkey FOREIGN KEY (chore_id) REFERENCES public.chores(id) ON DELETE CASCADE;
+CREATE INDEX IF NOT EXISTS wish_item_sources_user_provider_idx ON wish_item_sources USING btree (user_id, provider);
 
-ALTER TABLE ONLY public.chore_completions
-    ADD CONSTRAINT chore_completions_completed_by_fkey FOREIGN KEY (completed_by) REFERENCES public.users(id) ON DELETE CASCADE;
+CREATE INDEX IF NOT EXISTS wish_items_claimed_idx ON wish_items USING btree (claimed);
 
-ALTER TABLE ONLY public.chore_completions
-    ADD CONSTRAINT chore_completions_completed_by_users_id_fk FOREIGN KEY (completed_by) REFERENCES public.users(id) ON DELETE CASCADE;
+CREATE INDEX IF NOT EXISTS wish_items_external_id_idx ON wish_items USING btree (external_id);
 
-ALTER TABLE ONLY public.chores
-    ADD CONSTRAINT chores_assigned_to_fkey FOREIGN KEY (assigned_to) REFERENCES public.users(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS wish_items_member_id_idx ON wish_items USING btree (member_id);
 
-ALTER TABLE ONLY public.chores
-    ADD CONSTRAINT chores_assigned_to_users_id_fk FOREIGN KEY (assigned_to) REFERENCES public.users(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS wish_items_source_idx ON wish_items USING btree (wish_item_source_id);
 
-ALTER TABLE ONLY public.chores
-    ADD CONSTRAINT chores_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id) ON DELETE SET NULL;
+ALTER TABLE ONLY api_tokens
+    ADD CONSTRAINT api_tokens_created_by_fkey FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE;
 
-ALTER TABLE ONLY public.chores
-    ADD CONSTRAINT chores_created_by_users_id_fk FOREIGN KEY (created_by) REFERENCES public.users(id) ON DELETE SET NULL;
+ALTER TABLE ONLY audit_logs
+    ADD CONSTRAINT audit_logs_user_id_users_id_fk FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL;
 
-ALTER TABLE ONLY public.events
-    ADD CONSTRAINT events_calendar_source_id_calendar_sources_id_fk FOREIGN KEY (calendar_source_id) REFERENCES public.calendar_sources(id) ON DELETE CASCADE;
+ALTER TABLE ONLY birthdays
+    ADD CONSTRAINT birthdays_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL;
 
-ALTER TABLE ONLY public.events
-    ADD CONSTRAINT events_calendar_source_id_fkey FOREIGN KEY (calendar_source_id) REFERENCES public.calendar_sources(id) ON DELETE CASCADE;
+ALTER TABLE ONLY birthdays
+    ADD CONSTRAINT birthdays_user_id_users_id_fk FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL;
 
-ALTER TABLE ONLY public.events
-    ADD CONSTRAINT events_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id) ON DELETE SET NULL;
+ALTER TABLE ONLY bus_geofence_log
+    ADD CONSTRAINT bus_geofence_log_route_id_fkey FOREIGN KEY (route_id) REFERENCES bus_routes(id) ON DELETE CASCADE;
 
-ALTER TABLE ONLY public.events
-    ADD CONSTRAINT events_created_by_users_id_fk FOREIGN KEY (created_by) REFERENCES public.users(id) ON DELETE SET NULL;
+ALTER TABLE ONLY bus_routes
+    ADD CONSTRAINT bus_routes_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL;
 
-ALTER TABLE ONLY public.family_messages
-    ADD CONSTRAINT family_messages_author_id_fkey FOREIGN KEY (author_id) REFERENCES public.users(id) ON DELETE CASCADE;
+ALTER TABLE ONLY calendar_groups
+    ADD CONSTRAINT calendar_groups_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
 
-ALTER TABLE ONLY public.family_messages
-    ADD CONSTRAINT family_messages_author_id_users_id_fk FOREIGN KEY (author_id) REFERENCES public.users(id) ON DELETE CASCADE;
+ALTER TABLE ONLY calendar_groups
+    ADD CONSTRAINT calendar_groups_user_id_users_id_fk FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
 
-ALTER TABLE ONLY public.goal_achievements
-    ADD CONSTRAINT goal_achievements_goal_id_fkey FOREIGN KEY (goal_id) REFERENCES public.goals(id) ON DELETE CASCADE;
+ALTER TABLE ONLY calendar_sources
+    ADD CONSTRAINT calendar_sources_group_id_calendar_groups_id_fk FOREIGN KEY (group_id) REFERENCES calendar_groups(id) ON DELETE SET NULL;
 
-ALTER TABLE ONLY public.goal_achievements
-    ADD CONSTRAINT goal_achievements_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+ALTER TABLE ONLY calendar_sources
+    ADD CONSTRAINT calendar_sources_group_id_fkey FOREIGN KEY (group_id) REFERENCES calendar_groups(id) ON DELETE SET NULL;
 
-ALTER TABLE ONLY public.layouts
-    ADD CONSTRAINT layouts_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id) ON DELETE SET NULL;
+ALTER TABLE ONLY calendar_sources
+    ADD CONSTRAINT calendar_sources_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
 
-ALTER TABLE ONLY public.layouts
-    ADD CONSTRAINT layouts_created_by_users_id_fk FOREIGN KEY (created_by) REFERENCES public.users(id) ON DELETE SET NULL;
+ALTER TABLE ONLY calendar_sources
+    ADD CONSTRAINT calendar_sources_user_id_users_id_fk FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
 
-ALTER TABLE ONLY public.maintenance_completions
-    ADD CONSTRAINT maintenance_completions_completed_by_fkey FOREIGN KEY (completed_by) REFERENCES public.users(id) ON DELETE SET NULL;
+ALTER TABLE ONLY chore_completions
+    ADD CONSTRAINT chore_completions_approved_by_fkey FOREIGN KEY (approved_by) REFERENCES users(id) ON DELETE SET NULL;
 
-ALTER TABLE ONLY public.maintenance_completions
-    ADD CONSTRAINT maintenance_completions_completed_by_users_id_fk FOREIGN KEY (completed_by) REFERENCES public.users(id) ON DELETE SET NULL;
+ALTER TABLE ONLY chore_completions
+    ADD CONSTRAINT chore_completions_approved_by_users_id_fk FOREIGN KEY (approved_by) REFERENCES users(id) ON DELETE SET NULL;
 
-ALTER TABLE ONLY public.maintenance_completions
-    ADD CONSTRAINT maintenance_completions_reminder_id_fkey FOREIGN KEY (reminder_id) REFERENCES public.maintenance_reminders(id) ON DELETE CASCADE;
+ALTER TABLE ONLY chore_completions
+    ADD CONSTRAINT chore_completions_chore_id_chores_id_fk FOREIGN KEY (chore_id) REFERENCES chores(id) ON DELETE CASCADE;
 
-ALTER TABLE ONLY public.maintenance_completions
-    ADD CONSTRAINT maintenance_completions_reminder_id_maintenance_reminders_id_fk FOREIGN KEY (reminder_id) REFERENCES public.maintenance_reminders(id) ON DELETE CASCADE;
+ALTER TABLE ONLY chore_completions
+    ADD CONSTRAINT chore_completions_chore_id_fkey FOREIGN KEY (chore_id) REFERENCES chores(id) ON DELETE CASCADE;
 
-ALTER TABLE ONLY public.maintenance_reminders
-    ADD CONSTRAINT maintenance_reminders_assigned_to_fkey FOREIGN KEY (assigned_to) REFERENCES public.users(id) ON DELETE SET NULL;
+ALTER TABLE ONLY chore_completions
+    ADD CONSTRAINT chore_completions_completed_by_fkey FOREIGN KEY (completed_by) REFERENCES users(id) ON DELETE CASCADE;
 
-ALTER TABLE ONLY public.maintenance_reminders
-    ADD CONSTRAINT maintenance_reminders_assigned_to_users_id_fk FOREIGN KEY (assigned_to) REFERENCES public.users(id) ON DELETE SET NULL;
+ALTER TABLE ONLY chore_completions
+    ADD CONSTRAINT chore_completions_completed_by_users_id_fk FOREIGN KEY (completed_by) REFERENCES users(id) ON DELETE CASCADE;
 
-ALTER TABLE ONLY public.maintenance_reminders
-    ADD CONSTRAINT maintenance_reminders_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id) ON DELETE SET NULL;
+ALTER TABLE ONLY chores
+    ADD CONSTRAINT chores_assigned_to_fkey FOREIGN KEY (assigned_to) REFERENCES users(id) ON DELETE SET NULL;
 
-ALTER TABLE ONLY public.maintenance_reminders
-    ADD CONSTRAINT maintenance_reminders_created_by_users_id_fk FOREIGN KEY (created_by) REFERENCES public.users(id) ON DELETE SET NULL;
+ALTER TABLE ONLY chores
+    ADD CONSTRAINT chores_assigned_to_users_id_fk FOREIGN KEY (assigned_to) REFERENCES users(id) ON DELETE SET NULL;
 
-ALTER TABLE ONLY public.meals
-    ADD CONSTRAINT meals_cooked_by_fkey FOREIGN KEY (cooked_by) REFERENCES public.users(id) ON DELETE SET NULL;
+ALTER TABLE ONLY chores
+    ADD CONSTRAINT chores_created_by_fkey FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL;
 
-ALTER TABLE ONLY public.meals
-    ADD CONSTRAINT meals_cooked_by_users_id_fk FOREIGN KEY (cooked_by) REFERENCES public.users(id) ON DELETE SET NULL;
+ALTER TABLE ONLY chores
+    ADD CONSTRAINT chores_created_by_users_id_fk FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL;
 
-ALTER TABLE ONLY public.meals
-    ADD CONSTRAINT meals_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id) ON DELETE SET NULL;
+ALTER TABLE ONLY events
+    ADD CONSTRAINT events_calendar_source_id_calendar_sources_id_fk FOREIGN KEY (calendar_source_id) REFERENCES calendar_sources(id) ON DELETE CASCADE;
 
-ALTER TABLE ONLY public.meals
-    ADD CONSTRAINT meals_created_by_users_id_fk FOREIGN KEY (created_by) REFERENCES public.users(id) ON DELETE SET NULL;
+ALTER TABLE ONLY events
+    ADD CONSTRAINT events_calendar_source_id_fkey FOREIGN KEY (calendar_source_id) REFERENCES calendar_sources(id) ON DELETE CASCADE;
 
-ALTER TABLE ONLY public.meals
-    ADD CONSTRAINT meals_recipe_id_fkey FOREIGN KEY (recipe_id) REFERENCES public.recipes(id) ON DELETE SET NULL;
+ALTER TABLE ONLY events
+    ADD CONSTRAINT events_created_by_fkey FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL;
 
-ALTER TABLE ONLY public.photos
-    ADD CONSTRAINT photos_source_id_fkey FOREIGN KEY (source_id) REFERENCES public.photo_sources(id) ON DELETE CASCADE;
+ALTER TABLE ONLY events
+    ADD CONSTRAINT events_created_by_users_id_fk FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL;
 
-ALTER TABLE ONLY public.photos
-    ADD CONSTRAINT photos_source_id_photo_sources_id_fk FOREIGN KEY (source_id) REFERENCES public.photo_sources(id) ON DELETE CASCADE;
+ALTER TABLE ONLY family_messages
+    ADD CONSTRAINT family_messages_author_id_fkey FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE CASCADE;
 
-ALTER TABLE ONLY public.recipes
-    ADD CONSTRAINT recipes_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id) ON DELETE SET NULL;
+ALTER TABLE ONLY family_messages
+    ADD CONSTRAINT family_messages_author_id_users_id_fk FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE CASCADE;
 
-ALTER TABLE ONLY public.shopping_items
-    ADD CONSTRAINT shopping_items_added_by_fkey FOREIGN KEY (added_by) REFERENCES public.users(id) ON DELETE SET NULL;
+ALTER TABLE ONLY goal_achievements
+    ADD CONSTRAINT goal_achievements_goal_id_fkey FOREIGN KEY (goal_id) REFERENCES goals(id) ON DELETE CASCADE;
 
-ALTER TABLE ONLY public.shopping_items
-    ADD CONSTRAINT shopping_items_added_by_users_id_fk FOREIGN KEY (added_by) REFERENCES public.users(id) ON DELETE SET NULL;
+ALTER TABLE ONLY goal_achievements
+    ADD CONSTRAINT goal_achievements_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
 
-ALTER TABLE ONLY public.shopping_items
-    ADD CONSTRAINT shopping_items_list_id_fkey FOREIGN KEY (list_id) REFERENCES public.shopping_lists(id) ON DELETE CASCADE;
+ALTER TABLE ONLY layouts
+    ADD CONSTRAINT layouts_created_by_fkey FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL;
 
-ALTER TABLE ONLY public.shopping_items
-    ADD CONSTRAINT shopping_items_list_id_shopping_lists_id_fk FOREIGN KEY (list_id) REFERENCES public.shopping_lists(id) ON DELETE CASCADE;
+ALTER TABLE ONLY layouts
+    ADD CONSTRAINT layouts_created_by_users_id_fk FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL;
 
-ALTER TABLE ONLY public.shopping_items
-    ADD CONSTRAINT shopping_items_shopping_list_source_id_fkey FOREIGN KEY (shopping_list_source_id) REFERENCES public.shopping_list_sources(id) ON DELETE SET NULL;
+ALTER TABLE ONLY maintenance_completions
+    ADD CONSTRAINT maintenance_completions_completed_by_fkey FOREIGN KEY (completed_by) REFERENCES users(id) ON DELETE SET NULL;
 
-ALTER TABLE ONLY public.shopping_list_sources
-    ADD CONSTRAINT shopping_list_sources_shopping_list_id_fkey FOREIGN KEY (shopping_list_id) REFERENCES public.shopping_lists(id) ON DELETE CASCADE;
+ALTER TABLE ONLY maintenance_completions
+    ADD CONSTRAINT maintenance_completions_completed_by_users_id_fk FOREIGN KEY (completed_by) REFERENCES users(id) ON DELETE SET NULL;
 
-ALTER TABLE ONLY public.shopping_list_sources
-    ADD CONSTRAINT shopping_list_sources_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+ALTER TABLE ONLY maintenance_completions
+    ADD CONSTRAINT maintenance_completions_reminder_id_fkey FOREIGN KEY (reminder_id) REFERENCES maintenance_reminders(id) ON DELETE CASCADE;
 
-ALTER TABLE ONLY public.shopping_lists
-    ADD CONSTRAINT shopping_lists_assigned_to_fkey FOREIGN KEY (assigned_to) REFERENCES public.users(id) ON DELETE SET NULL;
+ALTER TABLE ONLY maintenance_completions
+    ADD CONSTRAINT maintenance_completions_reminder_id_maintenance_reminders_id_fk FOREIGN KEY (reminder_id) REFERENCES maintenance_reminders(id) ON DELETE CASCADE;
 
-ALTER TABLE ONLY public.shopping_lists
-    ADD CONSTRAINT shopping_lists_assigned_to_users_id_fk FOREIGN KEY (assigned_to) REFERENCES public.users(id) ON DELETE SET NULL;
+ALTER TABLE ONLY maintenance_reminders
+    ADD CONSTRAINT maintenance_reminders_assigned_to_fkey FOREIGN KEY (assigned_to) REFERENCES users(id) ON DELETE SET NULL;
 
-ALTER TABLE ONLY public.shopping_lists
-    ADD CONSTRAINT shopping_lists_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id) ON DELETE SET NULL;
+ALTER TABLE ONLY maintenance_reminders
+    ADD CONSTRAINT maintenance_reminders_assigned_to_users_id_fk FOREIGN KEY (assigned_to) REFERENCES users(id) ON DELETE SET NULL;
 
-ALTER TABLE ONLY public.shopping_lists
-    ADD CONSTRAINT shopping_lists_created_by_users_id_fk FOREIGN KEY (created_by) REFERENCES public.users(id) ON DELETE SET NULL;
+ALTER TABLE ONLY maintenance_reminders
+    ADD CONSTRAINT maintenance_reminders_created_by_fkey FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL;
 
-ALTER TABLE ONLY public.task_lists
-    ADD CONSTRAINT task_lists_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id) ON DELETE SET NULL;
+ALTER TABLE ONLY maintenance_reminders
+    ADD CONSTRAINT maintenance_reminders_created_by_users_id_fk FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL;
 
-ALTER TABLE ONLY public.task_sources
-    ADD CONSTRAINT task_sources_task_list_id_fkey FOREIGN KEY (task_list_id) REFERENCES public.task_lists(id) ON DELETE CASCADE;
+ALTER TABLE ONLY meals
+    ADD CONSTRAINT meals_cooked_by_fkey FOREIGN KEY (cooked_by) REFERENCES users(id) ON DELETE SET NULL;
 
-ALTER TABLE ONLY public.task_sources
-    ADD CONSTRAINT task_sources_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+ALTER TABLE ONLY meals
+    ADD CONSTRAINT meals_cooked_by_users_id_fk FOREIGN KEY (cooked_by) REFERENCES users(id) ON DELETE SET NULL;
 
-ALTER TABLE ONLY public.tasks
-    ADD CONSTRAINT tasks_assigned_to_fkey FOREIGN KEY (assigned_to) REFERENCES public.users(id) ON DELETE SET NULL;
+ALTER TABLE ONLY meals
+    ADD CONSTRAINT meals_created_by_fkey FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL;
 
-ALTER TABLE ONLY public.tasks
-    ADD CONSTRAINT tasks_assigned_to_users_id_fk FOREIGN KEY (assigned_to) REFERENCES public.users(id) ON DELETE SET NULL;
+ALTER TABLE ONLY meals
+    ADD CONSTRAINT meals_created_by_users_id_fk FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL;
 
-ALTER TABLE ONLY public.tasks
-    ADD CONSTRAINT tasks_completed_by_fkey FOREIGN KEY (completed_by) REFERENCES public.users(id) ON DELETE SET NULL;
+ALTER TABLE ONLY meals
+    ADD CONSTRAINT meals_recipe_id_fkey FOREIGN KEY (recipe_id) REFERENCES recipes(id) ON DELETE SET NULL;
 
-ALTER TABLE ONLY public.tasks
-    ADD CONSTRAINT tasks_completed_by_users_id_fk FOREIGN KEY (completed_by) REFERENCES public.users(id) ON DELETE SET NULL;
+ALTER TABLE ONLY photos
+    ADD CONSTRAINT photos_source_id_fkey FOREIGN KEY (source_id) REFERENCES photo_sources(id) ON DELETE CASCADE;
 
-ALTER TABLE ONLY public.tasks
-    ADD CONSTRAINT tasks_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id) ON DELETE SET NULL;
+ALTER TABLE ONLY photos
+    ADD CONSTRAINT photos_source_id_photo_sources_id_fk FOREIGN KEY (source_id) REFERENCES photo_sources(id) ON DELETE CASCADE;
 
-ALTER TABLE ONLY public.tasks
-    ADD CONSTRAINT tasks_created_by_users_id_fk FOREIGN KEY (created_by) REFERENCES public.users(id) ON DELETE SET NULL;
+ALTER TABLE ONLY recipes
+    ADD CONSTRAINT recipes_created_by_fkey FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL;
 
-ALTER TABLE ONLY public.tasks
-    ADD CONSTRAINT tasks_list_id_fkey FOREIGN KEY (list_id) REFERENCES public.task_lists(id) ON DELETE CASCADE;
+ALTER TABLE ONLY shopping_items
+    ADD CONSTRAINT shopping_items_added_by_fkey FOREIGN KEY (added_by) REFERENCES users(id) ON DELETE SET NULL;
 
-ALTER TABLE ONLY public.tasks
-    ADD CONSTRAINT tasks_task_source_id_fkey FOREIGN KEY (task_source_id) REFERENCES public.task_sources(id) ON DELETE SET NULL;
+ALTER TABLE ONLY shopping_items
+    ADD CONSTRAINT shopping_items_added_by_users_id_fk FOREIGN KEY (added_by) REFERENCES users(id) ON DELETE SET NULL;
 
+ALTER TABLE ONLY shopping_items
+    ADD CONSTRAINT shopping_items_list_id_fkey FOREIGN KEY (list_id) REFERENCES shopping_lists(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY shopping_items
+    ADD CONSTRAINT shopping_items_list_id_shopping_lists_id_fk FOREIGN KEY (list_id) REFERENCES shopping_lists(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY shopping_items
+    ADD CONSTRAINT shopping_items_shopping_list_source_id_fkey FOREIGN KEY (shopping_list_source_id) REFERENCES shopping_list_sources(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY shopping_list_sources
+    ADD CONSTRAINT shopping_list_sources_shopping_list_id_fkey FOREIGN KEY (shopping_list_id) REFERENCES shopping_lists(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY shopping_list_sources
+    ADD CONSTRAINT shopping_list_sources_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY shopping_lists
+    ADD CONSTRAINT shopping_lists_assigned_to_fkey FOREIGN KEY (assigned_to) REFERENCES users(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY shopping_lists
+    ADD CONSTRAINT shopping_lists_assigned_to_users_id_fk FOREIGN KEY (assigned_to) REFERENCES users(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY shopping_lists
+    ADD CONSTRAINT shopping_lists_created_by_fkey FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY shopping_lists
+    ADD CONSTRAINT shopping_lists_created_by_users_id_fk FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY task_lists
+    ADD CONSTRAINT task_lists_created_by_fkey FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY task_sources
+    ADD CONSTRAINT task_sources_task_list_id_fkey FOREIGN KEY (task_list_id) REFERENCES task_lists(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY task_sources
+    ADD CONSTRAINT task_sources_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY tasks
+    ADD CONSTRAINT tasks_assigned_to_fkey FOREIGN KEY (assigned_to) REFERENCES users(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY tasks
+    ADD CONSTRAINT tasks_assigned_to_users_id_fk FOREIGN KEY (assigned_to) REFERENCES users(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY tasks
+    ADD CONSTRAINT tasks_completed_by_fkey FOREIGN KEY (completed_by) REFERENCES users(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY tasks
+    ADD CONSTRAINT tasks_completed_by_users_id_fk FOREIGN KEY (completed_by) REFERENCES users(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY tasks
+    ADD CONSTRAINT tasks_created_by_fkey FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY tasks
+    ADD CONSTRAINT tasks_created_by_users_id_fk FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY tasks
+    ADD CONSTRAINT tasks_list_id_fkey FOREIGN KEY (list_id) REFERENCES task_lists(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY tasks
+    ADD CONSTRAINT tasks_task_source_id_fkey FOREIGN KEY (task_source_id) REFERENCES task_sources(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY wish_item_sources
+    ADD CONSTRAINT wish_item_sources_member_id_fkey FOREIGN KEY (member_id) REFERENCES users(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY wish_item_sources
+    ADD CONSTRAINT wish_item_sources_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY wish_items
+    ADD CONSTRAINT wish_items_added_by_fkey FOREIGN KEY (added_by) REFERENCES users(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY wish_items
+    ADD CONSTRAINT wish_items_claimed_by_fkey FOREIGN KEY (claimed_by) REFERENCES users(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY wish_items
+    ADD CONSTRAINT wish_items_member_id_fkey FOREIGN KEY (member_id) REFERENCES users(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY wish_items
+    ADD CONSTRAINT wish_items_wish_item_source_id_fkey FOREIGN KEY (wish_item_source_id) REFERENCES wish_item_sources(id) ON DELETE SET NULL;
