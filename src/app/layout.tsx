@@ -186,10 +186,9 @@ export const viewport: Viewport = {
   // Initial zoom level (1 = 100%)
   initialScale: 1,
 
-  // Prevent user zoom (important for touchscreen kiosks)
-  // NOTE: This can affect accessibility. Consider enabling for non-kiosk use.
-  maximumScale: 1,
-  userScalable: false,
+  // Allow pinch-to-zoom for accessibility (WCAG requirement)
+  maximumScale: 5,
+  userScalable: true,
 
   // Viewport fit cover for iOS safe area handling
   // This allows content to extend into the safe area (notch, home indicator)

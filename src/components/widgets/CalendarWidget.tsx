@@ -18,6 +18,7 @@ import {
 } from 'date-fns';
 import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { isLightColor } from '@/lib/utils/color';
 import { deduplicateEvents } from '@/lib/utils/calendarDedup';
 import { WidgetContainer, WidgetEmpty, useWidgetBgOverride } from './WidgetContainer';
 import {
@@ -190,7 +191,7 @@ export function CalendarWidget({
       {/* View selector */}
       {availableViews.length > 1 && (
         <Select value={viewType} onValueChange={(v) => setViewType(v as WidgetViewType)}>
-          <SelectTrigger className={cn("h-6 w-[70px] text-[10px]", transparentMode && "bg-transparent border-current/20")}>
+          <SelectTrigger aria-label="Calendar view" className={cn("h-6 w-[70px] text-[10px]", transparentMode && "bg-transparent border-current/20")}>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -231,7 +232,7 @@ export function CalendarWidget({
           className={cn(
             'px-2 py-1 rounded-full text-[10px] font-medium transition-colors inline-flex items-center gap-1 leading-none',
             selectedCalendarIds.has(group.id) || selectedCalendarIds.has('all')
-              ? 'text-white'
+              ? isLightColor(group.color) ? 'text-gray-900' : 'text-white'
               : 'bg-muted text-muted-foreground hover:bg-accent'
           )}
           style={
