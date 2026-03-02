@@ -91,6 +91,9 @@ export function useDashboardData() {
   const lastAutoSyncRef = useRef<number>(0);
 
   const autoSyncTasks = useCallback(async () => {
+    // Skip sync in guest/display mode — no session cookie means no write access
+    if (typeof document !== 'undefined' && !document.cookie.includes('prism_session')) return;
+
     const now = Date.now();
     if (now - lastAutoSyncRef.current < AUTO_SYNC_INTERVAL_MS) return;
 

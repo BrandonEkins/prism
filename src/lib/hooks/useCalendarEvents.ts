@@ -110,6 +110,9 @@ export function useCalendarEvents(
    * Trigger calendar sync
    */
   const syncCalendars = useCallback(async () => {
+    // Skip sync in guest/display mode — no session cookie means no write access
+    if (!document.cookie.includes('prism_session')) return;
+
     try {
       const response = await fetch('/api/calendars/sync', {
         method: 'POST',
