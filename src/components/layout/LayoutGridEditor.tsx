@@ -11,55 +11,19 @@ import { WidgetBgOverrideProvider } from '@/components/widgets/WidgetContainer';
 import { useTheme } from '@/components/providers';
 import { getColorPalette, FIXED_COLORS, PALETTE_ORDER, type PaletteId } from '@/lib/constants/colorPalettes';
 import type { WidgetConfig } from '@/lib/hooks/useLayouts';
+import { CssGridDisplay } from './grid/CssGridDisplay';
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
 
 const overlapCompactor = getCompactor(null, true);
 
-export interface EditorTheme {
-  gridBg: string;
-  gridStroke: string;
-  gridOpacity: number;
-  gridPatternId: string;
-  borderDash: string;
-}
+export type { EditorTheme } from './grid/gridEditorTypes';
+export { DASHBOARD_THEME, SCREENSAVER_THEME } from './grid/gridEditorTypes';
+export type { LayoutGridEditorProps } from './grid/gridEditorTypes';
 
-const DASHBOARD_THEME: EditorTheme = {
-  gridBg: '',
-  gridStroke: 'currentColor',
-  gridOpacity: 0.3,
-  gridPatternId: 'grid-dash',
-  borderDash: 'border-white/50 dark:border-white/40',
-};
-
-const SCREENSAVER_THEME: EditorTheme = {
-  gridBg: 'bg-black/80',
-  gridStroke: 'white',
-  gridOpacity: 0.2,
-  gridPatternId: 'grid-ss',
-  borderDash: 'border-white/40',
-};
-
-export { DASHBOARD_THEME, SCREENSAVER_THEME };
-
-export interface LayoutGridEditorProps {
-  layout: WidgetConfig[];
-  onLayoutChange: (layout: WidgetConfig[]) => void;
-  isEditable?: boolean;
-  renderWidget: (widget: WidgetConfig) => React.ReactNode;
-  widgetConstraints?: Record<string, { minW?: number; minH?: number }>;
-  margin?: number;
-  headerOffset?: number;
-  bottomOffset?: number;
-  minVisibleRows?: number;
-  theme?: EditorTheme;
-  gridHelperText?: string;
-  className?: string;
-  screenGuideOrientation?: 'landscape' | 'portrait';
-  enabledSizes?: string[];
-  onScrollInfo?: (info: { scrollY: number; visibleRows: number; scrollX: number; visibleCols: number; totalRows: number; totalCols: number }) => void;
-  scrollToRef?: React.MutableRefObject<((row: number, col?: number) => void) | null>;
-}
+// Re-import for local use
+import { DASHBOARD_THEME } from './grid/gridEditorTypes';
+import type { LayoutGridEditorProps } from './grid/gridEditorTypes';
 
 export function LayoutGridEditor({
   layout,
@@ -700,50 +664,18 @@ export function LayoutGridEditor({
     );
   }
 
-  // Display mode (non-editable) - prevent scrolling beyond screen bounds
+  // Display mode (non-editable) — pure CSS Grid, SSR-safe
   return (
-    <div
-      ref={containerRef as React.RefObject<HTMLDivElement>}
-      className={`relative overflow-hidden ${className || ''}`}
-      style={{ height: visibleRows * (cellSize + margin) + 2 * containerPadding }}
-    >
-      {mounted && width > 0 ? (
-        <div style={{ height: '100%' }}>
-          <RGL
-            className="layout"
-            width={width}
-            layouts={{ lg: rglLayout }}
-            breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480 }}
-            cols={{ lg: cols, md: 9, sm: 6, xs: 3 }}
-            rowHeight={cellSize}
-            compactor={overlapCompactor}
-            dragConfig={{ enabled: false }}
-            resizeConfig={{ enabled: false }}
-            containerPadding={[containerPadding, containerPadding]}
-            margin={[margin, margin]}
-          >
-            {visibleWidgets.map(w => {
-              const widgetStyle = getWidgetStyle(w);
-              const textClass = getTextClass(w, '');
-              const hasCustomBg = !!w.backgroundColor;
-
-              return (
-                <div key={w.i} className="relative" style={widgetStyle}>
-                  <WidgetBgOverrideProvider value={{ hasCustomBg, textColor: w.textColor, textOpacity: w.textOpacity }}>
-                    <div className={`h-full w-full overflow-hidden ${textClass}`}>
-                      {renderWidget(w)}
-                    </div>
-                  </WidgetBgOverrideProvider>
-                </div>
-              );
-            })}
-          </RGL>
-        </div>
-      ) : (
-        <div style={{ padding: 20, color: 'yellow' }}>
-          Waiting for container width...
-        </div>
-      )}
-    </div>
+    <CssGridDisplay
+      layout={layout}
+      renderWidget={renderWidget}
+      margin={margin}
+      containerPadding={containerPadding}
+      cols={cols}
+      headerOffset={headerOffset}
+      bottomOffset={bottomOffset}
+      minVisibleRows={minVisibleRows}
+      className={className}
+    />
   );
 }

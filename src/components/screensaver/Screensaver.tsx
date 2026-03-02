@@ -6,20 +6,13 @@ import { useIdleDetection } from '@/lib/hooks/useIdleDetection';
 import { usePhotos } from '@/lib/hooks/usePhotos';
 import { useAutoOrientationSetting, usePinnedPhoto, useScreensaverInterval } from '@/components/layout/WallpaperBackground';
 import { useScreenOrientation } from '@/lib/hooks/useScreenOrientation';
-import { ResponsiveGridLayout as RGL, useContainerWidth, getCompactor } from 'react-grid-layout';
-import type { LayoutItem, Layout } from 'react-grid-layout';
 import type { WidgetConfig } from '@/lib/hooks/useLayouts';
-import { hexToRgba } from '@/lib/utils/color';
-import { WidgetBgOverrideProvider } from '@/components/widgets/WidgetContainer';
 import { WIDGET_REGISTRY } from '@/components/widgets/widgetRegistry';
 import { useDashboardData } from '@/components/dashboard/useDashboardData';
 import { buildWidgetProps } from '@/components/dashboard/useWidgetProps';
-import 'react-grid-layout/css/styles.css';
-import 'react-resizable/css/styles.css';
+import { CssGridDisplay } from '@/components/layout/grid/CssGridDisplay';
 
 const SCREENSAVER_LAYOUT_KEY = 'prism-screensaver-layout';
-
-const overlapCompactor = getCompactor(null, true);
 
 export const DEFAULT_SCREENSAVER_LAYOUT: WidgetConfig[] = [
   { i: 'clock', x: 8, y: 9, w: 4, h: 3, visible: true },
@@ -149,7 +142,6 @@ export function Screensaver() {
 
 function ScreensaverGrid() {
   const layout = useMemo(() => loadScreensaverLayout(), []);
-  const { width, containerRef, mounted } = useContainerWidth();
   const data = useDashboardData();
   const widgetProps = useMemo(() =>
     buildWidgetProps(
@@ -160,50 +152,12 @@ function ScreensaverGrid() {
     ),
   [data]);
 
-  const rowHeight = useMemo(() => {
-    if (typeof window === 'undefined') return 60;
-    return Math.max(30, Math.floor((window.innerHeight - 24) / 12));
-  }, []);
-
-  const visibleWidgets = useMemo(
-    () => layout.filter(w => w.visible !== false),
-    [layout]
-  );
-
-  const rglLayout: LayoutItem[] = useMemo(
-    () => visibleWidgets.map((w) => ({ i: w.i, x: w.x, y: w.y, w: w.w, h: w.h, static: true })),
-    [visibleWidgets]
-  );
-
-  const getWidgetStyle = (w: WidgetConfig): React.CSSProperties | undefined => {
-    if (!w.backgroundColor && !w.outlineColor && !w.textColor) return undefined;
-    const style: React.CSSProperties = { borderRadius: '0.5rem' };
-    if (w.backgroundColor && w.backgroundColor !== 'transparent') {
-      const opacity = w.backgroundOpacity ?? 1;
-      style.backgroundColor = opacity < 1
-        ? hexToRgba(w.backgroundColor, opacity)
-        : w.backgroundColor;
-    }
-    if (w.outlineColor) {
-      const olOpacity = w.outlineOpacity ?? 1;
-      style.border = `2px solid ${olOpacity < 1 ? hexToRgba(w.outlineColor, olOpacity) : w.outlineColor}`;
-    }
-    if (w.textColor) {
-      const txtOpacity = w.textOpacity ?? 1;
-      style.color = txtOpacity < 1
-        ? hexToRgba(w.textColor, txtOpacity)
-        : w.textColor;
-    }
-    return style;
-  };
-
   const renderWidget = (w: WidgetConfig) => {
     const reg = WIDGET_REGISTRY[w.i];
     if (!reg) return null;
     const Component = reg.component;
     const rawProps = { ...widgetProps[w.i] || {}, gridW: w.w, gridH: w.h };
     // Strip interactive callbacks — screensaver widgets are display-only
-    // (any interaction exits the screensaver, so buttons/dropdowns are misleading)
     const {
       onAddClick, onAddMeal, onListChange, onItemToggle, onTaskToggle,
       onChoreComplete, onEventClick, onMessageClick, onDeleteClick,
@@ -219,37 +173,25 @@ function ScreensaverGrid() {
     );
   };
 
+  // Override renderWidget to inject screensaver text defaults (white text)
+  const renderScreensaverWidget = (w: WidgetConfig) => {
+    return renderWidget({
+      ...w,
+      textColor: w.textColor || '#FFFFFF',
+      textOpacity: w.textOpacity ?? (w.textColor ? 1 : 0.9),
+    });
+  };
+
   return (
-    <div ref={containerRef as React.RefObject<HTMLDivElement>} className="relative w-full h-full">
-      {mounted && width > 0 && (
-        <RGL
-          className="layout"
-          width={width}
-          layouts={{ lg: rglLayout }}
-          breakpoints={{ lg: 0 }}
-          cols={{ lg: 12 }}
-          rowHeight={rowHeight}
-          compactor={overlapCompactor}
-          dragConfig={{ enabled: false }}
-          resizeConfig={{ enabled: false }}
-          containerPadding={[12, 12]}
-          margin={[4, 4]}
-        >
-          {visibleWidgets.map(w => {
-            const hasCustomBg = !!w.backgroundColor;
-            const textColor = w.textColor || '#FFFFFF';
-            const textOpacity = w.textOpacity ?? (w.textColor ? 1 : 0.9);
-            return (
-              <div key={w.i} style={getWidgetStyle(w)}>
-                <WidgetBgOverrideProvider value={{ hasCustomBg, textColor, textOpacity }}>
-                  {renderWidget(w)}
-                </WidgetBgOverrideProvider>
-              </div>
-            );
-          })}
-        </RGL>
-      )}
-    </div>
+    <CssGridDisplay
+      layout={layout}
+      renderWidget={renderScreensaverWidget}
+      margin={4}
+      containerPadding={12}
+      cols={12}
+      fillHeight
+      className="w-full h-full"
+    />
   );
 }
 

@@ -6,7 +6,7 @@ import { Suspense, useState, useCallback, useEffect, useMemo, useRef } from 'rea
 const VISIBLE_WIDGETS_KEY = 'prism-visible-widgets';
 import { useRouter } from 'next/navigation';
 import { AppShell } from '@/components/layout/AppShell';
-import { DashboardGrid, DashboardLayout, DashboardHeader } from '@/components/layout/DashboardGrid';
+import { DashboardLayout, DashboardHeader } from '@/components/layout/DashboardGrid';
 import { LayoutGridEditor, SCREENSAVER_THEME } from '@/components/layout/LayoutGridEditor';
 import { LayoutEditor } from '@/components/layout/LayoutEditor';
 import { useAuth } from '@/components/providers';
@@ -57,8 +57,6 @@ export function Dashboard({
   slug,
 }: DashboardProps) {
   const router = useRouter();
-  const [isMounted, setIsMounted] = useState(false);
-  useEffect(() => { setIsMounted(true); }, []);
 
   const { activeUser, requireAuth, clearActiveUser } = useAuth();
   const { confirm: confirmAction, dialogProps: confirmDialogProps } = useConfirmDialog();
@@ -344,10 +342,6 @@ export function Dashboard({
             onScrollInfo={handleScrollInfo}
             scrollToRef={scrollToGridRef}
           />
-        ) : !isMounted ? (
-          <DashboardGrid>
-            <div className="col-span-4 flex items-center justify-center h-64 text-muted-foreground">Loading widgets...</div>
-          </DashboardGrid>
         ) : (
           <WidgetErrorBoundary>
             <LayoutGridEditor
