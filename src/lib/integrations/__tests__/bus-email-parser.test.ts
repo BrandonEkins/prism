@@ -213,6 +213,7 @@ describe('matchEmailToRoute', () => {
       checkpointName: 'Turned onto Elm',
       tripId: '15-A',
       eventTime: new Date(),
+      directionHint: null,
     };
 
     const match = matchEmailToRoute(parsed, routes);
@@ -230,6 +231,7 @@ describe('matchEmailToRoute', () => {
       checkpointName: 'ELM ST & OAK AVE',
       tripId: '15-A',
       eventTime: new Date(),
+      directionHint: null,
     };
 
     const match = matchEmailToRoute(parsed, routes);
@@ -246,6 +248,7 @@ describe('matchEmailToRoute', () => {
       checkpointName: 'Riverside Middle School',
       tripId: '15-A',
       eventTime: new Date(),
+      directionHint: null,
     };
 
     const match = matchEmailToRoute(parsed, routes);
@@ -262,6 +265,7 @@ describe('matchEmailToRoute', () => {
       checkpointName: 'ELM RD & OAK AVE',
       tripId: '15-A',
       eventTime: new Date(),
+      directionHint: null,
     };
 
     // Route uses shorthand "Elm & Oak"
@@ -282,6 +286,7 @@ describe('matchEmailToRoute', () => {
       checkpointName: 'Riverside Middle School',
       tripId: '15-A',
       eventTime: new Date(),
+      directionHint: null,
     };
 
     // Exact match still works with full name
@@ -297,6 +302,7 @@ describe('matchEmailToRoute', () => {
       checkpointName: 'Pine @ Cedar',
       tripId: '15-A',
       eventTime: new Date(),
+      directionHint: null,
     };
 
     expect(matchEmailToRoute(parsed, routes)).toBeNull();
@@ -309,6 +315,7 @@ describe('matchEmailToRoute', () => {
       checkpointName: 'Pine @ Cedar',
       tripId: '15-A',
       eventTime: new Date(),
+      directionHint: null,
     };
 
     const match = matchEmailToRoute(parsed, routes);
