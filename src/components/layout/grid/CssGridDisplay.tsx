@@ -22,7 +22,7 @@ export function CssGridDisplay({
   minVisibleRows = 0,
   className,
 }: CssGridDisplayProps) {
-  const { containerRef, cellSize, mounted } = useSquareCells(cols, containerPadding, margin, fillHeight);
+  const { containerRef, cellSize } = useSquareCells(cols, containerPadding, margin, fillHeight);
 
   const visibleWidgets = useMemo(
     () => layout.filter(w => w.visible !== false),
@@ -45,7 +45,7 @@ export function CssGridDisplay({
     <div
       ref={containerRef}
       className={`relative overflow-hidden ${className || ''}`}
-      style={{ height: containerHeight, visibility: mounted ? 'visible' : 'hidden' }}
+      style={{ height: containerHeight }}
     >
       <div
         style={{

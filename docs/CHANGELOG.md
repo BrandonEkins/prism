@@ -13,7 +13,6 @@ All notable changes to Prism are documented in this file.
   - Removes 5 packages from bundle (react-grid-layout and dependencies)
 - **Performance**: Lighthouse optimization pass
   - Lazy-load Add modals (task, message, chore, shopping) — deferred from critical path
-  - Fix CLS: grid display hidden until cell size measurement completes
   - Add React.memo to eager-loaded widgets (Clock, Weather, Calendar) to prevent unnecessary re-renders
 - **Bus Tracking**: Auto-sync emails on status poll (60s Redis debounce lock)
 
