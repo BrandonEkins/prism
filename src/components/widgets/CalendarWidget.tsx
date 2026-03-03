@@ -67,7 +67,7 @@ export interface CalendarWidgetProps {
 }
 
 
-export function CalendarWidget({
+export const CalendarWidget = React.memo(function CalendarWidget({
   events: externalEvents,
   loading: externalLoading,
   error: externalError,
@@ -336,7 +336,7 @@ export function CalendarWidget({
       )}
     </WidgetContainer>
   );
-}
+});
 
 
 // ---- List view sub-components (kept from original) ----

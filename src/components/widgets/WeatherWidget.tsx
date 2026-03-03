@@ -123,7 +123,7 @@ export interface WeatherWidgetProps {
  * @example Celsius
  * <WeatherWidget useCelsius />
  */
-export function WeatherWidget({
+export const WeatherWidget = React.memo(function WeatherWidget({
   location = 'Springfield, IL',
   useCelsius = false,
   showForecast = true,
@@ -254,7 +254,7 @@ export function WeatherWidget({
       </div>
     </WidgetContainer>
   );
-}
+});
 
 
 /**

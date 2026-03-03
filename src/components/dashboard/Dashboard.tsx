@@ -13,7 +13,12 @@ import { useAuth } from '@/components/providers';
 import { useScreenSafeZones } from '@/lib/hooks/useScreenSafeZones';
 import { useOrientation } from '@/lib/hooks/useOrientation';
 import { useIsMobile } from '@/lib/hooks/useIsMobile';
-import { AddTaskModal, AddMessageModal, AddChoreModal, AddShoppingItemModal } from '@/components/modals';
+import dynamic from 'next/dynamic';
+
+const AddTaskModal = dynamic(() => import('@/components/modals/AddTaskModal').then(m => ({ default: m.AddTaskModal })));
+const AddMessageModal = dynamic(() => import('@/components/modals/AddMessageModal').then(m => ({ default: m.AddMessageModal })));
+const AddChoreModal = dynamic(() => import('@/components/modals/AddChoreModal').then(m => ({ default: m.AddChoreModal })));
+const AddShoppingItemModal = dynamic(() => import('@/components/modals/AddShoppingItemModal').then(m => ({ default: m.AddShoppingItemModal })));
 import { WIDGET_REGISTRY } from '@/components/widgets/widgetRegistry';
 import { renderScreensaverPreview } from '@/components/screensaver/ScreensaverWidgetPreview';
 import type { WidgetConfig } from '@/lib/hooks/useLayouts';
