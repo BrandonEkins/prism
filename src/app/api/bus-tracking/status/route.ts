@@ -15,7 +15,16 @@ async function triggerSyncIfNeeded() {
     const acquired = await client.set('bus:sync-lock', '1', { NX: true, EX: 60 });
     if (!acquired) return; // synced recently
   }
-  await syncBusEmails();
+  try {
+    const result = await syncBusEmails();
+    if (result.skippedReasons.length > 0) {
+      console.warn('Bus sync skipped emails:', result.skippedReasons);
+    }
+  } catch (err) {
+    // Release lock early on error so next poll can retry
+    if (client) await client.del('bus:sync-lock').catch(() => {});
+    throw err;
+  }
 }
 
 export async function GET() {

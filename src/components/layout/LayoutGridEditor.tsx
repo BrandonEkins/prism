@@ -418,6 +418,21 @@ export function LayoutGridEditor({
               );
             })}
           </div>
+
+          {/* Reset all colors button — only show when any custom color is set */}
+          {(hasColorFill || hasColorOutline || hasColorText) && (
+            <button
+              onClick={() => updateWidgetColor(selectedWidget, {
+                backgroundColor: null, backgroundOpacity: 1,
+                outlineColor: null, outlineOpacity: 1,
+                textColor: null, textOpacity: 1,
+              })}
+              onPointerDown={(e) => e.stopPropagation()}
+              className="ml-auto px-2.5 min-h-[44px] text-xs rounded border border-border hover:bg-accent/50 text-muted-foreground transition-colors touch-manipulation"
+            >
+              Reset
+            </button>
+          )}
         </div>
       </div>
     );

@@ -26,6 +26,7 @@ interface SyncResult {
   newEvents: number;
   skipped: number;
   errors: string[];
+  skippedReasons: string[];
 }
 
 /**
@@ -94,7 +95,7 @@ async function ensureFreshToken(creds: {
  * Sync bus emails from Gmail. Main entry point for the sync service.
  */
 export async function syncBusEmails(): Promise<SyncResult> {
-  const result: SyncResult = { processed: 0, newEvents: 0, skipped: 0, errors: [] };
+  const result: SyncResult = { processed: 0, newEvents: 0, skipped: 0, errors: [], skippedReasons: [] };
 
   // Get Gmail credentials
   const creds = await getGmailCredentials();
@@ -118,7 +119,7 @@ export async function syncBusEmails(): Promise<SyncResult> {
   // Fetch unread FirstView emails
   let messageRefs: { id: string; threadId: string }[];
   try {
-    messageRefs = await fetchEmails(accessToken, FIRSTVIEW_QUERY, { unreadOnly: true });
+    messageRefs = await fetchEmails(accessToken, FIRSTVIEW_QUERY, { unreadOnly: true, maxResults: 50 });
   } catch (error) {
     result.errors.push(`Failed to fetch emails: ${error instanceof Error ? error.message : 'Unknown error'}`);
     return result;
@@ -162,6 +163,8 @@ export async function syncBusEmails(): Promise<SyncResult> {
       const parsed = parseBusEmail(subject, body, date);
       if (!parsed) {
         result.skipped++;
+        result.skippedReasons.push(`Parse failed: "${subject}"`);
+        console.warn(`Bus sync: could not parse email: "${subject}"`);
         await markEmailAsRead(accessToken, ref.id).catch(() => {});
         continue;
       }
@@ -170,6 +173,8 @@ export async function syncBusEmails(): Promise<SyncResult> {
       const match = matchEmailToRoute(parsed, routeData);
       if (!match) {
         result.skipped++;
+        result.skippedReasons.push(`No route match: "${subject}" (student=${parsed.studentName}, hint=${parsed.directionHint})`);
+        console.warn(`Bus sync: no route match for "${subject}" (student=${parsed.studentName}, hint=${parsed.directionHint})`);
         await markEmailAsRead(accessToken, ref.id).catch(() => {});
         continue;
       }
