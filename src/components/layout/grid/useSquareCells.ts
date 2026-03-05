@@ -24,7 +24,7 @@ export function useSquareCells(
     if (fillHeight) {
       setMounted(true);
       const vh = typeof window !== 'undefined' ? window.innerHeight : 720;
-      setCellSize(Math.max(30, Math.floor((vh - 2 * containerPadding - 11 * gap) / 12)));
+      setCellSize(Math.max(30, Math.floor((vh - 2 * containerPadding - (cols - 1) * gap) / cols)));
       return;
     }
     const el = nodeRef.current;
@@ -34,7 +34,8 @@ export function useSquareCells(
     setMounted(true);
     if (w <= 0) return;
     const available = w - 2 * containerPadding - (cols - 1) * gap;
-    setCellSize(Math.floor(available / cols));
+    // Enforce minimum 16px cells so grid remains usable on narrow screens (e.g. iPad portrait)
+    setCellSize(Math.max(16, Math.floor(available / cols)));
   }, [cols, containerPadding, gap, fillHeight]);
 
   // Callback ref — re-measures and re-attaches ResizeObserver when element changes

@@ -5,7 +5,7 @@
 
 import { eq, and } from 'drizzle-orm';
 import { db } from '@/lib/db/client';
-import { apiCredentials, busRoutes, busGeofenceLog } from '@/lib/db/schema';
+import { apiCredentials, busRoutes, busGeofenceLog, settings } from '@/lib/db/schema';
 import { decrypt, encrypt } from '@/lib/utils/crypto';
 import {
   refreshGmailAccessToken,
@@ -116,10 +116,22 @@ export async function syncBusEmails(): Promise<SyncResult> {
     return result;
   }
 
-  // Fetch unread FirstView emails
+  // Read Gmail label setting (e.g. 'bus' for emails filtered to label:bus)
+  const gmailLabel = await getBusGmailLabel();
+
+  // Use date filter to limit search window (today minus 1 day) instead of is:unread
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  const afterDate = `${yesterday.getFullYear()}/${String(yesterday.getMonth() + 1).padStart(2, '0')}/${String(yesterday.getDate()).padStart(2, '0')}`;
+
+  // Fetch FirstView emails using label + date filter, relying on DB dedup
   let messageRefs: { id: string; threadId: string }[];
   try {
-    messageRefs = await fetchEmails(accessToken, FIRSTVIEW_QUERY, { unreadOnly: true, maxResults: 50 });
+    messageRefs = await fetchEmails(accessToken, FIRSTVIEW_QUERY, {
+      labelName: gmailLabel || undefined,
+      afterDate,
+      maxResults: 50,
+    });
   } catch (error) {
     result.errors.push(`Failed to fetch emails: ${error instanceof Error ? error.message : 'Unknown error'}`);
     return result;
@@ -144,13 +156,12 @@ export async function syncBusEmails(): Promise<SyncResult> {
     try {
       result.processed++;
 
-      // Check if we've already processed this email
+      // Check if we've already processed this email (DB dedup via gmailMessageId)
       const existing = await db.query.busGeofenceLog.findFirst({
         where: (log, { eq }) => eq(log.gmailMessageId, ref.id),
       });
       if (existing) {
         result.skipped++;
-        // Still mark as read
         await markEmailAsRead(accessToken, ref.id).catch(() => {});
         continue;
       }
@@ -165,7 +176,6 @@ export async function syncBusEmails(): Promise<SyncResult> {
         result.skipped++;
         result.skippedReasons.push(`Parse failed: "${subject}"`);
         console.warn(`Bus sync: could not parse email: "${subject}"`);
-        await markEmailAsRead(accessToken, ref.id).catch(() => {});
         continue;
       }
 
@@ -175,7 +185,6 @@ export async function syncBusEmails(): Promise<SyncResult> {
         result.skipped++;
         result.skippedReasons.push(`No route match: "${subject}" (student=${parsed.studentName}, hint=${parsed.directionHint})`);
         console.warn(`Bus sync: no route match for "${subject}" (student=${parsed.studentName}, hint=${parsed.directionHint})`);
-        await markEmailAsRead(accessToken, ref.id).catch(() => {});
         continue;
       }
 
@@ -201,7 +210,7 @@ export async function syncBusEmails(): Promise<SyncResult> {
 
       result.newEvents++;
 
-      // Mark as read
+      // Mark as read for tidiness (dedup is DB-based, not read-state)
       await markEmailAsRead(accessToken, ref.id).catch(() => {});
     } catch (error) {
       result.errors.push(
@@ -248,4 +257,16 @@ function formatDateStr(date: Date): string {
   const m = String(date.getMonth() + 1).padStart(2, '0');
   const d = String(date.getDate()).padStart(2, '0');
   return `${y}-${m}-${d}`;
+}
+
+/**
+ * Read the Gmail label name for bus emails from settings.
+ * Returns null if not configured (will search all mail).
+ */
+export async function getBusGmailLabel(): Promise<string | null> {
+  const [row] = await db
+    .select()
+    .from(settings)
+    .where(eq(settings.key, 'busGmailLabel'));
+  return (row?.value as string) || null;
 }

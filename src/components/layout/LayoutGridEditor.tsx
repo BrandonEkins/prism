@@ -8,6 +8,7 @@ import { useScreenSafeZones } from '@/lib/hooks/useScreenSafeZones';
 import { useTheme } from '@/components/providers';
 import { getColorPalette, FIXED_COLORS, PALETTE_ORDER, type PaletteId } from '@/lib/constants/colorPalettes';
 import type { WidgetConfig } from '@/lib/hooks/useLayouts';
+import { GRID_COLS } from '@/lib/constants/grid';
 import { CssGridDisplay } from './grid/CssGridDisplay';
 import { CssGridEditor } from './grid/CssGridEditor';
 import { useSquareCells } from './grid/useSquareCells';
@@ -39,7 +40,7 @@ export function LayoutGridEditor({
   scrollToRef,
 }: LayoutGridEditorProps) {
   const { zones: SAFE_ZONES, allSizeNames } = useScreenSafeZones();
-  const cols = 12;
+  const cols = GRID_COLS;
   const containerPadding = 12;
   const margin = marginProp;
   const { width, containerRef, mounted, cellSize } = useSquareCells(cols, containerPadding, margin);
@@ -82,8 +83,11 @@ export function LayoutGridEditor({
     });
     // Ensure grid extends to show all screen size guides
     const maxScreenRows = Math.max(...SAFE_ZONES[screenGuideOrientation].map(z => z.rows));
+    // Buffer: at least 20 rows (or half a screen) below bottom-most widget
+    // so touch users can scroll far enough to select/drag/resize lower widgets
+    const scrollBuffer = Math.max(20, Math.ceil(visibleRows / 2));
     return {
-      totalRows: Math.max(maxY + 4, maxScreenRows + 4),
+      totalRows: Math.max(maxY + scrollBuffer, maxScreenRows + 4),
       totalCols: Math.max(maxX, cols),
     };
   }, [layout, visibleRows, cols, screenGuideOrientation, SAFE_ZONES]);

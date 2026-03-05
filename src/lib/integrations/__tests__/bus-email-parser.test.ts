@@ -72,8 +72,8 @@ describe('parseBusEmail', () => {
       expect(result!.studentName).toBe('Emma');
       expect(result!.checkpointName).toBe('ELM ST & OAK AVE');
       expect(result!.tripId).toBe('15-A');
-      expect(result!.eventTime.getHours()).toBe(16);
-      expect(result!.eventTime.getMinutes()).toBe(11);
+      // Arrival events use emailDate (timezone-safe) instead of parsing body time
+      expect(result!.eventTime).toEqual(fallbackDate);
     });
 
     it('parses with US date format', () => {
@@ -84,8 +84,8 @@ describe('parseBusEmail', () => {
       const result = parseBusEmail(subject, body, fallbackDate);
 
       expect(result).not.toBeNull();
-      expect(result!.eventTime.getHours()).toBe(7);
-      expect(result!.eventTime.getMinutes()).toBe(22);
+      // Uses emailDate for timezone correctness
+      expect(result!.eventTime).toEqual(fallbackDate);
     });
 
     it('handles 12 PM correctly', () => {
@@ -96,8 +96,7 @@ describe('parseBusEmail', () => {
       const result = parseBusEmail(subject, body, fallbackDate);
 
       expect(result).not.toBeNull();
-      expect(result!.eventTime.getHours()).toBe(12);
-      expect(result!.eventTime.getMinutes()).toBe(5);
+      expect(result!.eventTime).toEqual(fallbackDate);
     });
 
     it('handles 12 AM correctly', () => {
@@ -108,8 +107,7 @@ describe('parseBusEmail', () => {
       const result = parseBusEmail(subject, body, fallbackDate);
 
       expect(result).not.toBeNull();
-      expect(result!.eventTime.getHours()).toBe(0);
-      expect(result!.eventTime.getMinutes()).toBe(1);
+      expect(result!.eventTime).toEqual(fallbackDate);
     });
   });
 
@@ -126,8 +124,8 @@ describe('parseBusEmail', () => {
       expect(result!.studentName).toBe('Emma');
       expect(result!.checkpointName).toBe('Riverside Middle School');
       expect(result!.tripId).toBe('15-A');
-      expect(result!.eventTime.getHours()).toBe(7);
-      expect(result!.eventTime.getMinutes()).toBe(53);
+      // Arrival events use emailDate (timezone-safe)
+      expect(result!.eventTime).toEqual(fallbackDate);
     });
 
     it('parses PM school arrival', () => {
@@ -138,8 +136,7 @@ describe('parseBusEmail', () => {
       const result = parseBusEmail(subject, body, fallbackDate);
 
       expect(result).not.toBeNull();
-      expect(result!.eventTime.getHours()).toBe(14);
-      expect(result!.eventTime.getMinutes()).toBe(55);
+      expect(result!.eventTime).toEqual(fallbackDate);
     });
   });
 

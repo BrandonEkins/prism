@@ -4,7 +4,19 @@ All notable changes to Prism are documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+- **Layout Editor (iPad)**: Fix scrolling stopping too early — grid now extends 20+ rows (or half a screen) below the last widget
+- **Layout Editor (iPad)**: Fix touch drag not working — tap to select a widget, then drag to move (selected widgets disable browser scroll so dnd-kit receives the gesture)
+- **Layout Editor (iPad)**: Enforce minimum 16px cell size so grid remains usable on narrow screens
+- **Layout Editor**: Add "Move" grip indicator on selected widgets for touch discoverability
+- **Bus Tracking**: Fix arrival event timestamps off by 6 hours in UTC Docker containers — arrival parsers now use the email Date header (timezone-correct) instead of parsing body text times as naive UTC
+
 ### Changed
+- **Dashboard Grid**: Migrated from 12-column to 48-column grid for finer widget positioning (~20px increments vs ~80px)
+  - All existing layouts auto-migrate on load (coordinates scaled 4x)
+  - Shared `GRID_COLS` constant as single source of truth
+  - Widget constraints, templates, breakpoints, and validation all updated
+
 - **Dashboard Grid**: Replaced react-grid-layout with native CSS Grid + dnd-kit
   - Display mode uses pure CSS Grid (SSR-safe, zero JS layout overhead)
   - Edit mode uses dnd-kit for drag-to-move with grid snapping, pointer events for resize
@@ -15,6 +27,11 @@ All notable changes to Prism are documented in this file.
   - Lazy-load Add modals (task, message, chore, shopping) — deferred from critical path
   - Add React.memo to eager-loaded widgets (Clock, Weather, Calendar) to prevent unnecessary re-renders
 - **Bus Tracking**: Auto-sync emails on status poll (60s Redis debounce lock)
+- **Bus Tracking**: Switch from `is:unread` to label+date Gmail filtering for email sync
+  - Supports Gmail filters that skip inbox and route to a label (e.g. "bus")
+  - Configurable Gmail label in Settings → Bus Tracking
+  - Uses DB dedup (gmailMessageId) instead of marking emails as read
+  - Date-windowed search (last 24h) keeps queries efficient
 
 ### Added
 - **Bus Tracking**: Track school bus arrivals via FirstView email notifications

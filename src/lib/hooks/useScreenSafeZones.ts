@@ -32,10 +32,7 @@ interface ScreenSafeZonesConfig {
 // --- Defaults (different aspect ratios) ---
 
 export const DEFAULT_SCREENS: ScreenZoneConfig[] = [
-  { name: '16:9 (1080p)',    width: 1920, height: 1080, color: '#3B82F6' },
-  { name: '3:2 (Surface)',   width: 1500, height: 1000, color: '#EF4444' },
-  { name: '16:10 (MacBook)', width: 2560, height: 1600, color: '#F59E0B' },
-  { name: '4:3 (iPad)',      width: 2048, height: 1536, color: '#22C55E' },
+  { name: 'Example safe zone (edit me)', width: 1920, height: 1080, color: '#3B82F6' },
 ];
 
 export const RESOLUTION_PRESETS: { label: string; width: number; height: number }[] = [
@@ -51,18 +48,18 @@ export const RESOLUTION_PRESETS: { label: string; width: number; height: number 
 const STORAGE_KEY = 'prism:screen-safe-zones';
 
 // --- Computation ---
-// The grid uses a 12-column CSS Grid layout.
+// The grid uses a 48-column CSS Grid layout.
 // On narrower screens, fewer columns may be used:
 // Cell size = screenWidth / cols, cells are square.
 // Visible rows = screenHeight / cellSize = cols * screenHeight / screenWidth.
-// In landscape, all reasonable screens are >=1200px → 12 cols.
+// In landscape, all reasonable screens are >=1200px → 48 cols.
 // In portrait, narrower screens hit lower breakpoints → fewer cols.
 
 function getBreakpointCols(screenWidth: number): number {
-  if (screenWidth >= 1200) return 12;
-  if (screenWidth >= 996) return 9;
-  if (screenWidth >= 768) return 6;
-  return 3;
+  if (screenWidth >= 1200) return 48;
+  if (screenWidth >= 996) return 36;
+  if (screenWidth >= 768) return 24;
+  return 12;
 }
 
 export function computeZones(

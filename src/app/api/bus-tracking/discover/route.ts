@@ -19,6 +19,7 @@ import {
 } from '@/lib/integrations/gmail';
 import { parseBusEmail } from '@/lib/integrations/bus-email-parser';
 import { invalidateCache } from '@/lib/cache/redis';
+import { getBusGmailLabel } from '@/lib/services/bus-tracking-sync';
 
 const FIRSTVIEW_QUERY = 'from:support@myfirstview.com subject:"First View"';
 
@@ -86,9 +87,12 @@ export async function POST() {
         );
       }
 
-      // Fetch ALL FirstView emails (not just unread), up to 100
+      // Read Gmail label setting for filtered emails
+      const gmailLabel = await getBusGmailLabel();
+
+      // Fetch ALL FirstView emails (using label if configured), up to 100
       const messageRefs = await fetchEmails(accessToken, FIRSTVIEW_QUERY, {
-        unreadOnly: false,
+        labelName: gmailLabel || undefined,
         maxResults: 100,
       });
 

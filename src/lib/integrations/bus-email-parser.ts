@@ -71,11 +71,12 @@ const ARRIVED_AT_SCHOOL_BODY = /(.+?)'s bus arrived at school stop (.+?) at (\d{
 /**
  * Parse a FirstView email into a structured event.
  * Returns null if the email doesn't match any known pattern.
+ *
  */
 export function parseBusEmail(
   subject: string,
   body: string,
-  emailDate: Date
+  emailDate: Date,
 ): ParsedBusEmail | null {
   // Clean up body text (remove extra whitespace, newlines)
   let cleanBody = body.replace(/\r\n/g, '\n').replace(/\n+/g, ' ').trim();
@@ -166,7 +167,10 @@ function parseArrivedAtStop(body: string, emailDate: Date): ParsedBusEmail | nul
   const match = body.match(ARRIVED_AT_STOP_BODY);
   if (!match || !match[1] || !match[2] || !match[3] || !match[4] || !match[5]) return null;
 
-  const eventTime = parseEventTime(match[3].trim(), match[4].trim(), emailDate);
+  // Use emailDate (from Date header) as the event time. The email is sent within
+  // seconds of the actual event, and emailDate is already timezone-correct (unlike
+  // body text times which are in the sender's local timezone — problematic in UTC containers).
+  const eventTime = emailDate;
   const tripsStr = match[5].trim();
   const tripId = extractTripId(tripsStr);
   const directionHint = extractDirectionFromTrips(tripsStr);
@@ -185,7 +189,8 @@ function parseArrivedAtSchool(body: string, emailDate: Date): ParsedBusEmail | n
   const match = body.match(ARRIVED_AT_SCHOOL_BODY);
   if (!match || !match[1] || !match[2] || !match[3] || !match[4] || !match[5]) return null;
 
-  const eventTime = parseEventTime(match[3].trim(), match[4].trim(), emailDate);
+  // Use emailDate as event time (same rationale as parseArrivedAtStop)
+  const eventTime = emailDate;
   const tripsStr = match[5].trim();
   const tripId = extractTripId(tripsStr);
   const directionHint = extractDirectionFromTrips(tripsStr);
@@ -216,6 +221,10 @@ function normalizeStudentName(name: string): string {
  * Parse a time+date string into a Date object.
  * Time: "7:15 AM" or "04:11 PM"
  * Date: "3/1/2026" (US) or "2026-02-27" (ISO)
+ *
+ * NOTE: This creates dates in the runtime's timezone. For production use where
+ * timezone consistency matters, prefer using emailDate directly (as arrival
+ * parsers now do) rather than parsing body text times.
  */
 function parseEventTime(timeStr: string, dateStr: string, fallback: Date): Date {
   try {

@@ -8,22 +8,27 @@ import { getRedisClient } from '@/lib/cache/getRedisClient';
 import { predictArrival } from '@/lib/services/bus-arrival-predictor';
 import { isGmailConnected, syncBusEmails } from '@/lib/services/bus-tracking-sync';
 
-/** Fire-and-forget: sync Gmail emails at most every 60s via Redis lock */
+/**
+ * Fire-and-forget: sync Gmail emails with a mutex lock (not a cooldown).
+ * The lock only lives while a sync is in progress — once complete, the next
+ * poll immediately triggers a fresh sync. This minimizes lag to just the
+ * Gmail API round-trip time (~1-2s) rather than an arbitrary cooldown.
+ */
 async function triggerSyncIfNeeded() {
   const client = await getRedisClient();
   if (client) {
-    const acquired = await client.set('bus:sync-lock', '1', { NX: true, EX: 60 });
-    if (!acquired) return; // synced recently
+    // NX = only set if not exists (mutex). EX = 30s safety TTL in case process crashes.
+    const acquired = await client.set('bus:sync-lock', '1', { NX: true, EX: 30 });
+    if (!acquired) return; // another sync is in progress
   }
   try {
     const result = await syncBusEmails();
     if (result.skippedReasons.length > 0) {
       console.warn('Bus sync skipped emails:', result.skippedReasons);
     }
-  } catch (err) {
-    // Release lock early on error so next poll can retry
+  } finally {
+    // Release lock immediately so next poll can sync
     if (client) await client.del('bus:sync-lock').catch(() => {});
-    throw err;
   }
 }
 
@@ -61,7 +66,7 @@ export async function GET() {
       );
 
       return { routes: routesWithStatus, connected };
-    }, 30); // 30 second cache
+    }, 5); // 5s cache — matches fastest polling interval during active tracking
 
     return NextResponse.json(data);
   } catch (error) {

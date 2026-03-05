@@ -297,12 +297,15 @@ function DraggableWidget({
   return (
     <div
       ref={setNodeRef}
-      className={`relative cursor-grab active:cursor-grabbing touch-manipulation ${
-        isSelected ? 'ring-2 ring-primary ring-offset-2 z-[100]' : ''
+      className={`relative cursor-grab active:cursor-grabbing ${
+        isSelected ? 'ring-2 ring-primary ring-offset-2 z-[100]' : 'touch-manipulation'
       } ${isDragging ? 'opacity-30' : ''}`}
       style={{
         gridColumn: `${pos.x + 1} / span ${pos.w}`,
         gridRow: `${pos.y + 1} / span ${pos.h}`,
+        // When selected, disable browser touch scrolling so dnd-kit can handle drag gestures.
+        // Unselected widgets keep touch-manipulation so normal scrolling works.
+        ...(isSelected ? { touchAction: 'none' } : {}),
         ...widgetStyle,
       }}
       onClick={(e) => { e.stopPropagation(); onSelect(widget.i); }}
@@ -318,6 +321,16 @@ function DraggableWidget({
           {renderWidget(widget)}
         </div>
       </WidgetBgOverrideProvider>
+
+      {/* Move grip icon — visible when selected to indicate draggable */}
+      {isSelected && !isDragging && (
+        <div className="absolute top-1 left-1/2 -translate-x-1/2 z-10 bg-primary/80 text-primary-foreground rounded-full px-2 py-0.5 flex items-center gap-1 pointer-events-none text-[10px] font-medium shadow-sm">
+          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="5 9 2 12 5 15" /><polyline points="9 5 12 2 15 5" /><polyline points="15 19 12 22 9 19" /><polyline points="19 9 22 12 19 15" /><line x1="2" y1="12" x2="22" y2="12" /><line x1="12" y1="2" x2="12" y2="22" />
+          </svg>
+          Move
+        </div>
+      )}
 
       {/* Resize handles — visible when selected */}
       {isSelected && (
