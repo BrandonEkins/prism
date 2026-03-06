@@ -580,138 +580,6 @@ ALTER TABLE ONLY wish_item_sources
 ALTER TABLE ONLY wish_items
     ADD CONSTRAINT wish_items_pkey PRIMARY KEY (id);
 
-CREATE INDEX IF NOT EXISTS api_tokens_created_by_idx ON api_tokens USING btree (created_by);
-
-CREATE UNIQUE INDEX IF NOT EXISTS api_tokens_token_hash_idx ON api_tokens USING btree (token_hash);
-
-CREATE INDEX IF NOT EXISTS audit_logs_created_at_idx ON audit_logs USING btree (created_at);
-
-CREATE INDEX IF NOT EXISTS audit_logs_entity_type_idx ON audit_logs USING btree (entity_type);
-
-CREATE INDEX IF NOT EXISTS audit_logs_user_id_idx ON audit_logs USING btree (user_id);
-
-CREATE INDEX IF NOT EXISTS babysitter_info_section_idx ON babysitter_info USING btree (section);
-
-CREATE INDEX IF NOT EXISTS babysitter_info_sort_order_idx ON babysitter_info USING btree (sort_order);
-
-CREATE UNIQUE INDEX IF NOT EXISTS birthdays_name_event_type_idx ON birthdays USING btree (name, event_type);
-
-CREATE INDEX IF NOT EXISTS bus_geofence_log_event_time_idx ON bus_geofence_log USING btree (event_time);
-
-CREATE UNIQUE INDEX IF NOT EXISTS bus_geofence_log_gmail_message_id_idx ON bus_geofence_log USING btree (gmail_message_id);
-
-CREATE INDEX IF NOT EXISTS bus_geofence_log_route_id_idx ON bus_geofence_log USING btree (route_id);
-
-CREATE INDEX IF NOT EXISTS bus_geofence_log_trip_date_idx ON bus_geofence_log USING btree (trip_date);
-
-CREATE INDEX IF NOT EXISTS bus_routes_enabled_idx ON bus_routes USING btree (enabled);
-
-CREATE UNIQUE INDEX IF NOT EXISTS bus_routes_trip_direction_idx ON bus_routes USING btree (trip_id, direction);
-
-CREATE INDEX IF NOT EXISTS calendar_groups_type_idx ON calendar_groups USING btree (type);
-
-CREATE INDEX IF NOT EXISTS calendar_sources_enabled_idx ON calendar_sources USING btree (enabled);
-
-CREATE INDEX IF NOT EXISTS calendar_sources_user_id_idx ON calendar_sources USING btree (user_id);
-
-CREATE INDEX IF NOT EXISTS chore_completions_approved_by_idx ON chore_completions USING btree (approved_by);
-
-CREATE INDEX IF NOT EXISTS chore_completions_chore_approved_by_idx ON chore_completions USING btree (chore_id, approved_by);
-
-CREATE INDEX IF NOT EXISTS chore_completions_chore_id_idx ON chore_completions USING btree (chore_id);
-
-CREATE INDEX IF NOT EXISTS chore_completions_completed_at_idx ON chore_completions USING btree (completed_at);
-
-CREATE INDEX IF NOT EXISTS chores_assigned_to_idx ON chores USING btree (assigned_to);
-
-CREATE INDEX IF NOT EXISTS chores_next_due_idx ON chores USING btree (next_due);
-
-CREATE INDEX IF NOT EXISTS events_calendar_source_idx ON events USING btree (calendar_source_id);
-
-CREATE INDEX IF NOT EXISTS events_end_time_idx ON events USING btree (end_time);
-
-CREATE UNIQUE INDEX IF NOT EXISTS events_source_external_unique ON events USING btree (calendar_source_id, external_event_id);
-
-CREATE INDEX IF NOT EXISTS events_start_time_idx ON events USING btree (start_time);
-
-CREATE INDEX IF NOT EXISTS family_messages_created_at_idx ON family_messages USING btree (created_at);
-
-CREATE INDEX IF NOT EXISTS family_messages_expires_at_idx ON family_messages USING btree (expires_at);
-
-CREATE INDEX IF NOT EXISTS goal_achievements_goal_id_idx ON goal_achievements USING btree (goal_id);
-
-CREATE UNIQUE INDEX IF NOT EXISTS goal_achievements_goal_user_period_idx ON goal_achievements USING btree (goal_id, user_id, period_start);
-
-CREATE INDEX IF NOT EXISTS goal_achievements_user_id_idx ON goal_achievements USING btree (user_id);
-
-CREATE INDEX IF NOT EXISTS goals_active_idx ON goals USING btree (active);
-
-CREATE INDEX IF NOT EXISTS goals_active_priority_idx ON goals USING btree (active, priority);
-
-CREATE INDEX IF NOT EXISTS maintenance_reminders_next_due_idx ON maintenance_reminders USING btree (next_due);
-
-CREATE INDEX IF NOT EXISTS meals_day_of_week_idx ON meals USING btree (day_of_week);
-
-CREATE INDEX IF NOT EXISTS meals_week_of_idx ON meals USING btree (week_of);
-
-CREATE INDEX IF NOT EXISTS photos_favorite_idx ON photos USING btree (favorite);
-
-CREATE INDEX IF NOT EXISTS photos_source_id_idx ON photos USING btree (source_id);
-
-CREATE INDEX IF NOT EXISTS photos_taken_at_idx ON photos USING btree (taken_at);
-
-CREATE INDEX IF NOT EXISTS photos_usage_idx ON photos USING btree (usage);
-
-CREATE INDEX IF NOT EXISTS recipes_favorite_idx ON recipes USING btree (is_favorite);
-
-CREATE INDEX IF NOT EXISTS recipes_name_idx ON recipes USING btree (name);
-
-CREATE INDEX IF NOT EXISTS recipes_source_type_idx ON recipes USING btree (source_type);
-
-CREATE INDEX IF NOT EXISTS shopping_items_category_idx ON shopping_items USING btree (category);
-
-CREATE INDEX IF NOT EXISTS shopping_items_checked_idx ON shopping_items USING btree (checked);
-
-CREATE INDEX IF NOT EXISTS shopping_items_external_id_idx ON shopping_items USING btree (external_id);
-
-CREATE INDEX IF NOT EXISTS shopping_items_list_id_idx ON shopping_items USING btree (list_id);
-
-CREATE INDEX IF NOT EXISTS shopping_items_source_idx ON shopping_items USING btree (shopping_list_source_id);
-
-CREATE INDEX IF NOT EXISTS shopping_list_sources_shopping_list_idx ON shopping_list_sources USING btree (shopping_list_id);
-
-CREATE INDEX IF NOT EXISTS shopping_list_sources_user_provider_idx ON shopping_list_sources USING btree (user_id, provider);
-
-CREATE INDEX IF NOT EXISTS task_sources_task_list_idx ON task_sources USING btree (task_list_id);
-
-CREATE INDEX IF NOT EXISTS task_sources_user_provider_idx ON task_sources USING btree (user_id, provider);
-
-CREATE INDEX IF NOT EXISTS tasks_assigned_to_idx ON tasks USING btree (assigned_to);
-
-CREATE INDEX IF NOT EXISTS tasks_completed_idx ON tasks USING btree (completed);
-
-CREATE INDEX IF NOT EXISTS tasks_due_date_idx ON tasks USING btree (due_date);
-
-CREATE INDEX IF NOT EXISTS tasks_external_id_idx ON tasks USING btree (external_id);
-
-CREATE INDEX IF NOT EXISTS tasks_list_id_idx ON tasks USING btree (list_id);
-
-CREATE INDEX IF NOT EXISTS tasks_task_source_idx ON tasks USING btree (task_source_id);
-
-CREATE INDEX IF NOT EXISTS users_email_idx ON users USING btree (email);
-
-CREATE INDEX IF NOT EXISTS wish_item_sources_member_idx ON wish_item_sources USING btree (member_id);
-
-CREATE INDEX IF NOT EXISTS wish_item_sources_user_provider_idx ON wish_item_sources USING btree (user_id, provider);
-
-CREATE INDEX IF NOT EXISTS wish_items_claimed_idx ON wish_items USING btree (claimed);
-
-CREATE INDEX IF NOT EXISTS wish_items_external_id_idx ON wish_items USING btree (external_id);
-
-CREATE INDEX IF NOT EXISTS wish_items_member_id_idx ON wish_items USING btree (member_id);
-
-CREATE INDEX IF NOT EXISTS wish_items_source_idx ON wish_items USING btree (wish_item_source_id);
-
 ALTER TABLE ONLY api_tokens
     ADD CONSTRAINT api_tokens_created_by_fkey FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE;
 
@@ -939,3 +807,135 @@ ALTER TABLE ONLY wish_items
 
 ALTER TABLE ONLY wish_items
     ADD CONSTRAINT wish_items_wish_item_source_id_fkey FOREIGN KEY (wish_item_source_id) REFERENCES wish_item_sources(id) ON DELETE SET NULL;
+
+CREATE INDEX IF NOT EXISTS api_tokens_created_by_idx ON api_tokens USING btree (created_by);
+
+CREATE UNIQUE INDEX IF NOT EXISTS api_tokens_token_hash_idx ON api_tokens USING btree (token_hash);
+
+CREATE INDEX IF NOT EXISTS audit_logs_created_at_idx ON audit_logs USING btree (created_at);
+
+CREATE INDEX IF NOT EXISTS audit_logs_entity_type_idx ON audit_logs USING btree (entity_type);
+
+CREATE INDEX IF NOT EXISTS audit_logs_user_id_idx ON audit_logs USING btree (user_id);
+
+CREATE INDEX IF NOT EXISTS babysitter_info_section_idx ON babysitter_info USING btree (section);
+
+CREATE INDEX IF NOT EXISTS babysitter_info_sort_order_idx ON babysitter_info USING btree (sort_order);
+
+CREATE UNIQUE INDEX IF NOT EXISTS birthdays_name_event_type_idx ON birthdays USING btree (name, event_type);
+
+CREATE INDEX IF NOT EXISTS bus_geofence_log_event_time_idx ON bus_geofence_log USING btree (event_time);
+
+CREATE UNIQUE INDEX IF NOT EXISTS bus_geofence_log_gmail_message_id_idx ON bus_geofence_log USING btree (gmail_message_id);
+
+CREATE INDEX IF NOT EXISTS bus_geofence_log_route_id_idx ON bus_geofence_log USING btree (route_id);
+
+CREATE INDEX IF NOT EXISTS bus_geofence_log_trip_date_idx ON bus_geofence_log USING btree (trip_date);
+
+CREATE INDEX IF NOT EXISTS bus_routes_enabled_idx ON bus_routes USING btree (enabled);
+
+CREATE UNIQUE INDEX IF NOT EXISTS bus_routes_trip_direction_idx ON bus_routes USING btree (trip_id, direction);
+
+CREATE INDEX IF NOT EXISTS calendar_groups_type_idx ON calendar_groups USING btree (type);
+
+CREATE INDEX IF NOT EXISTS calendar_sources_enabled_idx ON calendar_sources USING btree (enabled);
+
+CREATE INDEX IF NOT EXISTS calendar_sources_user_id_idx ON calendar_sources USING btree (user_id);
+
+CREATE INDEX IF NOT EXISTS chore_completions_approved_by_idx ON chore_completions USING btree (approved_by);
+
+CREATE INDEX IF NOT EXISTS chore_completions_chore_approved_by_idx ON chore_completions USING btree (chore_id, approved_by);
+
+CREATE INDEX IF NOT EXISTS chore_completions_chore_id_idx ON chore_completions USING btree (chore_id);
+
+CREATE INDEX IF NOT EXISTS chore_completions_completed_at_idx ON chore_completions USING btree (completed_at);
+
+CREATE INDEX IF NOT EXISTS chores_assigned_to_idx ON chores USING btree (assigned_to);
+
+CREATE INDEX IF NOT EXISTS chores_next_due_idx ON chores USING btree (next_due);
+
+CREATE INDEX IF NOT EXISTS events_calendar_source_idx ON events USING btree (calendar_source_id);
+
+CREATE INDEX IF NOT EXISTS events_end_time_idx ON events USING btree (end_time);
+
+CREATE UNIQUE INDEX IF NOT EXISTS events_source_external_unique ON events USING btree (calendar_source_id, external_event_id);
+
+CREATE INDEX IF NOT EXISTS events_start_time_idx ON events USING btree (start_time);
+
+CREATE INDEX IF NOT EXISTS family_messages_created_at_idx ON family_messages USING btree (created_at);
+
+CREATE INDEX IF NOT EXISTS family_messages_expires_at_idx ON family_messages USING btree (expires_at);
+
+CREATE INDEX IF NOT EXISTS goal_achievements_goal_id_idx ON goal_achievements USING btree (goal_id);
+
+CREATE UNIQUE INDEX IF NOT EXISTS goal_achievements_goal_user_period_idx ON goal_achievements USING btree (goal_id, user_id, period_start);
+
+CREATE INDEX IF NOT EXISTS goal_achievements_user_id_idx ON goal_achievements USING btree (user_id);
+
+CREATE INDEX IF NOT EXISTS goals_active_idx ON goals USING btree (active);
+
+CREATE INDEX IF NOT EXISTS goals_active_priority_idx ON goals USING btree (active, priority);
+
+CREATE INDEX IF NOT EXISTS maintenance_reminders_next_due_idx ON maintenance_reminders USING btree (next_due);
+
+CREATE INDEX IF NOT EXISTS meals_day_of_week_idx ON meals USING btree (day_of_week);
+
+CREATE INDEX IF NOT EXISTS meals_week_of_idx ON meals USING btree (week_of);
+
+CREATE INDEX IF NOT EXISTS photos_favorite_idx ON photos USING btree (favorite);
+
+CREATE INDEX IF NOT EXISTS photos_source_id_idx ON photos USING btree (source_id);
+
+CREATE INDEX IF NOT EXISTS photos_taken_at_idx ON photos USING btree (taken_at);
+
+CREATE INDEX IF NOT EXISTS photos_usage_idx ON photos USING btree (usage);
+
+CREATE INDEX IF NOT EXISTS recipes_favorite_idx ON recipes USING btree (is_favorite);
+
+CREATE INDEX IF NOT EXISTS recipes_name_idx ON recipes USING btree (name);
+
+CREATE INDEX IF NOT EXISTS recipes_source_type_idx ON recipes USING btree (source_type);
+
+CREATE INDEX IF NOT EXISTS shopping_items_category_idx ON shopping_items USING btree (category);
+
+CREATE INDEX IF NOT EXISTS shopping_items_checked_idx ON shopping_items USING btree (checked);
+
+CREATE INDEX IF NOT EXISTS shopping_items_external_id_idx ON shopping_items USING btree (external_id);
+
+CREATE INDEX IF NOT EXISTS shopping_items_list_id_idx ON shopping_items USING btree (list_id);
+
+CREATE INDEX IF NOT EXISTS shopping_items_source_idx ON shopping_items USING btree (shopping_list_source_id);
+
+CREATE INDEX IF NOT EXISTS shopping_list_sources_shopping_list_idx ON shopping_list_sources USING btree (shopping_list_id);
+
+CREATE INDEX IF NOT EXISTS shopping_list_sources_user_provider_idx ON shopping_list_sources USING btree (user_id, provider);
+
+CREATE INDEX IF NOT EXISTS task_sources_task_list_idx ON task_sources USING btree (task_list_id);
+
+CREATE INDEX IF NOT EXISTS task_sources_user_provider_idx ON task_sources USING btree (user_id, provider);
+
+CREATE INDEX IF NOT EXISTS tasks_assigned_to_idx ON tasks USING btree (assigned_to);
+
+CREATE INDEX IF NOT EXISTS tasks_completed_idx ON tasks USING btree (completed);
+
+CREATE INDEX IF NOT EXISTS tasks_due_date_idx ON tasks USING btree (due_date);
+
+CREATE INDEX IF NOT EXISTS tasks_external_id_idx ON tasks USING btree (external_id);
+
+CREATE INDEX IF NOT EXISTS tasks_list_id_idx ON tasks USING btree (list_id);
+
+CREATE INDEX IF NOT EXISTS tasks_task_source_idx ON tasks USING btree (task_source_id);
+
+CREATE INDEX IF NOT EXISTS users_email_idx ON users USING btree (email);
+
+CREATE INDEX IF NOT EXISTS wish_item_sources_member_idx ON wish_item_sources USING btree (member_id);
+
+CREATE INDEX IF NOT EXISTS wish_item_sources_user_provider_idx ON wish_item_sources USING btree (user_id, provider);
+
+CREATE INDEX IF NOT EXISTS wish_items_claimed_idx ON wish_items USING btree (claimed);
+
+CREATE INDEX IF NOT EXISTS wish_items_external_id_idx ON wish_items USING btree (external_id);
+
+CREATE INDEX IF NOT EXISTS wish_items_member_id_idx ON wish_items USING btree (member_id);
+
+CREATE INDEX IF NOT EXISTS wish_items_source_idx ON wish_items USING btree (wish_item_source_id);
