@@ -15,7 +15,7 @@ export interface BusTrackingWidgetProps {
 
 export function BusTrackingWidget({ className, gridW }: BusTrackingWidgetProps) {
   const { routes, loading, error } = useBusTracking();
-  const isCompact = !gridW || gridW < 3;
+  const isCompact = !gridW || gridW < 12;
 
   // In compact mode, show only the most relevant route (closest to scheduled time)
   const displayRoutes = isCompact ? getBestRoute(routes) : routes;

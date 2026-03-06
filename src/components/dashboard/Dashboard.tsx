@@ -6,14 +6,20 @@ import { Suspense, useState, useCallback, useEffect, useMemo, useRef } from 'rea
 const VISIBLE_WIDGETS_KEY = 'prism-visible-widgets';
 import { useRouter } from 'next/navigation';
 import { AppShell } from '@/components/layout/AppShell';
-import { DashboardGrid, DashboardLayout, DashboardHeader } from '@/components/layout/DashboardGrid';
+import { DashboardLayout, DashboardHeader } from '@/components/layout/DashboardGrid';
 import { LayoutGridEditor, SCREENSAVER_THEME } from '@/components/layout/LayoutGridEditor';
 import { LayoutEditor } from '@/components/layout/LayoutEditor';
 import { useAuth } from '@/components/providers';
+import { GRID_COLS } from '@/lib/constants/grid';
 import { useScreenSafeZones } from '@/lib/hooks/useScreenSafeZones';
 import { useOrientation } from '@/lib/hooks/useOrientation';
 import { useIsMobile } from '@/lib/hooks/useIsMobile';
-import { AddTaskModal, AddMessageModal, AddChoreModal, AddShoppingItemModal } from '@/components/modals';
+import dynamic from 'next/dynamic';
+
+const AddTaskModal = dynamic(() => import('@/components/modals/AddTaskModal').then(m => ({ default: m.AddTaskModal })));
+const AddMessageModal = dynamic(() => import('@/components/modals/AddMessageModal').then(m => ({ default: m.AddMessageModal })));
+const AddChoreModal = dynamic(() => import('@/components/modals/AddChoreModal').then(m => ({ default: m.AddChoreModal })));
+const AddShoppingItemModal = dynamic(() => import('@/components/modals/AddShoppingItemModal').then(m => ({ default: m.AddShoppingItemModal })));
 import { WIDGET_REGISTRY } from '@/components/widgets/widgetRegistry';
 import { renderScreensaverPreview } from '@/components/screensaver/ScreensaverWidgetPreview';
 import type { WidgetConfig } from '@/lib/hooks/useLayouts';
@@ -57,8 +63,6 @@ export function Dashboard({
   slug,
 }: DashboardProps) {
   const router = useRouter();
-  const [isMounted, setIsMounted] = useState(false);
-  useEffect(() => { setIsMounted(true); }, []);
 
   const { activeUser, requireAuth, clearActiveUser } = useAuth();
   const { confirm: confirmAction, dialogProps: confirmDialogProps } = useConfirmDialog();
@@ -146,11 +150,11 @@ export function Dashboard({
 
   const [enabledSizes, setEnabledSizes] = useState<string[]>(allSizeNames);
   const [gridScrollY, setGridScrollY] = useState(0);
-  const [gridVisibleRows, setGridVisibleRows] = useState(12);
+  const [gridVisibleRows, setGridVisibleRows] = useState(GRID_COLS);
   const [gridScrollX, setGridScrollX] = useState(0);
-  const [gridVisibleCols, setGridVisibleCols] = useState(12);
-  const [gridTotalRows, setGridTotalRows] = useState(24);
-  const [gridTotalCols, setGridTotalCols] = useState(12);
+  const [gridVisibleCols, setGridVisibleCols] = useState(GRID_COLS);
+  const [gridTotalRows, setGridTotalRows] = useState(GRID_COLS * 2);
+  const [gridTotalCols, setGridTotalCols] = useState(GRID_COLS);
   const scrollToGridRef = useRef<((row: number, col?: number) => void) | null>(null);
 
   const handleScrollInfo = useCallback((info: { scrollY: number; visibleRows: number; scrollX: number; visibleCols: number; totalRows: number; totalCols: number }) => {
@@ -182,7 +186,7 @@ export function Dashboard({
       widgets = DEFAULT_TEMPLATE.widgets;
     } else {
       // Blank: single clock widget
-      widgets = [{ i: 'clock', x: 4, y: 4, w: 4, h: 4, visible: true }];
+      widgets = [{ i: 'clock', x: 16, y: 16, w: 16, h: 16, visible: true }];
     }
     try {
       const result = await data.layouts.saveLayout({ name, widgets, isDefault: false });
@@ -344,10 +348,6 @@ export function Dashboard({
             onScrollInfo={handleScrollInfo}
             scrollToRef={scrollToGridRef}
           />
-        ) : !isMounted ? (
-          <DashboardGrid>
-            <div className="col-span-4 flex items-center justify-center h-64 text-muted-foreground">Loading widgets...</div>
-          </DashboardGrid>
         ) : (
           <WidgetErrorBoundary>
             <LayoutGridEditor

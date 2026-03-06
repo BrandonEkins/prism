@@ -87,6 +87,17 @@ export function useLayouts(): UseLayoutsResult {
             h: w.h * 3,
           }));
         }
+        // Migrate 12-col layouts to 48-col: if max(x+w) > 4 and <= 12, scale by 4
+        const maxRight48 = Math.max(...widgets.map(w => w.x + w.w), 0);
+        if (maxRight48 > 4 && maxRight48 <= 12) {
+          widgets = widgets.map(w => ({
+            ...w,
+            x: w.x * 4,
+            y: w.y * 4,
+            w: w.w * 4,
+            h: w.h * 4,
+          }));
+        }
         return { ...l, widgets };
       });
       setLayouts(normalized);

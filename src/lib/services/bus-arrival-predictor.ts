@@ -194,37 +194,94 @@ async function getSegmentStats(
     byDate.get(key)!.push(event);
   }
 
-  // For each consecutive pair from currentIndex to end, collect transit times
+  // Build segments from currentIndex to end.
+  // First try consecutive pairs (i, i+1). If a pair lacks data,
+  // span across the gap to find any two checkpoints with data and
+  // interpolate the per-segment time.
   const segments: SegmentStat[] = [];
 
-  for (let i = fromCheckpointIndex; i < totalCheckpoints - 1; i++) {
-    const transitTimes: number[] = [];
+  let i = fromCheckpointIndex;
+  while (i < totalCheckpoints - 1) {
+    // Try consecutive pair first
+    const consecutiveTimes = collectTransitTimes(byDate, i, i + 1);
 
-    for (const [, dayEvents] of byDate) {
-      const from = dayEvents.find(e => e.checkpointIndex === i);
-      const to = dayEvents.find(e => e.checkpointIndex === i + 1);
-      if (from && to) {
-        const minutes = (to.eventTime.getTime() - from.eventTime.getTime()) / 60000;
-        if (minutes > 0 && minutes < 120) { // Sanity: skip > 2 hour gaps
-          transitTimes.push(minutes);
+    if (consecutiveTimes.length >= MIN_SAMPLES_FOR_PREDICTION) {
+      consecutiveTimes.sort((a, b) => a - b);
+      segments.push({
+        fromIndex: i,
+        toIndex: i + 1,
+        medianMinutes: percentile(consecutiveTimes, 50),
+        p25Minutes: percentile(consecutiveTimes, 25),
+        p75Minutes: percentile(consecutiveTimes, 75),
+        sampleCount: consecutiveTimes.length,
+      });
+      i++;
+      continue;
+    }
+
+    // Consecutive pair lacks data — try spanning across gap
+    let spanned = false;
+    for (let j = i + 2; j < totalCheckpoints; j++) {
+      const spanTimes = collectTransitTimes(byDate, i, j);
+      if (spanTimes.length >= MIN_SAMPLES_FOR_PREDICTION) {
+        // Distribute the spanned time evenly across the skipped segments
+        const spanCount = j - i;
+        spanTimes.sort((a, b) => a - b);
+        const perSegMedian = percentile(spanTimes, 50) / spanCount;
+        const perSegP25 = percentile(spanTimes, 25) / spanCount;
+        const perSegP75 = percentile(spanTimes, 75) / spanCount;
+        for (let k = i; k < j; k++) {
+          segments.push({
+            fromIndex: k,
+            toIndex: k + 1,
+            medianMinutes: perSegMedian,
+            p25Minutes: perSegP25,
+            p75Minutes: perSegP75,
+            sampleCount: spanTimes.length,
+          });
         }
+        i = j;
+        spanned = true;
+        break;
       }
     }
 
-    transitTimes.sort((a, b) => a - b);
-    const count = transitTimes.length;
-
-    segments.push({
-      fromIndex: i,
-      toIndex: i + 1,
-      medianMinutes: count > 0 ? percentile(transitTimes, 50) : 0,
-      p25Minutes: count > 0 ? percentile(transitTimes, 25) : 0,
-      p75Minutes: count > 0 ? percentile(transitTimes, 75) : 0,
-      sampleCount: count,
-    });
+    if (!spanned) {
+      // No data for any span — use whatever we have (even if < MIN_SAMPLES)
+      consecutiveTimes.sort((a, b) => a - b);
+      segments.push({
+        fromIndex: i,
+        toIndex: i + 1,
+        medianMinutes: consecutiveTimes.length > 0 ? percentile(consecutiveTimes, 50) : 0,
+        p25Minutes: consecutiveTimes.length > 0 ? percentile(consecutiveTimes, 25) : 0,
+        p75Minutes: consecutiveTimes.length > 0 ? percentile(consecutiveTimes, 75) : 0,
+        sampleCount: consecutiveTimes.length,
+      });
+      i++;
+    }
   }
 
   return segments;
+}
+
+/** Collect transit times between two checkpoint indices across all historical days */
+function collectTransitTimes(
+  byDate: Map<string, { checkpointIndex: number; eventTime: Date }[]>,
+  fromIndex: number,
+  toIndex: number,
+): number[] {
+  const times: number[] = [];
+  for (const [, dayEvents] of byDate) {
+    const from = dayEvents.find(e => e.checkpointIndex === fromIndex);
+    const to = dayEvents.find(e => e.checkpointIndex === toIndex);
+    if (from && to) {
+      const minutes = (to.eventTime.getTime() - from.eventTime.getTime()) / 60000;
+      if (minutes > 0 && minutes < 120) {
+        times.push(minutes);
+      }
+    }
+  }
+  return times;
 }
 
 function percentile(sorted: number[], p: number): number {

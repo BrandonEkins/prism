@@ -131,7 +131,7 @@ export function CoordinateEditor({ widgets, onWidgetsChange, mode, onFocusedWidg
                   <CoordInput
                     value={widget.x}
                     min={0}
-                    max={11}
+                    max={47}
                     onChange={v => handleUpdateWidget(widgetId, 'x', v)}
                     onFocus={() => handleFocusChange(widgetId)}
                     onBlur={() => handleFocusChange(null)}
@@ -141,7 +141,7 @@ export function CoordinateEditor({ widgets, onWidgetsChange, mode, onFocusedWidg
                   <CoordInput
                     value={widget.y}
                     min={0}
-                    max={29}
+                    max={119}
                     onChange={v => handleUpdateWidget(widgetId, 'y', v)}
                     onFocus={() => handleFocusChange(widgetId)}
                     onBlur={() => handleFocusChange(null)}
@@ -151,7 +151,7 @@ export function CoordinateEditor({ widgets, onWidgetsChange, mode, onFocusedWidg
                   <CoordInput
                     value={widget.w}
                     min={reg?.minW ?? 1}
-                    max={12}
+                    max={48}
                     onChange={v => handleUpdateWidget(widgetId, 'w', v)}
                     onFocus={() => handleFocusChange(widgetId)}
                     onBlur={() => handleFocusChange(null)}
@@ -161,7 +161,7 @@ export function CoordinateEditor({ widgets, onWidgetsChange, mode, onFocusedWidg
                   <CoordInput
                     value={widget.h}
                     min={reg?.minH ?? 1}
-                    max={30}
+                    max={120}
                     onChange={v => handleUpdateWidget(widgetId, 'h', v)}
                     onFocus={() => handleFocusChange(widgetId)}
                     onBlur={() => handleFocusChange(null)}

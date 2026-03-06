@@ -43,7 +43,8 @@ interface BusStatusResponse {
  * No checkpoint: 60s
  * In transit, ETA > 10min: 30s
  * In transit, ETA 5-10min: 15s
- * In transit, ETA <= 5min: 10s
+ * In transit, ETA 3-5min: 10s
+ * In transit, ETA <= 3min: 5s
  */
 function getPollingInterval(routes: BusRouteStatus[]): number {
   if (routes.length === 0) return 0;
@@ -79,7 +80,8 @@ function getPollingInterval(routes: BusRouteStatus[]): number {
   }
 
   if (!hasCheckpoint) return 60_000; // 60s — no checkpoint yet
-  if (minEta <= 5) return 10_000;    // 10s — ETA ≤ 5 min
+  if (minEta <= 3) return 5_000;     // 5s  — ETA ≤ 3 min
+  if (minEta <= 5) return 10_000;    // 10s — ETA 3-5 min
   if (minEta <= 10) return 15_000;   // 15s — ETA 5-10 min
   return 30_000;                      // 30s — in transit, ETA > 10 min
 }

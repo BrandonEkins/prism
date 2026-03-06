@@ -73,7 +73,7 @@ export interface ClockWidgetProps {
  * @example Compact (no date)
  * <ClockWidget showDate={false} />
  */
-export function ClockWidget({
+export const ClockWidget = React.memo(function ClockWidget({
   showSeconds = false,
   format24Hour = false,
   showDate = true,
@@ -163,7 +163,7 @@ export function ClockWidget({
       </div>
     </WidgetContainer>
   );
-}
+});
 
 
 /**

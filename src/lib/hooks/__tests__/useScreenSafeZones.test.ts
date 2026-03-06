@@ -12,7 +12,7 @@ import {
 } from '../useScreenSafeZones';
 
 describe('computeZones', () => {
-  it('computes landscape zones for 1920x1080 (16:9) → 12 cols', () => {
+  it('computes landscape zones for 1920x1080 (16:9) → 48 cols', () => {
     const screens: ScreenZoneConfig[] = [
       { name: '16:9', width: 1920, height: 1080, color: '#000' },
     ];
@@ -20,8 +20,8 @@ describe('computeZones', () => {
     const zones = computeZones(screens, 'landscape');
 
     expect(zones).toHaveLength(1);
-    expect(zones[0]!.cols).toBe(12); // 1920 >= 1200
-    expect(zones[0]!.rows).toBe(Math.min(Math.round(12 * 1080 / 1920), 50));
+    expect(zones[0]!.cols).toBe(48); // 1920 >= 1200
+    expect(zones[0]!.rows).toBe(Math.min(Math.round(48 * 1080 / 1920), 50));
     expect(zones[0]!.name).toBe('16:9');
   });
 
@@ -33,30 +33,30 @@ describe('computeZones', () => {
     // In portrait: width = min(1920,1080)=1080, height = max(1920,1080)=1920
     const zones = computeZones(screens, 'portrait');
 
-    expect(zones[0]!.cols).toBe(9); // 1080 >= 996 but < 1200
-    // rows = round(9 * 1920 / 1080) = round(16) = 16
-    expect(zones[0]!.rows).toBe(16);
+    expect(zones[0]!.cols).toBe(36); // 1080 >= 996 but < 1200
+    // rows = round(36 * 1920 / 1080) = round(64) = 64
+    expect(zones[0]!.rows).toBe(50); // capped at 50
   });
 
-  it('uses 6 cols for screens 768-995px wide', () => {
+  it('uses 24 cols for screens 768-995px wide', () => {
     const screens: ScreenZoneConfig[] = [
       { name: 'narrow', width: 800, height: 600, color: '#000' },
     ];
 
     const zones = computeZones(screens, 'landscape');
 
-    expect(zones[0]!.cols).toBe(6);
+    expect(zones[0]!.cols).toBe(24);
   });
 
-  it('uses 3 cols for screens under 768px', () => {
+  it('uses 12 cols for screens under 768px', () => {
     const screens: ScreenZoneConfig[] = [
       { name: 'mobile', width: 375, height: 667, color: '#000' },
     ];
 
     const zones = computeZones(screens, 'landscape');
 
-    // landscape: w=667, h=375. 667 < 768, so 3 cols
-    expect(zones[0]!.cols).toBe(3);
+    // landscape: w=667, h=375. 667 < 768, so 12 cols
+    expect(zones[0]!.cols).toBe(12);
   });
 
   it('caps rows at 50', () => {
@@ -67,7 +67,7 @@ describe('computeZones', () => {
 
     const zones = computeZones(screens, 'portrait');
 
-    // portrait: w=100, h=5000. cols=3. rows = round(3 * 5000 / 100) = 150, capped at 50
+    // portrait: w=100, h=5000. cols=12. rows = round(12 * 5000 / 100) = 600, capped at 50
     expect(zones[0]!.rows).toBe(50);
   });
 
@@ -76,8 +76,8 @@ describe('computeZones', () => {
 
     expect(zones).toHaveLength(DEFAULT_SCREENS.length);
     zones.forEach(z => {
-      expect(z.cols).toBeGreaterThanOrEqual(3);
-      expect(z.cols).toBeLessThanOrEqual(12);
+      expect(z.cols).toBeGreaterThanOrEqual(12);
+      expect(z.cols).toBeLessThanOrEqual(48);
       expect(z.rows).toBeGreaterThan(0);
       expect(z.rows).toBeLessThanOrEqual(50);
     });
@@ -90,9 +90,9 @@ describe('computeZones', () => {
 
     const zones = computeZones(screens, 'landscape');
 
-    // landscape: w=1200, h=1200. cols=12. rows = round(12 * 1200 / 1200) = 12
-    expect(zones[0]!.cols).toBe(12);
-    expect(zones[0]!.rows).toBe(12);
+    // landscape: w=1200, h=1200. cols=48. rows = round(48 * 1200 / 1200) = 48
+    expect(zones[0]!.cols).toBe(48);
+    expect(zones[0]!.rows).toBe(48);
   });
 
   it('iPad 4:3 portrait gives correct breakpoint', () => {
@@ -103,8 +103,9 @@ describe('computeZones', () => {
     const zones = computeZones(screens, 'portrait');
 
     // portrait: w=min(2048,1536)=1536, h=max(2048,1536)=2048
-    expect(zones[0]!.cols).toBe(12); // 1536 >= 1200
-    expect(zones[0]!.rows).toBe(16); // round(12 * 2048 / 1536) = round(16) = 16
+    expect(zones[0]!.cols).toBe(48); // 1536 >= 1200
+    // rows = round(48 * 2048 / 1536) = round(64) = 64, capped at 50
+    expect(zones[0]!.rows).toBe(50);
   });
 });
 
@@ -116,9 +117,9 @@ describe('DEFAULT_SCREEN_SAFE_ZONES', () => {
     expect(DEFAULT_SCREEN_SAFE_ZONES.portrait.length).toBe(DEFAULT_SCREENS.length);
   });
 
-  it('all default landscape zones use 12 cols (all screens >= 1200px)', () => {
+  it('all default landscape zones use 48 cols (all screens >= 1200px)', () => {
     DEFAULT_SCREEN_SAFE_ZONES.landscape.forEach(z => {
-      expect(z.cols).toBe(12);
+      expect(z.cols).toBe(48);
     });
   });
 });

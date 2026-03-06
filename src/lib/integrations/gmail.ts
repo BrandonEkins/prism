@@ -132,16 +132,25 @@ export class TokenRevokedError extends Error {
 }
 
 /**
- * Fetch emails matching a query (optionally only unread).
+ * Fetch emails matching a query.
  * Returns message IDs — call getEmailContent for full body.
+ *
+ * Options:
+ * - unreadOnly: append `is:unread` to query
+ * - labelName: append `label:<name>` to query (for Gmail-filtered emails)
+ * - afterDate: append `after:YYYY/MM/DD` to query (limit search window)
+ * - maxResults: max emails to return (default 20)
  */
 export async function fetchEmails(
   accessToken: string,
   query: string,
-  options: { unreadOnly?: boolean; maxResults?: number } = {}
+  options: { unreadOnly?: boolean; labelName?: string; afterDate?: string; maxResults?: number } = {}
 ): Promise<{ id: string; threadId: string }[]> {
-  const { unreadOnly = false, maxResults = 20 } = options;
-  const fullQuery = unreadOnly ? `${query} is:unread` : query;
+  const { unreadOnly = false, labelName, afterDate, maxResults = 20 } = options;
+  let fullQuery = query;
+  if (unreadOnly) fullQuery += ' is:unread';
+  if (labelName) fullQuery += ` label:${labelName}`;
+  if (afterDate) fullQuery += ` after:${afterDate}`;
   const params = new URLSearchParams({
     q: fullQuery,
     maxResults: maxResults.toString(),

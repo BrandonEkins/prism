@@ -14,8 +14,8 @@ export const SCREENSAVER_TEMPLATES: Record<string, ScreensaverTemplate> = {
     description: 'Clock and weather, top-right corner',
     orientation: 'landscape',
     widgets: [
-      { i: 'clock', x: 8, y: 0, w: 4, h: 3, visible: true },
-      { i: 'weather', x: 8, y: 3, w: 4, h: 2, visible: true },
+      { i: 'clock', x: 32, y: 0, w: 16, h: 12, visible: true },
+      { i: 'weather', x: 32, y: 12, w: 16, h: 8, visible: true },
     ],
   },
   photoFrame: {
@@ -23,8 +23,8 @@ export const SCREENSAVER_TEMPLATES: Record<string, ScreensaverTemplate> = {
     description: 'Small clock and weather overlay — photos fill the screen',
     orientation: 'landscape',
     widgets: [
-      { i: 'clock', x: 9, y: 0, w: 3, h: 2, visible: true },
-      { i: 'weather', x: 9, y: 2, w: 3, h: 1, visible: true },
+      { i: 'clock', x: 36, y: 0, w: 12, h: 8, visible: true },
+      { i: 'weather', x: 36, y: 8, w: 12, h: 4, visible: true },
     ],
   },
   infoPanel: {
@@ -32,10 +32,10 @@ export const SCREENSAVER_TEMPLATES: Record<string, ScreensaverTemplate> = {
     description: 'Calendar on the left, clock + weather + messages on the right',
     orientation: 'landscape',
     widgets: [
-      { i: 'calendar', x: 0, y: 0, w: 5, h: 9, visible: true },
-      { i: 'weather', x: 8, y: 0, w: 4, h: 2, visible: true },
-      { i: 'messages', x: 8, y: 2, w: 4, h: 4, visible: true },
-      { i: 'clock', x: 8, y: 6, w: 4, h: 3, visible: true },
+      { i: 'calendar', x: 0, y: 0, w: 20, h: 36, visible: true },
+      { i: 'weather', x: 32, y: 0, w: 16, h: 8, visible: true },
+      { i: 'messages', x: 32, y: 8, w: 16, h: 16, visible: true },
+      { i: 'clock', x: 32, y: 24, w: 16, h: 12, visible: true },
     ],
   },
   familyBoard: {
@@ -43,11 +43,11 @@ export const SCREENSAVER_TEMPLATES: Record<string, ScreensaverTemplate> = {
     description: 'Tasks and chores across the top, clock + weather + messages on the right',
     orientation: 'landscape',
     widgets: [
-      { i: 'tasks', x: 0, y: 0, w: 4, h: 5, visible: true },
-      { i: 'chores', x: 4, y: 0, w: 4, h: 5, visible: true },
-      { i: 'weather', x: 8, y: 0, w: 4, h: 2, visible: true },
-      { i: 'messages', x: 8, y: 2, w: 4, h: 4, visible: true },
-      { i: 'clock', x: 8, y: 6, w: 4, h: 3, visible: true },
+      { i: 'tasks', x: 0, y: 0, w: 16, h: 20, visible: true },
+      { i: 'chores', x: 16, y: 0, w: 16, h: 20, visible: true },
+      { i: 'weather', x: 32, y: 0, w: 16, h: 8, visible: true },
+      { i: 'messages', x: 32, y: 8, w: 16, h: 16, visible: true },
+      { i: 'clock', x: 32, y: 24, w: 16, h: 12, visible: true },
     ],
   },
   kitchen: {
@@ -55,10 +55,10 @@ export const SCREENSAVER_TEMPLATES: Record<string, ScreensaverTemplate> = {
     description: 'Meals spanning the top, shopping list below, clock + weather on the right',
     orientation: 'landscape',
     widgets: [
-      { i: 'meals', x: 0, y: 0, w: 8, h: 4, visible: true },
-      { i: 'shopping', x: 0, y: 4, w: 5, h: 5, visible: true },
-      { i: 'weather', x: 8, y: 0, w: 4, h: 2, visible: true },
-      { i: 'clock', x: 8, y: 2, w: 4, h: 3, visible: true },
+      { i: 'meals', x: 0, y: 0, w: 32, h: 16, visible: true },
+      { i: 'shopping', x: 0, y: 16, w: 20, h: 20, visible: true },
+      { i: 'weather', x: 32, y: 0, w: 16, h: 8, visible: true },
+      { i: 'clock', x: 32, y: 8, w: 16, h: 12, visible: true },
     ],
   },
   commandCenter: {
@@ -66,26 +66,24 @@ export const SCREENSAVER_TEMPLATES: Record<string, ScreensaverTemplate> = {
     description: 'Full grid with all common widgets',
     orientation: 'landscape',
     widgets: [
-      { i: 'calendar', x: 0, y: 0, w: 4, h: 6, visible: true },
-      { i: 'tasks', x: 4, y: 0, w: 4, h: 4, visible: true },
-      { i: 'messages', x: 8, y: 0, w: 4, h: 4, visible: true },
-      { i: 'chores', x: 4, y: 4, w: 4, h: 4, visible: true },
-      { i: 'birthdays', x: 8, y: 4, w: 4, h: 4, visible: true },
-      { i: 'weather', x: 0, y: 6, w: 4, h: 2, visible: true },
-      { i: 'clock', x: 0, y: 8, w: 4, h: 3, visible: true },
+      { i: 'calendar', x: 0, y: 0, w: 16, h: 24, visible: true },
+      { i: 'tasks', x: 16, y: 0, w: 16, h: 16, visible: true },
+      { i: 'messages', x: 32, y: 0, w: 16, h: 16, visible: true },
+      { i: 'chores', x: 16, y: 16, w: 16, h: 16, visible: true },
+      { i: 'birthdays', x: 32, y: 16, w: 16, h: 16, visible: true },
+      { i: 'weather', x: 0, y: 24, w: 16, h: 8, visible: true },
+      { i: 'clock', x: 0, y: 32, w: 16, h: 12, visible: true },
     ],
   },
 
   // ── Portrait Templates ───────────────────────────────────────────
-  // Portrait: narrower screens hit lower RGL breakpoints (fewer cols)
-  // Widgets stay within ~10 columns and stack deep for a vertical feel
   minimalPortrait: {
     name: 'Minimal',
     description: 'Clock and weather centered near the top',
     orientation: 'portrait',
     widgets: [
-      { i: 'clock', x: 3, y: 0, w: 4, h: 3, visible: true },
-      { i: 'weather', x: 3, y: 3, w: 4, h: 2, visible: true },
+      { i: 'clock', x: 12, y: 0, w: 16, h: 12, visible: true },
+      { i: 'weather', x: 12, y: 12, w: 16, h: 8, visible: true },
     ],
   },
   photoFramePortrait: {
@@ -93,8 +91,8 @@ export const SCREENSAVER_TEMPLATES: Record<string, ScreensaverTemplate> = {
     description: 'Tiny clock overlay for a tall screen',
     orientation: 'portrait',
     widgets: [
-      { i: 'clock', x: 3, y: 0, w: 4, h: 2, visible: true },
-      { i: 'weather', x: 3, y: 2, w: 4, h: 1, visible: true },
+      { i: 'clock', x: 12, y: 0, w: 16, h: 8, visible: true },
+      { i: 'weather', x: 12, y: 8, w: 16, h: 4, visible: true },
     ],
   },
   infoPanelPortrait: {
@@ -102,10 +100,10 @@ export const SCREENSAVER_TEMPLATES: Record<string, ScreensaverTemplate> = {
     description: 'Calendar and info stacked vertically',
     orientation: 'portrait',
     widgets: [
-      { i: 'calendar', x: 0, y: 0, w: 10, h: 7, visible: true },
-      { i: 'clock', x: 0, y: 7, w: 5, h: 3, visible: true },
-      { i: 'weather', x: 5, y: 7, w: 5, h: 2, visible: true },
-      { i: 'messages', x: 0, y: 10, w: 10, h: 5, visible: true },
+      { i: 'calendar', x: 0, y: 0, w: 40, h: 28, visible: true },
+      { i: 'clock', x: 0, y: 28, w: 20, h: 12, visible: true },
+      { i: 'weather', x: 20, y: 28, w: 20, h: 8, visible: true },
+      { i: 'messages', x: 0, y: 40, w: 40, h: 20, visible: true },
     ],
   },
   familyBoardPortrait: {
@@ -113,11 +111,11 @@ export const SCREENSAVER_TEMPLATES: Record<string, ScreensaverTemplate> = {
     description: 'Tasks and chores stacked, info below',
     orientation: 'portrait',
     widgets: [
-      { i: 'tasks', x: 0, y: 0, w: 10, h: 5, visible: true },
-      { i: 'chores', x: 0, y: 5, w: 10, h: 5, visible: true },
-      { i: 'weather', x: 0, y: 10, w: 5, h: 2, visible: true },
-      { i: 'clock', x: 5, y: 10, w: 5, h: 3, visible: true },
-      { i: 'messages', x: 0, y: 13, w: 10, h: 4, visible: true },
+      { i: 'tasks', x: 0, y: 0, w: 40, h: 20, visible: true },
+      { i: 'chores', x: 0, y: 20, w: 40, h: 20, visible: true },
+      { i: 'weather', x: 0, y: 40, w: 20, h: 8, visible: true },
+      { i: 'clock', x: 20, y: 40, w: 20, h: 12, visible: true },
+      { i: 'messages', x: 0, y: 52, w: 40, h: 16, visible: true },
     ],
   },
   kitchenPortrait: {
@@ -125,10 +123,10 @@ export const SCREENSAVER_TEMPLATES: Record<string, ScreensaverTemplate> = {
     description: 'Meals and shopping stacked for a tall screen',
     orientation: 'portrait',
     widgets: [
-      { i: 'meals', x: 0, y: 0, w: 10, h: 5, visible: true },
-      { i: 'shopping', x: 0, y: 5, w: 10, h: 6, visible: true },
-      { i: 'weather', x: 0, y: 11, w: 5, h: 2, visible: true },
-      { i: 'clock', x: 5, y: 11, w: 5, h: 3, visible: true },
+      { i: 'meals', x: 0, y: 0, w: 40, h: 20, visible: true },
+      { i: 'shopping', x: 0, y: 20, w: 40, h: 24, visible: true },
+      { i: 'weather', x: 0, y: 44, w: 20, h: 8, visible: true },
+      { i: 'clock', x: 20, y: 44, w: 20, h: 12, visible: true },
     ],
   },
   commandCenterPortrait: {
@@ -136,13 +134,13 @@ export const SCREENSAVER_TEMPLATES: Record<string, ScreensaverTemplate> = {
     description: 'All common widgets in a narrow, tall layout',
     orientation: 'portrait',
     widgets: [
-      { i: 'calendar', x: 0, y: 0, w: 10, h: 6, visible: true },
-      { i: 'tasks', x: 0, y: 6, w: 5, h: 4, visible: true },
-      { i: 'messages', x: 5, y: 6, w: 5, h: 4, visible: true },
-      { i: 'chores', x: 0, y: 10, w: 5, h: 4, visible: true },
-      { i: 'birthdays', x: 5, y: 10, w: 5, h: 4, visible: true },
-      { i: 'weather', x: 0, y: 14, w: 5, h: 2, visible: true },
-      { i: 'clock', x: 5, y: 14, w: 5, h: 3, visible: true },
+      { i: 'calendar', x: 0, y: 0, w: 40, h: 24, visible: true },
+      { i: 'tasks', x: 0, y: 24, w: 20, h: 16, visible: true },
+      { i: 'messages', x: 20, y: 24, w: 20, h: 16, visible: true },
+      { i: 'chores', x: 0, y: 40, w: 20, h: 16, visible: true },
+      { i: 'birthdays', x: 20, y: 40, w: 20, h: 16, visible: true },
+      { i: 'weather', x: 0, y: 56, w: 20, h: 8, visible: true },
+      { i: 'clock', x: 20, y: 56, w: 20, h: 12, visible: true },
     ],
   },
 };

@@ -6,34 +6,28 @@ import { useIdleDetection } from '@/lib/hooks/useIdleDetection';
 import { usePhotos } from '@/lib/hooks/usePhotos';
 import { useAutoOrientationSetting, usePinnedPhoto, useScreensaverInterval } from '@/components/layout/WallpaperBackground';
 import { useScreenOrientation } from '@/lib/hooks/useScreenOrientation';
-import { ResponsiveGridLayout as RGL, useContainerWidth, getCompactor } from 'react-grid-layout';
-import type { LayoutItem, Layout } from 'react-grid-layout';
 import type { WidgetConfig } from '@/lib/hooks/useLayouts';
-import { hexToRgba } from '@/lib/utils/color';
-import { WidgetBgOverrideProvider } from '@/components/widgets/WidgetContainer';
 import { WIDGET_REGISTRY } from '@/components/widgets/widgetRegistry';
 import { useDashboardData } from '@/components/dashboard/useDashboardData';
 import { buildWidgetProps } from '@/components/dashboard/useWidgetProps';
-import 'react-grid-layout/css/styles.css';
-import 'react-resizable/css/styles.css';
+import { GRID_COLS } from '@/lib/constants/grid';
+import { CssGridDisplay } from '@/components/layout/grid/CssGridDisplay';
 
 const SCREENSAVER_LAYOUT_KEY = 'prism-screensaver-layout';
 
-const overlapCompactor = getCompactor(null, true);
-
 export const DEFAULT_SCREENSAVER_LAYOUT: WidgetConfig[] = [
-  { i: 'clock', x: 8, y: 9, w: 4, h: 3, visible: true },
-  { i: 'weather', x: 8, y: 7, w: 4, h: 2, visible: true },
-  { i: 'messages', x: 8, y: 4, w: 4, h: 3, visible: true },
-  { i: 'calendar', x: 0, y: 4, w: 4, h: 4, visible: false },
-  { i: 'birthdays', x: 0, y: 8, w: 4, h: 4, visible: false },
-  { i: 'tasks', x: 0, y: 0, w: 3, h: 4, visible: false },
-  { i: 'chores', x: 3, y: 0, w: 3, h: 4, visible: false },
-  { i: 'shopping', x: 6, y: 0, w: 3, h: 4, visible: false },
-  { i: 'meals', x: 0, y: 4, w: 4, h: 4, visible: false },
-  { i: 'photos', x: 4, y: 4, w: 4, h: 4, visible: false },
-  { i: 'wishes', x: 4, y: 0, w: 3, h: 4, visible: false },
-  { i: 'busTracking', x: 9, y: 0, w: 3, h: 3, visible: false },
+  { i: 'clock', x: 32, y: 36, w: 16, h: 12, visible: true },
+  { i: 'weather', x: 32, y: 28, w: 16, h: 8, visible: true },
+  { i: 'messages', x: 32, y: 16, w: 16, h: 12, visible: true },
+  { i: 'calendar', x: 0, y: 16, w: 16, h: 16, visible: false },
+  { i: 'birthdays', x: 0, y: 32, w: 16, h: 16, visible: false },
+  { i: 'tasks', x: 0, y: 0, w: 12, h: 16, visible: false },
+  { i: 'chores', x: 12, y: 0, w: 12, h: 16, visible: false },
+  { i: 'shopping', x: 24, y: 0, w: 12, h: 16, visible: false },
+  { i: 'meals', x: 0, y: 16, w: 16, h: 16, visible: false },
+  { i: 'photos', x: 16, y: 16, w: 16, h: 16, visible: false },
+  { i: 'wishes', x: 16, y: 0, w: 12, h: 16, visible: false },
+  { i: 'busTracking', x: 36, y: 0, w: 12, h: 12, visible: false },
 ];
 
 export function loadScreensaverLayout(): WidgetConfig[] {
@@ -41,7 +35,13 @@ export function loadScreensaverLayout(): WidgetConfig[] {
   try {
     const stored = localStorage.getItem(SCREENSAVER_LAYOUT_KEY);
     if (!stored) return DEFAULT_SCREENSAVER_LAYOUT;
-    const parsed = JSON.parse(stored) as WidgetConfig[];
+    let parsed = JSON.parse(stored) as WidgetConfig[];
+    // Migrate 12-col screensaver layouts to 48-col
+    const maxRight = Math.max(...parsed.map(w => w.x + w.w), 0);
+    if (maxRight > 0 && maxRight <= 12) {
+      parsed = parsed.map(w => ({ ...w, x: w.x * 4, y: w.y * 4, w: w.w * 4, h: w.h * 4 }));
+      localStorage.setItem(SCREENSAVER_LAYOUT_KEY, JSON.stringify(parsed));
+    }
     return DEFAULT_SCREENSAVER_LAYOUT.map(def => {
       const saved = parsed.find(p => p.i === def.i);
       return saved ? { ...def, ...saved } : def;
@@ -149,7 +149,6 @@ export function Screensaver() {
 
 function ScreensaverGrid() {
   const layout = useMemo(() => loadScreensaverLayout(), []);
-  const { width, containerRef, mounted } = useContainerWidth();
   const data = useDashboardData();
   const widgetProps = useMemo(() =>
     buildWidgetProps(
@@ -160,50 +159,12 @@ function ScreensaverGrid() {
     ),
   [data]);
 
-  const rowHeight = useMemo(() => {
-    if (typeof window === 'undefined') return 60;
-    return Math.max(30, Math.floor((window.innerHeight - 24) / 12));
-  }, []);
-
-  const visibleWidgets = useMemo(
-    () => layout.filter(w => w.visible !== false),
-    [layout]
-  );
-
-  const rglLayout: LayoutItem[] = useMemo(
-    () => visibleWidgets.map((w) => ({ i: w.i, x: w.x, y: w.y, w: w.w, h: w.h, static: true })),
-    [visibleWidgets]
-  );
-
-  const getWidgetStyle = (w: WidgetConfig): React.CSSProperties | undefined => {
-    if (!w.backgroundColor && !w.outlineColor && !w.textColor) return undefined;
-    const style: React.CSSProperties = { borderRadius: '0.5rem' };
-    if (w.backgroundColor && w.backgroundColor !== 'transparent') {
-      const opacity = w.backgroundOpacity ?? 1;
-      style.backgroundColor = opacity < 1
-        ? hexToRgba(w.backgroundColor, opacity)
-        : w.backgroundColor;
-    }
-    if (w.outlineColor) {
-      const olOpacity = w.outlineOpacity ?? 1;
-      style.border = `2px solid ${olOpacity < 1 ? hexToRgba(w.outlineColor, olOpacity) : w.outlineColor}`;
-    }
-    if (w.textColor) {
-      const txtOpacity = w.textOpacity ?? 1;
-      style.color = txtOpacity < 1
-        ? hexToRgba(w.textColor, txtOpacity)
-        : w.textColor;
-    }
-    return style;
-  };
-
   const renderWidget = (w: WidgetConfig) => {
     const reg = WIDGET_REGISTRY[w.i];
     if (!reg) return null;
     const Component = reg.component;
     const rawProps = { ...widgetProps[w.i] || {}, gridW: w.w, gridH: w.h };
     // Strip interactive callbacks — screensaver widgets are display-only
-    // (any interaction exits the screensaver, so buttons/dropdowns are misleading)
     const {
       onAddClick, onAddMeal, onListChange, onItemToggle, onTaskToggle,
       onChoreComplete, onEventClick, onMessageClick, onDeleteClick,
@@ -219,37 +180,25 @@ function ScreensaverGrid() {
     );
   };
 
+  // Override renderWidget to inject screensaver text defaults (white text)
+  const renderScreensaverWidget = (w: WidgetConfig) => {
+    return renderWidget({
+      ...w,
+      textColor: w.textColor || '#FFFFFF',
+      textOpacity: w.textOpacity ?? (w.textColor ? 1 : 0.9),
+    });
+  };
+
   return (
-    <div ref={containerRef as React.RefObject<HTMLDivElement>} className="relative w-full h-full">
-      {mounted && width > 0 && (
-        <RGL
-          className="layout"
-          width={width}
-          layouts={{ lg: rglLayout }}
-          breakpoints={{ lg: 0 }}
-          cols={{ lg: 12 }}
-          rowHeight={rowHeight}
-          compactor={overlapCompactor}
-          dragConfig={{ enabled: false }}
-          resizeConfig={{ enabled: false }}
-          containerPadding={[12, 12]}
-          margin={[4, 4]}
-        >
-          {visibleWidgets.map(w => {
-            const hasCustomBg = !!w.backgroundColor;
-            const textColor = w.textColor || '#FFFFFF';
-            const textOpacity = w.textOpacity ?? (w.textColor ? 1 : 0.9);
-            return (
-              <div key={w.i} style={getWidgetStyle(w)}>
-                <WidgetBgOverrideProvider value={{ hasCustomBg, textColor, textOpacity }}>
-                  {renderWidget(w)}
-                </WidgetBgOverrideProvider>
-              </div>
-            );
-          })}
-        </RGL>
-      )}
-    </div>
+    <CssGridDisplay
+      layout={layout}
+      renderWidget={renderScreensaverWidget}
+      margin={4}
+      containerPadding={12}
+      cols={GRID_COLS}
+      fillHeight
+      className="w-full h-full"
+    />
   );
 }
 

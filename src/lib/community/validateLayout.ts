@@ -5,17 +5,17 @@
 
 // Widget minimum sizes — extracted from WIDGET_REGISTRY to avoid importing React components
 export const WIDGET_CONSTRAINTS: Record<string, { minW: number; minH: number }> = {
-  clock:     { minW: 2, minH: 2 },
-  weather:   { minW: 2, minH: 2 },
-  calendar:  { minW: 3, minH: 4 },
-  tasks:     { minW: 2, minH: 3 },
-  messages:  { minW: 2, minH: 3 },
-  chores:    { minW: 2, minH: 3 },
-  shopping:  { minW: 2, minH: 3 },
-  meals:     { minW: 3, minH: 3 },
-  birthdays: { minW: 2, minH: 3 },
-  photos:    { minW: 2, minH: 2 },
-  points:    { minW: 2, minH: 3 },
+  clock:     { minW: 8, minH: 8 },
+  weather:   { minW: 8, minH: 8 },
+  calendar:  { minW: 12, minH: 16 },
+  tasks:     { minW: 8, minH: 12 },
+  messages:  { minW: 8, minH: 12 },
+  chores:    { minW: 8, minH: 12 },
+  shopping:  { minW: 8, minH: 12 },
+  meals:     { minW: 12, minH: 12 },
+  birthdays: { minW: 8, minH: 12 },
+  photos:    { minW: 8, minH: 8 },
+  points:    { minW: 8, minH: 12 },
 };
 
 export const VALID_WIDGET_IDS = Object.keys(WIDGET_CONSTRAINTS);
@@ -234,13 +234,13 @@ export function validateCommunityLayout(
     if (widget.h < 1) {
       errors.push(`Widget "${widget.i}": h >= 1 required (got ${widget.h}).`);
     }
-    if (widget.x + widget.w > 12) {
-      errors.push(`Widget "${widget.i}": x + w <= 12 required (got ${widget.x + widget.w}).`);
+    if (widget.x + widget.w > 48) {
+      errors.push(`Widget "${widget.i}": x + w <= 48 required (got ${widget.x + widget.w}).`);
     }
 
     // Max Y check
-    if (widget.y + widget.h > 30) {
-      errors.push(`Widget "${widget.i}": extends beyond y=30 (unreasonable scrolling).`);
+    if (widget.y + widget.h > 120) {
+      errors.push(`Widget "${widget.i}": extends beyond y=120 (unreasonable scrolling).`);
     }
 
     // Minimum size per widget type
@@ -276,7 +276,7 @@ export function validateCommunityLayout(
 
   // --- Warnings ---
   const maxBottom = Math.max(0, ...parsedWidgets.map(w => w.y + w.h));
-  if (maxBottom > 24) {
+  if (maxBottom > 96) {
     warnings.push(`Layout is very tall (extends to row ${maxBottom}). May require scrolling on most screens.`);
   }
 

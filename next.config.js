@@ -25,7 +25,6 @@ const withPWA = require('next-pwa')({
 const nextConfig = {
   output: 'standalone',
   reactStrictMode: true,
-  transpilePackages: ['react-grid-layout'],
 
   images: {
     remotePatterns: [

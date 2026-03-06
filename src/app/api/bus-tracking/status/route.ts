@@ -4,14 +4,44 @@ import { eq } from 'drizzle-orm';
 import { db } from '@/lib/db/client';
 import { busRoutes } from '@/lib/db/schema';
 import { getCached } from '@/lib/cache/redis';
+import { getRedisClient } from '@/lib/cache/getRedisClient';
 import { predictArrival } from '@/lib/services/bus-arrival-predictor';
-import { isGmailConnected } from '@/lib/services/bus-tracking-sync';
+import { isGmailConnected, syncBusEmails } from '@/lib/services/bus-tracking-sync';
+
+/**
+ * Fire-and-forget: sync Gmail emails with a mutex lock (not a cooldown).
+ * The lock only lives while a sync is in progress — once complete, the next
+ * poll immediately triggers a fresh sync. This minimizes lag to just the
+ * Gmail API round-trip time (~1-2s) rather than an arbitrary cooldown.
+ */
+async function triggerSyncIfNeeded() {
+  const client = await getRedisClient();
+  if (client) {
+    // NX = only set if not exists (mutex). EX = 30s safety TTL in case process crashes.
+    const acquired = await client.set('bus:sync-lock', '1', { NX: true, EX: 30 });
+    if (!acquired) return; // another sync is in progress
+  }
+  try {
+    const result = await syncBusEmails();
+    if (result.skippedReasons.length > 0) {
+      console.warn('Bus sync skipped emails:', result.skippedReasons);
+    }
+  } finally {
+    // Release lock immediately so next poll can sync
+    if (client) await client.del('bus:sync-lock').catch(() => {});
+  }
+}
 
 export async function GET() {
   const auth = await getDisplayAuth();
   if (!auth) {
     return NextResponse.json({ routes: [], connected: false });
   }
+
+  // Trigger background email sync (debounced, non-blocking)
+  triggerSyncIfNeeded().catch(err =>
+    console.error('Background bus sync failed:', err instanceof Error ? err.message : err)
+  );
 
   try {
     const data = await getCached('bus:status', async () => {
@@ -36,7 +66,7 @@ export async function GET() {
       );
 
       return { routes: routesWithStatus, connected };
-    }, 30); // 30 second cache
+    }, 5); // 5s cache — matches fastest polling interval during active tracking
 
     return NextResponse.json(data);
   } catch (error) {

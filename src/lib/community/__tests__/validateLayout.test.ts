@@ -17,10 +17,10 @@ function makeLayout(overrides: Partial<CommunityLayoutData> = {}): CommunityLayo
     screenSizes: ['2560x1440'],
     orientation: 'landscape',
     widgets: [
-      { i: 'calendar', x: 0, y: 0, w: 6, h: 8 },
-      { i: 'clock', x: 6, y: 0, w: 3, h: 3 },
-      { i: 'weather', x: 9, y: 0, w: 3, h: 3 },
-      { i: 'tasks', x: 6, y: 3, w: 6, h: 5 },
+      { i: 'calendar', x: 0, y: 0, w: 24, h: 32 },
+      { i: 'clock', x: 24, y: 0, w: 12, h: 12 },
+      { i: 'weather', x: 36, y: 0, w: 12, h: 12 },
+      { i: 'tasks', x: 24, y: 12, w: 24, h: 20 },
     ],
     ...overrides,
   };
@@ -97,10 +97,10 @@ describe('validateCommunityLayout', () => {
     it('rejects invalid widget IDs', () => {
       const result = validateCommunityLayout(makeLayout({
         widgets: [
-          { i: 'calendar', x: 0, y: 0, w: 6, h: 8 },
-          { i: 'clock', x: 6, y: 0, w: 3, h: 3 },
-          { i: 'weather', x: 9, y: 0, w: 3, h: 3 },
-          { i: 'nonexistent_widget', x: 0, y: 8, w: 4, h: 3 },
+          { i: 'calendar', x: 0, y: 0, w: 24, h: 32 },
+          { i: 'clock', x: 24, y: 0, w: 12, h: 12 },
+          { i: 'weather', x: 36, y: 0, w: 12, h: 12 },
+          { i: 'nonexistent_widget', x: 0, y: 32, w: 16, h: 12 },
         ],
       }));
       expect(result.valid).toBe(false);
@@ -110,10 +110,10 @@ describe('validateCommunityLayout', () => {
     it('rejects duplicate widget IDs', () => {
       const result = validateCommunityLayout(makeLayout({
         widgets: [
-          { i: 'calendar', x: 0, y: 0, w: 6, h: 8 },
-          { i: 'clock', x: 6, y: 0, w: 3, h: 3 },
-          { i: 'weather', x: 9, y: 0, w: 3, h: 3 },
-          { i: 'calendar', x: 0, y: 8, w: 6, h: 4 },
+          { i: 'calendar', x: 0, y: 0, w: 24, h: 32 },
+          { i: 'clock', x: 24, y: 0, w: 12, h: 12 },
+          { i: 'weather', x: 36, y: 0, w: 12, h: 12 },
+          { i: 'calendar', x: 0, y: 32, w: 24, h: 16 },
         ],
       }));
       expect(result.valid).toBe(false);
@@ -123,9 +123,9 @@ describe('validateCommunityLayout', () => {
     it('rejects widget with missing properties', () => {
       const result = validateCommunityLayout(makeLayout({
         widgets: [
-          { i: 'calendar', x: 0, y: 0, w: 6, h: 8 },
-          { i: 'clock', x: 6, y: 0, w: 3, h: 3 },
-          { i: 'weather', x: 9, y: 0, w: 3 } as CommunityLayoutData['widgets'][0],
+          { i: 'calendar', x: 0, y: 0, w: 24, h: 32 },
+          { i: 'clock', x: 24, y: 0, w: 12, h: 12 },
+          { i: 'weather', x: 36, y: 0, w: 12 } as CommunityLayoutData['widgets'][0],
         ],
       }));
       expect(result.valid).toBe(false);
@@ -137,9 +137,9 @@ describe('validateCommunityLayout', () => {
     it('rejects negative x', () => {
       const result = validateCommunityLayout(makeLayout({
         widgets: [
-          { i: 'calendar', x: -1, y: 0, w: 6, h: 8 },
-          { i: 'clock', x: 6, y: 0, w: 3, h: 3 },
-          { i: 'weather', x: 9, y: 0, w: 3, h: 3 },
+          { i: 'calendar', x: -1, y: 0, w: 24, h: 32 },
+          { i: 'clock', x: 24, y: 0, w: 12, h: 12 },
+          { i: 'weather', x: 36, y: 0, w: 12, h: 12 },
         ],
       }));
       expect(result.valid).toBe(false);
@@ -149,32 +149,32 @@ describe('validateCommunityLayout', () => {
     it('rejects negative y', () => {
       const result = validateCommunityLayout(makeLayout({
         widgets: [
-          { i: 'calendar', x: 0, y: -1, w: 6, h: 8 },
-          { i: 'clock', x: 6, y: 0, w: 3, h: 3 },
-          { i: 'weather', x: 9, y: 0, w: 3, h: 3 },
+          { i: 'calendar', x: 0, y: -1, w: 24, h: 32 },
+          { i: 'clock', x: 24, y: 0, w: 12, h: 12 },
+          { i: 'weather', x: 36, y: 0, w: 12, h: 12 },
         ],
       }));
       expect(result.valid).toBe(false);
     });
 
-    it('rejects x + w > 12', () => {
+    it('rejects x + w > 48', () => {
       const result = validateCommunityLayout(makeLayout({
         widgets: [
-          { i: 'calendar', x: 8, y: 0, w: 6, h: 8 },
-          { i: 'clock', x: 0, y: 0, w: 3, h: 3 },
-          { i: 'weather', x: 3, y: 0, w: 3, h: 3 },
+          { i: 'calendar', x: 32, y: 0, w: 24, h: 32 },
+          { i: 'clock', x: 0, y: 0, w: 12, h: 12 },
+          { i: 'weather', x: 12, y: 0, w: 12, h: 12 },
         ],
       }));
       expect(result.valid).toBe(false);
-      expect(result.errors.some(e => e.includes('x + w <= 12'))).toBe(true);
+      expect(result.errors.some(e => e.includes('x + w <= 48'))).toBe(true);
     });
 
     it('rejects w < 1', () => {
       const result = validateCommunityLayout(makeLayout({
         widgets: [
-          { i: 'calendar', x: 0, y: 0, w: 0, h: 8 },
-          { i: 'clock', x: 6, y: 0, w: 3, h: 3 },
-          { i: 'weather', x: 9, y: 0, w: 3, h: 3 },
+          { i: 'calendar', x: 0, y: 0, w: 0, h: 32 },
+          { i: 'clock', x: 24, y: 0, w: 12, h: 12 },
+          { i: 'weather', x: 36, y: 0, w: 12, h: 12 },
         ],
       }));
       expect(result.valid).toBe(false);
@@ -184,36 +184,36 @@ describe('validateCommunityLayout', () => {
     it('rejects h < 1', () => {
       const result = validateCommunityLayout(makeLayout({
         widgets: [
-          { i: 'calendar', x: 0, y: 0, w: 6, h: 0 },
-          { i: 'clock', x: 6, y: 0, w: 3, h: 3 },
-          { i: 'weather', x: 9, y: 0, w: 3, h: 3 },
+          { i: 'calendar', x: 0, y: 0, w: 24, h: 0 },
+          { i: 'clock', x: 24, y: 0, w: 12, h: 12 },
+          { i: 'weather', x: 36, y: 0, w: 12, h: 12 },
         ],
       }));
       expect(result.valid).toBe(false);
     });
 
-    it('rejects widgets extending beyond y=30', () => {
+    it('rejects widgets extending beyond y=120', () => {
       const result = validateCommunityLayout(makeLayout({
         widgets: [
-          { i: 'calendar', x: 0, y: 26, w: 6, h: 8 },
-          { i: 'clock', x: 6, y: 0, w: 3, h: 3 },
-          { i: 'weather', x: 9, y: 0, w: 3, h: 3 },
+          { i: 'calendar', x: 0, y: 104, w: 24, h: 32 },
+          { i: 'clock', x: 24, y: 0, w: 12, h: 12 },
+          { i: 'weather', x: 36, y: 0, w: 12, h: 12 },
         ],
       }));
       expect(result.valid).toBe(false);
-      expect(result.errors.some(e => e.includes('y=30'))).toBe(true);
+      expect(result.errors.some(e => e.includes('y=120'))).toBe(true);
     });
   });
 
   // --- Minimum size constraints ---
   describe('minimum size constraints', () => {
     it('rejects widget below minW', () => {
-      // calendar minW is 3
+      // calendar minW is 12
       const result = validateCommunityLayout(makeLayout({
         widgets: [
-          { i: 'calendar', x: 0, y: 0, w: 2, h: 8 },
-          { i: 'clock', x: 6, y: 0, w: 3, h: 3 },
-          { i: 'weather', x: 9, y: 0, w: 3, h: 3 },
+          { i: 'calendar', x: 0, y: 0, w: 8, h: 32 },
+          { i: 'clock', x: 24, y: 0, w: 12, h: 12 },
+          { i: 'weather', x: 36, y: 0, w: 12, h: 12 },
         ],
       }));
       expect(result.valid).toBe(false);
@@ -221,12 +221,12 @@ describe('validateCommunityLayout', () => {
     });
 
     it('rejects widget below minH', () => {
-      // calendar minH is 4
+      // calendar minH is 16
       const result = validateCommunityLayout(makeLayout({
         widgets: [
-          { i: 'calendar', x: 0, y: 0, w: 6, h: 2 },
-          { i: 'clock', x: 6, y: 0, w: 3, h: 3 },
-          { i: 'weather', x: 9, y: 0, w: 3, h: 3 },
+          { i: 'calendar', x: 0, y: 0, w: 24, h: 8 },
+          { i: 'clock', x: 24, y: 0, w: 12, h: 12 },
+          { i: 'weather', x: 36, y: 0, w: 12, h: 12 },
         ],
       }));
       expect(result.valid).toBe(false);
@@ -239,10 +239,10 @@ describe('validateCommunityLayout', () => {
     it('rejects overlapping widgets', () => {
       const result = validateCommunityLayout(makeLayout({
         widgets: [
-          { i: 'calendar', x: 0, y: 0, w: 7, h: 8 },
-          { i: 'clock', x: 5, y: 0, w: 4, h: 4 },
-          { i: 'weather', x: 9, y: 0, w: 3, h: 3 },
-          { i: 'tasks', x: 0, y: 8, w: 4, h: 4 },
+          { i: 'calendar', x: 0, y: 0, w: 28, h: 32 },
+          { i: 'clock', x: 20, y: 0, w: 16, h: 16 },
+          { i: 'weather', x: 36, y: 0, w: 12, h: 12 },
+          { i: 'tasks', x: 0, y: 32, w: 16, h: 16 },
         ],
       }));
       expect(result.valid).toBe(false);
@@ -252,10 +252,10 @@ describe('validateCommunityLayout', () => {
     it('accepts adjacent (non-overlapping) widgets', () => {
       const result = validateCommunityLayout(makeLayout({
         widgets: [
-          { i: 'calendar', x: 0, y: 0, w: 6, h: 8 },
-          { i: 'clock', x: 6, y: 0, w: 3, h: 3 },
-          { i: 'weather', x: 9, y: 0, w: 3, h: 3 },
-          { i: 'tasks', x: 6, y: 3, w: 6, h: 5 },
+          { i: 'calendar', x: 0, y: 0, w: 24, h: 32 },
+          { i: 'clock', x: 24, y: 0, w: 12, h: 12 },
+          { i: 'weather', x: 36, y: 0, w: 12, h: 12 },
+          { i: 'tasks', x: 24, y: 12, w: 24, h: 20 },
         ],
       }));
       expect(result.valid).toBe(true);
@@ -310,8 +310,8 @@ describe('validateCommunityLayout', () => {
     it('requires at least 3 visible widgets for community submission', () => {
       const result = validateCommunityLayout(makeLayout({
         widgets: [
-          { i: 'clock', x: 0, y: 0, w: 3, h: 3 },
-          { i: 'weather', x: 3, y: 0, w: 3, h: 3 },
+          { i: 'clock', x: 0, y: 0, w: 12, h: 12 },
+          { i: 'weather', x: 12, y: 0, w: 12, h: 12 },
         ],
       }), { communitySubmission: true });
       expect(result.valid).toBe(false);
@@ -368,10 +368,10 @@ describe('validateCommunityLayout', () => {
     ];
 
     const existingWidgets = [
-      { i: 'calendar', x: 0, y: 0, w: 6, h: 8 },
-      { i: 'clock', x: 6, y: 0, w: 3, h: 3 },
-      { i: 'weather', x: 9, y: 0, w: 3, h: 3 },
-      { i: 'tasks', x: 6, y: 3, w: 6, h: 5 },
+      { i: 'calendar', x: 0, y: 0, w: 24, h: 32 },
+      { i: 'clock', x: 24, y: 0, w: 12, h: 12 },
+      { i: 'weather', x: 36, y: 0, w: 12, h: 12 },
+      { i: 'tasks', x: 24, y: 12, w: 24, h: 20 },
     ];
 
     it('rejects exact duplicate of existing layout', () => {
@@ -387,10 +387,10 @@ describe('validateCommunityLayout', () => {
     it('rejects near-duplicate (>85% overlap)', () => {
       const result = validateCommunityLayout(makeLayout({
         widgets: [
-          { i: 'calendar', x: 0, y: 0, w: 6, h: 8 },
-          { i: 'clock', x: 6, y: 0, w: 3, h: 3 },
-          { i: 'weather', x: 9, y: 0, w: 3, h: 3 },
-          { i: 'tasks', x: 6, y: 3, w: 6, h: 6 }, // Slightly different h
+          { i: 'calendar', x: 0, y: 0, w: 24, h: 32 },
+          { i: 'clock', x: 24, y: 0, w: 12, h: 12 },
+          { i: 'weather', x: 36, y: 0, w: 12, h: 12 },
+          { i: 'tasks', x: 24, y: 12, w: 24, h: 24 }, // Slightly different h
         ],
       }), {
         communitySubmission: true,
@@ -404,10 +404,10 @@ describe('validateCommunityLayout', () => {
     it('accepts sufficiently different layout', () => {
       const result = validateCommunityLayout(makeLayout({
         widgets: [
-          { i: 'meals', x: 0, y: 0, w: 8, h: 6 },
-          { i: 'shopping', x: 0, y: 6, w: 6, h: 6 },
-          { i: 'clock', x: 8, y: 0, w: 4, h: 3 },
-          { i: 'weather', x: 8, y: 3, w: 4, h: 3 },
+          { i: 'meals', x: 0, y: 0, w: 32, h: 24 },
+          { i: 'shopping', x: 0, y: 24, w: 24, h: 24 },
+          { i: 'clock', x: 32, y: 0, w: 16, h: 12 },
+          { i: 'weather', x: 32, y: 12, w: 16, h: 12 },
         ],
       }), {
         communitySubmission: true,
@@ -420,13 +420,13 @@ describe('validateCommunityLayout', () => {
 
   // --- Warnings ---
   describe('warnings', () => {
-    it('warns for very tall layouts (y+h > 24)', () => {
+    it('warns for very tall layouts (y+h > 96)', () => {
       const result = validateCommunityLayout(makeLayout({
         widgets: [
-          { i: 'calendar', x: 0, y: 0, w: 6, h: 8 },
-          { i: 'clock', x: 6, y: 0, w: 3, h: 3 },
-          { i: 'weather', x: 9, y: 0, w: 3, h: 3 },
-          { i: 'tasks', x: 0, y: 20, w: 4, h: 8 },
+          { i: 'calendar', x: 0, y: 0, w: 24, h: 32 },
+          { i: 'clock', x: 24, y: 0, w: 12, h: 12 },
+          { i: 'weather', x: 36, y: 0, w: 12, h: 12 },
+          { i: 'tasks', x: 0, y: 80, w: 16, h: 32 },
         ],
       }));
       expect(result.valid).toBe(true);
@@ -440,9 +440,9 @@ describe('validateCommunityLayout', () => {
       const result = validateCommunityLayout(makeLayout({
         mode: 'screensaver',
         widgets: [
-          { i: 'clock', x: 8, y: 0, w: 4, h: 3 },
-          { i: 'weather', x: 8, y: 3, w: 4, h: 2 },
-          { i: 'messages', x: 0, y: 0, w: 4, h: 4 },
+          { i: 'clock', x: 32, y: 0, w: 16, h: 12 },
+          { i: 'weather', x: 32, y: 12, w: 16, h: 8 },
+          { i: 'messages', x: 0, y: 0, w: 16, h: 16 },
         ],
       }));
       expect(result.valid).toBe(true);

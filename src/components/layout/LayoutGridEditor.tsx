@@ -2,64 +2,24 @@
 
 import * as React from 'react';
 import { useMemo, useRef, useState, useCallback, useEffect } from 'react';
-import { ResponsiveGridLayout as RGL, useContainerWidth, getCompactor } from 'react-grid-layout';
-import type { LayoutItem, Layout } from 'react-grid-layout';
 import { PaintBucket, Square, Type } from 'lucide-react';
-import { isLightColor, hexToRgba } from '@/lib/utils/color';
+import { isLightColor } from '@/lib/utils/color';
 import { useScreenSafeZones } from '@/lib/hooks/useScreenSafeZones';
-import { WidgetBgOverrideProvider } from '@/components/widgets/WidgetContainer';
 import { useTheme } from '@/components/providers';
 import { getColorPalette, FIXED_COLORS, PALETTE_ORDER, type PaletteId } from '@/lib/constants/colorPalettes';
 import type { WidgetConfig } from '@/lib/hooks/useLayouts';
-import 'react-grid-layout/css/styles.css';
-import 'react-resizable/css/styles.css';
+import { GRID_COLS } from '@/lib/constants/grid';
+import { CssGridDisplay } from './grid/CssGridDisplay';
+import { CssGridEditor } from './grid/CssGridEditor';
+import { useSquareCells } from './grid/useSquareCells';
 
-const overlapCompactor = getCompactor(null, true);
+export type { EditorTheme } from './grid/gridEditorTypes';
+export { DASHBOARD_THEME, SCREENSAVER_THEME } from './grid/gridEditorTypes';
+export type { LayoutGridEditorProps } from './grid/gridEditorTypes';
 
-export interface EditorTheme {
-  gridBg: string;
-  gridStroke: string;
-  gridOpacity: number;
-  gridPatternId: string;
-  borderDash: string;
-}
-
-const DASHBOARD_THEME: EditorTheme = {
-  gridBg: '',
-  gridStroke: 'currentColor',
-  gridOpacity: 0.3,
-  gridPatternId: 'grid-dash',
-  borderDash: 'border-white/50 dark:border-white/40',
-};
-
-const SCREENSAVER_THEME: EditorTheme = {
-  gridBg: 'bg-black/80',
-  gridStroke: 'white',
-  gridOpacity: 0.2,
-  gridPatternId: 'grid-ss',
-  borderDash: 'border-white/40',
-};
-
-export { DASHBOARD_THEME, SCREENSAVER_THEME };
-
-export interface LayoutGridEditorProps {
-  layout: WidgetConfig[];
-  onLayoutChange: (layout: WidgetConfig[]) => void;
-  isEditable?: boolean;
-  renderWidget: (widget: WidgetConfig) => React.ReactNode;
-  widgetConstraints?: Record<string, { minW?: number; minH?: number }>;
-  margin?: number;
-  headerOffset?: number;
-  bottomOffset?: number;
-  minVisibleRows?: number;
-  theme?: EditorTheme;
-  gridHelperText?: string;
-  className?: string;
-  screenGuideOrientation?: 'landscape' | 'portrait';
-  enabledSizes?: string[];
-  onScrollInfo?: (info: { scrollY: number; visibleRows: number; scrollX: number; visibleCols: number; totalRows: number; totalCols: number }) => void;
-  scrollToRef?: React.MutableRefObject<((row: number, col?: number) => void) | null>;
-}
+// Re-import for local use
+import { DASHBOARD_THEME } from './grid/gridEditorTypes';
+import type { LayoutGridEditorProps } from './grid/gridEditorTypes';
 
 export function LayoutGridEditor({
   layout,
@@ -80,11 +40,13 @@ export function LayoutGridEditor({
   scrollToRef,
 }: LayoutGridEditorProps) {
   const { zones: SAFE_ZONES, allSizeNames } = useScreenSafeZones();
-  const { width, containerRef, mounted } = useContainerWidth();
+  const cols = GRID_COLS;
+  const containerPadding = 12;
+  const margin = marginProp;
+  const { width, containerRef, mounted, cellSize } = useSquareCells(cols, containerPadding, margin);
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === 'dark';
   const [selectedWidget, setSelectedWidget] = useState<string | null>(null);
-  const tapStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
   const colorPickerRef = useRef<HTMLInputElement | null>(null);
   const [colorTarget, setColorTarget] = useState<'fill' | 'outline' | 'text'>('fill');
   const [paletteId, setPaletteId] = useState<PaletteId>('seasonal');
@@ -96,16 +58,6 @@ export function LayoutGridEditor({
 
   const screenGuideOrientation = screenGuideOrientationProp ?? screenGuideOrientationInternal;
   const enabledSizes = enabledSizesProp ?? enabledSizesInternal;
-
-  const cols = 12;
-  const containerPadding = 12;
-  const margin = marginProp;
-
-  const cellSize = useMemo(() => {
-    if (!mounted || width <= 0) return 60;
-    const availableWidth = width - 2 * containerPadding - (cols - 1) * margin;
-    return Math.floor(availableWidth / cols);
-  }, [mounted, width, margin]);
 
   const visibleRows = useMemo(() => {
     if (typeof window === 'undefined') return 24;
@@ -131,8 +83,11 @@ export function LayoutGridEditor({
     });
     // Ensure grid extends to show all screen size guides
     const maxScreenRows = Math.max(...SAFE_ZONES[screenGuideOrientation].map(z => z.rows));
+    // Buffer: at least 20 rows (or half a screen) below bottom-most widget
+    // so touch users can scroll far enough to select/drag/resize lower widgets
+    const scrollBuffer = Math.max(20, Math.ceil(visibleRows / 2));
     return {
-      totalRows: Math.max(maxY + 4, maxScreenRows + 4),
+      totalRows: Math.max(maxY + scrollBuffer, maxScreenRows + 4),
       totalCols: Math.max(maxX, cols),
     };
   }, [layout, visibleRows, cols, screenGuideOrientation, SAFE_ZONES]);
@@ -181,44 +136,6 @@ export function LayoutGridEditor({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [layoutJson]);
 
-  const rglLayout: LayoutItem[] = useMemo(
-    () =>
-      stableLayout
-        .filter(w => w.visible !== false)
-        .map(w => {
-          const constraints = widgetConstraints?.[w.i];
-          return {
-            i: w.i,
-            x: w.x,
-            y: w.y,
-            w: w.w,
-            h: w.h,
-            minW: constraints?.minW ?? 1,
-            minH: constraints?.minH ?? 1,
-          };
-        }),
-    [stableLayout, widgetConstraints]
-  );
-
-  const visibleWidgets = useMemo(
-    () => stableLayout.filter(w => w.visible !== false),
-    [stableLayout]
-  );
-
-  const handleLayoutChange = useMemo(() => {
-    return (newLayout: Layout) => {
-      const current = layoutRef.current;
-      const updated: WidgetConfig[] = current.map(w => {
-        const found = newLayout.find((l: LayoutItem) => l.i === w.i);
-        if (found) {
-          return { ...w, x: found.x, y: found.y, w: found.w, h: found.h };
-        }
-        return w;
-      });
-      onLayoutChange(updated);
-    };
-  }, [onLayoutChange]);
-
   const updateWidgetColor = useCallback((widgetId: string, updates: { backgroundColor?: string | null; backgroundOpacity?: number; outlineColor?: string | null; outlineOpacity?: number; textColor?: string | null; textOpacity?: number }) => {
     const updated = layoutRef.current.map(w => {
       if (w.i === widgetId) {
@@ -236,29 +153,6 @@ export function LayoutGridEditor({
     });
     onLayoutChange(updated);
   }, [onLayoutChange]);
-
-  const getWidgetStyle = (widget: WidgetConfig): React.CSSProperties | undefined => {
-    if (!widget.backgroundColor && !widget.outlineColor) return undefined;
-    const style: React.CSSProperties = { borderRadius: '0.5rem' };
-    if (widget.backgroundColor && widget.backgroundColor !== 'transparent') {
-      const opacity = widget.backgroundOpacity ?? 1;
-      style.backgroundColor = opacity < 1
-        ? hexToRgba(widget.backgroundColor, opacity)
-        : widget.backgroundColor;
-    }
-    if (widget.outlineColor) {
-      const olOpacity = widget.outlineOpacity ?? 1;
-      style.border = `2px solid ${olOpacity < 1 ? hexToRgba(widget.outlineColor, olOpacity) : widget.outlineColor}`;
-    }
-    return style;
-  };
-
-  const getTextClass = (widget: WidgetConfig, fallback: string) => {
-    // textColor is applied via context → WidgetContainer inline style, not as a class
-    if (widget.textColor) return '';
-    if (!widget.backgroundColor || widget.backgroundColor === 'transparent' || widget.backgroundOpacity === 0) return fallback;
-    return isLightColor(widget.backgroundColor) ? 'text-black' : 'text-white';
-  };
 
   // Clear selection when widget becomes invisible
   useEffect(() => {
@@ -528,6 +422,21 @@ export function LayoutGridEditor({
               );
             })}
           </div>
+
+          {/* Reset all colors button — only show when any custom color is set */}
+          {(hasColorFill || hasColorOutline || hasColorText) && (
+            <button
+              onClick={() => updateWidgetColor(selectedWidget, {
+                backgroundColor: null, backgroundOpacity: 1,
+                outlineColor: null, outlineOpacity: 1,
+                textColor: null, textOpacity: 1,
+              })}
+              onPointerDown={(e) => e.stopPropagation()}
+              className="ml-auto px-2.5 min-h-[44px] text-xs rounded border border-border hover:bg-accent/50 text-muted-foreground transition-colors touch-manipulation"
+            >
+              Reset
+            </button>
+          )}
         </div>
       </div>
     );
@@ -603,9 +512,7 @@ export function LayoutGridEditor({
 
   const combinedRef = useCallback((node: HTMLDivElement | null) => {
     (scrollContainerRef as React.MutableRefObject<HTMLDivElement | null>).current = node;
-    if (containerRef && 'current' in containerRef) {
-      (containerRef as React.MutableRefObject<HTMLDivElement | null>).current = node;
-    }
+    containerRef(node);
   }, [containerRef]);
 
   if (isEditable) {
@@ -620,7 +527,6 @@ export function LayoutGridEditor({
         >
           <div
             className="relative editing-mode"
-            onClick={() => setSelectedWidget(null)}
             style={{
               minHeight: totalRows * (cellSize + margin) + 2 * containerPadding,
               minWidth: totalCols * (cellSize + margin) + 2 * containerPadding,
@@ -634,61 +540,21 @@ export function LayoutGridEditor({
               </div>
             )}
             {mounted && width > 0 ? (
-              <RGL
-                className="layout"
-                width={Math.max(width, totalCols * (cellSize + margin) + 2 * containerPadding)}
-                layouts={{ lg: rglLayout }}
-                breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480 }}
-                cols={{ lg: cols, md: 9, sm: 6, xs: 3 }}
-                rowHeight={cellSize}
-                compactor={overlapCompactor}
-                dragConfig={{ enabled: true }}
-                resizeConfig={{ enabled: true, handles: ['n', 's', 'e', 'w', 'ne', 'se', 'sw'] }}
-                onLayoutChange={handleLayoutChange}
-                containerPadding={[containerPadding, containerPadding]}
-                margin={[margin, margin]}
-              >
-                {visibleWidgets.map(w => {
-                  const widgetStyle = getWidgetStyle(w);
-                  const textClass = getTextClass(w, '');
-                  const isSelected = selectedWidget === w.i;
-                  const hasCustomBg = !!w.backgroundColor;
-
-                  return (
-                    <div
-                      key={w.i}
-                      className={`relative cursor-pointer ${isSelected ? 'ring-2 ring-primary ring-offset-2 z-[100]' : ''}`}
-                      style={widgetStyle}
-                      onClick={(e) => { e.stopPropagation(); setSelectedWidget(w.i); }}
-                      onTouchStart={(e) => {
-                        const touch = e.touches[0];
-                        if (touch) tapStartRef.current = { x: touch.clientX, y: touch.clientY, time: Date.now() };
-                      }}
-                      onTouchEnd={(e) => {
-                        if (!tapStartRef.current) return;
-                        const t = e.changedTouches[0];
-                        if (!t) { tapStartRef.current = null; return; }
-                        const dx = Math.abs(t.clientX - tapStartRef.current.x);
-                        const dy = Math.abs(t.clientY - tapStartRef.current.y);
-                        const dt = Date.now() - tapStartRef.current.time;
-                        tapStartRef.current = null;
-                        if (dx < 10 && dy < 10 && dt < 500) {
-                          e.stopPropagation();
-                          e.preventDefault();
-                          setSelectedWidget(w.i);
-                        }
-                      }}
-                    >
-                      <div className={`absolute inset-0 z-10 border-2 border-dashed ${isSelected ? 'border-primary' : theme.borderDash} rounded-lg pointer-events-none`} />
-                      <WidgetBgOverrideProvider value={{ hasCustomBg, textColor: w.textColor, textOpacity: w.textOpacity }}>
-                        <div className={`h-full w-full overflow-hidden ${textClass}`}>
-                          {renderWidget(w)}
-                        </div>
-                      </WidgetBgOverrideProvider>
-                    </div>
-                  );
-                })}
-              </RGL>
+              <CssGridEditor
+                layout={stableLayout}
+                onLayoutChange={onLayoutChange}
+                renderWidget={renderWidget}
+                widgetConstraints={widgetConstraints}
+                cellSize={cellSize}
+                margin={margin}
+                containerPadding={containerPadding}
+                cols={cols}
+                totalRows={totalRows}
+                totalCols={totalCols}
+                selectedWidget={selectedWidget}
+                onSelectWidget={setSelectedWidget}
+                theme={theme}
+              />
             ) : (
               <div style={{ padding: 20, color: 'yellow' }}>
                 Waiting for container width...
@@ -700,50 +566,18 @@ export function LayoutGridEditor({
     );
   }
 
-  // Display mode (non-editable) - prevent scrolling beyond screen bounds
+  // Display mode (non-editable) — pure CSS Grid, SSR-safe
   return (
-    <div
-      ref={containerRef as React.RefObject<HTMLDivElement>}
-      className={`relative overflow-hidden ${className || ''}`}
-      style={{ height: visibleRows * (cellSize + margin) + 2 * containerPadding }}
-    >
-      {mounted && width > 0 ? (
-        <div style={{ height: '100%' }}>
-          <RGL
-            className="layout"
-            width={width}
-            layouts={{ lg: rglLayout }}
-            breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480 }}
-            cols={{ lg: cols, md: 9, sm: 6, xs: 3 }}
-            rowHeight={cellSize}
-            compactor={overlapCompactor}
-            dragConfig={{ enabled: false }}
-            resizeConfig={{ enabled: false }}
-            containerPadding={[containerPadding, containerPadding]}
-            margin={[margin, margin]}
-          >
-            {visibleWidgets.map(w => {
-              const widgetStyle = getWidgetStyle(w);
-              const textClass = getTextClass(w, '');
-              const hasCustomBg = !!w.backgroundColor;
-
-              return (
-                <div key={w.i} className="relative" style={widgetStyle}>
-                  <WidgetBgOverrideProvider value={{ hasCustomBg, textColor: w.textColor, textOpacity: w.textOpacity }}>
-                    <div className={`h-full w-full overflow-hidden ${textClass}`}>
-                      {renderWidget(w)}
-                    </div>
-                  </WidgetBgOverrideProvider>
-                </div>
-              );
-            })}
-          </RGL>
-        </div>
-      ) : (
-        <div style={{ padding: 20, color: 'yellow' }}>
-          Waiting for container width...
-        </div>
-      )}
-    </div>
+    <CssGridDisplay
+      layout={layout}
+      renderWidget={renderWidget}
+      margin={margin}
+      containerPadding={containerPadding}
+      cols={cols}
+      headerOffset={headerOffset}
+      bottomOffset={bottomOffset}
+      minVisibleRows={minVisibleRows}
+      className={className}
+    />
   );
 }
