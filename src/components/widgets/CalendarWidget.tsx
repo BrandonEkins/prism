@@ -45,12 +45,12 @@ const VIEW_OPTIONS: { value: WidgetViewType; label: string }[] = [
   { value: 'month', label: 'Month' },
 ];
 
-/** Determine which views are available at a given grid size (12-col grid) */
+/** Determine which views are available at a given grid size (48-col grid) */
 function getAvailableViews(gridW: number, gridH: number): WidgetViewType[] {
-  if (gridW >= 9 && gridH >= 6) return ['list', 'day', 'week', 'twoWeek', 'month'];
-  if (gridW >= 6 && gridH >= 9) return ['list', 'day', 'week', 'twoWeek', 'month'];
-  if (gridW >= 6 && gridH >= 6) return ['list', 'week', 'twoWeek', 'month'];
-  if (gridW >= 4 && gridH >= 4) return ['list', 'week', 'twoWeek'];
+  if (gridW >= 36 && gridH >= 24) return ['list', 'day', 'week', 'twoWeek', 'month'];
+  if (gridW >= 24 && gridH >= 36) return ['list', 'day', 'week', 'twoWeek', 'month'];
+  if (gridW >= 24 && gridH >= 24) return ['list', 'week', 'twoWeek', 'month'];
+  if (gridW >= 16 && gridH >= 16) return ['list', 'week', 'twoWeek'];
   return ['list'];
 }
 

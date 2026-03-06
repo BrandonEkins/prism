@@ -10,6 +10,7 @@ import { DashboardLayout, DashboardHeader } from '@/components/layout/DashboardG
 import { LayoutGridEditor, SCREENSAVER_THEME } from '@/components/layout/LayoutGridEditor';
 import { LayoutEditor } from '@/components/layout/LayoutEditor';
 import { useAuth } from '@/components/providers';
+import { GRID_COLS } from '@/lib/constants/grid';
 import { useScreenSafeZones } from '@/lib/hooks/useScreenSafeZones';
 import { useOrientation } from '@/lib/hooks/useOrientation';
 import { useIsMobile } from '@/lib/hooks/useIsMobile';
@@ -149,11 +150,11 @@ export function Dashboard({
 
   const [enabledSizes, setEnabledSizes] = useState<string[]>(allSizeNames);
   const [gridScrollY, setGridScrollY] = useState(0);
-  const [gridVisibleRows, setGridVisibleRows] = useState(12);
+  const [gridVisibleRows, setGridVisibleRows] = useState(GRID_COLS);
   const [gridScrollX, setGridScrollX] = useState(0);
-  const [gridVisibleCols, setGridVisibleCols] = useState(12);
-  const [gridTotalRows, setGridTotalRows] = useState(24);
-  const [gridTotalCols, setGridTotalCols] = useState(12);
+  const [gridVisibleCols, setGridVisibleCols] = useState(GRID_COLS);
+  const [gridTotalRows, setGridTotalRows] = useState(GRID_COLS * 2);
+  const [gridTotalCols, setGridTotalCols] = useState(GRID_COLS);
   const scrollToGridRef = useRef<((row: number, col?: number) => void) | null>(null);
 
   const handleScrollInfo = useCallback((info: { scrollY: number; visibleRows: number; scrollX: number; visibleCols: number; totalRows: number; totalCols: number }) => {
@@ -185,7 +186,7 @@ export function Dashboard({
       widgets = DEFAULT_TEMPLATE.widgets;
     } else {
       // Blank: single clock widget
-      widgets = [{ i: 'clock', x: 4, y: 4, w: 4, h: 4, visible: true }];
+      widgets = [{ i: 'clock', x: 16, y: 16, w: 16, h: 16, visible: true }];
     }
     try {
       const result = await data.layouts.saveLayout({ name, widgets, isDefault: false });

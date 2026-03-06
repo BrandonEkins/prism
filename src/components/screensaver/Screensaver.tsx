@@ -10,23 +10,24 @@ import type { WidgetConfig } from '@/lib/hooks/useLayouts';
 import { WIDGET_REGISTRY } from '@/components/widgets/widgetRegistry';
 import { useDashboardData } from '@/components/dashboard/useDashboardData';
 import { buildWidgetProps } from '@/components/dashboard/useWidgetProps';
+import { GRID_COLS } from '@/lib/constants/grid';
 import { CssGridDisplay } from '@/components/layout/grid/CssGridDisplay';
 
 const SCREENSAVER_LAYOUT_KEY = 'prism-screensaver-layout';
 
 export const DEFAULT_SCREENSAVER_LAYOUT: WidgetConfig[] = [
-  { i: 'clock', x: 8, y: 9, w: 4, h: 3, visible: true },
-  { i: 'weather', x: 8, y: 7, w: 4, h: 2, visible: true },
-  { i: 'messages', x: 8, y: 4, w: 4, h: 3, visible: true },
-  { i: 'calendar', x: 0, y: 4, w: 4, h: 4, visible: false },
-  { i: 'birthdays', x: 0, y: 8, w: 4, h: 4, visible: false },
-  { i: 'tasks', x: 0, y: 0, w: 3, h: 4, visible: false },
-  { i: 'chores', x: 3, y: 0, w: 3, h: 4, visible: false },
-  { i: 'shopping', x: 6, y: 0, w: 3, h: 4, visible: false },
-  { i: 'meals', x: 0, y: 4, w: 4, h: 4, visible: false },
-  { i: 'photos', x: 4, y: 4, w: 4, h: 4, visible: false },
-  { i: 'wishes', x: 4, y: 0, w: 3, h: 4, visible: false },
-  { i: 'busTracking', x: 9, y: 0, w: 3, h: 3, visible: false },
+  { i: 'clock', x: 32, y: 36, w: 16, h: 12, visible: true },
+  { i: 'weather', x: 32, y: 28, w: 16, h: 8, visible: true },
+  { i: 'messages', x: 32, y: 16, w: 16, h: 12, visible: true },
+  { i: 'calendar', x: 0, y: 16, w: 16, h: 16, visible: false },
+  { i: 'birthdays', x: 0, y: 32, w: 16, h: 16, visible: false },
+  { i: 'tasks', x: 0, y: 0, w: 12, h: 16, visible: false },
+  { i: 'chores', x: 12, y: 0, w: 12, h: 16, visible: false },
+  { i: 'shopping', x: 24, y: 0, w: 12, h: 16, visible: false },
+  { i: 'meals', x: 0, y: 16, w: 16, h: 16, visible: false },
+  { i: 'photos', x: 16, y: 16, w: 16, h: 16, visible: false },
+  { i: 'wishes', x: 16, y: 0, w: 12, h: 16, visible: false },
+  { i: 'busTracking', x: 36, y: 0, w: 12, h: 12, visible: false },
 ];
 
 export function loadScreensaverLayout(): WidgetConfig[] {
@@ -34,7 +35,13 @@ export function loadScreensaverLayout(): WidgetConfig[] {
   try {
     const stored = localStorage.getItem(SCREENSAVER_LAYOUT_KEY);
     if (!stored) return DEFAULT_SCREENSAVER_LAYOUT;
-    const parsed = JSON.parse(stored) as WidgetConfig[];
+    let parsed = JSON.parse(stored) as WidgetConfig[];
+    // Migrate 12-col screensaver layouts to 48-col
+    const maxRight = Math.max(...parsed.map(w => w.x + w.w), 0);
+    if (maxRight > 0 && maxRight <= 12) {
+      parsed = parsed.map(w => ({ ...w, x: w.x * 4, y: w.y * 4, w: w.w * 4, h: w.h * 4 }));
+      localStorage.setItem(SCREENSAVER_LAYOUT_KEY, JSON.stringify(parsed));
+    }
     return DEFAULT_SCREENSAVER_LAYOUT.map(def => {
       const saved = parsed.find(p => p.i === def.i);
       return saved ? { ...def, ...saved } : def;
@@ -188,7 +195,7 @@ function ScreensaverGrid() {
       renderWidget={renderScreensaverWidget}
       margin={4}
       containerPadding={12}
-      cols={12}
+      cols={GRID_COLS}
       fillHeight
       className="w-full h-full"
     />

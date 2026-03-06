@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { useMemo, useCallback } from 'react';
 import type { ScreenSafeZones } from '@/lib/hooks/useScreenSafeZones';
+import { GRID_COLS } from '@/lib/constants/grid';
 import { DEFAULT_SCREEN_SAFE_ZONES } from '@/lib/hooks/useScreenSafeZones';
 
 interface PreviewWidget {
@@ -99,7 +100,7 @@ export function LayoutPreview({
   widgets,
   width = 160,
   height = 100,
-  cols = 12,
+  cols = GRID_COLS,
   highlightWidget,
   showLabels = true,
   showGrid = true,

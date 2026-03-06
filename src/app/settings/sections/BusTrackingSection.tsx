@@ -68,16 +68,22 @@ export function BusTrackingSection() {
   const [syncing, setSyncing] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
   const [discovering, setDiscovering] = useState(false);
+  const [gmailLabel, setGmailLabel] = useState('');
 
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const [routesRes, connRes] = await Promise.all([
+      const [routesRes, connRes, settingsRes] = await Promise.all([
         fetch('/api/bus-tracking/routes'),
         fetch('/api/bus-tracking/connection'),
+        fetch('/api/settings'),
       ]);
       if (routesRes.ok) setRoutes(await routesRes.json());
       if (connRes.ok) setConnection(await connRes.json());
+      if (settingsRes.ok) {
+        const allSettings = await settingsRes.json();
+        if (allSettings.busGmailLabel) setGmailLabel(allSettings.busGmailLabel);
+      }
     } catch {
       // Silent fail — loading state will clear
     } finally {
@@ -148,6 +154,20 @@ export function BusTrackingSection() {
     }
   };
 
+  const handleSaveLabel = async (label: string) => {
+    try {
+      await fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key: 'busGmailLabel', value: label.trim() || null }),
+      });
+      setGmailLabel(label.trim());
+      toast({ title: 'Gmail label saved' });
+    } catch {
+      toast({ title: 'Failed to save label', variant: 'destructive' });
+    }
+  };
+
   const handleDisconnect = async () => {
     setDisconnecting(true);
     try {
@@ -206,6 +226,8 @@ export function BusTrackingSection() {
         disconnecting={disconnecting}
         onSync={handleSync}
         onDisconnect={handleDisconnect}
+        gmailLabel={gmailLabel}
+        onSaveLabel={handleSaveLabel}
       />
 
       {/* Bus Routes Card */}
@@ -281,13 +303,23 @@ function GmailConnectionCard({
   disconnecting,
   onSync,
   onDisconnect,
+  gmailLabel,
+  onSaveLabel,
 }: {
   connection: ConnectionStatus;
   syncing: boolean;
   disconnecting: boolean;
   onSync: () => void;
   onDisconnect: () => void;
+  gmailLabel: string;
+  onSaveLabel: (label: string) => void;
 }) {
+  const [labelInput, setLabelInput] = useState(gmailLabel);
+  const labelDirty = labelInput.trim() !== gmailLabel;
+
+  // Sync external changes
+  useEffect(() => { setLabelInput(gmailLabel); }, [gmailLabel]);
+
   return (
     <Card>
       <CardHeader>
@@ -308,7 +340,7 @@ function GmailConnectionCard({
           )}
         </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="space-y-3">
         <div className="flex items-center gap-2">
           {connection.connected ? (
             <>
@@ -330,6 +362,28 @@ function GmailConnectionCard({
             </Button>
           )}
         </div>
+        {connection.connected && (
+          <div className="flex items-end gap-2">
+            <div className="flex-1">
+              <Label className="text-xs">Gmail Label</Label>
+              <Input
+                value={labelInput}
+                onChange={e => setLabelInput(e.target.value)}
+                placeholder="e.g. bus"
+                className="h-8 text-sm"
+              />
+              <p className="text-[11px] text-muted-foreground mt-0.5">
+                If you filter bus emails to a Gmail label, enter it here. Leave blank to search all mail.
+              </p>
+            </div>
+            {labelDirty && (
+              <Button size="sm" onClick={() => onSaveLabel(labelInput)}>
+                <Check className="h-4 w-4 mr-1" />
+                Save
+              </Button>
+            )}
+          </div>
+        )}
       </CardContent>
     </Card>
   );

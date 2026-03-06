@@ -4,6 +4,7 @@ import { useMemo } from 'react';
 import { WidgetBgOverrideProvider } from '@/components/widgets/WidgetContainer';
 import { getWidgetStyle, getTextColorClass } from './gridWidgetStyles';
 import { useSquareCells } from './useSquareCells';
+import { GRID_COLS } from '@/lib/constants/grid';
 import type { CssGridDisplayProps } from './gridEditorTypes';
 
 /**
@@ -15,7 +16,7 @@ export function CssGridDisplay({
   renderWidget,
   margin = 8,
   containerPadding = 12,
-  cols = 12,
+  cols = GRID_COLS,
   fillHeight = false,
   headerOffset = 140,
   bottomOffset = 0,

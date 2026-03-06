@@ -131,8 +131,8 @@ export const WeatherWidget = React.memo(function WeatherWidget({
   data: externalData,
   loading = false,
   error = null,
-  gridW = 3,
-  gridH = 3,
+  gridW = 12,
+  gridH = 12,
   className,
 }: WeatherWidgetProps) {
   // Use provided data or demo data
