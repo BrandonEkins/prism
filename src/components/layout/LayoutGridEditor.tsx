@@ -10,7 +10,8 @@ import { getColorPalette, FIXED_COLORS, PALETTE_ORDER, type PaletteId } from '@/
 import type { WidgetConfig } from '@/lib/hooks/useLayouts';
 import { GRID_COLS } from '@/lib/constants/grid';
 import { CssGridDisplay } from './grid/CssGridDisplay';
-import { CssGridEditor } from './grid/CssGridEditor';
+import dynamic from 'next/dynamic';
+const CssGridEditor = dynamic(() => import('./grid/CssGridEditor').then(m => ({ default: m.CssGridEditor })), { ssr: false });
 import { useSquareCells } from './grid/useSquareCells';
 
 export type { EditorTheme } from './grid/gridEditorTypes';

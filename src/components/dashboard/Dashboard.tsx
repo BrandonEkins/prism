@@ -8,7 +8,7 @@ import { useRouter } from 'next/navigation';
 import { AppShell } from '@/components/layout/AppShell';
 import { DashboardLayout, DashboardHeader } from '@/components/layout/DashboardGrid';
 import { LayoutGridEditor, SCREENSAVER_THEME } from '@/components/layout/LayoutGridEditor';
-import { LayoutEditor } from '@/components/layout/LayoutEditor';
+const LayoutEditor = dynamic(() => import('@/components/layout/LayoutEditor').then(m => ({ default: m.LayoutEditor })), { ssr: false });
 import { useAuth } from '@/components/providers';
 import { GRID_COLS } from '@/lib/constants/grid';
 import { useScreenSafeZones } from '@/lib/hooks/useScreenSafeZones';
