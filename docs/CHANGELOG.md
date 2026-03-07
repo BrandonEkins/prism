@@ -4,13 +4,20 @@ All notable changes to Prism are documented in this file.
 
 ## [Unreleased]
 
+### Added
+- **Calendar**: Multi-week view replaces the fixed 2-week view — configurable from 1 to 4 weeks on both the calendar page and dashboard widget
+- **Calendar**: Bordered/borderless toggle for multi-week cell outlines; rows auto-size to content
+
 ### Improved
+- **Performance**: Split RecipesView into RecipeCard, RecipeDetailModal, RecipeFormModal, ImportUrlModal, and ImportPaprikaModal sub-components
+- **Performance**: Split ShoppingView into ShoppingCategoryCard and extracted useShoppingCelebration, useShoppingDragReorder, useShoppingInlineInput hooks
 - **Performance**: Lazy-load layout editor and dnd-kit (only loaded in edit mode) — LCP improved from 7.2s to 3.9s, TBT from 2.4s to 1.4s
 - **Performance**: Bundle analyzer added to build config (`ANALYZE=true npx next build`)
 - **Bus Tracking**: Sync lock changed from 60s cooldown to mutex (release on completion) — updates arrive within seconds
 - **Bus Tracking**: Response cache reduced to 5s, polling ramps to 5s when ETA ≤ 3 min
 
 ### Fixed
+- **Recipes**: Fixed crash when opening "Add Recipe" form (missing optional chain on ingredients)
 - **Layout Editor (iPad)**: Fix scrolling stopping too early — grid now extends 20+ rows (or half a screen) below the last widget
 - **Layout Editor (iPad)**: Fix touch drag not working — tap to select a widget, then drag to move (selected widgets disable browser scroll so dnd-kit receives the gesture)
 - **Layout Editor (iPad)**: Enforce minimum 16px cell size so grid remains usable on narrow screens

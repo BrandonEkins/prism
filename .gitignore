@@ -111,3 +111,6 @@ nul
 
 # Claude Code artifacts
 transcript*.json
+
+# Lighthouse reports
+lighthouse-*
