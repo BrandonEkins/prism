@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, lazy, Suspense } from 'react';
 import { format } from 'date-fns';
 import { toast } from '@/components/ui/use-toast';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
@@ -22,7 +22,12 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { AddEventModal } from '@/components/modals';
 import { PageWrapper, SubpageHeader, FilterBar } from '@/components/layout';
-import { MonthView, WeekView, MultiWeekView, ThreeMonthView, DayViewSideBySide, WeekVerticalView } from '@/components/calendar';
+const MonthView = lazy(() => import('@/components/calendar/MonthView').then(m => ({ default: m.MonthView })));
+const WeekView = lazy(() => import('@/components/calendar/WeekView').then(m => ({ default: m.WeekView })));
+const MultiWeekView = lazy(() => import('@/components/calendar/MultiWeekView').then(m => ({ default: m.MultiWeekView })));
+const ThreeMonthView = lazy(() => import('@/components/calendar/ThreeMonthView').then(m => ({ default: m.ThreeMonthView })));
+const DayViewSideBySide = lazy(() => import('@/components/calendar/DayViewSideBySide').then(m => ({ default: m.DayViewSideBySide })));
+const WeekVerticalView = lazy(() => import('@/components/calendar/WeekVerticalView').then(m => ({ default: m.WeekVerticalView })));
 import { useCalendarViewData } from './useCalendarViewData';
 import { useIsMobile, useSwipeNavigation } from '@/lib/hooks';
 import { useAuth } from '@/components/providers';
@@ -191,25 +196,29 @@ export function CalendarView() {
               <p className="text-destructive">Failed to load calendar: {error}</p>
             </div>
           )}
-          {!loading && !error && viewType === 'month' && (
-            <MonthView currentDate={currentDate} events={events} onEventClick={setSelectedEvent}
-              onDateClick={(date) => { setCurrentDate(date); setViewType('day'); }} />
-          )}
-          {!loading && !error && viewType === 'week' && (
-            <WeekView currentDate={currentDate} events={events} onEventClick={setSelectedEvent} />
-          )}
-          {!loading && !error && viewType === 'weekVertical' && (
-            <WeekVerticalView currentDate={currentDate} events={events} calendarGroups={calendarGroups} selectedCalendarIds={selectedCalendarIds} mergedView={mergedView} onEventClick={setSelectedEvent} />
-          )}
-          {!loading && !error && viewType === 'multiWeek' && (
-            <MultiWeekView currentDate={currentDate} events={events} onEventClick={setSelectedEvent} weekCount={weekCount} bordered={weeksBordered} />
-          )}
-          {!loading && !error && viewType === 'threeMonth' && (
-            <ThreeMonthView currentDate={currentDate} events={events} onEventClick={setSelectedEvent}
-              onDateClick={(date) => { setCurrentDate(date); setViewType('month'); }} />
-          )}
-          {!loading && !error && viewType === 'day' && (
-            <DayViewSideBySide currentDate={currentDate} events={events} calendarGroups={calendarGroups} selectedCalendarIds={selectedCalendarIds} mergedView={mergedView} onEventClick={setSelectedEvent} />
+          {!loading && !error && (
+            <Suspense fallback={<div className="h-full flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>}>
+              {viewType === 'month' && (
+                <MonthView currentDate={currentDate} events={events} onEventClick={setSelectedEvent}
+                  onDateClick={(date) => { setCurrentDate(date); setViewType('day'); }} />
+              )}
+              {viewType === 'week' && (
+                <WeekView currentDate={currentDate} events={events} onEventClick={setSelectedEvent} />
+              )}
+              {viewType === 'weekVertical' && (
+                <WeekVerticalView currentDate={currentDate} events={events} calendarGroups={calendarGroups} selectedCalendarIds={selectedCalendarIds} mergedView={mergedView} onEventClick={setSelectedEvent} />
+              )}
+              {viewType === 'multiWeek' && (
+                <MultiWeekView currentDate={currentDate} events={events} onEventClick={setSelectedEvent} weekCount={weekCount} bordered={weeksBordered} />
+              )}
+              {viewType === 'threeMonth' && (
+                <ThreeMonthView currentDate={currentDate} events={events} onEventClick={setSelectedEvent}
+                  onDateClick={(date) => { setCurrentDate(date); setViewType('month'); }} />
+              )}
+              {viewType === 'day' && (
+                <DayViewSideBySide currentDate={currentDate} events={events} calendarGroups={calendarGroups} selectedCalendarIds={selectedCalendarIds} mergedView={mergedView} onEventClick={setSelectedEvent} />
+              )}
+            </Suspense>
           )}
         </div>
 

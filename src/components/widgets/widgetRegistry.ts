@@ -1,9 +1,9 @@
 import { ComponentType, lazy } from 'react';
 import { ClockWidget } from './ClockWidget';
 import { WeatherWidget } from './WeatherWidget';
-import { CalendarWidget } from './CalendarWidget';
 
 // Lazy-load non-default widgets to reduce initial bundle size
+const CalendarWidget = lazy(() => import('./CalendarWidget').then(m => ({ default: m.CalendarWidget })));
 const TasksWidget = lazy(() => import('./TasksWidget').then(m => ({ default: m.TasksWidget })));
 const MessagesWidget = lazy(() => import('./MessagesWidget').then(m => ({ default: m.MessagesWidget })));
 const ChoresWidget = lazy(() => import('./ChoresWidget').then(m => ({ default: m.ChoresWidget })));

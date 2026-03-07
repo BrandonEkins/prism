@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, lazy, Suspense } from 'react';
 import {
   format,
   isToday,
@@ -16,7 +16,7 @@ import {
   startOfDay,
   startOfWeek,
 } from 'date-fns';
-import { Calendar, ChevronLeft, ChevronRight, Grid3X3 } from 'lucide-react';
+import { Calendar, ChevronLeft, ChevronRight, Grid3X3, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { isLightColor } from '@/lib/utils/color';
 import { deduplicateEvents } from '@/lib/utils/calendarDedup';
@@ -30,7 +30,10 @@ import {
   SelectValue,
 } from '@/components/ui';
 import { useCalendarEvents, useCalendarFilter } from '@/lib/hooks';
-import { MonthView, WeekView, MultiWeekView, DayViewSideBySide } from '@/components/calendar';
+const MonthView = lazy(() => import('@/components/calendar/MonthView').then(m => ({ default: m.MonthView })));
+const WeekView = lazy(() => import('@/components/calendar/WeekView').then(m => ({ default: m.WeekView })));
+const MultiWeekView = lazy(() => import('@/components/calendar/MultiWeekView').then(m => ({ default: m.MultiWeekView })));
+const DayViewSideBySide = lazy(() => import('@/components/calendar/DayViewSideBySide').then(m => ({ default: m.DayViewSideBySide })));
 import type { CalendarEvent } from '@/types/calendar';
 export type { CalendarEvent };
 
@@ -340,50 +343,52 @@ export const CalendarWidget = React.memo(function CalendarWidget({
         )
       )}
 
-      {effectiveView === 'month' && (
-        <MonthView
-          currentDate={currentDate}
-          events={events}
-          onEventClick={handleEventClick}
-          onDateClick={(date) => {
-            setCurrentDate(date);
-            setViewType('day');
-          }}
-        />
-      )}
-
-      {effectiveView === 'week' && (
-        <WeekView
-          currentDate={currentDate}
-          events={events}
-          onEventClick={handleEventClick}
-        />
-      )}
-
-      {effectiveView === 'multiWeek' && (
-        <MultiWeekView
-          currentDate={currentDate}
-          events={events}
-          onEventClick={handleEventClick}
-          weekCount={widgetWeekCount}
-          bordered={widgetBordered}
-        />
-      )}
-
-      {effectiveView === 'day' && (
-        <>
-          <div className="text-center text-sm font-medium text-foreground mb-2">
-            {formatDayHeader(currentDate)}
-          </div>
-          <DayViewSideBySide
+      <Suspense fallback={<div className="h-full flex items-center justify-center"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>}>
+        {effectiveView === 'month' && (
+          <MonthView
             currentDate={currentDate}
             events={events}
-            calendarGroups={calendarGroups}
-            selectedCalendarIds={selectedCalendarIds}
+            onEventClick={handleEventClick}
+            onDateClick={(date) => {
+              setCurrentDate(date);
+              setViewType('day');
+            }}
+          />
+        )}
+
+        {effectiveView === 'week' && (
+          <WeekView
+            currentDate={currentDate}
+            events={events}
             onEventClick={handleEventClick}
           />
-        </>
-      )}
+        )}
+
+        {effectiveView === 'multiWeek' && (
+          <MultiWeekView
+            currentDate={currentDate}
+            events={events}
+            onEventClick={handleEventClick}
+            weekCount={widgetWeekCount}
+            bordered={widgetBordered}
+          />
+        )}
+
+        {effectiveView === 'day' && (
+          <>
+            <div className="text-center text-sm font-medium text-foreground mb-2">
+              {formatDayHeader(currentDate)}
+            </div>
+            <DayViewSideBySide
+              currentDate={currentDate}
+              events={events}
+              calendarGroups={calendarGroups}
+              selectedCalendarIds={selectedCalendarIds}
+              onEventClick={handleEventClick}
+            />
+          </>
+        )}
+      </Suspense>
     </WidgetContainer>
   );
 });
