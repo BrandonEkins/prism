@@ -98,7 +98,7 @@ export function SideNav({ user, onLogout, onLogin, className }: SideNavProps) {
       >
         {/* HEADER WITH LOGO */}
         <div className="flex items-center h-16 px-2 border-b border-border justify-center group-hover:justify-start">
-          <Link href="/" className="flex items-center gap-2">
+          <Link href="/" className="flex items-center gap-2" aria-label="Prism home">
             <div className="w-8 h-8 rounded-lg bg-card flex items-center justify-center shrink-0 overflow-hidden">
               <PrismIcon size={24} />
             </div>
@@ -117,6 +117,7 @@ export function SideNav({ user, onLogout, onLogin, className }: SideNavProps) {
                 <li key={item.href}>
                   <Link
                     href={item.href}
+                    aria-label={item.label}
                     className={cn(
                       'flex items-center gap-3 px-3 py-2.5 rounded-lg',
                       'text-sm font-medium',
@@ -128,7 +129,7 @@ export function SideNav({ user, onLogout, onLogin, className }: SideNavProps) {
                       'justify-center group-hover:justify-start'
                     )}
                   >
-                    <Icon className="h-5 w-5 flex-shrink-0" />
+                    <Icon className="h-5 w-5 flex-shrink-0" aria-hidden="true" />
                     <span className="hidden group-hover:inline whitespace-nowrap">
                       {item.label}
                     </span>

@@ -36,9 +36,16 @@ All notable changes to Prism are documented in this file.
   - Custom snap modifier adapts to dynamic cell sizes across screen resolutions
   - Touch support via dnd-kit TouchSensor
   - Removes 5 packages from bundle (react-grid-layout and dependencies)
-- **Performance**: Lighthouse optimization pass
+- **Performance**: Lighthouse optimization pass (desktop score: 52 → 96)
+  - Lazy-load overlays (Screensaver, AwayMode, BabysitterMode) — broke transitive import chain that pulled entire widget registry into root layout
+  - Extract screensaver storage utilities to break circular dependency between Screensaver and useDashboardLayout
   - Lazy-load Add modals (task, message, chore, shopping) — deferred from critical path
   - Add React.memo to eager-loaded widgets (Clock, Weather, Calendar) to prevent unnecessary re-renders
+- **Accessibility**: Lighthouse accessibility score 92 → 100
+  - Fix WCAG color contrast: rewrite `isLightColor` with proper sRGB linearization and WCAG contrast ratio calculation
+  - Fix calendar "Today" badge using white text on yellow seasonal highlight background
+  - Add `aria-label` to all sidebar nav links (text hidden when collapsed)
+  - Add `aria-label` to logo home link
 - **Bus Tracking**: Auto-sync emails on status poll (60s Redis debounce lock)
 - **Bus Tracking**: Switch from `is:unread` to label+date Gmail filtering for email sync
   - Supports Gmail filters that skip inbox and route to a label (e.g. "bus")

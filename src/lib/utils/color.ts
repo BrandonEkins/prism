@@ -16,14 +16,39 @@ export function hexToRgba(hex: string, opacity: number): string {
   return `rgba(${r},${g},${b},${opacity})`;
 }
 
-export function isLightColor(hex: string): boolean {
+/** sRGB linearization for a single channel (0–1). */
+function linearize(c: number): number {
+  return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+}
+
+/** WCAG 2.1 relative luminance from hex color. */
+export function relativeLuminance(hex: string): number {
   const c = hex.replace('#', '');
-  const r = parseInt(c.substring(0, 2), 16) / 255;
-  const g = parseInt(c.substring(2, 4), 16) / 255;
-  const b = parseInt(c.substring(4, 6), 16) / 255;
-  // Relative luminance (ITU-R BT.709)
-  const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
-  return luminance > 0.5;
+  const r = linearize(parseInt(c.substring(0, 2), 16) / 255);
+  const g = linearize(parseInt(c.substring(2, 4), 16) / 255);
+  const b = linearize(parseInt(c.substring(4, 6), 16) / 255);
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+/** WCAG contrast ratio between two luminances. */
+function contrastRatio(l1: number, l2: number): number {
+  const lighter = Math.max(l1, l2);
+  const darker = Math.min(l1, l2);
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
+/**
+ * Returns true if the given hex color needs dark text for WCAG AA contrast.
+ * Uses proper sRGB linearization and checks 4.5:1 ratio against white (#fff).
+ */
+export function isLightColor(hex: string): boolean {
+  const bgLum = relativeLuminance(hex);
+  const whiteLum = 1.0; // luminance of #ffffff
+  const blackLum = 0.0; // luminance of #000000
+  // Use dark text if white doesn't meet 4.5:1, or if black provides better contrast
+  const whiteContrast = contrastRatio(whiteLum, bgLum);
+  const blackContrast = contrastRatio(bgLum, blackLum);
+  return blackContrast > whiteContrast;
 }
 
 /**

@@ -283,7 +283,7 @@ export const CalendarWidget = React.memo(function CalendarWidget({
           className={cn(
             'px-2 py-1 rounded-full text-[10px] font-medium transition-colors inline-flex items-center gap-1 leading-none',
             selectedCalendarIds.has(group.id) || selectedCalendarIds.has('all')
-              ? isLightColor(group.color) ? 'text-gray-900' : 'text-white'
+              ? isLightColor(group.color) ? 'text-black' : 'text-white'
               : 'bg-muted text-muted-foreground hover:bg-accent'
           )}
           style={
@@ -422,7 +422,7 @@ function DaySection({
           {formatDayHeader(date)}
         </span>
         {isToday(date) && (
-          <Badge className="text-[10px] px-1.5 py-0 bg-seasonal-highlight text-seasonal-accent-foreground">
+          <Badge className="text-[10px] px-1.5 py-0 bg-seasonal-highlight text-foreground">
             Today
           </Badge>
         )}
