@@ -4,6 +4,7 @@ import { db } from '@/lib/db/client';
 import { settings } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { logActivity } from '@/lib/services/auditLog';
+import { invalidateCache } from '@/lib/cache/redis';
 import type { AuthResult } from '@/lib/auth';
 
 export async function GET() {
@@ -69,6 +70,11 @@ export async function PATCH(request: NextRequest) {
       entityType: 'setting',
       summary: `Updated setting: ${body.key}`,
     });
+
+    // Invalidate related caches when specific settings change
+    if (body.key === 'location') {
+      await invalidateCache('weather:*');
+    }
 
     return NextResponse.json({ key: body.key, value: body.value });
   } catch (error) {

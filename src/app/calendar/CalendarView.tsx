@@ -99,33 +99,37 @@ export function CalendarView() {
               <Button variant={viewType === 'weekVertical' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewType('weekVertical')} className="rounded-none border-r">
                 <List className="h-4 w-4 mr-1" />List
               </Button>
-              <div className="flex items-center border-r">
-                <Button variant={viewType === 'multiWeek' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewType('multiWeek')} className="rounded-none border-r-0">
-                  <CalendarRange className="h-4 w-4 mr-1" />{weekCount}W
+              <div className="relative flex items-center border-r">
+                <Button
+                  variant={viewType === 'multiWeek' ? 'secondary' : 'ghost'}
+                  size="sm"
+                  className="rounded-none"
+                  onClick={() => {
+                    if (viewType === 'multiWeek') {
+                      setWeeksBordered(!weeksBordered);
+                    } else {
+                      setViewType('multiWeek');
+                    }
+                  }}
+                  asChild
+                >
+                  <label className="cursor-pointer">
+                    <Grid3X3 className={cn('h-4 w-4 mr-1', viewType === 'multiWeek' && weeksBordered && 'text-primary')} />{weekCount}W
+                    {viewType === 'multiWeek' && (
+                      <select
+                        value={weekCount}
+                        onChange={(e) => setWeekCount(Number(e.target.value) as 1 | 2 | 3 | 4)}
+                        className="absolute inset-0 w-full opacity-0 cursor-pointer"
+                        aria-label="Number of weeks"
+                        style={{ colorScheme: 'normal' }}
+                      >
+                        {[1, 2, 3, 4].map(n => (
+                          <option key={n} value={n} className="text-foreground bg-background">{n}W</option>
+                        ))}
+                      </select>
+                    )}
+                  </label>
                 </Button>
-                {viewType === 'multiWeek' && (
-                  <>
-                    <select
-                      value={weekCount}
-                      onChange={(e) => setWeekCount(Number(e.target.value) as 1 | 2 | 3 | 4)}
-                      className="h-8 w-10 text-xs bg-secondary border-0 rounded-none cursor-pointer focus:outline-none"
-                      aria-label="Number of weeks"
-                    >
-                      {[1, 2, 3, 4].map(n => (
-                        <option key={n} value={n}>{n}</option>
-                      ))}
-                    </select>
-                    <Button
-                      variant={weeksBordered ? 'secondary' : 'ghost'}
-                      size="sm"
-                      onClick={() => setWeeksBordered(!weeksBordered)}
-                      className="rounded-none px-2"
-                      title={weeksBordered ? 'Hide cell borders' : 'Show cell borders'}
-                    >
-                      <Grid3X3 className="h-4 w-4" />
-                    </Button>
-                  </>
-                )}
               </div>
               <Button variant={viewType === 'month' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewType('month')} className="rounded-none border-r">
                 <LayoutGrid className="h-4 w-4 mr-1" />Month

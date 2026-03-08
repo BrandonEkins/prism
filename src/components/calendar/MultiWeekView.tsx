@@ -107,7 +107,6 @@ function DayCell({
         isPast && 'opacity-50',
         bordered && 'border border-border rounded-md bg-card/85',
         bordered && isPast && 'bg-muted/65',
-        !bordered && isToday(date) && 'border-2 border-primary rounded-md',
       )}
     >
       {/* Date header */}
@@ -116,8 +115,9 @@ function DayCell({
           'shrink-0 px-1',
           compact ? 'py-0.5' : 'py-1',
           isToday(date) && 'bg-primary',
-          isToday(date) && (bordered ? 'rounded-t-[5px]' : 'rounded-t-[3px]'),
+          isToday(date) && (bordered ? 'rounded-t-[5px]' : 'rounded-md'),
         )}
+        {...(isToday(date) ? { 'data-keep-bg': '' } : {})}
       >
         <div className={cn(
           'font-medium flex items-center gap-1 text-sm',

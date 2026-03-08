@@ -1,45 +1,67 @@
 # Contributing to Prism
 
-Thanks for your interest in making Prism better! Since this is a young project still finding its footing, I want to make sure contributions align with the project's direction before you invest time building something.
+## Getting Started
 
-## Before You Start
+1. Fork the repository and clone your fork
+2. Copy `.env.example` to `.env` and configure your environment
+3. Run `docker-compose up -d` to start all services
+4. Run `npm install` for local development
 
-**Please open an issue first** to discuss what you'd like to add or change. This helps us:
-- Make sure it fits with Prism's goals
-- Avoid duplicate work
-- Talk through the approach before code is written
-- Save you time if it's not something I can merge
+## Development Workflow
 
-This isn't about control—it's about making sure your time is well spent and that Prism stays focused on what families actually need.
+1. Create a feature branch from `master`
+2. Make your changes following the conventions below
+3. Run the quality checks (see below)
+4. Submit a pull request
 
-## What Fits Prism
+## Quality Standards
 
-Good candidates for contributions:
-- New integrations with popular family services (Google Photos, Todoist, etc.)
-- Bug fixes and performance improvements
-- Better mobile/tablet experience
-- Accessibility improvements
-- Documentation and setup guides
+All pull requests must meet the following Lighthouse score thresholds:
 
-Things that probably don't fit:
-- Features that only work for edge cases
-- Integrations that duplicate existing functionality
-- Major architectural changes (let's discuss these separately)
-- Features that significantly increase complexity
+| Category | Minimum Score |
+|---|---|
+| Performance | 95% |
+| Accessibility | 95% |
+| Best Practices | 95% |
+| SEO | 95% |
 
-## Technical Considerations
+PRs that score below 95% in any Lighthouse category will not be merged.
 
-Since Prism was built with AI assistance, the codebase has some quirks. I can't guarantee I'll understand every line of code someone contributes, so:
-- Keep changes focused and well-documented
-- Emphasize code reuse—both for maintainability and performance
-- Test on both desktop and mobile
-- Make sure it works in Docker
-- Don't break existing features
+### Running Lighthouse
 
-## The Review Process
+```bash
+# Build and start the app
+docker-compose up -d
 
-I'm learning as I go here. Reviews might take time, and I might need help understanding proposed changes. Please be patient as I figure out what sustainable maintenance looks like for this project.
+# Run Lighthouse via Chrome DevTools or CLI
+npx lighthouse http://localhost:3000 --output=json --output=html
+```
 
-## Questions?
+### Other Checks
 
-Open an issue or start a discussion. I'm figuring this out too, and I appreciate your understanding.
+```bash
+# TypeScript type checking
+npx tsc --noEmit
+
+# Linting
+npx next lint
+
+# Unit tests
+npx jest
+
+# E2E tests
+npx playwright test
+```
+
+## Code Conventions
+
+- **TypeScript**: Strict mode, no `any` unless unavoidable
+- **Styling**: Tailwind CSS only — no inline styles or CSS modules
+- **Components**: Keep under 250 lines; extract hooks or sub-components if larger
+- **API Routes**: Use `withAuth` middleware, add Redis cache invalidation on mutations
+- **Accessibility**: All interactive elements need accessible names; maintain WCAG 2.1 AA contrast ratios
+- **Touch targets**: Minimum 44px (Apple HIG)
+
+## Commit Messages
+
+Write descriptive commit messages that explain the "why" rather than the "what".

@@ -122,7 +122,7 @@ function ScreensaverGrid() {
     } = rawProps as Record<string, unknown>;
     return (
       <React.Suspense fallback={<div className="flex items-center justify-center h-full opacity-50 text-sm">Loading...</div>}>
-        <div className="h-full w-full [&_*]:!bg-transparent [&_.bg-card]:!bg-white/10 [&_.border-border]:!border-white/20">
+        <div className="h-full w-full [&_*:not([data-keep-bg])]:!bg-transparent [&_.bg-card]:!bg-white/10 [&_.border-border]:!border-white/20">
           <Component {...props} />
         </div>
       </React.Suspense>

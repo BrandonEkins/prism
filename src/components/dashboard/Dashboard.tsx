@@ -58,7 +58,7 @@ export interface DashboardProps {
 }
 
 export function Dashboard({
-  weatherLocation = 'Springfield, IL',
+  weatherLocation,
   className,
   slug,
 }: DashboardProps) {

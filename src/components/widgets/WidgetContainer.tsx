@@ -250,7 +250,6 @@ export function WidgetContainer({
             '--foreground': hslVal,
             '--card-foreground': hslVal,
             '--muted-foreground': mutedHslVal,
-            '--primary': hslVal,
             '--seasonal-accent': hslVal,
             // Override border colors so Select/dropdown outlines pick up the custom color
             '--input': hslVal,

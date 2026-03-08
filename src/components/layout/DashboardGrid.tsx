@@ -33,6 +33,7 @@ import * as React from 'react';
 import { cn } from '@/lib/utils';
 import { AwayModeToggle } from '@/components/away-mode';
 import { BabysitterModeToggle } from '@/components/babysitter-mode';
+import { useAutoHideUI } from '@/lib/hooks/useAutoHideUI';
 
 
 /**
@@ -194,8 +195,12 @@ export function DashboardHeader({
   onEditClick,
   onScreensaverClick,
 }: DashboardHeaderProps) {
+  const { uiHidden } = useAutoHideUI();
   return (
-    <header className="flex-shrink-0 border-b border-border bg-card/85 backdrop-blur-sm px-4 py-2">
+    <header className={cn(
+      'flex-shrink-0 border-b border-border bg-card/85 backdrop-blur-sm px-4 py-2 transition-all duration-500 ease-in-out',
+      uiHidden ? 'opacity-0 -translate-y-full h-0 py-0 border-0 overflow-hidden delay-0' : 'delay-200'
+    )}>
       <div className="flex items-center justify-end gap-2">
         {/* Edit layout button */}
         {onEditClick && (

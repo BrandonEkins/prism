@@ -10,7 +10,15 @@ export function getWidgetStyle(w: WidgetConfig): CSSProperties | undefined {
   if (!w.backgroundColor && !w.outlineColor && !w.textColor) return undefined;
   const style: CSSProperties = { borderRadius: '0.5rem' };
 
-  if (w.backgroundColor && w.backgroundColor !== 'transparent') {
+  if (w.backgroundColor === 'frosted') {
+    // Blur intensity mapped from backgroundOpacity: 0.25=light, 0.5=med, 0.75=heavy, 1=max
+    const intensity = w.backgroundOpacity ?? 0.5;
+    const blurPx = Math.round(intensity * 24); // 6px to 24px
+    const tintOpacity = 0.08 + intensity * 0.12; // 0.08 to 0.20
+    style.backgroundColor = `rgba(255,255,255,${tintOpacity})`;
+    style.backdropFilter = `blur(${blurPx}px) saturate(${1 + intensity * 0.3})`;
+    (style as Record<string, string>).WebkitBackdropFilter = `blur(${blurPx}px) saturate(${1 + intensity * 0.3})`;
+  } else if (w.backgroundColor && w.backgroundColor !== 'transparent') {
     const opacity = w.backgroundOpacity ?? 1;
     style.backgroundColor = opacity < 1
       ? hexToRgba(w.backgroundColor, opacity)
@@ -38,6 +46,6 @@ export function getWidgetStyle(w: WidgetConfig): CSSProperties | undefined {
  */
 export function getTextColorClass(w: WidgetConfig, fallback = ''): string {
   if (w.textColor) return '';
-  if (!w.backgroundColor || w.backgroundColor === 'transparent' || w.backgroundOpacity === 0) return fallback;
+  if (!w.backgroundColor || w.backgroundColor === 'transparent' || w.backgroundColor === 'frosted' || w.backgroundOpacity === 0) return fallback;
   return isLightColor(w.backgroundColor) ? 'text-black' : 'text-white';
 }

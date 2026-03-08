@@ -30,6 +30,7 @@ import { WallpaperBackground } from './WallpaperBackground';
 import { cn } from '@/lib/utils';
 import { useOrientation } from '@/lib/hooks/useOrientation';
 import { useIsMobile } from '@/lib/hooks/useIsMobile';
+import { useAutoHideUI } from '@/lib/hooks/useAutoHideUI';
 
 /**
  * APP SHELL PROPS
@@ -91,6 +92,7 @@ export function AppShell({
 }: AppShellProps) {
   const orientation = useOrientation();
   const isMobile = useIsMobile();
+  const { uiHidden } = useAutoHideUI();
 
   // Determine which nav to show:
   // - Mobile (small screens): MobileNav (simplified)
@@ -107,18 +109,23 @@ export function AppShell({
 
       {/* SIDE NAVIGATION - landscape mode on larger screens */}
       {!hideNav && showSideNav && (
-        <SideNav user={user} onLogout={onLogout} onLogin={onLogin} />
+        <div className={cn(
+          'relative z-40 transition-all duration-500 ease-in-out',
+          uiHidden ? '-translate-x-full opacity-0 delay-200' : 'translate-x-0 opacity-100 delay-0'
+        )}>
+          <SideNav user={user} onLogout={onLogout} onLogin={onLogin} />
+        </div>
       )}
 
       {/* MAIN CONTENT AREA */}
       <main
         className={cn(
-          'min-h-screen relative z-10',
-          // Left margin only when SideNav is visible (landscape on larger screens)
-          !hideNav && showSideNav && 'ml-16',
+          'min-h-screen transition-[margin,padding] duration-500 ease-in-out',
+          // Left margin only when SideNav is visible and not hidden
+          !hideNav && showSideNav && !uiHidden && 'ml-16',
           // Bottom padding when bottom nav is visible (portrait or mobile)
-          !hideNav && showPortraitNav && 'pb-24',
-          !hideNav && showMobileNav && 'pb-16',
+          !hideNav && showPortraitNav && !uiHidden && 'pb-24',
+          !hideNav && showMobileNav && !uiHidden && 'pb-16',
           className
         )}
       >
@@ -126,10 +133,24 @@ export function AppShell({
       </main>
 
       {/* PORTRAIT BOTTOM NAVIGATION - portrait mode on larger screens */}
-      {!hideNav && showPortraitNav && <PortraitNav user={user} onLogin={onLogin} onLogout={onLogout} />}
+      {!hideNav && showPortraitNav && (
+        <div className={cn(
+          'z-40 transition-all duration-500 ease-in-out',
+          uiHidden ? 'translate-y-full opacity-0 delay-200' : 'translate-y-0 opacity-100 delay-0'
+        )}>
+          <PortraitNav user={user} onLogin={onLogin} onLogout={onLogout} />
+        </div>
+      )}
 
       {/* MOBILE BOTTOM NAVIGATION - small screens only */}
-      {!hideNav && showMobileNav && <MobileNav user={user} onLogin={onLogin} onLogout={onLogout} />}
+      {!hideNav && showMobileNav && (
+        <div className={cn(
+          'z-40 transition-all duration-500 ease-in-out',
+          uiHidden ? 'translate-y-full opacity-0 delay-200' : 'translate-y-0 opacity-100 delay-0'
+        )}>
+          <MobileNav user={user} onLogin={onLogin} onLogout={onLogout} />
+        </div>
+      )}
     </div>
   );
 }

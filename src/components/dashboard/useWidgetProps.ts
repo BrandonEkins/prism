@@ -19,7 +19,7 @@ export function buildWidgetProps(
   data: ReturnType<typeof useDashboardData>,
   requireAuth: RequireAuthFn,
   modals: ModalSetters,
-  weatherLocation: string,
+  weatherLocation?: string,
   confirmAction?: ConfirmFn,
 ): Record<string, Record<string, unknown>> {
   return {

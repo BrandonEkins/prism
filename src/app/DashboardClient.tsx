@@ -9,6 +9,6 @@ const Dashboard = dynamic(
 
 export function DashboardClient() {
   return (
-    <Dashboard weatherLocation="Springfield, IL" />
+    <Dashboard />
   );
 }

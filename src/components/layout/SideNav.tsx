@@ -72,6 +72,7 @@ export function SideNav({ user, onLogout, onLogin, className }: SideNavProps) {
   const pathname = usePathname();
   const { filterNavItems } = useHiddenPages();
   const navItems = filterNavItems(ALL_NAV_ITEMS);
+  const [hovered, setHovered] = React.useState(false);
 
   // Check if a nav item is active
   const isActive = (href: string) => {
@@ -81,28 +82,30 @@ export function SideNav({ user, onLogout, onLogin, className }: SideNavProps) {
     return pathname.startsWith(href);
   };
 
+  const expanded = hovered;
+
   return (
     <>
       {/* SIDE NAVIGATION - visibility controlled by AppShell based on orientation */}
       <aside
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
         className={cn(
-          'group fixed left-0 top-0 z-40 h-screen',
+          'fixed left-0 top-0 z-40 h-screen',
           'bg-card/85 backdrop-blur-sm border-r border-border',
           'flex flex-col',
           'transition-all duration-300 ease-in-out',
-          'w-16',
-          'hover:w-60',
-          'hover:shadow-xl',
+          expanded ? 'w-60 shadow-xl' : 'w-16',
           className
         )}
       >
         {/* HEADER WITH LOGO */}
-        <div className="flex items-center h-16 px-2 border-b border-border justify-center group-hover:justify-start">
+        <div className={cn('flex items-center h-16 px-2 border-b border-border', expanded ? 'justify-start' : 'justify-center')}>
           <Link href="/" className="flex items-center gap-2" aria-label="Prism home">
             <div className="w-8 h-8 rounded-lg bg-card flex items-center justify-center shrink-0 overflow-hidden">
               <PrismIcon size={24} />
             </div>
-            <span className="hidden group-hover:inline font-semibold text-lg">Prism</span>
+            {expanded && <span className="font-semibold text-lg">Prism</span>}
           </Link>
         </div>
 
@@ -126,13 +129,13 @@ export function SideNav({ user, onLogout, onLogin, className }: SideNavProps) {
                       active
                         ? 'bg-seasonal-accent text-seasonal-accent-foreground'
                         : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
-                      'justify-center group-hover:justify-start'
+                      expanded ? 'justify-start' : 'justify-center'
                     )}
                   >
                     <Icon className="h-5 w-5 flex-shrink-0" aria-hidden="true" />
-                    <span className="hidden group-hover:inline whitespace-nowrap">
+                    {expanded && <span className="whitespace-nowrap">
                       {item.label}
-                    </span>
+                    </span>}
                   </Link>
                 </li>
               );
@@ -150,7 +153,7 @@ export function SideNav({ user, onLogout, onLogin, className }: SideNavProps) {
               'transition-colors duration-200',
               'touch-target',
               'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
-              'justify-center group-hover:justify-start'
+              expanded ? 'justify-start' : 'justify-center'
             )}
             aria-label={user ? 'Log out' : 'Log in'}
           >
@@ -172,9 +175,9 @@ export function SideNav({ user, onLogout, onLogin, className }: SideNavProps) {
                     user.name.charAt(0).toUpperCase()
                   )}
                 </div>
-                <span className="hidden group-hover:inline whitespace-nowrap truncate">
+                {expanded && <span className="whitespace-nowrap truncate">
                   {user.name}
-                </span>
+                </span>}
               </>
             ) : (
               <>
@@ -195,9 +198,9 @@ export function SideNav({ user, onLogout, onLogin, className }: SideNavProps) {
                     <circle cx="12" cy="7" r="4" />
                   </svg>
                 </div>
-                <span className="hidden group-hover:inline whitespace-nowrap text-red-500">
+                {expanded && <span className="whitespace-nowrap text-red-500">
                   Log in
-                </span>
+                </span>}
               </>
             )}
           </button>

@@ -32,7 +32,7 @@ interface ScreenSafeZonesConfig {
 // --- Defaults (different aspect ratios) ---
 
 export const DEFAULT_SCREENS: ScreenZoneConfig[] = [
-  { name: 'Example safe zone (edit me)', width: 1920, height: 1080, color: '#3B82F6' },
+  { name: '1080p', width: 1920, height: 1080, color: '#3B82F6' },
 ];
 
 export const RESOLUTION_PRESETS: { label: string; width: number; height: number }[] = [

@@ -15,6 +15,7 @@ import { useScreenOrientation } from '@/lib/hooks/useScreenOrientation';
 import { useOrientationOverride } from '../SettingsView';
 import { useFamily } from '@/components/providers/FamilyProvider';
 import { useScreensaverTimeout } from '@/lib/hooks/useScreensaverTimeout';
+import { useAutoHideUI } from '@/lib/hooks/useAutoHideUI';
 import { useAwayModeTimeout } from '@/lib/hooks/useAwayModeTimeout';
 import { useHiddenHours } from '@/lib/hooks/useHiddenHours';
 import { useScreenSafeZones, DEFAULT_SCREENS, RESOLUTION_PRESETS, computeZones } from '@/lib/hooks/useScreenSafeZones';
@@ -164,26 +165,11 @@ export function DisplaySection() {
 
       <WallpaperSettingsCard />
 
-      <ScreensaverTimeoutCard />
-
-      <AwayModeTimeoutCard />
+      <TimersCard />
 
       <CalendarHoursCard />
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Location</CardTitle>
-          <CardDescription>
-            Set your location for weather and time
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Input
-            defaultValue="Springfield, IL"
-            placeholder="City, State"
-          />
-        </CardContent>
-      </Card>
+      <LocationCard />
 
       <OrientationCard />
 
@@ -263,91 +249,105 @@ function DisplayUserCard() {
   );
 }
 
-function ScreensaverTimeoutCard() {
-  const { timeout, setTimeout } = useScreensaverTimeout();
+function TimersCard() {
+  const { timeout: ssTimeout, setTimeout: setSsTimeout } = useScreensaverTimeout();
   const { interval: photoInterval, setInterval: setPhotoInterval } = useScreensaverInterval();
+  const { autoHideEnabled, setAutoHideEnabled } = useAutoHideUI();
+  const { timeout: awayTimeout, setTimeout: setAwayTimeout } = useAwayModeTimeout();
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Screensaver</CardTitle>
+        <CardTitle>Timers &amp; Auto-Activation</CardTitle>
         <CardDescription>
-          Activate screensaver mode after a period of inactivity
+          Configure screensaver, auto-hide, and away mode inactivity timers
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="flex items-center gap-3">
-          <span className="text-sm text-muted-foreground">Activate after</span>
-          <select
-            value={timeout}
-            onChange={(e) => setTimeout(Number(e.target.value))}
-            className="border border-border rounded px-2 py-1 text-sm bg-background"
-          >
-            <option value={30}>30 seconds</option>
-            <option value={60}>1 minute</option>
-            <option value={120}>2 minutes</option>
-            <option value={600}>10 minutes</option>
-            <option value={3600}>1 hour</option>
-            <option value={0}>Never</option>
-          </select>
+      <CardContent className="space-y-5">
+        {/* Screensaver */}
+        <div className="space-y-3">
+          <h4 className="text-sm font-medium">Screensaver</h4>
+          <div className="flex items-center gap-3 pl-2">
+            <span className="text-sm text-muted-foreground">Activate after</span>
+            <select
+              value={ssTimeout}
+              onChange={(e) => setSsTimeout(Number(e.target.value))}
+              className="border border-border rounded px-2 py-1 text-sm bg-background"
+            >
+              <option value={30}>30 seconds</option>
+              <option value={60}>1 minute</option>
+              <option value={120}>2 minutes</option>
+              <option value={600}>10 minutes</option>
+              <option value={3600}>1 hour</option>
+              <option value={0}>Never</option>
+            </select>
+          </div>
+          <div className="flex items-center gap-3 pl-2">
+            <span className="text-sm text-muted-foreground">Rotate photos every</span>
+            <select
+              value={photoInterval}
+              onChange={(e) => setPhotoInterval(Number(e.target.value))}
+              className="border border-border rounded px-2 py-1 text-sm bg-background"
+            >
+              <option value={5}>5 seconds</option>
+              <option value={10}>10 seconds</option>
+              <option value={15}>15 seconds</option>
+              <option value={30}>30 seconds</option>
+              <option value={60}>1 minute</option>
+              <option value={300}>5 minutes</option>
+              <option value={600}>10 minutes</option>
+              <option value={3600}>1 hour</option>
+              <option value={0}>Never (static)</option>
+            </select>
+          </div>
         </div>
-        <div className="flex items-center gap-3">
-          <span className="text-sm text-muted-foreground">Rotate photos every</span>
-          <select
-            value={photoInterval}
-            onChange={(e) => setPhotoInterval(Number(e.target.value))}
-            className="border border-border rounded px-2 py-1 text-sm bg-background"
-          >
-            <option value={5}>5 seconds</option>
-            <option value={10}>10 seconds</option>
-            <option value={15}>15 seconds</option>
-            <option value={30}>30 seconds</option>
-            <option value={60}>1 minute</option>
-            <option value={300}>5 minutes</option>
-            <option value={600}>10 minutes</option>
-            <option value={3600}>1 hour</option>
-            <option value={0}>Never (static)</option>
-          </select>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
 
-function AwayModeTimeoutCard() {
-  const { timeout, setTimeout } = useAwayModeTimeout();
+        <div className="border-t border-border" />
 
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Away Mode Auto-Activation</CardTitle>
-        <CardDescription>
-          Automatically enable Away Mode after extended inactivity to hide sensitive information
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="flex items-center gap-3">
-          <span className="text-sm text-muted-foreground">Activate after</span>
-          <select
-            value={timeout}
-            onChange={(e) => setTimeout(Number(e.target.value))}
-            className="border border-border rounded px-2 py-1 text-sm bg-background"
-          >
-            <option value={0}>Never (manual only)</option>
-            <option value={4}>4 hours</option>
-            <option value={8}>8 hours</option>
-            <option value={12}>12 hours</option>
-            <option value={24}>1 day</option>
-            <option value={48}>2 days</option>
-            <option value={72}>3 days</option>
-            <option value={168}>1 week</option>
-          </select>
-          <span className="text-sm text-muted-foreground">of no interaction</span>
+        {/* Auto-Hide Navigation */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <div>
+              <h4 className="text-sm font-medium">Auto-Hide Navigation</h4>
+              <p className="text-xs text-muted-foreground">Hide nav and toolbar after 10s of inactivity</p>
+            </div>
+            <Switch
+              checked={autoHideEnabled}
+              onCheckedChange={(checked) => {
+                setAutoHideEnabled(checked);
+                window.dispatchEvent(new Event('prism:auto-hide-change'));
+              }}
+            />
+          </div>
         </div>
-        <p className="text-xs text-muted-foreground">
-          When enabled, the screensaver will run normally, but after the specified time with no
-          touch/keyboard input, Away Mode will automatically activate for privacy.
-        </p>
+
+        <div className="border-t border-border" />
+
+        {/* Away Mode */}
+        <div className="space-y-2">
+          <h4 className="text-sm font-medium">Away Mode Auto-Activation</h4>
+          <div className="flex items-center gap-3 pl-2">
+            <span className="text-sm text-muted-foreground">Activate after</span>
+            <select
+              value={awayTimeout}
+              onChange={(e) => setAwayTimeout(Number(e.target.value))}
+              className="border border-border rounded px-2 py-1 text-sm bg-background"
+            >
+              <option value={0}>Never (manual only)</option>
+              <option value={4}>4 hours</option>
+              <option value={8}>8 hours</option>
+              <option value={12}>12 hours</option>
+              <option value={24}>1 day</option>
+              <option value={48}>2 days</option>
+              <option value={72}>3 days</option>
+              <option value={168}>1 week</option>
+            </select>
+            <span className="text-sm text-muted-foreground">of no interaction</span>
+          </div>
+          <p className="text-xs text-muted-foreground pl-2">
+            After the specified idle time, Away Mode activates automatically for privacy.
+          </p>
+        </div>
       </CardContent>
     </Card>
   );
@@ -509,6 +509,103 @@ function CalendarHoursCard() {
               : 24 - settings.startHour + settings.endHour
           } hours)
         </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+
+function LocationCard() {
+  const [zipCode, setZipCode] = useState('');
+  const [city, setCity] = useState('');
+  const [state, setState] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+
+  const fetchLocation = useCallback(async () => {
+    try {
+      const res = await fetch('/api/settings');
+      if (res.ok) {
+        const data = await res.json();
+        const loc = data.settings?.location as { zipCode?: string; city?: string; state?: string } | undefined;
+        if (loc) {
+          setZipCode(loc.zipCode || '');
+          setCity(loc.city || '');
+          setState(loc.state || '');
+        }
+      }
+    } catch { /* ignore */ }
+    setLoaded(true);
+  }, []);
+
+  useEffect(() => { fetchLocation(); }, [fetchLocation]);
+
+  const saveLocation = async (patch: { zipCode?: string; city?: string; state?: string }) => {
+    const updated = { zipCode: patch.zipCode ?? zipCode, city: patch.city ?? city, state: patch.state ?? state };
+    setSaving(true);
+    try {
+      await fetch('/api/settings', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key: 'location', value: updated }),
+      });
+    } catch { /* ignore */ }
+    setSaving(false);
+  };
+
+  if (!loaded) return null;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Location</CardTitle>
+        <CardDescription>
+          Set your location for weather data. Use either a US zip code or city/state.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div className="flex items-center gap-3">
+          <span className="text-sm text-muted-foreground w-16 shrink-0">Zip code</span>
+          <Input
+            value={zipCode}
+            onChange={(e) => {
+              const val = e.target.value.replace(/[^0-9]/g, '').slice(0, 5);
+              setZipCode(val);
+            }}
+            onBlur={() => saveLocation({ zipCode })}
+            placeholder="e.g. 60601"
+            className="w-28"
+            maxLength={5}
+            inputMode="numeric"
+            disabled={saving}
+          />
+        </div>
+        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+          <span className="w-full text-center">— or —</span>
+        </div>
+        <div className="flex items-center gap-3">
+          <span className="text-sm text-muted-foreground w-16 shrink-0">City</span>
+          <Input
+            value={city}
+            onChange={(e) => setCity(e.target.value)}
+            onBlur={() => saveLocation({ city })}
+            placeholder="e.g. Chicago"
+            disabled={saving}
+          />
+        </div>
+        <div className="flex items-center gap-3">
+          <span className="text-sm text-muted-foreground w-16 shrink-0">State</span>
+          <Input
+            value={state}
+            onChange={(e) => setState(e.target.value.slice(0, 2).toUpperCase())}
+            onBlur={() => saveLocation({ state })}
+            placeholder="e.g. IL"
+            className="w-20"
+            maxLength={2}
+            disabled={saving}
+          />
+        </div>
+        {saving && <p className="text-xs text-muted-foreground">Saving...</p>}
       </CardContent>
     </Card>
   );

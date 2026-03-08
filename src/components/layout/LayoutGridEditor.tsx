@@ -245,7 +245,34 @@ export function LayoutGridEditor({
 
         {/* Row 3: Special swatch + themed colors + B/W + custom picker */}
         <div className="flex items-center gap-1 px-3 pb-1.5">
-          {/* Special swatch — checkerboard for all targets */}
+          {/* Default swatch — resets current target to theme default */}
+          {(() => {
+            const isDefault = colorTarget === 'fill' ? !bgColor
+              : colorTarget === 'outline' ? !olColor : !txtColor;
+            const resetTarget = () => {
+              if (colorTarget === 'fill') updateWidgetColor(selectedWidget, { backgroundColor: null, backgroundOpacity: 1 });
+              else if (colorTarget === 'outline') updateWidgetColor(selectedWidget, { outlineColor: null, outlineOpacity: 1 });
+              else updateWidgetColor(selectedWidget, { textColor: null, textOpacity: 1 });
+            };
+            return (
+              <button
+                onClick={resetTarget}
+                onPointerDown={(e) => e.stopPropagation()}
+                className={`w-8 h-8 rounded-full border border-gray-300 overflow-hidden transition-transform hover:scale-110 touch-manipulation ${
+                  isDefault ? 'ring-2 ring-primary ring-offset-1' : ''
+                }`}
+                title="Theme default"
+              >
+                <div className="w-full h-full bg-card/85 flex items-center justify-center">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground">
+                    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                    <path d="M3 3v5h5" />
+                  </svg>
+                </div>
+              </button>
+            );
+          })()}
+          {/* Special swatches — checkerboard (transparent) + frosted glass */}
           {(() => {
             const specialValue = colorTarget === 'fill' ? 'transparent' : null;
             const isSpecialSelected = colorTarget === 'fill'
@@ -273,6 +300,29 @@ export function LayoutGridEditor({
               </button>
             );
           })()}
+          {/* Frosted glass swatch — only for fill target */}
+          {colorTarget === 'fill' && (
+            <button
+              onClick={() => applyColorToTarget(selectedWidget, 'frosted')}
+              onPointerDown={(e) => e.stopPropagation()}
+              className={`w-8 h-8 rounded-full border border-gray-300 overflow-hidden transition-transform hover:scale-110 touch-manipulation ${
+                bgColor === 'frosted' ? 'ring-2 ring-primary ring-offset-1' : ''
+              }`}
+              title="Frosted glass"
+            >
+              <svg viewBox="0 0 32 32" className="w-full h-full">
+                <defs>
+                  <radialGradient id="frost-grad" cx="30%" cy="30%">
+                    <stop offset="0%" stopColor="rgba(255,255,255,0.7)" />
+                    <stop offset="100%" stopColor="rgba(200,210,230,0.4)" />
+                  </radialGradient>
+                </defs>
+                <circle cx="16" cy="16" r="16" fill="url(#frost-grad)" />
+                <circle cx="10" cy="12" r="4" fill="rgba(255,255,255,0.3)" />
+                <circle cx="20" cy="18" r="3" fill="rgba(255,255,255,0.2)" />
+              </svg>
+            </button>
+          )}
 
           <div className="w-px h-6 bg-border mx-0.5" />
 
@@ -322,37 +372,73 @@ export function LayoutGridEditor({
             />
           </div>
 
-          {/* Opacity — inline on swatch row, visible when active target has a color */}
-          {((colorTarget === 'fill' && hasColorFill) || (colorTarget === 'outline' && hasColorOutline) || (colorTarget === 'text' && hasColorText)) && (
-            <>
-              <div className="w-px h-6 bg-border mx-0.5" />
-              {[0, 0.25, 0.5, 0.75, 1].map((o) => {
-                const currentOpacity = colorTarget === 'fill' ? bgOpacity : colorTarget === 'outline' ? olOpacity : txtOpacity;
-                const handleOpacityClick = () => {
-                  if (colorTarget === 'fill') updateWidgetColor(selectedWidget, { backgroundOpacity: o });
-                  else if (colorTarget === 'outline') updateWidgetColor(selectedWidget, { outlineOpacity: o });
-                  else updateWidgetColor(selectedWidget, { textOpacity: o });
-                };
-                return (
-                  <button
-                    key={o}
-                    onClick={handleOpacityClick}
-                    onPointerDown={(e) => e.stopPropagation()}
-                    className={`w-8 h-8 rounded-full text-[10px] border transition-colors touch-manipulation ${
-                      currentOpacity === o
-                        ? 'bg-primary text-primary-foreground border-primary'
-                        : 'border-border hover:bg-accent/50'
-                    }`}
-                  >
-                    {Math.round(o * 100)}%
-                  </button>
-                );
-              })}
-            </>
-          )}
+          {/* Opacity / blur intensity — inline on swatch row */}
+          {(() => {
+            const isFrosted = colorTarget === 'fill' && bgColor === 'frosted';
+            const showOpacity = !isFrosted && ((colorTarget === 'fill' && hasColorFill) || (colorTarget === 'outline' && hasColorOutline) || (colorTarget === 'text' && hasColorText));
+            const showBlur = isFrosted;
+            if (!showOpacity && !showBlur) return null;
+
+            if (showBlur) {
+              // Blur intensity: repurpose backgroundOpacity for frosted blur level
+              const blurLevels = [
+                { value: 0.25, label: 'Light' },
+                { value: 0.5, label: 'Med' },
+                { value: 0.75, label: 'Heavy' },
+                { value: 1, label: 'Max' },
+              ];
+              return (
+                <>
+                  <div className="w-px h-6 bg-border mx-0.5" />
+                  {blurLevels.map(({ value, label }) => (
+                    <button
+                      key={value}
+                      onClick={() => updateWidgetColor(selectedWidget, { backgroundOpacity: value })}
+                      onPointerDown={(e) => e.stopPropagation()}
+                      className={`w-8 h-8 rounded-full text-[10px] border transition-colors touch-manipulation ${
+                        bgOpacity === value
+                          ? 'bg-primary text-primary-foreground border-primary'
+                          : 'border-border hover:bg-accent/50'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </>
+              );
+            }
+
+            return (
+              <>
+                <div className="w-px h-6 bg-border mx-0.5" />
+                {[0, 0.25, 0.5, 0.75, 1].map((o) => {
+                  const currentOpacity = colorTarget === 'fill' ? bgOpacity : colorTarget === 'outline' ? olOpacity : txtOpacity;
+                  const handleOpacityClick = () => {
+                    if (colorTarget === 'fill') updateWidgetColor(selectedWidget, { backgroundOpacity: o });
+                    else if (colorTarget === 'outline') updateWidgetColor(selectedWidget, { outlineOpacity: o });
+                    else updateWidgetColor(selectedWidget, { textOpacity: o });
+                  };
+                  return (
+                    <button
+                      key={o}
+                      onClick={handleOpacityClick}
+                      onPointerDown={(e) => e.stopPropagation()}
+                      className={`w-8 h-8 rounded-full text-[10px] border transition-colors touch-manipulation ${
+                        currentOpacity === o
+                          ? 'bg-primary text-primary-foreground border-primary'
+                          : 'border-border hover:bg-accent/50'
+                      }`}
+                    >
+                      {Math.round(o * 100)}%
+                    </button>
+                  );
+                })}
+              </>
+            );
+          })()}
         </div>
 
-        {/* Row 4: Target buttons with harvey ball indicators */}
+        {/* Row 4: Target buttons with harvey ball indicators + Reset */}
         <div className="flex items-center gap-2 px-3 pb-2">
           <div className="flex gap-1">
             {([
@@ -360,8 +446,8 @@ export function LayoutGridEditor({
               { id: 'outline' as const, icon: Square, label: 'Outline', color: olColor, opacity: olOpacity },
               { id: 'text' as const, icon: Type, label: 'Text', color: txtColor, opacity: txtOpacity },
             ]).map(({ id, icon: Icon, label, color, opacity }) => {
-              const fillColor = color && color !== 'transparent' ? color : '#999';
-              const fillLevel = !color || color === 'transparent' ? 0 : opacity;
+              const fillColor = color && color !== 'transparent' && color !== 'frosted' ? color : (color === 'frosted' ? '#b0c4de' : '#999');
+              const fillLevel = !color || color === 'transparent' ? 0 : (color === 'frosted' ? 1 : opacity);
               const isActive = colorTarget === id;
               // Contrasting stroke: light stroke on dark fills, dark stroke on light fills
               const ballStroke = fillLevel > 0 && color && color !== 'transparent'
@@ -424,20 +510,6 @@ export function LayoutGridEditor({
             })}
           </div>
 
-          {/* Reset all colors button — only show when any custom color is set */}
-          {(hasColorFill || hasColorOutline || hasColorText) && (
-            <button
-              onClick={() => updateWidgetColor(selectedWidget, {
-                backgroundColor: null, backgroundOpacity: 1,
-                outlineColor: null, outlineOpacity: 1,
-                textColor: null, textOpacity: 1,
-              })}
-              onPointerDown={(e) => e.stopPropagation()}
-              className="ml-auto px-2.5 min-h-[44px] text-xs rounded border border-border hover:bg-accent/50 text-muted-foreground transition-colors touch-manipulation"
-            >
-              Reset
-            </button>
-          )}
         </div>
       </div>
     );

@@ -124,7 +124,7 @@ export interface WeatherWidgetProps {
  * <WeatherWidget useCelsius />
  */
 export const WeatherWidget = React.memo(function WeatherWidget({
-  location = 'Springfield, IL',
+  location = '',
   useCelsius = false,
   showForecast = true,
   forecastDays,

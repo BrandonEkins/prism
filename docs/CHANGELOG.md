@@ -7,6 +7,26 @@ All notable changes to Prism are documented in this file.
 ### Added
 - **Calendar**: Multi-week view replaces the fixed 2-week view — configurable from 1 to 4 weeks on both the calendar page and dashboard widget
 - **Calendar**: Bordered/borderless toggle for multi-week cell outlines; rows auto-size to content
+- **Dashboard Editor**: Frosted glass background option with variable blur intensity (Light/Med/Heavy/Max)
+- **Dashboard Editor**: Default swatch (reset icon) to return any color target to theme defaults
+- **Dashboard Editor**: Harvey ball indicators on Fill/Outline/Text target buttons show color state at a glance
+- **Auto-Hide UI**: Nav bar and toolbar auto-hide after 10 seconds of inactivity, reappear on mouse/touch (configurable in Settings)
+- **Auto-Hide UI**: Staggered animation — header hides first, then nav; nav reappears first, then header
+- **Settings**: Location card wired to weather API — supports zip code or city/state, stored in database
+- **CONTRIBUTING.md**: Quality standards requiring 95% minimum Lighthouse score across all categories
+
+### Improved
+- **Settings**: Consolidated Screensaver Timeout, Auto-Hide Navigation, and Away Mode Auto-Activation into single "Timers & Auto-Activation" card
+- **Calendar**: Multi-week toolbar no longer resizes when switching views — grid icon doubles as border toggle
+- **Calendar**: Multi-week today highlight preserved in screensaver mode (data-keep-bg attribute)
+- **SideNav**: State-based hover expansion (replaces CSS group-hover) — nav stays open during page navigation
+- **Weather**: Location resolved from DB settings with fallback chain (query param → DB → env var → default)
+- **Screensaver**: Fixed `--primary` CSS variable override that turned today highlight bar white
+
+### Fixed
+- **SideNav**: Fixed nav appearing behind page content (removed `relative` from main, added `relative z-40` to nav wrapper)
+- **Layout Editor**: Added `busTracking` to widget validation constraints (fixes "unknown widget ID" error)
+- **Safe Zones**: Shortened default label from "Example safe zone (edit me)" to "1080p" to prevent preview cutoff
 
 ### Improved
 - **Performance**: Split RecipesView into RecipeCard, RecipeDetailModal, RecipeFormModal, ImportUrlModal, and ImportPaprikaModal sub-components

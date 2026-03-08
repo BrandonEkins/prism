@@ -9,6 +9,6 @@ const Dashboard = dynamic(
 
 export function DashboardSlugClient({ slug }: { slug: string }) {
   return (
-    <Dashboard weatherLocation="Springfield, IL" slug={slug} />
+    <Dashboard slug={slug} />
   );
 }
