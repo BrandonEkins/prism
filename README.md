@@ -77,21 +77,26 @@ Build your home view with drag-and-drop widgets:
 - **Meals** - Weekly meal planning grid with recipe linking
 - **Messages** - Family message board with pinned and expiring messages
 - **Points** - Per-child point totals and goal progress
+- **Wishes** - Per-family-member wish lists with Microsoft To Do sync
+- **Bus Tracker** - School bus arrival tracking via FirstView email notifications
+- **Birthdays** - Upcoming family birthdays
 - **Clock** - Simple digital clock with date
 
-Widgets are resizable and rearrangeable. Your layout persists per device and can be exported/imported as JSON.
+Widgets are resizable and rearrangeable on a 48-column CSS Grid. Multiple dashboards are supported (e.g. `/d/kitchen`, `/d/bedroom`), each with independent layouts and screensaver configurations.
 
 ### Full-Page Modules
 
 Beyond the dashboard, Prism includes dedicated pages for:
 
-- **Calendar** - Full calendar with multiple view modes, event creation, and configurable hidden hours
+- **Calendar** - Full calendar with multiple view modes (day, week, multi-week, month, 3-month), event creation, and configurable hidden hours
 - **Recipes** - Recipe library with URL import (schema.org), Paprika import, and favorites
 - **Shopping** - Multiple lists with drag-to-reorder categories and shopping mode
 - **Chores** - Chore management with group-by-person view and approval workflow
 - **Tasks** - Task lists with Microsoft To Do sync
 - **Meals** - Weekly meal planning with recipe linking
 - **Goals** - Family goals with point allocation and recurring rewards
+- **Wishes** - Per-member wish lists, claim/hide gifts, Microsoft To Do sync
+- **Messages** - Family message board with pinned and expiring messages
 - **Photos** - Photo gallery with tagging for wallpaper/screensaver use
 - **Babysitter** - Public info page for caregivers (emergency contacts, WiFi QR code, house rules)
 
@@ -104,9 +109,10 @@ Beyond the dashboard, Prism includes dedicated pages for:
 ### Integrations
 
 - **Google Calendar** - Events (read-only via iCal or OAuth)
-- **Microsoft To Do** - Tasks and shopping lists (bidirectional sync)
+- **Microsoft To Do** - Tasks, shopping lists, and wish lists (bidirectional sync)
 - **OneDrive** - Photos for slideshow and wallpaper
 - **OpenWeatherMap** - Weather data
+- **Gmail + FirstView** - School bus arrival tracking via geofence email notifications
 - **Paprika** - Recipe import
 
 The goal isn't to replace your existing tools. It's to bring them together in one place that works for your family's rhythms.
@@ -159,10 +165,10 @@ This project was built entirely with [Claude Code](https://claude.ai/code). I di
 I used Playwright to systematically crawl DAKboard and Skylight, capturing screenshots and analyzing their features, layouts, and interaction patterns. Browser dev tools helped me understand how they handled integrations and real-time updates. This became source material for defining what Prism should do.
 
 **Tech stack:**
-- React + TypeScript frontend
-- Node.js backend
-- Docker for deployment
-- React-grid-layout for dashboard widgets
+- Next.js 15 (App Router) + React + TypeScript frontend
+- Node.js backend with PostgreSQL (Drizzle ORM) and Redis caching
+- Docker Compose for deployment
+- CSS Grid + dnd-kit for dashboard layout (48-column grid)
 - PIN-based auth optimized for shared family devices
 
 **Important:** I cannot be responsible for security vulnerabilities or code quality issues. Use at your own risk. That said, I use this in my own home and will continue to maintain it as I encounter problems.
@@ -185,7 +191,6 @@ Some features exist because I needed them:
 - **Screensaver modes** - Photo slideshow, away mode for privacy, babysitter mode for caregivers
 
 Some features are still on the roadmap:
-- **Bus tracking integration** - Reverse-engineering my kids' bus tracking app so departure times appear on Prism
 - **Additional integrations** - Google Photos, Todoist, Home Assistant, and other services people actually use
 - **Multi-household support** - For shared custody situations
 - **Voice control** - "Hey Prism, what's for dinner?"
