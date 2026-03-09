@@ -329,6 +329,9 @@ export function matchEmailToRoute(
     // Trip ID match (if available)
     if (parsed.tripId && route.tripId !== parsed.tripId) continue;
 
+    // Direction match (if hint available)
+    if (parsed.directionHint && route.direction !== parsed.directionHint) continue;
+
     // Find checkpoint index
     let checkpointIndex = -1;
     let checkpointName = parsed.checkpointName;
