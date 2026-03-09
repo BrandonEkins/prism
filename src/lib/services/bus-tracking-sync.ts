@@ -109,6 +109,8 @@ export async function syncBusEmails(): Promise<SyncResult> {
     accessToken = await ensureFreshToken(creds);
   } catch (error) {
     if (error instanceof TokenRevokedError) {
+      // Delete stale credential so /connection reports disconnected
+      await db.delete(apiCredentials).where(eq(apiCredentials.service, 'gmail-bus'));
       result.errors.push('Gmail token expired or revoked. Please reconnect.');
     } else {
       result.errors.push(`Token refresh failed: ${error instanceof Error ? error.message : 'Unknown error'}`);

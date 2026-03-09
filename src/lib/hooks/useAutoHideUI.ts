@@ -10,13 +10,15 @@ const HIDE_DELAY = 10_000; // 10 seconds
  * Only hides when the feature is enabled in settings.
  */
 export function useAutoHideUI() {
-  const [enabled, setEnabledState] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem(STORAGE_KEY) === 'true';
-    }
-    return false;
-  });
+  const [enabled, setEnabledState] = useState(false);
   const [hidden, setHidden] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  // Read from localStorage after mount to avoid SSR hydration mismatch
+  useEffect(() => {
+    setEnabledState(localStorage.getItem(STORAGE_KEY) === 'true');
+    setMounted(true);
+  }, []);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const resetTimer = useCallback(() => {
@@ -66,5 +68,5 @@ export function useAutoHideUI() {
     };
   }, []);
 
-  return { autoHideEnabled: enabled, setAutoHideEnabled: setEnabled, uiHidden: enabled && hidden };
+  return { autoHideEnabled: enabled, setAutoHideEnabled: setEnabled, uiHidden: mounted && enabled && hidden };
 }

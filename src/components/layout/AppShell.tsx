@@ -109,12 +109,7 @@ export function AppShell({
 
       {/* SIDE NAVIGATION - landscape mode on larger screens */}
       {!hideNav && showSideNav && (
-        <div className={cn(
-          'relative z-40 transition-all duration-500 ease-in-out',
-          uiHidden ? '-translate-x-full opacity-0 delay-200' : 'translate-x-0 opacity-100 delay-0'
-        )}>
-          <SideNav user={user} onLogout={onLogout} onLogin={onLogin} />
-        </div>
+        <SideNav user={user} onLogout={onLogout} onLogin={onLogin} uiHidden={uiHidden} />
       )}
 
       {/* MAIN CONTENT AREA */}
@@ -134,22 +129,12 @@ export function AppShell({
 
       {/* PORTRAIT BOTTOM NAVIGATION - portrait mode on larger screens */}
       {!hideNav && showPortraitNav && (
-        <div className={cn(
-          'z-40 transition-all duration-500 ease-in-out',
-          uiHidden ? 'translate-y-full opacity-0 delay-200' : 'translate-y-0 opacity-100 delay-0'
-        )}>
-          <PortraitNav user={user} onLogin={onLogin} onLogout={onLogout} />
-        </div>
+        <PortraitNav user={user} onLogin={onLogin} onLogout={onLogout} uiHidden={uiHidden} />
       )}
 
       {/* MOBILE BOTTOM NAVIGATION - small screens only */}
       {!hideNav && showMobileNav && (
-        <div className={cn(
-          'z-40 transition-all duration-500 ease-in-out',
-          uiHidden ? 'translate-y-full opacity-0 delay-200' : 'translate-y-0 opacity-100 delay-0'
-        )}>
-          <MobileNav user={user} onLogin={onLogin} onLogout={onLogout} />
-        </div>
+        <MobileNav user={user} onLogin={onLogin} onLogout={onLogout} uiHidden={uiHidden} />
       )}
     </div>
   );

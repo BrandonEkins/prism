@@ -76,6 +76,8 @@ export async function POST() {
         }
       } catch (error) {
         if (error instanceof TokenRevokedError) {
+          // Delete stale credential so /connection reports disconnected
+          await db.delete(apiCredentials).where(eq(apiCredentials.service, 'gmail-bus'));
           return NextResponse.json(
             { error: 'Gmail token expired. Please reconnect.' },
             { status: 401 }

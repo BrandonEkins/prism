@@ -24,9 +24,10 @@ export interface PortraitNavProps {
   } | null;
   onLogin?: () => void;
   onLogout?: () => void;
+  uiHidden?: boolean;
 }
 
-export function PortraitNav({ user, onLogin, onLogout }: PortraitNavProps) {
+export function PortraitNav({ user, onLogin, onLogout, uiHidden }: PortraitNavProps) {
   const pathname = usePathname();
   const { filterNavItems } = useHiddenPages();
   const navItems = filterNavItems(ALL_NAV_ITEMS);
@@ -37,7 +38,11 @@ export function PortraitNav({ user, onLogin, onLogout }: PortraitNavProps) {
   };
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-sm border-t border-border z-40 safe-area-bottom">
+    <nav className={cn(
+      'fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-sm border-t border-border z-40 safe-area-bottom',
+      'transition-all duration-500 ease-in-out',
+      uiHidden ? 'translate-y-full opacity-0 delay-200' : 'translate-y-0 opacity-100 delay-0'
+    )}>
       <div className="flex items-center justify-center h-20 overflow-x-auto scrollbar-none px-4">
         {navItems.map((item) => {
           const Icon = item.icon;

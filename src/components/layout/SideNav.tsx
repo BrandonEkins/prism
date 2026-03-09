@@ -45,6 +45,8 @@ export interface SideNavProps {
   onLogout?: () => void;
   /** Callback when login is clicked (when no user) */
   onLogin?: () => void;
+  /** Whether auto-hide has hidden the UI */
+  uiHidden?: boolean;
   /** Additional CSS classes */
   className?: string;
 }
@@ -67,7 +69,7 @@ export interface SideNavProps {
  *   onLogout={() => setCurrentUser(null)}
  * />
  */
-export function SideNav({ user, onLogout, onLogin, className }: SideNavProps) {
+export function SideNav({ user, onLogout, onLogin, uiHidden, className }: SideNavProps) {
   // Get current pathname for active state
   const pathname = usePathname();
   const { filterNavItems } = useHiddenPages();
@@ -94,8 +96,9 @@ export function SideNav({ user, onLogout, onLogin, className }: SideNavProps) {
           'fixed left-0 top-0 z-40 h-screen',
           'bg-card/85 backdrop-blur-sm border-r border-border',
           'flex flex-col',
-          'transition-all duration-300 ease-in-out',
+          'transition-all duration-500 ease-in-out',
           expanded ? 'w-60 shadow-xl' : 'w-16',
+          uiHidden ? '-translate-x-full opacity-0 delay-200' : 'translate-x-0 opacity-100 delay-0',
           className
         )}
       >

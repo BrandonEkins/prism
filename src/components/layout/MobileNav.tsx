@@ -46,6 +46,7 @@ export interface MobileNavProps {
   } | null;
   onLogin?: () => void;
   onLogout?: () => void;
+  uiHidden?: boolean;
 }
 
 // Primary items shown in bottom bar (most used for companion app)
@@ -60,7 +61,7 @@ const primaryItems: NavItem[] = [
 // Secondary items shown in "More" menu (empty now, but kept for future use)
 const secondaryItems: NavItem[] = [];
 
-export function MobileNav({ user, onLogin, onLogout }: MobileNavProps) {
+export function MobileNav({ user, onLogin, onLogout, uiHidden }: MobileNavProps) {
   const pathname = usePathname();
   const [showMore, setShowMore] = useState(false);
   const { theme, setTheme } = useTheme();
@@ -175,7 +176,11 @@ export function MobileNav({ user, onLogin, onLogout }: MobileNavProps) {
       )}
 
       {/* Bottom navigation bar - visibility controlled by AppShell */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-card border-t border-border z-40 safe-area-bottom">
+      <nav className={cn(
+        'fixed bottom-0 left-0 right-0 bg-card border-t border-border z-40 safe-area-bottom',
+        'transition-all duration-500 ease-in-out',
+        uiHidden ? 'translate-y-full opacity-0 delay-200' : 'translate-y-0 opacity-100 delay-0'
+      )}>
         <div className="flex items-center justify-around h-16">
           {visiblePrimary.map((item) => {
             const Icon = item.icon;
