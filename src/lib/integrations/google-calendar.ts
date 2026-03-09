@@ -46,6 +46,7 @@ export interface GoogleCalendarEvent {
   colorId?: string;
   recurrence?: string[];
   recurringEventId?: string;
+  status?: 'confirmed' | 'tentative' | 'cancelled';
 }
 
 /**
@@ -224,30 +225,42 @@ export async function fetchCalendarEvents(
   // Default timeMax to 30 days from now if not specified
   const effectiveTimeMax = timeMax || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
-  const params = new URLSearchParams({
-    timeMin: timeMin.toISOString(),
-    timeMax: effectiveTimeMax.toISOString(),
-    maxResults: maxResults.toString(),
-    singleEvents: singleEvents.toString(),
-    orderBy,
-  });
+  const allEvents: GoogleCalendarEvent[] = [];
+  let pageToken: string | undefined;
 
-  const response = await fetch(
-    `${GOOGLE_CALENDAR_API}/calendars/${encodeURIComponent(calendarId)}/events?${params}`,
-    {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
+  do {
+    const params = new URLSearchParams({
+      timeMin: timeMin.toISOString(),
+      timeMax: effectiveTimeMax.toISOString(),
+      maxResults: maxResults.toString(),
+      singleEvents: singleEvents.toString(),
+      orderBy,
+    });
+    if (pageToken) {
+      params.set('pageToken', pageToken);
     }
-  );
 
-  if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`Failed to fetch events: ${error}`);
-  }
+    const response = await fetch(
+      `${GOOGLE_CALENDAR_API}/calendars/${encodeURIComponent(calendarId)}/events?${params}`,
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      }
+    );
 
-  const data = await response.json();
-  return data.items || [];
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`Failed to fetch events: ${error}`);
+    }
+
+    const data = await response.json();
+    const items = data.items || [];
+    allEvents.push(...items);
+    pageToken = data.nextPageToken;
+  } while (pageToken);
+
+  return allEvents;
 }
 
 /**

@@ -144,9 +144,16 @@ export async function syncGoogleCalendarSource(
     return { synced: 0, errors: [`Failed to fetch events: ${error}`] };
   }
 
+  // Build set of Google event IDs for deletion cleanup (excluding cancelled)
+  const googleEventIds = new Set<string>();
+
   // Process each event using upsert to prevent duplicates
   for (const googleEvent of googleEvents) {
     try {
+      // Skip cancelled events (deleted recurring instances)
+      if (googleEvent.status === 'cancelled') continue;
+
+      googleEventIds.add(googleEvent.id);
       const internalEvent = convertGoogleEventToInternal(googleEvent, sourceId);
 
       // Use upsert (ON CONFLICT) to prevent race condition duplicates
@@ -188,8 +195,7 @@ export async function syncGoogleCalendarSource(
   }
 
   // Delete events that exist in Prism but were removed from Google
-  // (Google is source of truth for synced events)
-  const googleEventIds = new Set(googleEvents.map((e) => e.id));
+  // (Google is source of truth for synced events; cancelled events excluded above)
 
   // Find Prism events for this source that have an external_event_id
   // but are no longer in Google (within the sync date range)
