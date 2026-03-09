@@ -53,18 +53,16 @@ export async function POST(
       );
     }
 
-    // Can't claim your own items
-    if (claimedBy && claimedBy === existing.memberId) {
-      return NextResponse.json(
-        { error: 'Cannot claim items on your own wish list' },
-        { status: 400 }
-      );
-    }
-
     // If already claimed by someone else, prevent double-claim
     if (claimedBy && existing.claimed && existing.claimedBy !== claimedBy) {
+      // If the owner is trying to self-claim but someone already got it, give a friendly message
+      const isSelfClaim = claimedBy === existing.memberId;
       return NextResponse.json(
-        { error: 'This item has already been claimed by someone else' },
+        { error: isSelfClaim
+            ? 'Someone already got this for you!'
+            : 'This item has already been claimed by someone else',
+          alreadyPurchased: isSelfClaim,
+        },
         { status: 409 }
       );
     }

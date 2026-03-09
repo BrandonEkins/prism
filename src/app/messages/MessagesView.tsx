@@ -26,6 +26,7 @@ import {
   AlertTriangle,
   Trash2,
   Clock,
+  Users,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -34,6 +35,7 @@ import { UserAvatar } from '@/components/ui/avatar';
 import { PageWrapper, SubpageHeader, FilterBar, PersonFilter } from '@/components/layout';
 import { useMessages } from '@/lib/hooks';
 import { useAuth } from '@/components/providers';
+import { useFamily } from '@/components/providers';
 import { AddMessageModal } from '@/components/modals/AddMessageModal';
 import type { FamilyMessage } from '@/components/widgets/MessagesWidget';
 import type { FamilyMember } from '@/types';
@@ -45,11 +47,13 @@ import type { FamilyMember } from '@/types';
 export function MessagesView() {
 
   const { activeUser, requireAuth } = useAuth();
+  const { members: familyMembers } = useFamily();
   const { confirm: confirmDelete, dialogProps: confirmDialogProps } = useConfirmDialog();
 
   // State
   const { messages, loading, error, refresh, deleteMessage } = useMessages();
   const [filterAuthor, setFilterAuthor] = useState<string | null>(null);
+  const [groupByPerson, setGroupByPerson] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
 
   // Get unique authors
@@ -85,6 +89,40 @@ export function MessagesView() {
 
     return result;
   }, [messages, filterAuthor]);
+
+  // Group messages by author
+  const messagesByAuthor = useMemo(() => {
+    if (!groupByPerson) return null;
+    const groups: { member: FamilyMember; messages: FamilyMessage[] }[] = [];
+    const memberMap = new Map<string, FamilyMessage[]>();
+
+    for (const msg of filteredMessages) {
+      const key = msg.author.id;
+      if (!memberMap.has(key)) memberMap.set(key, []);
+      memberMap.get(key)!.push(msg);
+    }
+
+    // Use family member order
+    for (const member of familyMembers) {
+      const msgs = memberMap.get(member.id);
+      if (msgs && msgs.length > 0) {
+        groups.push({ member, messages: msgs });
+      }
+    }
+
+    // Any authors not in family members (shouldn't happen but be safe)
+    for (const [authorId, msgs] of memberMap) {
+      if (!familyMembers.some(m => m.id === authorId)) {
+        const author = msgs[0]!.author;
+        groups.push({
+          member: { id: author.id, name: author.name, color: author.color },
+          messages: msgs,
+        });
+      }
+    }
+
+    return groups;
+  }, [groupByPerson, filteredMessages, familyMembers]);
 
   // Handle delete - requires auth and ownership check
   const handleDelete = async (messageId: string) => {
@@ -141,13 +179,23 @@ export function MessagesView() {
           }
         />
 
-        {authors.length > 1 && (
+        {(authors.length > 1 || messages.length > 0) && (
           <FilterBar>
             <PersonFilter
               members={authors}
               selected={filterAuthor}
               onSelect={setFilterAuthor}
             />
+            <div className="w-px h-5 bg-border shrink-0" />
+            <Button
+              variant={groupByPerson ? 'secondary' : 'ghost'}
+              size="sm"
+              onClick={() => setGroupByPerson(!groupByPerson)}
+              className="gap-1 shrink-0 h-8"
+            >
+              <Users className="h-4 w-4" />
+              <span className="hidden sm:inline">Group by Person</span>
+            </Button>
           </FilterBar>
         )}
 
@@ -190,6 +238,48 @@ export function MessagesView() {
                 Add your first message
               </Button>
             </div>
+          ) : groupByPerson && messagesByAuthor ? (
+            <div className="grid gap-3 max-w-6xl mx-auto" style={{
+              gridTemplateColumns: messagesByAuthor.length <= 2
+                ? 'repeat(auto-fit, minmax(300px, 1fr))'
+                : 'repeat(auto-fit, minmax(280px, 1fr))'
+            }}>
+              {messagesByAuthor.map(({ member, messages: msgs }) => (
+                <div
+                  key={member.id}
+                  className="flex flex-col border-2 rounded-lg overflow-hidden bg-card/90 backdrop-blur-sm"
+                  style={{ borderColor: member.color }}
+                >
+                  <div
+                    className="flex items-center gap-2 px-3 py-2 shrink-0"
+                    style={{ backgroundColor: member.color + '20' }}
+                  >
+                    <UserAvatar
+                      name={member.name}
+                      color={member.color}
+                      size="sm"
+                      className="h-7 w-7"
+                    />
+                    <h3 className="font-bold text-lg" style={{ color: member.color }}>
+                      {member.name}
+                    </h3>
+                    <Badge variant="outline" className="ml-auto">
+                      {msgs.length}
+                    </Badge>
+                  </div>
+                  <div className="flex-1 overflow-y-auto p-2 space-y-2">
+                    {msgs.map((message) => (
+                      <MessageCard
+                        key={message.id}
+                        message={message}
+                        onDelete={() => handleDelete(message.id)}
+                        compact
+                      />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
           ) : (
             <div className="space-y-3 max-w-4xl mx-auto">
               {filteredMessages.map((message) => (
@@ -231,12 +321,54 @@ export function MessagesView() {
 function MessageCard({
   message,
   onDelete,
+  compact,
 }: {
   message: FamilyMessage;
   onDelete: () => void;
+  compact?: boolean;
 }) {
   const timeAgo = formatDistanceToNow(message.createdAt, { addSuffix: true });
   const fullDate = format(message.createdAt, 'PPp');
+
+  if (compact) {
+    return (
+      <div
+        className={cn(
+          'p-2 rounded-md border border-border bg-card/50',
+          'hover:bg-muted/50 transition-colors group',
+          message.important && 'bg-red-100/50 dark:bg-red-950/50 border-destructive/20'
+        )}
+      >
+        <div className="flex items-start justify-between gap-1">
+          <div className="flex-1 min-w-0">
+            <p className="text-sm whitespace-pre-wrap">{message.message}</p>
+            <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+              <span className="text-xs text-muted-foreground" title={fullDate}>{timeAgo}</span>
+              {message.pinned && (
+                <Badge variant="outline" className="gap-0.5 text-[10px] h-4 px-1">
+                  <Pin className="h-2.5 w-2.5" />Pinned
+                </Badge>
+              )}
+              {message.important && (
+                <Badge variant="destructive" className="gap-0.5 text-[10px] h-4 px-1">
+                  <AlertTriangle className="h-2.5 w-2.5" />
+                </Badge>
+              )}
+            </div>
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onDelete}
+            className="opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6 shrink-0 text-destructive"
+            title="Delete message"
+          >
+            <Trash2 className="h-3 w-3" />
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div

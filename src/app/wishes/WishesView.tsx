@@ -1,7 +1,9 @@
 'use client';
 
-import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
+import React from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { toast } from '@/components/ui/use-toast';
+import { ToastAction } from '@/components/ui/toast';
 import {
   Gift,
   Plus,
@@ -9,6 +11,7 @@ import {
   Pencil,
   Trash2,
   ShoppingBag,
+  CheckCircle2,
   Circle,
   GripVertical,
 } from 'lucide-react';
@@ -17,6 +20,7 @@ import { Input } from '@/components/ui/input';
 import { PageWrapper, SubpageHeader, PersonFilter } from '@/components/layout';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useConfirmDialog } from '@/lib/hooks/useConfirmDialog';
+import { useDragReorder } from '@/lib/hooks/useDragReorder';
 import { useFamily } from '@/components/providers/FamilyProvider';
 import { useAuth } from '@/components/providers';
 import { useWishItems } from '@/lib/hooks/useWishItems';
@@ -58,97 +62,37 @@ export function WishesView() {
   const isPortrait = orientation === 'portrait';
   const showingAll = selectedMemberId === null;
 
-  // --- Card drag-to-swap (like shopping categories) ---
-  const [cardOrder, setCardOrder] = useState<string[]>([]);
-  const [draggedMemberId, setDraggedMemberId] = useState<string | null>(null);
-  const touchStartRef = useRef<{ x: number; y: number; element: HTMLElement | null }>({ x: 0, y: 0, element: null });
+  // --- Card drag-to-swap ---
+  const memberIds = useMemo(() => members.map(m => m.id), [members]);
+  const [cardOrder, setCardOrder] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('prism:wish-card-order');
+      return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
+  });
 
-  // Initialize card order from localStorage or member order
-  useEffect(() => {
-    if (members.length === 0) return;
-    const stored = localStorage.getItem('prism:wish-card-order');
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored) as string[];
-        // Keep only valid member IDs, append any new members
-        const memberIds = members.map(m => m.id);
-        const valid = parsed.filter(id => memberIds.includes(id));
-        const missing = memberIds.filter(id => !valid.includes(id));
-        setCardOrder([...valid, ...missing]);
-        return;
-      } catch { /* fall through */ }
-    }
-    setCardOrder(members.map(m => m.id));
-  }, [members]);
+  const effectiveOrder = useMemo(() => {
+    const known = cardOrder.filter(k => memberIds.includes(k));
+    const newKeys = memberIds.filter(k => !known.includes(k));
+    return [...known, ...newKeys];
+  }, [cardOrder, memberIds]);
 
   const saveCardOrder = useCallback((order: string[]) => {
     setCardOrder(order);
-    localStorage.setItem('prism:wish-card-order', JSON.stringify(order));
+    try { localStorage.setItem('prism:wish-card-order', JSON.stringify(order)); } catch {}
   }, []);
 
-  // Mouse drag handlers
-  const handleDragStart = useCallback((memberId: string) => {
-    setDraggedMemberId(memberId);
-  }, []);
-
-  const handleDragOver = useCallback((e: React.DragEvent, targetMemberId: string) => {
-    e.preventDefault();
-    if (!draggedMemberId || draggedMemberId === targetMemberId) return;
-    const newOrder = [...cardOrder];
-    const draggedIndex = newOrder.indexOf(draggedMemberId);
-    const targetIndex = newOrder.indexOf(targetMemberId);
-    if (draggedIndex !== -1 && targetIndex !== -1) {
-      newOrder.splice(draggedIndex, 1);
-      newOrder.splice(targetIndex, 0, draggedMemberId);
-      saveCardOrder(newOrder);
-    }
-  }, [draggedMemberId, cardOrder, saveCardOrder]);
-
-  const handleDragEnd = useCallback(() => {
-    setDraggedMemberId(null);
-  }, []);
-
-  // Touch drag handlers
-  const handleTouchStart = useCallback((e: React.TouchEvent, memberId: string) => {
-    const touch = e.touches[0];
-    if (!touch) return;
-    touchStartRef.current = { x: touch.clientX, y: touch.clientY, element: e.currentTarget as HTMLElement };
-    setDraggedMemberId(memberId);
-  }, []);
-
-  const handleTouchMove = useCallback((e: React.TouchEvent) => {
-    if (!draggedMemberId) return;
-    const touch = e.touches[0];
-    if (!touch) return;
-    const elements = document.elementsFromPoint(touch.clientX, touch.clientY);
-    for (const el of elements) {
-      const attr = el.getAttribute('data-member-id');
-      if (attr && attr !== draggedMemberId) {
-        const newOrder = [...cardOrder];
-        const draggedIndex = newOrder.indexOf(draggedMemberId);
-        const targetIndex = newOrder.indexOf(attr);
-        if (draggedIndex !== -1 && targetIndex !== -1 && draggedIndex !== targetIndex) {
-          newOrder.splice(draggedIndex, 1);
-          newOrder.splice(targetIndex, 0, draggedMemberId);
-          saveCardOrder(newOrder);
-        }
-        break;
-      }
-    }
-  }, [draggedMemberId, cardOrder, saveCardOrder]);
-
-  const handleTouchEnd = useCallback(() => {
-    setDraggedMemberId(null);
-    touchStartRef.current = { x: 0, y: 0, element: null };
-  }, []);
+  const { draggedId: draggedMemberId, getDragProps } = useDragReorder({
+    order: effectiveOrder,
+    onReorder: saveCardOrder,
+  });
 
   // Members in card order
   const orderedMembers = useMemo(() => {
-    if (cardOrder.length === 0) return members;
-    return cardOrder
+    return effectiveOrder
       .map(id => members.find(m => m.id === id))
       .filter((m): m is FamilyMember => m != null);
-  }, [members, cardOrder]);
+  }, [members, effectiveOrder]);
 
   // Group items by member when showing all
   const groupedItems = useMemo(() => {
@@ -242,15 +186,30 @@ export function WishesView() {
       if (item.claimed && item.claimedBy?.id === user.id) {
         await unclaimItem(item.id);
         toast({ title: `Unmarked "${item.name}"` });
+      } else if (item.claimed && isOwnList(item.memberId)) {
+        // Own list, already crossed off — unclaim
+        await unclaimItem(item.id);
+        toast({ title: `Uncrossed "${item.name}"` });
       } else {
         await claimItem(item.id, user.id);
-        toast({ title: `Marked "${item.name}" as purchased` });
+        const isSelf = item.memberId === user.id;
+        toast({
+          title: isSelf ? `Crossed off "${item.name}"` : `Marked "${item.name}" as purchased`,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          action: React.createElement(ToastAction, {
+            altText: 'Undo',
+            onClick: () => { unclaimItem(item.id).catch(() => {}); },
+          }, 'Undo') as any,
+        });
       }
     } catch (err) {
-      toast({
-        title: err instanceof Error ? err.message : 'Failed to update',
-        variant: 'destructive',
-      });
+      const message = err instanceof Error ? err.message : 'Failed to update';
+      // Special handling for "someone already got this"
+      if (message.includes('already got this')) {
+        toast({ title: message, variant: 'success' });
+      } else {
+        toast({ title: message, variant: 'destructive' });
+      }
     }
   };
 
@@ -300,12 +259,7 @@ export function WishesView() {
                   isOwnList={isOwnList(member.id)}
                   viewerId={viewerId}
                   isDragging={isDragging}
-                  onDragStart={() => handleDragStart(member.id)}
-                  onDragOver={(e) => handleDragOver(e, member.id)}
-                  onDragEnd={handleDragEnd}
-                  onTouchStart={(e) => handleTouchStart(e, member.id)}
-                  onTouchMove={handleTouchMove}
-                  onTouchEnd={handleTouchEnd}
+                  dragProps={getDragProps(member.id)}
                   onEdit={handleOpenEditModal}
                   onDelete={handleDelete}
                   onClaim={handleClaim}
@@ -360,12 +314,7 @@ function MemberWishCard({
   isOwnList,
   viewerId,
   isDragging,
-  onDragStart,
-  onDragOver,
-  onDragEnd,
-  onTouchStart,
-  onTouchMove,
-  onTouchEnd,
+  dragProps,
   onEdit,
   onDelete,
   onClaim,
@@ -376,12 +325,7 @@ function MemberWishCard({
   isOwnList: boolean;
   viewerId?: string;
   isDragging: boolean;
-  onDragStart: () => void;
-  onDragOver: (e: React.DragEvent) => void;
-  onDragEnd: () => void;
-  onTouchStart: (e: React.TouchEvent) => void;
-  onTouchMove: (e: React.TouchEvent) => void;
-  onTouchEnd: () => void;
+  dragProps: Record<string, unknown>;
   onEdit: (item: WishItem) => void;
   onDelete: (item: WishItem) => void;
   onClaim: (item: WishItem) => void;
@@ -389,14 +333,7 @@ function MemberWishCard({
 }) {
   return (
     <div
-      data-member-id={member.id}
-      draggable
-      onDragStart={onDragStart}
-      onDragOver={onDragOver}
-      onDragEnd={onDragEnd}
-      onTouchStart={onTouchStart}
-      onTouchMove={onTouchMove}
-      onTouchEnd={onTouchEnd}
+      {...dragProps}
       className={cn(
         'flex flex-col rounded-xl border-2 bg-card/50 overflow-hidden min-h-0',
         'cursor-grab active:cursor-grabbing transition-all touch-none',
@@ -482,39 +419,13 @@ function SinglePersonView({
   onClaim: (item: WishItem) => void;
 }) {
   return (
-    <>
-      {items.length === 0 ? (
-        <div className="text-center py-12 text-muted-foreground">
-          <Gift className="h-12 w-12 mx-auto mb-3 opacity-40" />
-          <p className="text-lg font-medium mb-1">
-            {isOwnList ? 'Your wish list is empty' : `${member?.name}'s wish list is empty`}
-          </p>
-          <p className="text-sm">
-            {isOwnList ? 'Add things you want!' : 'Add a gift idea for them!'}
-          </p>
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {items.map(item => (
-            <WishItemRow
-              key={item.id}
-              item={item}
-              isOwnList={isOwnList}
-              viewerId={viewerId}
-              onEdit={() => onEdit(item)}
-              onDelete={() => onDelete(item)}
-              onClaim={() => onClaim(item)}
-            />
-          ))}
-        </div>
-      )}
-
-      <div className="mt-4 flex gap-2">
+    <div className="space-y-2">
+      <div className="flex gap-2 mb-2">
         <Input
           value={quickAddName}
           onChange={(e) => setQuickAddName(e.target.value)}
           placeholder={isOwnList ? 'Add a wish...' : `Add a gift idea for ${member?.name}...`}
-          className="flex-1"
+          className="flex-1 h-9"
           onKeyDown={(e) => {
             if (e.key === 'Enter') {
               e.preventDefault();
@@ -527,7 +438,31 @@ function SinglePersonView({
           Add
         </Button>
       </div>
-    </>
+
+      {items.length === 0 ? (
+        <div className="text-center py-12 text-muted-foreground">
+          <Gift className="h-12 w-12 mx-auto mb-3 opacity-40" />
+          <p className="text-lg font-medium mb-1">
+            {isOwnList ? 'Your wish list is empty' : `${member?.name}'s wish list is empty`}
+          </p>
+          <p className="text-sm">
+            {isOwnList ? 'Add things you want!' : 'Add a gift idea for them!'}
+          </p>
+        </div>
+      ) : (
+        items.map(item => (
+          <WishItemRow
+            key={item.id}
+            item={item}
+            isOwnList={isOwnList}
+            viewerId={viewerId}
+            onEdit={() => onEdit(item)}
+            onDelete={() => onDelete(item)}
+            onClaim={() => onClaim(item)}
+          />
+        ))
+      )}
+    </div>
   );
 }
 
@@ -558,11 +493,28 @@ function WishItemRow({
         'flex items-center gap-2 rounded-lg border border-border',
         'hover:bg-muted/50 transition-colors',
         compact ? 'p-2 gap-2' : 'p-3 gap-3',
-        !isOwnList && item.claimed && 'opacity-60 bg-green-50/50 dark:bg-green-950/20 border-green-500/30',
+        item.claimed && 'opacity-60 bg-green-50/50 dark:bg-green-950/20 border-green-500/30',
       )}
     >
-      {/* Purchased/claim toggle (only on other people's lists) */}
-      {!isOwnList && (
+      {/* Cross-off / claim toggle */}
+      {isOwnList ? (
+        <button
+          onClick={onClaim}
+          className={cn(
+            'shrink-0 p-1 rounded transition-colors',
+            item.claimed
+              ? 'text-green-600 hover:text-green-700'
+              : 'text-muted-foreground/40 hover:text-green-600'
+          )}
+          title={item.claimed ? 'Uncross' : 'Cross off (got it myself)'}
+        >
+          {item.claimed ? (
+            <CheckCircle2 className={compact ? 'h-4 w-4' : 'h-5 w-5'} />
+          ) : (
+            <Circle className={compact ? 'h-4 w-4' : 'h-5 w-5'} />
+          )}
+        </button>
+      ) : (
         <button
           onClick={onClaim}
           className={cn(
@@ -595,7 +547,7 @@ function WishItemRow({
         <div className="flex items-center gap-2">
           <span className={cn(
             'font-medium text-sm truncate',
-            !isOwnList && item.claimed && 'line-through text-muted-foreground'
+            item.claimed && 'line-through text-muted-foreground'
           )}>
             {item.name}
           </span>
@@ -619,6 +571,12 @@ function WishItemRow({
         {!isOwnList && item.claimed && item.claimedBy && (
           <p className="text-xs text-green-600 dark:text-green-400 mt-0.5">
             {isClaimedByMe ? 'You purchased this' : `Purchased by ${item.claimedBy.name}`}
+          </p>
+        )}
+        {/* Show self-crossed-off status */}
+        {isOwnList && item.claimed && (
+          <p className="text-xs text-green-600 dark:text-green-400 mt-0.5">
+            Got it myself
           </p>
         )}
       </div>
