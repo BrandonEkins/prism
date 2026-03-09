@@ -98,8 +98,13 @@ function MiniMonth({
               const inMonth = isSameMonth(date, month);
               const today = isToday(date);
               const isPast = isBefore(date, startOfDay(new Date())) && !today;
+              const dayStart = startOfDay(date);
               const dayEvents = events
-                .filter((e) => isSameDay(e.startTime, date))
+                .filter((e) =>
+                  e.allDay
+                    ? e.startTime <= dayStart && e.endTime > dayStart
+                    : isSameDay(e.startTime, date)
+                )
                 .sort((a, b) => {
                   if (a.allDay && !b.allDay) return -1;
                   if (!a.allDay && b.allDay) return 1;

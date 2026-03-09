@@ -92,7 +92,12 @@ function DayCell({
   compact: boolean;
   bordered: boolean;
 }) {
-  const dayEvents = events.filter((event) => isSameDay(event.startTime, date));
+  const dayStart = startOfDay(date);
+  const dayEvents = events.filter((event) =>
+    event.allDay
+      ? event.startTime <= dayStart && event.endTime > dayStart
+      : isSameDay(event.startTime, date)
+  );
   const sorted = [...dayEvents].sort((a, b) => {
     if (a.allDay && !b.allDay) return -1;
     if (!a.allDay && b.allDay) return 1;

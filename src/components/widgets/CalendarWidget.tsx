@@ -197,7 +197,12 @@ export const CalendarWidget = React.memo(function CalendarWidget({
     const result: Array<{ date: Date; events: CalendarEvent[] }> = [];
     for (let i = 0; i < listDays; i++) {
       const date = addDays(listStartDate, i);
-      const dayEvents = listEvents.filter(e => isSameDay(e.startTime, date));
+      const dayStart = startOfDay(date);
+      const dayEvents = listEvents.filter(e =>
+        e.allDay
+          ? e.startTime <= dayStart && e.endTime > dayStart
+          : isSameDay(e.startTime, date)
+      );
       if (dayEvents.length > 0) result.push({ date, events: dayEvents });
     }
     return result;

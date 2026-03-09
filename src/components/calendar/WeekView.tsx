@@ -41,9 +41,13 @@ export function WeekView({
   // Get visible hours (filtered if hidden mode is enabled)
   const hours = getVisibleHours();
 
-  // Get all-day events for a day
-  const getAllDayEvents = (date: Date) =>
-    events.filter((e) => isSameDay(e.startTime, date) && e.allDay);
+  // Get all-day events for a day (multi-day events span across days)
+  const getAllDayEvents = (date: Date) => {
+    const dayStart = startOfDay(date);
+    return events.filter((e) =>
+      e.allDay && e.startTime <= dayStart && e.endTime > dayStart
+    );
+  };
 
   // Get timed events for a specific day and hour
   const getHourEvents = (date: Date, hour: number) =>

@@ -83,8 +83,13 @@ export function MonthView({
         style={{ gridTemplateRows: `repeat(${numWeeks}, minmax(60px, 1fr))` }}
       >
         {days.map((date, index) => {
+          const dayStart = startOfDay(date);
           const dayEvents = events
-            .filter((event) => isSameDay(event.startTime, date))
+            .filter((event) =>
+              event.allDay
+                ? event.startTime <= dayStart && event.endTime > dayStart
+                : isSameDay(event.startTime, date)
+            )
             .sort((a, b) => {
               if (a.allDay && !b.allDay) return -1;
               if (!a.allDay && b.allDay) return 1;

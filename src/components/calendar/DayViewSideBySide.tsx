@@ -47,8 +47,11 @@ export function DayViewSideBySide({
   // Get visible hours (filtered if hidden mode is enabled)
   const hours = getVisibleHours();
 
+  const dayStart = startOfDay(currentDate);
   const dayEvents = events.filter((event) =>
-    isSameDay(event.startTime, currentDate)
+    event.allDay
+      ? event.startTime <= dayStart && event.endTime > dayStart
+      : isSameDay(event.startTime, currentDate)
   );
 
   const allDayEvents = dayEvents.filter((e) => e.allDay);
