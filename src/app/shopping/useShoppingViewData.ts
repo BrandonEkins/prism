@@ -1,8 +1,11 @@
 'use client';
 
+import React from 'react';
 import { useState, useMemo } from 'react';
 import { useShoppingLists } from '@/lib/hooks';
 import { useAuth, useFamily } from '@/components/providers';
+import { toast } from '@/components/ui/use-toast';
+import { ToastAction } from '@/components/ui/toast';
 import type { ShoppingItem, ShoppingList } from '@/types';
 
 export function useShoppingViewData() {
@@ -46,7 +49,18 @@ export function useShoppingViewData() {
   const toggleItem = async (itemId: string) => {
     const item = activeList?.items.find((i) => i.id === itemId);
     if (!item) return;
-    await apiToggleItem(itemId, !item.checked);
+    const newChecked = !item.checked;
+    await apiToggleItem(itemId, newChecked);
+    if (newChecked) {
+      toast({
+        title: `"${item.name}" checked off`,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        action: React.createElement(ToastAction, {
+          altText: 'Undo',
+          onClick: () => { apiToggleItem(itemId, false); },
+        }, 'Undo') as any,
+      });
+    }
   };
 
   const deleteItem = async (itemId: string) => {

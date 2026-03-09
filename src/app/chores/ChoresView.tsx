@@ -1,7 +1,7 @@
 'use client';
 
 import { format, parseISO, formatDistanceToNow, isPast, differenceInDays } from 'date-fns';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { toast } from '@/components/ui/use-toast';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import {
@@ -15,10 +15,12 @@ import {
   Users,
   CalendarDays,
   Settings,
+  GripVertical,
   Trash2,
   X,
 } from 'lucide-react';
 import { useOrientation } from '@/lib/hooks/useOrientation';
+import { useDragReorder } from '@/lib/hooks/useDragReorder';
 import { PlaneCelebration } from '@/components/ui/PlaneCelebration';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -40,6 +42,208 @@ const CHORE_CATEGORIES = [
   { value: 'pets', label: 'Pets' },
   { value: 'trash', label: 'Trash' },
 ];
+
+// ---------- Grouped chore grid with drag reorder ----------
+
+interface ChoreGroupGridProps {
+  choresByUser: { user: { id: string; name: string; color: string } | null; chores: any[] }[];
+  inlineChoreByUser: Record<string, string>;
+  setInlineChoreByUser: React.Dispatch<React.SetStateAction<Record<string, string>>>;
+  inlineAddChore: (title: string, assignedTo?: string) => Promise<boolean>;
+  completeChore: (id: string) => Promise<boolean>;
+  editChore: (chore: any) => void;
+  deleteChore: (id: string) => void;
+  setCelebratingUser: (user: { id: string; name: string } | null) => void;
+}
+
+function ChoreGroupGrid({
+  choresByUser,
+  inlineChoreByUser,
+  setInlineChoreByUser,
+  inlineAddChore,
+  completeChore,
+  editChore,
+  deleteChore,
+  setCelebratingUser,
+}: ChoreGroupGridProps) {
+  const groupKeys = useMemo(() => choresByUser.map(g => g.user?.id || 'unassigned'), [choresByUser]);
+  const [groupOrder, setGroupOrder] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('prism:chore-group-order');
+      return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
+  });
+
+  const effectiveOrder = useMemo(() => {
+    const known = groupOrder.filter(k => groupKeys.includes(k));
+    const newKeys = groupKeys.filter(k => !known.includes(k));
+    return [...known, ...newKeys];
+  }, [groupOrder, groupKeys]);
+
+  const saveOrder = useCallback((order: string[]) => {
+    setGroupOrder(order);
+    try { localStorage.setItem('prism:chore-group-order', JSON.stringify(order)); } catch {}
+  }, []);
+
+  const { draggedId, getDragProps } = useDragReorder({ order: effectiveOrder, onReorder: saveOrder });
+
+  const sortedGroups = useMemo(() => {
+    const map = new Map(choresByUser.map(g => [g.user?.id || 'unassigned', g]));
+    return effectiveOrder.map(k => map.get(k)).filter(Boolean) as typeof choresByUser;
+  }, [choresByUser, effectiveOrder]);
+
+  return (
+    <div className={cn(
+      'grid gap-2 h-full',
+      sortedGroups.length <= 2 ? 'grid-cols-1 md:grid-cols-2' :
+      sortedGroups.length <= 4 ? 'grid-cols-2' :
+      'grid-cols-2 md:grid-cols-3'
+    )}>
+      {sortedGroups.map(({ user, chores }) => {
+        const userColor = user?.color || '#6B7280';
+        const key = user?.id || 'unassigned';
+        const isDragging = draggedId === key;
+        return (
+          <div
+            key={key}
+            {...getDragProps(key)}
+            className={cn(
+              'flex flex-col border-2 rounded-lg overflow-hidden bg-card/90 backdrop-blur-sm cursor-grab active:cursor-grabbing touch-none transition-all',
+              isDragging && 'opacity-50 scale-95 ring-4 ring-primary/50'
+            )}
+            style={{ borderColor: userColor }}
+          >
+            <div
+              className="flex items-center gap-2 px-3 py-2 shrink-0"
+              style={{ backgroundColor: userColor + '20' }}
+            >
+              <GripVertical className="h-4 w-4 text-muted-foreground/50 shrink-0" />
+              {user ? (
+                <UserAvatar name={user.name} color={user.color} size="sm" className="h-7 w-7" />
+              ) : (
+                <ClipboardList className="h-5 w-5 text-muted-foreground" />
+              )}
+              <h3 className="font-bold text-lg" style={{ color: userColor }}>
+                {user?.name || 'Unassigned'}
+              </h3>
+              <Badge variant="outline" className="ml-auto">
+                {chores.length}
+              </Badge>
+            </div>
+            <div className="flex-1 overflow-y-auto p-2 space-y-1">
+              <Input
+                placeholder="Add chore..."
+                value={inlineChoreByUser[key] || ''}
+                onChange={(e) => setInlineChoreByUser(prev => ({ ...prev, [key]: e.target.value }))}
+                onKeyDown={async (e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    const val = (inlineChoreByUser[key] || '').trim();
+                    if (!val) return;
+                    const success = await inlineAddChore(val, user?.id);
+                    if (success) setInlineChoreByUser(prev => ({ ...prev, [key]: '' }));
+                  }
+                }}
+                onClick={(e) => e.stopPropagation()}
+                onMouseDown={(e) => e.stopPropagation()}
+                draggable={false}
+                className="h-8 text-sm mb-1"
+              />
+              {chores.map((chore) => {
+                const nextDue = chore.nextDue ? new Date(chore.nextDue) : null;
+                const isOverdue = nextDue && isPast(nextDue);
+                const daysUntil = nextDue ? differenceInDays(nextDue, new Date()) : null;
+                const isCompletedToday = chore.lastCompleted &&
+                  new Date(chore.lastCompleted) > new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+                return (
+                  <div
+                    key={chore.id}
+                    className={cn(
+                      'p-2 rounded-md border cursor-pointer hover:bg-muted/50 transition-colors group',
+                      isCompletedToday ? 'opacity-60 bg-green-50/50 dark:bg-green-950/20 border-green-500/30' :
+                      isOverdue ? 'border-red-500/50 bg-red-50/50 dark:bg-red-950/20' : 'border-border'
+                    )}
+                    onClick={async () => {
+                      const success = await completeChore(chore.id);
+                      if (success && user) {
+                        const otherChores = chores.filter((c: any) => c.id !== chore.id);
+                        const allOthersCompleted = otherChores.every((c: any) =>
+                          c.lastCompleted && new Date(c.lastCompleted) > new Date(Date.now() - 24 * 60 * 60 * 1000)
+                        );
+                        if (allOthersCompleted && !isCompletedToday) {
+                          setCelebratingUser({ id: user.id, name: user.name });
+                        }
+                      }
+                    }}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <p className={cn(
+                          'font-medium text-sm truncate',
+                          isCompletedToday && 'line-through'
+                        )}>{chore.title}</p>
+                        {nextDue && !isCompletedToday && (
+                          <div className={cn(
+                            'flex items-center gap-1 text-xs mt-0.5',
+                            isOverdue ? 'text-red-600 dark:text-red-400' : 'text-muted-foreground'
+                          )}>
+                            <CalendarDays className="h-3 w-3" />
+                            {isOverdue ? (
+                              <span>Due {formatDistanceToNow(nextDue, { addSuffix: true })}</span>
+                            ) : daysUntil === 0 ? (
+                              <span>Due today</span>
+                            ) : daysUntil === 1 ? (
+                              <span>Due tomorrow</span>
+                            ) : (
+                              <span>Due {format(nextDue, 'MMM d')}</span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        {chore.pointValue > 0 && (
+                          <Badge variant="secondary" className="text-xs">
+                            {chore.pointValue} pts
+                          </Badge>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0 opacity-50 hover:opacity-100"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            editChore(chore);
+                          }}
+                        >
+                          <Settings className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 text-destructive hover:text-destructive"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            deleteChore(chore.id);
+                          }}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+              {chores.length === 0 && (
+                <p className="text-center text-muted-foreground text-sm py-4">No chores</p>
+              )}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 export function ChoresView() {
   const { requireAuth } = useAuth();
@@ -277,150 +481,16 @@ export function ChoresView() {
               <Button variant="outline" size="sm" className="mt-4" onClick={handleAddWithAuth}>Add your first chore</Button>
             </div>
           ) : groupByUser && choresByUser ? (
-            <div className={cn(
-              'grid gap-2 h-full',
-              choresByUser.length <= 2 ? 'grid-cols-1 md:grid-cols-2' :
-              choresByUser.length <= 4 ? 'grid-cols-2' :
-              'grid-cols-2 md:grid-cols-3'
-            )}>
-              {choresByUser.map(({ user, chores }) => {
-                const userColor = user?.color || '#6B7280';
-                return (
-                  <div
-                    key={user?.id || 'unassigned'}
-                    className="flex flex-col border-2 rounded-lg overflow-hidden bg-card/90 backdrop-blur-sm"
-                    style={{ borderColor: userColor }}
-                  >
-                    <div
-                      className="flex items-center gap-2 px-3 py-2 shrink-0"
-                      style={{ backgroundColor: userColor + '20' }}
-                    >
-                      {user ? (
-                        <UserAvatar name={user.name} color={user.color} size="sm" className="h-7 w-7" />
-                      ) : (
-                        <ClipboardList className="h-5 w-5 text-muted-foreground" />
-                      )}
-                      <h3 className="font-bold text-lg" style={{ color: userColor }}>
-                        {user?.name || 'Unassigned'}
-                      </h3>
-                      <Badge variant="outline" className="ml-auto">
-                        {chores.length}
-                      </Badge>
-                    </div>
-                    <div className="flex-1 overflow-y-auto p-2 space-y-1">
-                      <div className="pb-1">
-                        <Input
-                          placeholder="Add chore..."
-                          value={inlineChoreByUser[user?.id || 'unassigned'] || ''}
-                          onChange={(e) => setInlineChoreByUser(prev => ({ ...prev, [user?.id || 'unassigned']: e.target.value }))}
-                          onKeyDown={async (e) => {
-                            if (e.key === 'Enter') {
-                              e.preventDefault();
-                              const key = user?.id || 'unassigned';
-                              const value = inlineChoreByUser[key]?.trim();
-                              if (!value) return;
-                              const success = await inlineAddChore(value, user?.id);
-                              if (success) {
-                                setInlineChoreByUser(prev => ({ ...prev, [key]: '' }));
-                              }
-                            }
-                          }}
-                          className="h-8 text-sm"
-                        />
-                      </div>
-                      {chores.map((chore) => {
-                        const nextDue = chore.nextDue ? new Date(chore.nextDue) : null;
-                        const isOverdue = nextDue && isPast(nextDue);
-                        const daysUntil = nextDue ? differenceInDays(nextDue, new Date()) : null;
-                        const isCompletedToday = chore.lastCompleted &&
-                          new Date(chore.lastCompleted) > new Date(Date.now() - 24 * 60 * 60 * 1000);
-
-                        return (
-                          <div
-                            key={chore.id}
-                            className={cn(
-                              'p-2 rounded-md border cursor-pointer hover:bg-muted/50 transition-colors group',
-                              isCompletedToday ? 'opacity-60 bg-green-50/50 dark:bg-green-950/20 border-green-500/30' :
-                              isOverdue ? 'border-red-500/50 bg-red-50/50 dark:bg-red-950/20' : 'border-border'
-                            )}
-                            onClick={async () => {
-                              const success = await completeChore(chore.id);
-                              if (success && user) {
-                                const otherChores = chores.filter((c) => c.id !== chore.id);
-                                const allOthersCompleted = otherChores.every((c) =>
-                                  c.lastCompleted && new Date(c.lastCompleted) > new Date(Date.now() - 24 * 60 * 60 * 1000)
-                                );
-                                if (allOthersCompleted && !isCompletedToday) {
-                                  setCelebratingUser({ id: user.id, name: user.name });
-                                }
-                              }
-                            }}
-                          >
-                            <div className="flex items-start justify-between gap-2">
-                              <div className="flex-1 min-w-0">
-                                <p className={cn(
-                                  'font-medium text-sm truncate',
-                                  isCompletedToday && 'line-through'
-                                )}>{chore.title}</p>
-                                {nextDue && !isCompletedToday && (
-                                  <div className={cn(
-                                    'flex items-center gap-1 text-xs mt-0.5',
-                                    isOverdue ? 'text-red-600 dark:text-red-400' : 'text-muted-foreground'
-                                  )}>
-                                    <CalendarDays className="h-3 w-3" />
-                                    {isOverdue ? (
-                                      <span>Due {formatDistanceToNow(nextDue, { addSuffix: true })}</span>
-                                    ) : daysUntil === 0 ? (
-                                      <span>Due today</span>
-                                    ) : daysUntil === 1 ? (
-                                      <span>Due tomorrow</span>
-                                    ) : (
-                                      <span>Due {format(nextDue, 'MMM d')}</span>
-                                    )}
-                                  </div>
-                                )}
-                              </div>
-                              <div className="flex items-center gap-1 shrink-0">
-                                {chore.pointValue > 0 && (
-                                  <Badge variant="secondary" className="text-xs">
-                                    {chore.pointValue} pts
-                                  </Badge>
-                                )}
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-6 w-6 p-0 opacity-50 hover:opacity-100"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    editChore(chore);
-                                  }}
-                                >
-                                  <Settings className="h-3 w-3" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 text-destructive hover:text-destructive"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    deleteChore(chore.id);
-                                  }}
-                                >
-                                  <Trash2 className="h-3 w-3" />
-                                </Button>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                      {chores.length === 0 && (
-                        <p className="text-center text-muted-foreground text-sm py-4">No chores</p>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+            <ChoreGroupGrid
+              choresByUser={choresByUser}
+              inlineChoreByUser={inlineChoreByUser}
+              setInlineChoreByUser={setInlineChoreByUser}
+              inlineAddChore={inlineAddChore}
+              completeChore={completeChore}
+              editChore={editChore}
+              deleteChore={deleteChore}
+              setCelebratingUser={setCelebratingUser}
+            />
           ) : (
             <div className="space-y-2 max-w-4xl mx-auto">
               <Input

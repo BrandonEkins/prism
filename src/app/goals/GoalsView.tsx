@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import {
   Trophy,
   Plus,
@@ -9,10 +9,12 @@ import {
   Check,
   ChevronUp,
   ChevronDown,
+  GripVertical,
   RotateCcw,
   AlertCircle,
   RefreshCw,
 } from 'lucide-react';
+import { useDragReorder } from '@/lib/hooks/useDragReorder';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -120,16 +122,27 @@ export function GoalsView() {
     try { await deleteGoal(id); } catch (err) { console.error('Failed to delete:', err); }
   };
 
+  const goalIds = useMemo(() => goals.map(g => g.id), [goals]);
+
+  const handleDragReorder = useCallback(async (newOrder: string[]) => {
+    try { await reorderGoals(newOrder); } catch (err) { console.error('Failed to reorder:', err); }
+  }, [reorderGoals]);
+
+  const { draggedId: draggedGoalId, getDragProps: getGoalDragProps } = useDragReorder({
+    order: goalIds,
+    onReorder: handleDragReorder,
+  });
+
   const handleMoveUp = async (index: number) => {
     if (index === 0) return;
-    const ids = goals.map((g) => g.id);
+    const ids = [...goalIds];
     [ids[index - 1], ids[index]] = [ids[index]!, ids[index - 1]!];
     try { await reorderGoals(ids); } catch (err) { console.error('Failed to reorder:', err); }
   };
 
   const handleMoveDown = async (index: number) => {
     if (index >= goals.length - 1) return;
-    const ids = goals.map((g) => g.id);
+    const ids = [...goalIds];
     [ids[index], ids[index + 1]] = [ids[index + 1]!, ids[index]!];
     try { await reorderGoals(ids); } catch (err) { console.error('Failed to reorder:', err); }
   };
@@ -216,17 +229,20 @@ export function GoalsView() {
                 {goals.map((goal, index) => (
                   <div
                     key={goal.id}
+                    {...(isParent ? getGoalDragProps(goal.id) : {})}
                     className={cn(
-                      'rounded-lg border p-4',
+                      'rounded-lg border p-4 transition-all',
                       goal.fullyAchieved
                         ? 'border-green-500/50 bg-green-100 dark:bg-green-950'
-                        : 'bg-card border-border'
+                        : 'bg-card border-border',
+                      isParent && 'cursor-grab active:cursor-grabbing touch-none',
+                      draggedGoalId === goal.id && 'opacity-50 scale-95 ring-4 ring-primary/50'
                     )}
                   >
                     {/* Goal header */}
                     <div className="flex items-center gap-2 mb-3">
                       {isParent && (
-                        <div className="flex flex-col gap-0.5">
+                        <div className="flex flex-col items-center gap-0.5">
                           <button
                             onClick={() => handleMoveUp(index)}
                             disabled={index === 0}
@@ -235,6 +251,7 @@ export function GoalsView() {
                           >
                             <ChevronUp className="h-3.5 w-3.5" />
                           </button>
+                          <GripVertical className="h-3 w-3 text-muted-foreground/50" />
                           <button
                             onClick={() => handleMoveDown(index)}
                             disabled={index >= goals.length - 1}

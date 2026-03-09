@@ -1,10 +1,12 @@
 'use client';
 
+import React from 'react';
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { isPast, parseISO } from 'date-fns';
 import { useAuth, useFamily } from '@/components/providers';
 import { useChores } from '@/lib/hooks';
 import { toast } from '@/components/ui/use-toast';
+import { ToastAction } from '@/components/ui/toast';
 import { useConfirmDialog } from '@/lib/hooks/useConfirmDialog';
 import type { Chore } from '@/types';
 
@@ -168,7 +170,19 @@ export function useChoresViewData() {
         const completerName = familyMembers.find(m => m.id === completedById)?.name || 'They';
         toast({ title: `Great job! "${chore.title}" is now pending parental approval for ${completerName}.`, variant: 'success' });
       } else {
-        toast({ title: `Chore completed! ${chore.pointValue} points awarded.`, variant: 'success' });
+        toast({
+          title: `Chore completed! ${chore.pointValue} points awarded.`,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          action: React.createElement(ToastAction, {
+            altText: 'Undo',
+            onClick: async () => {
+              try {
+                await fetch(`/api/chores/${choreId}/complete`, { method: 'DELETE' });
+                refreshChores();
+              } catch { /* silently fail */ }
+            },
+          }, 'Undo') as any,
+        });
       }
       refreshChores();
       return true;

@@ -1,12 +1,14 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { toast } from '@/components/ui/use-toast';
 import { Plus, Edit2, Trash2, GripVertical, ChevronUp, ChevronDown } from 'lucide-react';
+import { useDragReorder } from '@/lib/hooks/useDragReorder';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { UserAvatar } from '@/components/ui/avatar';
+import { cn } from '@/lib/utils';
 import { useAuth, useFamily } from '@/components/providers';
 import { MemberModal } from '../components/MemberModal';
 import type { MemberModalSaveData } from '../components/MemberModal';
@@ -33,13 +35,10 @@ export function FamilySection() {
   const [editingMember, setEditingMember] = useState<FamilyMember | null>(null);
   const [showAddMember, setShowAddMember] = useState(false);
 
-  const moveMember = useCallback(async (index: number, direction: -1 | 1) => {
-    const newIndex = index + direction;
-    if (newIndex < 0 || newIndex >= familyMembers.length) return;
-    const newOrder = [...familyMembers];
-    const [moved] = newOrder.splice(index, 1);
-    newOrder.splice(newIndex, 0, moved!);
-    const order = newOrder.map((m, i) => ({ id: m.id, sortOrder: i }));
+  const memberIds = useMemo(() => familyMembers.map(m => m.id), [familyMembers]);
+
+  const saveReorder = useCallback(async (newOrder: string[]) => {
+    const order = newOrder.map((id, i) => ({ id, sortOrder: i }));
     try {
       const res = await fetch('/api/family/reorder', {
         method: 'PUT',
@@ -50,7 +49,18 @@ export function FamilySection() {
     } catch (err) {
       console.error('Failed to reorder:', err);
     }
-  }, [familyMembers, refreshFamily]);
+  }, [refreshFamily]);
+
+  const { draggedId, getDragProps } = useDragReorder({ order: memberIds, onReorder: saveReorder });
+
+  const moveMember = useCallback(async (index: number, direction: -1 | 1) => {
+    const newIndex = index + direction;
+    if (newIndex < 0 || newIndex >= familyMembers.length) return;
+    const newOrder = [...memberIds];
+    const [moved] = newOrder.splice(index, 1);
+    newOrder.splice(newIndex, 0, moved!);
+    saveReorder(newOrder);
+  }, [familyMembers.length, memberIds, saveReorder]);
 
   const deleteMember = async (id: string) => {
     const member = familyMembers.find((m) => m.id === id);
@@ -151,11 +161,16 @@ export function FamilySection() {
       </div>
 
       <div className="space-y-3">
-        {familyMembers.map((member, index) => (
-          <Card key={member.id}>
+        {familyMembers.map((member, index) => {
+          const isDragging = draggedId === member.id;
+          return (
+          <Card key={member.id} {...getDragProps(member.id)} className={cn(
+            'cursor-grab active:cursor-grabbing touch-none transition-all',
+            isDragging && 'opacity-50 scale-95 ring-4 ring-primary/50'
+          )}>
             <CardContent className="flex items-center justify-between p-4">
               <div className="flex items-center gap-3">
-                <div className="flex flex-col gap-0.5">
+                <div className="flex flex-col items-center gap-0.5">
                   <Button
                     variant="ghost"
                     size="icon"
@@ -166,6 +181,7 @@ export function FamilySection() {
                   >
                     <ChevronUp className="h-3 w-3" />
                   </Button>
+                  <GripVertical className="h-3 w-3 text-muted-foreground/50" />
                   <Button
                     variant="ghost"
                     size="icon"
@@ -222,7 +238,8 @@ export function FamilySection() {
               </div>
             </CardContent>
           </Card>
-        ))}
+          );
+        })}
       </div>
 
       {(showAddMember || editingMember) && (

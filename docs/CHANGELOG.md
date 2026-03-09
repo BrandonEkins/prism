@@ -5,6 +5,9 @@ All notable changes to Prism are documented in this file.
 ## [Unreleased]
 
 ### Added
+- **Drag Reorder**: Tasks, chores, goals, and family profile cards can now be reordered by drag-and-drop (touch + mouse supported)
+- **Drag Reorder**: Family profile sort order persists to database via `/api/family/reorder`; task/chore group order persists to localStorage
+- **Undo**: Tasks, chores, and shopping items now show an "Undo" toast button when completed/checked off
 - **Calendar**: Multi-week view replaces the fixed 2-week view — configurable from 1 to 4 weeks on both the calendar page and dashboard widget
 - **Calendar**: Bordered/borderless toggle for multi-week cell outlines; rows auto-size to content
 - **Dashboard Editor**: Frosted glass background option with variable blur intensity (Light/Med/Heavy/Max)

@@ -20,7 +20,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
 import { db } from '@/lib/db/client';
 import { chores, choreCompletions, users } from '@/lib/db/schema';
-import { eq, and, isNull } from 'drizzle-orm';
+import { eq, and, isNull, desc } from 'drizzle-orm';
 import { completeChoreSchema, validateRequest } from '@/lib/validations';
 import { invalidateCache } from '@/lib/cache/redis';
 import { rateLimitGuard } from '@/lib/cache/rateLimit';
@@ -251,5 +251,62 @@ export async function POST(
       { error: 'Failed to complete chore' },
       { status: 500 }
     );
+  }
+}
+
+/**
+ * DELETE /api/chores/[id]/complete
+ * Undo the most recent completion for a chore (parent-only).
+ */
+export async function DELETE(
+  _request: NextRequest,
+  { params }: RouteParams
+) {
+  const auth = await requireAuth();
+  if (auth instanceof NextResponse) return auth;
+
+  try {
+    const { id: choreId } = await params;
+
+    // Find the most recent completion
+    const [latest] = await db
+      .select({ id: choreCompletions.id })
+      .from(choreCompletions)
+      .where(eq(choreCompletions.choreId, choreId))
+      .orderBy(desc(choreCompletions.completedAt))
+      .limit(1);
+
+    if (!latest) {
+      return NextResponse.json({ error: 'No completion to undo' }, { status: 404 });
+    }
+
+    // Delete completion and recalculate chore state
+    await db.transaction(async (tx) => {
+      await tx.delete(choreCompletions).where(eq(choreCompletions.id, latest.id));
+
+      // Find the new most recent completion (if any)
+      const [prevCompletion] = await tx
+        .select({ completedAt: choreCompletions.completedAt })
+        .from(choreCompletions)
+        .where(eq(choreCompletions.choreId, choreId))
+        .orderBy(desc(choreCompletions.completedAt))
+        .limit(1);
+
+      await tx
+        .update(chores)
+        .set({
+          lastCompleted: prevCompletion?.completedAt || null,
+          updatedAt: new Date(),
+        })
+        .where(eq(chores.id, choreId));
+    });
+
+    await invalidateCache('chores:*');
+    await invalidateCache('goals:*');
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('Error undoing chore completion:', error);
+    return NextResponse.json({ error: 'Failed to undo completion' }, { status: 500 });
   }
 }
