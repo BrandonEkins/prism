@@ -24,7 +24,11 @@ All notable changes to Prism are documented in this file.
 - **Screensaver**: Fixed `--primary` CSS variable override that turned today highlight bar white
 
 ### Fixed
-- **SideNav**: Fixed nav appearing behind page content (removed `relative` from main, added `relative z-40` to nav wrapper)
+- **Navigation**: Fixed nav bar appearing behind page content on iPad — removed wrapper divs that created CSS containing blocks breaking `position: fixed`
+- **Navigation**: Fixed auto-hide SSR hydration mismatch — localStorage read deferred to useEffect
+- **Google Calendar**: Fixed events beyond 250-event page being silently dropped — added pagination loop following `nextPageToken`
+- **Google Calendar**: Cancelled recurring event instances now filtered out during sync instead of appearing as active events
+- **Bus Tracking**: Fixed token mismatch between discover and sync — stale Gmail credentials now deleted on `TokenRevokedError`
 - **Layout Editor**: Added `busTracking` to widget validation constraints (fixes "unknown widget ID" error)
 - **Safe Zones**: Shortened default label from "Example safe zone (edit me)" to "1080p" to prevent preview cutoff
 
