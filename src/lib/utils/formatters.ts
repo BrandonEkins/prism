@@ -308,7 +308,14 @@ export function formatWishItemRow(item: {
     notes: item.notes,
     sortOrder: item.sortOrder,
     ...(isOwnerViewing
-      ? { claimed: false, claimedBy: null, claimedAt: null }
+      ? // Owner viewing: show self-claims, hide others' claims (keep gifts secret)
+        item.claimed && item.claimedById === item.memberId
+          ? {
+              claimed: true,
+              claimedBy: { id: item.claimedById, name: item.claimedByName, color: item.claimedByColor },
+              claimedAt: item.claimedAt?.toISOString() || null,
+            }
+          : { claimed: false, claimedBy: null, claimedAt: null }
       : {
           claimed: item.claimed,
           claimedBy: item.claimedById
