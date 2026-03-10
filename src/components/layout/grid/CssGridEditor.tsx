@@ -20,6 +20,8 @@ import type { WidgetConfig } from '@/lib/hooks/useLayouts';
 
 type ResizeEdge = 'n' | 's' | 'e' | 'w' | 'ne' | 'se' | 'sw';
 
+type EditMode = 'move' | 'resize';
+
 export interface CssGridEditorProps {
   layout: WidgetConfig[];
   onLayoutChange: (layout: WidgetConfig[]) => void;
@@ -52,6 +54,7 @@ export function CssGridEditor({
   theme,
 }: CssGridEditorProps) {
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [editMode, setEditMode] = useState<EditMode>('move');
   const [resizePreview, setResizePreview] = useState<{
     widgetId: string;
     x: number; y: number; w: number; h: number;
@@ -79,6 +82,25 @@ export function CssGridEditor({
       activationConstraint: { delay: 200, tolerance: 5 },
     }),
   );
+
+  // Cycle: unselected → move → resize → deselect
+  const handleWidgetClick = useCallback((id: string) => {
+    if (selectedWidget !== id) {
+      onSelectWidget(id);
+      setEditMode('move');
+    } else if (editMode === 'move') {
+      setEditMode('resize');
+    } else {
+      onSelectWidget(null);
+      setEditMode('move');
+    }
+  }, [selectedWidget, editMode, onSelectWidget]);
+
+  // Reset mode when widget is deselected externally
+  const handleDeselect = useCallback(() => {
+    onSelectWidget(null);
+    setEditMode('move');
+  }, [onSelectWidget]);
 
   const visibleWidgets = useMemo(
     () => layout.filter(w => w.visible !== false),
@@ -201,7 +223,7 @@ export function CssGridEditor({
           position: 'relative',
           zIndex: 10,
         }}
-        onClick={() => onSelectWidget(null)}
+        onClick={handleDeselect}
       >
         {visibleWidgets.map(w => (
           <DraggableWidget
@@ -210,7 +232,8 @@ export function CssGridEditor({
             pos={getWidgetPos(w)}
             isSelected={selectedWidget === w.i}
             isDragging={activeId === w.i}
-            onSelect={onSelectWidget}
+            editMode={selectedWidget === w.i ? editMode : 'move'}
+            onSelect={handleWidgetClick}
             onResizeStart={handleResizeStart}
             renderWidget={renderWidget}
             theme={theme}
@@ -272,7 +295,8 @@ interface DraggableWidgetProps {
   pos: { x: number; y: number; w: number; h: number };
   isSelected: boolean;
   isDragging: boolean;
-  onSelect: (id: string | null) => void;
+  editMode: EditMode;
+  onSelect: (id: string) => void;
   onResizeStart: (widgetId: string, edge: ResizeEdge, e: React.PointerEvent) => void;
   renderWidget: (widget: WidgetConfig) => React.ReactNode;
   theme: EditorTheme;
@@ -283,37 +307,55 @@ function DraggableWidget({
   pos,
   isSelected,
   isDragging,
+  editMode,
   onSelect,
   onResizeStart,
   renderWidget,
   theme,
 }: DraggableWidgetProps) {
-  const { attributes, listeners, setNodeRef } = useDraggable({ id: widget.i });
+  const inMoveMode = isSelected && editMode === 'move';
+  const inResizeMode = isSelected && editMode === 'resize';
+
+  // Only attach dnd-kit drag listeners in move mode
+  const { attributes, listeners, setNodeRef } = useDraggable({
+    id: widget.i,
+    disabled: inResizeMode,
+  });
 
   const widgetStyle = getWidgetStyle(widget);
   const textClass = getTextColorClass(widget, '');
   const hasCustomBg = !!widget.backgroundColor;
 
+  // Ring color: blue for move, orange for resize
+  const ringClass = isSelected
+    ? inResizeMode
+      ? 'ring-2 ring-orange-500 ring-offset-2 z-[100]'
+      : 'ring-2 ring-primary ring-offset-2 z-[100]'
+    : 'touch-manipulation';
+
   return (
     <div
       ref={setNodeRef}
-      className={`relative cursor-grab active:cursor-grabbing ${
-        isSelected ? 'ring-2 ring-primary ring-offset-2 z-[100]' : 'touch-manipulation'
-      } ${isDragging ? 'opacity-30' : ''}`}
+      className={`relative ${inResizeMode ? '' : 'cursor-grab active:cursor-grabbing'} ${ringClass} ${isDragging ? 'opacity-30' : ''}`}
       style={{
         gridColumn: `${pos.x + 1} / span ${pos.w}`,
         gridRow: `${pos.y + 1} / span ${pos.h}`,
-        // When selected, disable browser touch scrolling so dnd-kit can handle drag gestures.
-        // Unselected widgets keep touch-manipulation so normal scrolling works.
-        ...(isSelected ? { touchAction: 'none' } : {}),
+        // In move mode: disable browser scrolling so dnd-kit handles drag.
+        // In resize mode: disable scrolling on handles (set per-handle below).
+        // Unselected: keep touch-manipulation for normal scrolling.
+        ...(inMoveMode ? { touchAction: 'none' } : {}),
         ...widgetStyle,
       }}
       onClick={(e) => { e.stopPropagation(); onSelect(widget.i); }}
-      {...listeners}
-      {...attributes}
+      {...(inMoveMode ? listeners : {})}
+      {...(inMoveMode ? attributes : {})}
     >
       {/* Dashed border overlay */}
-      <div className={`absolute inset-0 z-10 border-2 border-dashed ${isSelected ? 'border-primary' : theme.borderDash} rounded-lg pointer-events-none`} />
+      <div className={`absolute inset-0 z-10 border-2 border-dashed ${
+        isSelected
+          ? inResizeMode ? 'border-orange-500' : 'border-primary'
+          : theme.borderDash
+      } rounded-lg pointer-events-none`} />
 
       {/* Widget content */}
       <WidgetBgOverrideProvider value={{ hasCustomBg, textColor: widget.textColor, textOpacity: widget.textOpacity }}>
@@ -322,18 +364,38 @@ function DraggableWidget({
         </div>
       </WidgetBgOverrideProvider>
 
-      {/* Move grip icon — visible when selected to indicate draggable */}
+      {/* Mode label — visible when selected */}
       {isSelected && !isDragging && (
-        <div className="absolute top-1 left-1/2 -translate-x-1/2 z-10 bg-primary/80 text-primary-foreground rounded-full px-2 py-0.5 flex items-center gap-1 pointer-events-none text-[10px] font-medium shadow-sm">
-          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="5 9 2 12 5 15" /><polyline points="9 5 12 2 15 5" /><polyline points="15 19 12 22 9 19" /><polyline points="19 9 22 12 19 15" /><line x1="2" y1="12" x2="22" y2="12" /><line x1="12" y1="2" x2="12" y2="22" />
-          </svg>
-          Move
+        <div className={`absolute top-1 left-1/2 -translate-x-1/2 z-10 text-white rounded-full px-2 py-0.5 flex items-center gap-1 pointer-events-none text-[10px] font-medium shadow-sm ${
+          inResizeMode ? 'bg-orange-500/90' : 'bg-primary/80'
+        }`}>
+          {inResizeMode ? (
+            <>
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="15 3 21 3 21 9" /><polyline points="9 21 3 21 3 15" /><line x1="21" y1="3" x2="14" y2="10" /><line x1="3" y1="21" x2="10" y2="14" />
+              </svg>
+              Resize
+            </>
+          ) : (
+            <>
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="5 9 2 12 5 15" /><polyline points="9 5 12 2 15 5" /><polyline points="15 19 12 22 9 19" /><polyline points="19 9 22 12 19 15" /><line x1="2" y1="12" x2="22" y2="12" /><line x1="12" y1="2" x2="12" y2="22" />
+              </svg>
+              Move
+            </>
+          )}
         </div>
       )}
 
-      {/* Resize handles — visible when selected */}
-      {isSelected && (
+      {/* Hint: tap again to switch mode */}
+      {isSelected && !isDragging && (
+        <div className="absolute bottom-1 left-1/2 -translate-x-1/2 z-10 bg-black/60 text-white rounded-full px-2 py-0.5 pointer-events-none text-[9px] shadow-sm whitespace-nowrap">
+          Tap to {inResizeMode ? 'deselect' : 'resize'}
+        </div>
+      )}
+
+      {/* Resize handles — only visible in resize mode, much larger for touch */}
+      {inResizeMode && (
         <ResizeHandles widgetId={widget.i} onResizeStart={onResizeStart} />
       )}
     </div>
@@ -341,17 +403,19 @@ function DraggableWidget({
 }
 
 // Resize handle hit areas + visual indicators
+// Handles are only shown in resize mode, so they can be large for touch
 const EDGES: ResizeEdge[] = ['n', 's', 'e', 'w', 'ne', 'se', 'sw'];
-const HIT = 16; // hit area size (px)
+const HIT = 28; // hit area size — large for touch (px)
+const CORNER_HIT = 48; // corner hit area (px) — meets Apple 44px minimum
 
 const EDGE_HIT_STYLES: Record<ResizeEdge, React.CSSProperties> = {
-  n:  { top: -HIT / 2, left: HIT, right: HIT, height: HIT, cursor: 'ns-resize' },
-  s:  { bottom: -HIT / 2, left: HIT, right: HIT, height: HIT, cursor: 'ns-resize' },
-  e:  { right: -HIT / 2, top: HIT, bottom: HIT, width: HIT, cursor: 'ew-resize' },
-  w:  { left: -HIT / 2, top: HIT, bottom: HIT, width: HIT, cursor: 'ew-resize' },
-  ne: { top: -HIT / 2, right: -HIT / 2, width: HIT * 2, height: HIT * 2, cursor: 'nesw-resize' },
-  se: { bottom: -HIT / 2, right: -HIT / 2, width: HIT * 2, height: HIT * 2, cursor: 'nwse-resize' },
-  sw: { bottom: -HIT / 2, left: -HIT / 2, width: HIT * 2, height: HIT * 2, cursor: 'nesw-resize' },
+  n:  { top: -HIT / 2, left: CORNER_HIT / 2, right: CORNER_HIT / 2, height: HIT, cursor: 'ns-resize' },
+  s:  { bottom: -HIT / 2, left: CORNER_HIT / 2, right: CORNER_HIT / 2, height: HIT, cursor: 'ns-resize' },
+  e:  { right: -HIT / 2, top: CORNER_HIT / 2, bottom: CORNER_HIT / 2, width: HIT, cursor: 'ew-resize' },
+  w:  { left: -HIT / 2, top: CORNER_HIT / 2, bottom: CORNER_HIT / 2, width: HIT, cursor: 'ew-resize' },
+  ne: { top: -CORNER_HIT / 2, right: -CORNER_HIT / 2, width: CORNER_HIT, height: CORNER_HIT, cursor: 'nesw-resize' },
+  se: { bottom: -CORNER_HIT / 2, right: -CORNER_HIT / 2, width: CORNER_HIT, height: CORNER_HIT, cursor: 'nwse-resize' },
+  sw: { bottom: -CORNER_HIT / 2, left: -CORNER_HIT / 2, width: CORNER_HIT, height: CORNER_HIT, cursor: 'nesw-resize' },
 };
 
 function ResizeHandles({ widgetId, onResizeStart }: {
@@ -367,27 +431,27 @@ function ResizeHandles({ widgetId, onResizeStart }: {
           style={{ ...EDGE_HIT_STYLES[edge], touchAction: 'none' }}
           onPointerDown={(e) => onResizeStart(widgetId, edge, e)}
         >
-          {/* Visual dot for corners */}
+          {/* Visual dot for corners — large and visible */}
           {edge.length === 2 && (
             <div
-              className="absolute bg-primary rounded-full"
+              className="absolute bg-orange-500 rounded-full shadow-md border-2 border-white"
               style={{
-                width: 8,
-                height: 8,
+                width: 18,
+                height: 18,
                 top: '50%',
                 left: '50%',
                 transform: 'translate(-50%, -50%)',
               }}
             />
           )}
-          {/* Visual bar for edges */}
+          {/* Visual bar for edges — thick and visible */}
           {edge.length === 1 && (
             <div
-              className="absolute bg-primary/60 rounded-full"
+              className="absolute bg-orange-500/70 rounded-full"
               style={{
                 ...(edge === 'n' || edge === 's'
-                  ? { width: 24, height: 4, top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }
-                  : { width: 4, height: 24, top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }),
+                  ? { width: 56, height: 6, top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }
+                  : { width: 6, height: 56, top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }),
               }}
             />
           )}
