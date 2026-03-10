@@ -17,6 +17,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { useBackups } from '@/lib/hooks/useBackups';
 
+type DangerStep = null | 'warn-truncate' | 'confirm-truncate' | 'warn-seed' | 'confirm-seed';
+
 export function BackupSection() {
   const {
     backups,
@@ -38,7 +40,8 @@ export function BackupSection() {
 
   const [confirmRestore, setConfirmRestore] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
-  const [confirmTruncate, setConfirmTruncate] = useState(false);
+  const [dangerStep, setDangerStep] = useState<DangerStep>(null);
+  const [challengeInput, setChallengeInput] = useState('');
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const showSuccess = (message: string) => {
@@ -71,7 +74,8 @@ export function BackupSection() {
 
   const handleTruncate = async () => {
     const result = await truncateDatabase();
-    setConfirmTruncate(false);
+    setDangerStep(null);
+    setChallengeInput('');
     if (result.success) {
       showSuccess('All data has been cleared. Refresh the page to see changes.');
     }
@@ -79,10 +83,20 @@ export function BackupSection() {
 
   const handleSeed = async () => {
     const result = await seedDatabase();
+    setDangerStep(null);
+    setChallengeInput('');
     if (result.success) {
       showSuccess('Database seeded with demo data! Refresh the page to see changes.');
     }
   };
+
+  const cancelDanger = () => {
+    setDangerStep(null);
+    setChallengeInput('');
+  };
+
+  const TRUNCATE_CHALLENGE = 'DELETE ALL DATA';
+  const SEED_CHALLENGE = 'SEED DEMO DATA';
 
   return (
     <div className="space-y-6">
@@ -316,64 +330,141 @@ export function BackupSection() {
           Danger Zone
         </h4>
 
-        <div className="flex flex-wrap gap-3">
-          {/* Clear All Data */}
-          {confirmTruncate ? (
-            <div className="flex items-center gap-2 p-2 bg-red-50 dark:bg-red-950/30 rounded-lg">
-              <span className="text-sm text-red-600 dark:text-red-400">
-                This will DELETE all data. Are you sure?
-              </span>
+        {/* Step 1: Warning for truncate */}
+        {dangerStep === 'warn-truncate' && (
+          <div className="p-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-lg space-y-3">
+            <div className="flex items-start gap-2">
+              <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-medium text-red-600 dark:text-red-400">Warning: This will permanently delete all data</p>
+                <p className="text-sm text-red-600/80 dark:text-red-400/80 mt-1">
+                  All family members, chores, tasks, calendar events, meals, recipes, shopping lists, messages, and settings will be removed. This cannot be undone.
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="destructive" size="sm" onClick={() => { setDangerStep('confirm-truncate'); setChallengeInput(''); }}>
+                I understand, proceed
+              </Button>
+              <Button variant="outline" size="sm" onClick={cancelDanger}>Cancel</Button>
+            </div>
+          </div>
+        )}
+
+        {/* Step 2: Type-to-confirm for truncate */}
+        {dangerStep === 'confirm-truncate' && (
+          <div className="p-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-lg space-y-3">
+            <p className="text-sm text-red-600 dark:text-red-400">
+              Type <span className="font-mono font-bold">{TRUNCATE_CHALLENGE}</span> to confirm:
+            </p>
+            <input
+              type="text"
+              value={challengeInput}
+              onChange={(e) => setChallengeInput(e.target.value)}
+              placeholder={TRUNCATE_CHALLENGE}
+              className="w-full px-3 py-2 rounded-md border border-red-300 dark:border-red-700 bg-background text-foreground font-mono text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && challengeInput === TRUNCATE_CHALLENGE) handleTruncate();
+                if (e.key === 'Escape') cancelDanger();
+              }}
+            />
+            <div className="flex gap-2">
               <Button
                 variant="destructive"
                 size="sm"
                 onClick={handleTruncate}
-                disabled={truncating}
+                disabled={truncating || challengeInput !== TRUNCATE_CHALLENGE}
               >
                 {truncating ? (
-                  <RefreshCw className="h-4 w-4 animate-spin" />
+                  <><RefreshCw className="h-4 w-4 mr-1 animate-spin" /> Deleting...</>
                 ) : (
-                  'Yes, Delete Everything'
+                  'Delete Everything'
                 )}
               </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setConfirmTruncate(false)}
-                disabled={truncating}
-              >
-                Cancel
-              </Button>
+              <Button variant="outline" size="sm" onClick={cancelDanger} disabled={truncating}>Cancel</Button>
             </div>
-          ) : (
+          </div>
+        )}
+
+        {/* Step 1: Warning for seed */}
+        {dangerStep === 'warn-seed' && (
+          <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg space-y-3">
+            <div className="flex items-start gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-medium text-amber-600 dark:text-amber-400">Warning: This will overwrite your data</p>
+                <p className="text-sm text-amber-600/80 dark:text-amber-400/80 mt-1">
+                  Seeding will populate the database with demo family data (Alex, Jordan, Sam, Riley). Existing data may be affected.
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="default" size="sm" className="bg-amber-600 hover:bg-amber-700 text-white" onClick={() => { setDangerStep('confirm-seed'); setChallengeInput(''); }}>
+                I understand, proceed
+              </Button>
+              <Button variant="outline" size="sm" onClick={cancelDanger}>Cancel</Button>
+            </div>
+          </div>
+        )}
+
+        {/* Step 2: Type-to-confirm for seed */}
+        {dangerStep === 'confirm-seed' && (
+          <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg space-y-3">
+            <p className="text-sm text-amber-600 dark:text-amber-400">
+              Type <span className="font-mono font-bold">{SEED_CHALLENGE}</span> to confirm:
+            </p>
+            <input
+              type="text"
+              value={challengeInput}
+              onChange={(e) => setChallengeInput(e.target.value)}
+              placeholder={SEED_CHALLENGE}
+              className="w-full px-3 py-2 rounded-md border border-amber-300 dark:border-amber-700 bg-background text-foreground font-mono text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && challengeInput === SEED_CHALLENGE) handleSeed();
+                if (e.key === 'Escape') cancelDanger();
+              }}
+            />
+            <div className="flex gap-2">
+              <Button
+                variant="default"
+                size="sm"
+                className="bg-amber-600 hover:bg-amber-700 text-white"
+                onClick={handleSeed}
+                disabled={seeding || challengeInput !== SEED_CHALLENGE}
+              >
+                {seeding ? (
+                  <><RefreshCw className="h-4 w-4 mr-1 animate-spin" /> Seeding...</>
+                ) : (
+                  'Seed Demo Data'
+                )}
+              </Button>
+              <Button variant="outline" size="sm" onClick={cancelDanger} disabled={seeding}>Cancel</Button>
+            </div>
+          </div>
+        )}
+
+        {/* Buttons (only show when no confirmation is active) */}
+        {!dangerStep && (
+          <div className="flex flex-wrap gap-3">
             <Button
               variant="outline"
-              onClick={() => setConfirmTruncate(true)}
+              onClick={() => setDangerStep('warn-truncate')}
               className="border-red-300 text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-950/30"
             >
               <Eraser className="h-4 w-4 mr-2" />
               Clear All Data
             </Button>
-          )}
-
-          {/* Seed Demo Data */}
-          <Button
-            variant="outline"
-            onClick={handleSeed}
-            disabled={seeding}
-          >
-            {seeding ? (
-              <>
-                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                Seeding...
-              </>
-            ) : (
-              <>
-                <Sparkles className="h-4 w-4 mr-2" />
-                Seed Demo Data
-              </>
-            )}
-          </Button>
-        </div>
+            <Button
+              variant="outline"
+              onClick={() => setDangerStep('warn-seed')}
+            >
+              <Sparkles className="h-4 w-4 mr-2" />
+              Seed Demo Data
+            </Button>
+          </div>
+        )}
 
         <p className="text-xs text-muted-foreground">
           &quot;Clear All Data&quot; removes everything from the database.
