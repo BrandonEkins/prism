@@ -74,7 +74,29 @@ export function SideNav({ user, onLogout, onLogin, uiHidden, className }: SideNa
   const pathname = usePathname();
   const { filterNavItems } = useHiddenPages();
   const navItems = filterNavItems(ALL_NAV_ITEMS);
-  const [hovered, setHovered] = React.useState(false);
+  const [expanded, setExpanded] = React.useState(false);
+  const asideRef = React.useRef<HTMLElement>(null);
+
+  // Close drawer when clicking outside
+  React.useEffect(() => {
+    if (!expanded) return;
+    const handler = (e: MouseEvent | TouchEvent) => {
+      if (asideRef.current && !asideRef.current.contains(e.target as Node)) {
+        setExpanded(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    document.addEventListener('touchstart', handler);
+    return () => {
+      document.removeEventListener('mousedown', handler);
+      document.removeEventListener('touchstart', handler);
+    };
+  }, [expanded]);
+
+  // Collapse on navigation
+  React.useEffect(() => {
+    setExpanded(false);
+  }, [pathname]);
 
   // Check if a nav item is active
   const isActive = (href: string) => {
@@ -84,14 +106,20 @@ export function SideNav({ user, onLogout, onLogin, uiHidden, className }: SideNa
     return pathname.startsWith(href);
   };
 
-  const expanded = hovered;
+  // Toggle drawer on tap in the blank area of collapsed nav
+  const handleAsideClick = (e: React.MouseEvent) => {
+    // Only toggle if clicking the aside itself (blank area), not a link/button
+    if (e.target === e.currentTarget || (e.target as HTMLElement).closest('nav') === null && (e.target as HTMLElement).closest('a') === null && (e.target as HTMLElement).closest('button') === null) {
+      setExpanded(prev => !prev);
+    }
+  };
 
   return (
     <>
       {/* SIDE NAVIGATION - visibility controlled by AppShell based on orientation */}
       <aside
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
+        ref={asideRef}
+        onClick={handleAsideClick}
         className={cn(
           'fixed left-0 top-0 z-40 h-screen',
           'bg-card/85 backdrop-blur-sm border-r border-border',

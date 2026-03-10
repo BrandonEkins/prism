@@ -83,37 +83,29 @@ export function useDashboardLayout(layouts: LayoutsData, slug?: string) {
   }, [activeLayout]);
 
   const handleSave = useCallback(async (name?: string) => {
-    try {
-      const saveData: Partial<Layout> & { name: string; widgets: WidgetConfig[] } = {
-        ...(activeLayout ? { id: activeLayout.id } : {}),
-        name: name || activeLayout?.name || 'My Layout',
-        widgets: editingWidgets,
-        isDefault: activeLayout?.isDefault ?? true,
-        screensaverWidgets: ssLayout,
-        orientation: activeLayout?.orientation || 'landscape',
-      };
-      await layouts.saveLayout(saveData);
-      setIsEditing(false);
-    } catch (err) {
-      console.error('Failed to save layout:', err);
-    }
+    const saveData: Partial<Layout> & { name: string; widgets: WidgetConfig[] } = {
+      ...(activeLayout ? { id: activeLayout.id } : {}),
+      name: name || activeLayout?.name || 'My Layout',
+      widgets: editingWidgets,
+      isDefault: activeLayout?.isDefault ?? true,
+      screensaverWidgets: ssLayout,
+      orientation: activeLayout?.orientation || 'landscape',
+    };
+    await layouts.saveLayout(saveData);
+    setIsEditing(false);
   }, [activeLayout, editingWidgets, ssLayout, layouts]);
 
   const handleSaveAs = useCallback(async (defaultName?: string) => {
     const name = window.prompt('Layout name:', defaultName || 'New Layout');
     if (!name) return;
-    try {
-      await layouts.saveLayout({
-        name,
-        widgets: editingWidgets,
-        isDefault: true,
-        screensaverWidgets: ssLayout,
-        orientation: activeLayout?.orientation || 'landscape',
-      });
-      setIsEditing(false);
-    } catch (err) {
-      console.error('Failed to save layout:', err);
-    }
+    await layouts.saveLayout({
+      name,
+      widgets: editingWidgets,
+      isDefault: true,
+      screensaverWidgets: ssLayout,
+      orientation: activeLayout?.orientation || 'landscape',
+    });
+    setIsEditing(false);
   }, [editingWidgets, ssLayout, activeLayout, layouts]);
 
   const handleReset = useCallback(() => {

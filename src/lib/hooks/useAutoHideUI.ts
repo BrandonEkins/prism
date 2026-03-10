@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { usePathname } from 'next/navigation';
 
 const STORAGE_KEY = 'prism:auto-hide-ui';
 const HIDE_DELAY = 10_000; // 10 seconds
@@ -13,6 +14,9 @@ export function useAutoHideUI() {
   const [enabled, setEnabledState] = useState(false);
   const [hidden, setHidden] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const pathname = usePathname();
+  // Only auto-hide on dashboard routes (/ and /d/[slug])
+  const isDashboard = pathname === '/' || pathname.startsWith('/d/');
 
   // Read from localStorage after mount to avoid SSR hydration mismatch
   useEffect(() => {
@@ -68,5 +72,5 @@ export function useAutoHideUI() {
     };
   }, []);
 
-  return { autoHideEnabled: enabled, setAutoHideEnabled: setEnabled, uiHidden: mounted && enabled && hidden };
+  return { autoHideEnabled: enabled, setAutoHideEnabled: setEnabled, uiHidden: mounted && enabled && isDashboard && hidden };
 }

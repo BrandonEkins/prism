@@ -34,7 +34,7 @@ export interface DashboardInfo {
 export interface LayoutEditorProps {
   widgets: WidgetConfig[];
   onWidgetsChange: (widgets: WidgetConfig[]) => void;
-  onSave: (name?: string) => void;
+  onSave: (name?: string) => void | Promise<void>;
   onSaveAs: (defaultName?: string) => void;
   onReset: () => void;
   onCancel: () => void;
@@ -292,14 +292,21 @@ export function LayoutEditor({
     }
   };
 
-  const handleSave = () => {
-    if (editingScreensaver) {
-      onScreensaverSave?.();
-    } else {
-      onSave();
+  const handleSave = async () => {
+    try {
+      if (editingScreensaver) {
+        await onScreensaverSave?.();
+      } else {
+        await onSave();
+      }
+      setSaveFeedback('Saved!');
+      setTimeout(() => setSaveFeedback(''), 2000);
+    } catch (err) {
+      console.error('Save failed:', err);
+      setSaveFeedback('Failed!');
+      setTimeout(() => setSaveFeedback(''), 3000);
+      toast({ title: 'Failed to save layout', variant: 'destructive' });
     }
-    setSaveFeedback('Saved!');
-    setTimeout(() => setSaveFeedback(''), 2000);
   };
 
   const handleShareOpen = () => {

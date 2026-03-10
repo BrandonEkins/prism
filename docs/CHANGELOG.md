@@ -4,12 +4,15 @@ All notable changes to Prism are documented in this file.
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-03-09
+
 ### Added
 - **Calendar**: Multi-week view replaces the fixed 2-week view — configurable from 1 to 4 weeks on both the calendar page and dashboard widget
 - **Calendar**: Bordered/borderless toggle for multi-week cell outlines; rows auto-size to content
 - **Dashboard Editor**: Frosted glass background option with variable blur intensity (Light/Med/Heavy/Max)
 - **Dashboard Editor**: Default swatch (reset icon) to return any color target to theme defaults
 - **Dashboard Editor**: Harvey ball indicators on Fill/Outline/Text target buttons show color state at a glance
+- **Dashboard Editor**: Two-mode touch editing — tap widget to select (move mode), tap again for resize mode, tap again to deselect
 - **Auto-Hide UI**: Nav bar and toolbar auto-hide after 10 seconds of inactivity, reappear on mouse/touch (configurable in Settings)
 - **Auto-Hide UI**: Staggered animation — header hides first, then nav; nav reappears first, then header
 - **Settings**: Location card wired to weather API — supports zip code or city/state, stored in database
@@ -25,17 +28,20 @@ All notable changes to Prism are documented in this file.
 - **Settings**: Consolidated Screensaver Timeout, Auto-Hide Navigation, and Away Mode Auto-Activation into single "Timers & Auto-Activation" card
 - **Calendar**: Multi-week toolbar no longer resizes when switching views — grid icon doubles as border toggle
 - **Calendar**: Multi-week today highlight preserved in screensaver mode (data-keep-bg attribute)
-- **SideNav**: State-based hover expansion (replaces CSS group-hover) — nav stays open during page navigation
+- **SideNav**: Tap-to-expand drawer replaces hover-based expansion — works reliably on touch devices, collapses on outside tap or navigation
 - **Weather**: Location resolved from DB settings with fallback chain (query param → DB → env var → default)
 - **Screensaver**: Fixed `--primary` CSS variable override that turned today highlight bar white
+- **Accessibility**: Dashboard editor uses dashed border for move mode, solid for resize — distinguishable without color
 
 ### Fixed
 - **Navigation**: Fixed nav bar appearing behind page content on iPad — removed wrapper divs that created CSS containing blocks breaking `position: fixed`
 - **Navigation**: Fixed auto-hide SSR hydration mismatch — localStorage read deferred to useEffect
+- **Navigation**: Auto-hide now limited to dashboard pages only — no more jarring nav animations on subpages
 - **Google Calendar**: Fixed events beyond 250-event page being silently dropped — added pagination loop following `nextPageToken`
 - **Google Calendar**: Cancelled recurring event instances now filtered out during sync instead of appearing as active events
 - **Bus Tracking**: Fixed token mismatch between discover and sync — stale Gmail credentials now deleted on `TokenRevokedError`
 - **Layout Editor**: Added `busTracking` to widget validation constraints (fixes "unknown widget ID" error)
+- **Layout Editor**: Fixed dashboard save showing "Saved!" but not actually persisting — save button now awaits the API call and shows error on failure
 - **Safe Zones**: Shortened default label from "Example safe zone (edit me)" to "1080p" to prevent preview cutoff
 - **Calendar**: Multi-day all-day events now span all their days instead of only appearing on the start date (affected all calendar views + widget)
 

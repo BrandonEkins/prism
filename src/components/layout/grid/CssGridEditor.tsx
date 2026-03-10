@@ -350,11 +350,11 @@ function DraggableWidget({
       {...(inMoveMode ? listeners : {})}
       {...(inMoveMode ? attributes : {})}
     >
-      {/* Dashed border overlay */}
-      <div className={`absolute inset-0 z-10 border-2 border-dashed ${
+      {/* Border overlay — dashed for move, solid for resize (accessible: pattern + color) */}
+      <div className={`absolute inset-0 z-10 border-2 ${
         isSelected
-          ? inResizeMode ? 'border-orange-500' : 'border-primary'
-          : theme.borderDash
+          ? inResizeMode ? 'border-solid border-orange-500' : 'border-dashed border-primary'
+          : `border-dashed ${theme.borderDash}`
       } rounded-lg pointer-events-none`} />
 
       {/* Widget content */}
