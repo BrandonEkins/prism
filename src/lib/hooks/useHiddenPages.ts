@@ -4,8 +4,18 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { ALWAYS_VISIBLE_HREFS } from '@/lib/constants/navItems';
 import type { NavItem } from '@/lib/constants/navItems';
 
+const CACHE_KEY = 'prism:hidden-pages';
+
+function readCachedHiddenPages(): string[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const cached = localStorage.getItem(CACHE_KEY);
+    return cached ? JSON.parse(cached) : [];
+  } catch { return []; }
+}
+
 export function useHiddenPages() {
-  const [hiddenPages, setHiddenPagesState] = useState<string[]>([]);
+  const [hiddenPages, setHiddenPagesState] = useState<string[]>(readCachedHiddenPages);
   const [loaded, setLoaded] = useState(false);
 
   const fetchHiddenPages = useCallback(async () => {
@@ -16,6 +26,7 @@ export function useHiddenPages() {
         const val = data.settings?.hiddenPages;
         if (Array.isArray(val)) {
           setHiddenPagesState(val);
+          localStorage.setItem(CACHE_KEY, JSON.stringify(val));
         }
       }
     } catch { /* ignore */ }
@@ -28,6 +39,7 @@ export function useHiddenPages() {
 
   const setHiddenPages = useCallback(async (pages: string[]) => {
     setHiddenPagesState(pages);
+    localStorage.setItem(CACHE_KEY, JSON.stringify(pages));
     try {
       await fetch('/api/settings', {
         method: 'PATCH',

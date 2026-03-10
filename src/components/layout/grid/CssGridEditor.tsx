@@ -330,7 +330,7 @@ function DraggableWidget({
   const ringClass = isSelected
     ? inResizeMode
       ? 'ring-2 ring-orange-500 ring-offset-2 z-[100]'
-      : 'ring-2 ring-primary ring-offset-2 z-[100]'
+      : 'ring-2 ring-blue-500 ring-offset-2 z-[100]'
     : 'touch-manipulation';
 
   return (
@@ -353,7 +353,7 @@ function DraggableWidget({
       {/* Border overlay — dashed for move, solid for resize (accessible: pattern + color) */}
       <div className={`absolute inset-0 z-10 border-2 ${
         isSelected
-          ? inResizeMode ? 'border-solid border-orange-500' : 'border-dashed border-primary'
+          ? inResizeMode ? 'border-solid border-orange-500' : 'border-dashed border-blue-500'
           : `border-dashed ${theme.borderDash}`
       } rounded-lg pointer-events-none`} />
 
@@ -367,7 +367,7 @@ function DraggableWidget({
       {/* Mode label — visible when selected */}
       {isSelected && !isDragging && (
         <div className={`absolute top-1 left-1/2 -translate-x-1/2 z-10 text-white rounded-full px-2 py-0.5 flex items-center gap-1 pointer-events-none text-[10px] font-medium shadow-sm ${
-          inResizeMode ? 'bg-orange-500/90' : 'bg-primary/80'
+          inResizeMode ? 'bg-orange-500/90' : 'bg-blue-500/90'
         }`}>
           {inResizeMode ? (
             <>

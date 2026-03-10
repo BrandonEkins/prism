@@ -106,12 +106,11 @@ export function SideNav({ user, onLogout, onLogin, uiHidden, className }: SideNa
     return pathname.startsWith(href);
   };
 
-  // Toggle drawer on tap in the blank area of collapsed nav
+  // Toggle drawer on tap in blank area — skip if clicking a link or button
   const handleAsideClick = (e: React.MouseEvent) => {
-    // Only toggle if clicking the aside itself (blank area), not a link/button
-    if (e.target === e.currentTarget || (e.target as HTMLElement).closest('nav') === null && (e.target as HTMLElement).closest('a') === null && (e.target as HTMLElement).closest('button') === null) {
-      setExpanded(prev => !prev);
-    }
+    const target = e.target as HTMLElement;
+    if (target.closest('a') || target.closest('button')) return;
+    setExpanded(prev => !prev);
   };
 
   return (
