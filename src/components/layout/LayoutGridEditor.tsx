@@ -69,9 +69,11 @@ export function LayoutGridEditor({
 
   const visibleRows = useMemo(() => {
     if (typeof window === 'undefined') return 24;
-    const availableHeight = window.innerHeight - headerOffset - bottomOffset;
+    // In measure mode, use full viewport (no toolbar/header/nav offsets)
+    const offset = measureMode ? 0 : headerOffset + bottomOffset;
+    const availableHeight = window.innerHeight - offset;
     return Math.max(minVisibleRows, Math.floor((availableHeight + margin) / (cellSize + margin)));
-  }, [cellSize, margin, headerOffset, bottomOffset, minVisibleRows]);
+  }, [cellSize, margin, headerOffset, bottomOffset, minVisibleRows, measureMode]);
 
   const visibleCols = useMemo(() => {
     if (width <= 0) return cols;
