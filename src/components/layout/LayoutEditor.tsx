@@ -149,7 +149,37 @@ export function LayoutEditor({
   const [showShareDialog, setShowShareDialog] = useState(false);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [focusedWidget, setFocusedWidget] = useState<string | null>(null);
+  const [measureMode, setMeasureMode] = useState(false);
   const toolbarRef = useRef<HTMLDivElement>(null);
+
+  // Toggle measure mode — hides toolbar + nav, shows only grid
+  const toggleMeasureMode = useCallback(() => {
+    setMeasureMode(prev => {
+      const next = !prev;
+      window.dispatchEvent(new CustomEvent('prism:measure-mode', { detail: next }));
+      if (next) setActivePopover(null);
+      return next;
+    });
+  }, []);
+
+  // Keyboard shortcut: Ctrl+Shift+M
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.shiftKey && e.key === 'M') {
+        e.preventDefault();
+        toggleMeasureMode();
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [toggleMeasureMode]);
+
+  // Clean up measure mode on unmount (editor closing)
+  useEffect(() => {
+    return () => {
+      window.dispatchEvent(new CustomEvent('prism:measure-mode', { detail: false }));
+    };
+  }, []);
 
   const currentWidgets = useMemo(() =>
     editingScreensaver ? (screensaverWidgets || []) : widgets,
@@ -343,6 +373,20 @@ export function LayoutEditor({
 
   const btnClass = "px-2 py-1.5 text-xs rounded-md whitespace-nowrap transition-colors";
   const moreItemClass = "w-full text-left px-3 py-1.5 text-sm hover:bg-accent transition-colors";
+
+  if (measureMode) {
+    return (
+      <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[200] flex items-center gap-2 bg-card/90 backdrop-blur-sm border border-border rounded-full px-4 py-2 shadow-lg">
+        <button
+          onClick={toggleMeasureMode}
+          className="px-3 py-1.5 text-xs rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-colors whitespace-nowrap"
+        >
+          Exit Measure Mode
+        </button>
+        <span className="text-[10px] text-muted-foreground">Ctrl+Shift+M</span>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -553,6 +597,15 @@ export function LayoutEditor({
 
           {/* Right group */}
           <div className="flex items-center gap-2">
+            {/* Measure Mode */}
+            <button
+              onClick={toggleMeasureMode}
+              className={`${btnClass} bg-muted hover:bg-accent`}
+              title="Hide toolbar and nav to see true layout (Ctrl+Shift+M)"
+            >
+              Measure
+            </button>
+
             {/* Screensaver toggle */}
             {onToggleScreensaverEdit && (
               <button
