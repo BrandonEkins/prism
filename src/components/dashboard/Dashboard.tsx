@@ -14,6 +14,7 @@ import { GRID_COLS } from '@/lib/constants/grid';
 import { useScreenSafeZones } from '@/lib/hooks/useScreenSafeZones';
 import { useOrientation } from '@/lib/hooks/useOrientation';
 import { useIsMobile } from '@/lib/hooks/useIsMobile';
+import { useAutoHideUI } from '@/lib/hooks/useAutoHideUI';
 import dynamic from 'next/dynamic';
 
 const AddTaskModal = dynamic(() => import('@/components/modals/AddTaskModal').then(m => ({ default: m.AddTaskModal })));
@@ -112,8 +113,10 @@ export function Dashboard({
   // Detect portrait nav to offset grid height (nav covers bottom 80px + safe area)
   const deviceOrientation = useOrientation();
   const isMobile = useIsMobile();
+  const { uiHidden } = useAutoHideUI();
   const hasPortraitNav = !isMobile && deviceOrientation === 'portrait';
-  const bottomOffset = hasPortraitNav ? 96 : 0; // matches AppShell pb-24
+  // Only reserve bottom space when nav is actually visible (not auto-hidden)
+  const bottomOffset = hasPortraitNav && !uiHidden ? 96 : 0;
 
   // Grid control state shared between LayoutEditor toolbar and LayoutGridEditor
   const { allSizeNames } = useScreenSafeZones();
@@ -357,7 +360,7 @@ export function Dashboard({
               renderWidget={renderDashboardWidget}
               widgetConstraints={dashboardConstraints}
               margin={8}
-              headerOffset={140}
+              headerOffset={layout.isEditing ? 140 : uiHidden ? 0 : 50}
               bottomOffset={bottomOffset}
               screenGuideOrientation={screenGuideOrientation}
               enabledSizes={enabledSizes}
