@@ -2,14 +2,18 @@
 
 **A subscription-free, self-hosted family dashboard that integrates with the tools you already use without becoming yet another system of record.**
 
-![License](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)
+[![License](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](LICENSE)
 [![Test Install](https://github.com/sandydargoport/prism/actions/workflows/test-install.yml/badge.svg)](https://github.com/sandydargoport/prism/actions/workflows/test-install.yml)
 
-Prism is a configurable family dashboard designed for large wall-mounted screens and handheld tablets. It connects to existing services you already use—Google Calendar, Microsoft To Do, OneDrive, and more—and displays the information your family actually needs. Built for people who value privacy, hate subscriptions, and are comfortable with Docker.
+Prism is a configurable family dashboard designed for large wall-mounted screens and handheld tablets. It connects to existing services you already use - Google Calendar, Microsoft To Do, OneDrive, and more - and displays the information your family actually needs. Built for people who value privacy, hate subscriptions, and are comfortable with Docker.
+
+If Prism is useful to you, a star helps others find it.
+
+---
 
 ## Demo
 
-*Prism is built for wall-mounted displays and tablets, with a mobile PWA as a companion for on-the-go. Large-format screenshots coming soon — the demos below were captured on laptop, iPad, and iPhone.*
+*Prism is built for wall-mounted displays and tablets, with a mobile PWA as a companion for on-the-go. Large-format screenshots coming soon - the demos below were captured on laptop, iPad, and iPhone.*
 
 <table>
   <tr>
@@ -61,8 +65,6 @@ docker-compose up -d
 Open **http://localhost:3000** and log in with PIN `1234` (parent) or `0000` (child).
 
 ## What Prism Does
-
-Prism is a configurable family dashboard designed for large wall-mounted screens and handheld tablets. It connects to existing services you already use and displays the information your family actually needs.
 
 ### Dashboard Widgets
 
@@ -145,24 +147,30 @@ Your database, settings, and uploaded files are stored in Docker volumes and are
 
 <details>
 <summary><strong>Behind the Project (click to expand)</strong></summary>
-<br>
 
-### Why I Built This With AI
+### Why I Built This
 
-I have long chased the skillset to translate what I hold in my mind into something I can build with my hands. I need to understand foundational concepts before building on them. Without that foundation, everything feels unstable.
+I’ve always had a clearer vision of what I want to build than the ability to build it. Software development is a skill I’ve tried to pick up more than once - it never stuck, not for lack of trying, but because it wasn’t where I was investing my time.
 
-Software development isn’t where I’ve invested my time, despite repeated attempts. When I saw people building impressive projects in hours with Claude Code, I wanted to test it with something more substantial. I wanted a full application with real requirements, not just a toy project.
+When I saw what Claude Code could do with a real, scoped project, I wanted to test it seriously. Not a toy. A full application with actual requirements, real integrations, and a UI that worked across devices.
 
-Initially, I thought I'd use this as a learning opportunity. I would have Claude heavily comment the code so I could eventually make changes myself. That quickly created bloated code, and I had to make a choice: prioritize a working solution or the educational experience. I chose the former. There are no shortcuts to learning software development, and that’s not where my energy is right now.
+The problem I wanted to solve was real: I wanted a family dashboard that connected to the tools we already use, ran on my own hardware, and didn’t cost $10/month indefinitely. I admire DAKboard’s configurability and Skylight’s simplicity, but neither felt right. DAKboard feels like a solo project that outgrew itself; Skylight is a locked room. I wanted something open.
 
-I admire the configurability of DAKboard and the great UI simplicity of Skylight, but the former feels like a solo project turned paid software, and the latter feels incongruent with my sense of home. Neither path appealed to me. Instead, I made Prism open-source, hoping others could benefit from it and perhaps contribute integrations that matter to their own needs.
+So I defined what I wanted, worked through it piece by piece, and pushed back hard when things didn’t work. I made product decisions, UX decisions, and integration choices. I did the competitive research - using Playwright to crawl DAKboard and Skylight and analyze how they handled layouts, integrations, and real-time updates. I tested everything on my own family’s hardware before shipping it.
+
+The code was written by Claude Code. That’s not a footnote - it’s the whole point. I wanted to see what was possible when someone who isn’t a software developer brings enough clarity and persistence to the process. The answer, apparently, is this.
+
+I’m sharing it as open source because others might find it useful, and because the only way it gets better is if more people use it and contribute to it.
 
 ### How It Was Built
 
-This project was built entirely with [Claude Code](https://claude.ai/code). I directed the implementation by defining requirements, designing user experience, prioritizing features, and making architectural decisions. Claude Code handled the actual coding.
+This project was built entirely with [Claude Code](https://claude.ai/code). I directed the implementation by defining requirements, designing user experience, prioritizing features, and making product decisions. Claude Code handled the actual coding.
 
-**Reverse-engineering competitors:**
-I used Playwright to systematically crawl DAKboard and Skylight, capturing screenshots and analyzing their features, layouts, and interaction patterns. Browser dev tools helped me understand how they handled integrations and real-time updates. This became source material for defining what Prism should do.
+**Competitive research:**
+I used Playwright to systematically crawl DAKboard and Skylight, capturing screenshots and analyzing their features, layouts, and interaction patterns. Browser dev tools helped me understand how they handled integrations and real-time updates. This became the foundation for defining what Prism should do differently.
+
+**Code review approach:**
+Rather than reviewing code myself - which I’m not well-positioned to do - I used adversarial prompting across multiple LLMs to critique each other’s output. It’s an imperfect process, but it’s more rigorous than a single model reviewing its own work.
 
 **Tech stack:**
 - Next.js 15 (App Router) + React + TypeScript frontend
@@ -171,42 +179,39 @@ I used Playwright to systematically crawl DAKboard and Skylight, capturing scree
 - CSS Grid + dnd-kit for dashboard layout (48-column grid)
 - PIN-based auth optimized for shared family devices
 
-**Important:** I cannot be responsible for security vulnerabilities or code quality issues. Use at your own risk. That said, I use this in my own home and will continue to maintain it as I encounter problems.
+**On security and code quality:** I’ve done what I can to make this solid - there’s a CI pipeline, E2E tests, and a security policy. I use this in my own home. But I’m not a professional software developer, and I can’t make guarantees I’m not qualified to make. Use reasonable judgment about what you expose to the internet.
 
-### Why Prism Exists
-
-I didn't want to pay yet another monthly subscription. I tried several open-source projects, but they were all built for different purposes. Magic Mirror didn't support photo displays. I found another open-source Skylight alternative that looked promising but had minimal features implemented. I explored a Home Assistant setup, but it felt like I was forcing something to work in a way it didn't want to.
-
-What I wanted was a system built for my use case, not a solution poorly adapted or force-fit into something it wasn't meant to be. I didn't want to ask my spouse to use different tools, and I didn't want to change my own workflow. I wanted a solution that worked for me rather than the other way around.
-
-So I built Prism.
-
-### Features I'm Excited About
+### Features I’m Excited About
 
 Some features exist because I needed them:
+
 - **Recipe viewer** - Not another recipe app, but a way to view recipes on a large kitchen screen without repeatedly unlocking my phone
 - **Calendar parsing** - Handles the integrations that matter most to families (school calendars, work calendars, shared family events)
 - **Drag-and-drop layout** - Build your dashboard the way you want it, resize and arrange widgets to fit your screen
 - **Chores with approval workflow** - Kids mark chores complete, parents approve and award points
 - **Screensaver modes** - Photo slideshow, away mode for privacy, babysitter mode for caregivers
 
-Some features are still on the roadmap:
-- **Additional integrations** - Google Photos, Todoist, Home Assistant, and other services people actually use
-- **Multi-household support** - For shared custody situations
-- **Voice control** - "Hey Prism, what's for dinner?"
-- **Offline support** - Service workers so the dashboard works even when internet is down
+Some things are still on the roadmap:
 
-The architecture makes adding integrations relatively straightforward. If you contribute one that matters to you, we all benefit. Some ideas I'm less certain about (direct smart home control, music widgets) might be better handled by integrating with existing solutions like Home Assistant.
+- Additional integrations - Google Photos, Todoist, Home Assistant, and other services people actually use
+- Multi-household support - For shared custody situations
+- Voice control - "Hey Prism, what’s for dinner?"
+- Offline support - Service workers so the dashboard works even when internet is down
+
+The architecture makes adding integrations relatively straightforward. If you contribute one that matters to you, we all benefit.
 
 </details>
 
 ## Contributing
 
 I built this for my family, but I'm sharing it because others might find it useful. If you do:
-- ⭐ Star the repo
-- 🐛 Report issues you encounter
-- 💡 Suggest features that would help your family
-- 🔧 Submit PRs for improvements
+
+- Star the repo
+- Report issues you encounter
+- Suggest features that would help your family
+- Submit PRs for improvements
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
 
 ## License
 
@@ -217,7 +222,3 @@ See [LICENSE](LICENSE) for details.
 ## Acknowledgments
 
 Built with Claude Code. Inspired by frustration with existing solutions. Made better by the self-hosting community.
-
----
-
-**Note:** This is a hobby project by someone who works in AI and product management, not a professional software developer. I use it daily and will maintain it for my own needs, which hopefully benefits others too. If you find it useful, let me know!
