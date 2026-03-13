@@ -1,4 +1,12 @@
-CREATE TABLE IF NOT EXISTS api_credentials (
+-- Prism Schema (auto-generated from pg_dump, cleaned for fresh installs)
+-- Extensions and functions are in 01-init.sql
+-- Run after 01-init.sql
+
+--
+-- Name: api_credentials; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS public.api_credentials (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     service character varying(100) NOT NULL,
     encrypted_credentials text NOT NULL,
@@ -7,7 +15,12 @@ CREATE TABLE IF NOT EXISTS api_credentials (
     updated_at timestamp without time zone DEFAULT now() NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS api_tokens (
+
+--
+-- Name: api_tokens; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS public.api_tokens (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     name character varying(100) NOT NULL,
     token_hash character varying(64) NOT NULL,
@@ -16,7 +29,12 @@ CREATE TABLE IF NOT EXISTS api_tokens (
     created_at timestamp without time zone DEFAULT now() NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS audit_logs (
+
+--
+-- Name: audit_logs; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS public.audit_logs (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     user_id uuid,
     action character varying(50) NOT NULL,
@@ -27,7 +45,12 @@ CREATE TABLE IF NOT EXISTS audit_logs (
     created_at timestamp without time zone DEFAULT now() NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS babysitter_info (
+
+--
+-- Name: babysitter_info; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS public.babysitter_info (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     section character varying(50) NOT NULL,
     sort_order integer DEFAULT 0 NOT NULL,
@@ -37,7 +60,12 @@ CREATE TABLE IF NOT EXISTS babysitter_info (
     updated_at timestamp without time zone DEFAULT now() NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS birthdays (
+
+--
+-- Name: birthdays; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS public.birthdays (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     name character varying(100) NOT NULL,
     birth_date date NOT NULL,
@@ -49,7 +77,12 @@ CREATE TABLE IF NOT EXISTS birthdays (
     created_at timestamp without time zone DEFAULT now() NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS bus_geofence_log (
+
+--
+-- Name: bus_geofence_log; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS public.bus_geofence_log (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     route_id uuid NOT NULL,
     event_type character varying(30) NOT NULL,
@@ -63,7 +96,12 @@ CREATE TABLE IF NOT EXISTS bus_geofence_log (
     created_at timestamp without time zone DEFAULT now() NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS bus_routes (
+
+--
+-- Name: bus_routes; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS public.bus_routes (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     student_name character varying(100) NOT NULL,
     user_id uuid,
@@ -80,7 +118,12 @@ CREATE TABLE IF NOT EXISTS bus_routes (
     updated_at timestamp without time zone DEFAULT now() NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS calendar_groups (
+
+--
+-- Name: calendar_groups; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS public.calendar_groups (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     name character varying(255) NOT NULL,
     color character varying(7) DEFAULT '#3B82F6'::character varying NOT NULL,
@@ -91,7 +134,26 @@ CREATE TABLE IF NOT EXISTS calendar_groups (
     updated_at timestamp without time zone DEFAULT now() NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS calendar_sources (
+
+--
+-- Name: calendar_notes; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS public.calendar_notes (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    date date NOT NULL,
+    content text DEFAULT ''::text NOT NULL,
+    created_by uuid,
+    created_at timestamp without time zone DEFAULT now() NOT NULL,
+    updated_at timestamp without time zone DEFAULT now() NOT NULL
+);
+
+
+--
+-- Name: calendar_sources; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS public.calendar_sources (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     user_id uuid,
     provider character varying(50) NOT NULL,
@@ -112,7 +174,12 @@ CREATE TABLE IF NOT EXISTS calendar_sources (
     updated_at timestamp without time zone DEFAULT now() NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS chore_completions (
+
+--
+-- Name: chore_completions; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS public.chore_completions (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     chore_id uuid NOT NULL,
     completed_by uuid NOT NULL,
@@ -124,7 +191,12 @@ CREATE TABLE IF NOT EXISTS chore_completions (
     notes text
 );
 
-CREATE TABLE IF NOT EXISTS chores (
+
+--
+-- Name: chores; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS public.chores (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     title character varying(255) NOT NULL,
     description text,
@@ -143,7 +215,12 @@ CREATE TABLE IF NOT EXISTS chores (
     updated_at timestamp without time zone DEFAULT now() NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS events (
+
+--
+-- Name: events; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS public.events (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     calendar_source_id uuid,
     external_event_id character varying(255),
@@ -163,7 +240,12 @@ CREATE TABLE IF NOT EXISTS events (
     updated_at timestamp without time zone DEFAULT now() NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS family_messages (
+
+--
+-- Name: family_messages; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS public.family_messages (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     message text NOT NULL,
     author_id uuid NOT NULL,
@@ -174,7 +256,12 @@ CREATE TABLE IF NOT EXISTS family_messages (
     updated_at timestamp without time zone DEFAULT now() NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS goal_achievements (
+
+--
+-- Name: goal_achievements; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS public.goal_achievements (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     goal_id uuid NOT NULL,
     user_id uuid NOT NULL,
@@ -182,7 +269,12 @@ CREATE TABLE IF NOT EXISTS goal_achievements (
     achieved_at timestamp without time zone DEFAULT now() NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS goals (
+
+--
+-- Name: goals; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS public.goals (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     name character varying(255) NOT NULL,
     description text,
@@ -197,7 +289,12 @@ CREATE TABLE IF NOT EXISTS goals (
     updated_at timestamp without time zone DEFAULT now() NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS layouts (
+
+--
+-- Name: layouts; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS public.layouts (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     name character varying(100) NOT NULL,
     is_default boolean DEFAULT false NOT NULL,
@@ -211,7 +308,12 @@ CREATE TABLE IF NOT EXISTS layouts (
     orientation character varying(20) DEFAULT 'landscape'::character varying
 );
 
-CREATE TABLE IF NOT EXISTS maintenance_completions (
+
+--
+-- Name: maintenance_completions; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS public.maintenance_completions (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     reminder_id uuid NOT NULL,
     completed_at timestamp without time zone DEFAULT now() NOT NULL,
@@ -221,7 +323,12 @@ CREATE TABLE IF NOT EXISTS maintenance_completions (
     notes text
 );
 
-CREATE TABLE IF NOT EXISTS maintenance_reminders (
+
+--
+-- Name: maintenance_reminders; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS public.maintenance_reminders (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     title character varying(255) NOT NULL,
     category character varying(50) NOT NULL,
@@ -237,7 +344,12 @@ CREATE TABLE IF NOT EXISTS maintenance_reminders (
     updated_at timestamp without time zone DEFAULT now() NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS meals (
+
+--
+-- Name: meals; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS public.meals (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     name character varying(255) NOT NULL,
     description text,
@@ -260,7 +372,12 @@ CREATE TABLE IF NOT EXISTS meals (
     updated_at timestamp without time zone DEFAULT now() NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS photo_sources (
+
+--
+-- Name: photo_sources; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS public.photo_sources (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     type character varying(20) NOT NULL,
     name character varying(255) NOT NULL,
@@ -275,7 +392,12 @@ CREATE TABLE IF NOT EXISTS photo_sources (
     updated_at timestamp without time zone DEFAULT now() NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS photos (
+
+--
+-- Name: photos; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS public.photos (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     source_id uuid NOT NULL,
     filename character varying(255) NOT NULL,
@@ -293,7 +415,12 @@ CREATE TABLE IF NOT EXISTS photos (
     created_at timestamp without time zone DEFAULT now() NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS recipes (
+
+--
+-- Name: recipes; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS public.recipes (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     name character varying(255) NOT NULL,
     description text,
@@ -318,14 +445,24 @@ CREATE TABLE IF NOT EXISTS recipes (
     updated_at timestamp without time zone DEFAULT now() NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS settings (
+
+--
+-- Name: settings; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS public.settings (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     key character varying(100) NOT NULL,
     value jsonb NOT NULL,
     updated_at timestamp without time zone DEFAULT now() NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS shopping_items (
+
+--
+-- Name: shopping_items; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS public.shopping_items (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     list_id uuid NOT NULL,
     name character varying(255) NOT NULL,
@@ -347,7 +484,12 @@ CREATE TABLE IF NOT EXISTS shopping_items (
     updated_at timestamp without time zone DEFAULT now() NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS shopping_list_sources (
+
+--
+-- Name: shopping_list_sources; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS public.shopping_list_sources (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     user_id uuid NOT NULL,
     provider character varying(50) NOT NULL,
@@ -364,7 +506,12 @@ CREATE TABLE IF NOT EXISTS shopping_list_sources (
     updated_at timestamp without time zone DEFAULT now() NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS shopping_lists (
+
+--
+-- Name: shopping_lists; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS public.shopping_lists (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     name character varying(100) NOT NULL,
     description text,
@@ -379,7 +526,12 @@ CREATE TABLE IF NOT EXISTS shopping_lists (
     visible_categories jsonb
 );
 
-CREATE TABLE IF NOT EXISTS task_lists (
+
+--
+-- Name: task_lists; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS public.task_lists (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     name character varying(255) NOT NULL,
     color character varying(7),
@@ -389,7 +541,12 @@ CREATE TABLE IF NOT EXISTS task_lists (
     updated_at timestamp without time zone DEFAULT now() NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS task_sources (
+
+--
+-- Name: task_sources; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS public.task_sources (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     user_id uuid NOT NULL,
     provider character varying(50) NOT NULL,
@@ -406,7 +563,12 @@ CREATE TABLE IF NOT EXISTS task_sources (
     updated_at timestamp without time zone DEFAULT now() NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS tasks (
+
+--
+-- Name: tasks; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS public.tasks (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     title character varying(255) NOT NULL,
     description text,
@@ -427,7 +589,12 @@ CREATE TABLE IF NOT EXISTS tasks (
     updated_at timestamp without time zone DEFAULT now() NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS users (
+
+--
+-- Name: users; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS public.users (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     name character varying(100) NOT NULL,
     role character varying(20) NOT NULL,
@@ -437,10 +604,16 @@ CREATE TABLE IF NOT EXISTS users (
     avatar_url text,
     preferences jsonb DEFAULT '{}'::jsonb NOT NULL,
     created_at timestamp without time zone DEFAULT now() NOT NULL,
-    updated_at timestamp without time zone DEFAULT now() NOT NULL
+    updated_at timestamp without time zone DEFAULT now() NOT NULL,
+    sort_order integer DEFAULT 0 NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS wish_item_sources (
+
+--
+-- Name: wish_item_sources; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS public.wish_item_sources (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     user_id uuid NOT NULL,
     provider character varying(50) NOT NULL,
@@ -457,7 +630,12 @@ CREATE TABLE IF NOT EXISTS wish_item_sources (
     updated_at timestamp without time zone DEFAULT now() NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS wish_items (
+
+--
+-- Name: wish_items; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS public.wish_items (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     member_id uuid NOT NULL,
     name character varying(255) NOT NULL,
@@ -475,467 +653,1377 @@ CREATE TABLE IF NOT EXISTS wish_items (
     updated_at timestamp without time zone DEFAULT now() NOT NULL
 );
 
-ALTER TABLE ONLY api_credentials
+
+--
+-- Name: api_credentials api_credentials_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.api_credentials
     ADD CONSTRAINT api_credentials_pkey PRIMARY KEY (id);
 
-ALTER TABLE ONLY api_credentials
+
+--
+-- Name: api_credentials api_credentials_service_unique; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.api_credentials
     ADD CONSTRAINT api_credentials_service_unique UNIQUE (service);
 
-ALTER TABLE ONLY api_tokens
+
+--
+-- Name: api_tokens api_tokens_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.api_tokens
     ADD CONSTRAINT api_tokens_pkey PRIMARY KEY (id);
 
-ALTER TABLE ONLY audit_logs
+
+--
+-- Name: audit_logs audit_logs_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.audit_logs
     ADD CONSTRAINT audit_logs_pkey PRIMARY KEY (id);
 
-ALTER TABLE ONLY babysitter_info
+
+--
+-- Name: babysitter_info babysitter_info_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.babysitter_info
     ADD CONSTRAINT babysitter_info_pkey PRIMARY KEY (id);
 
-ALTER TABLE ONLY birthdays
+
+--
+-- Name: birthdays birthdays_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.birthdays
     ADD CONSTRAINT birthdays_pkey PRIMARY KEY (id);
 
-ALTER TABLE ONLY bus_geofence_log
+
+--
+-- Name: bus_geofence_log bus_geofence_log_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.bus_geofence_log
     ADD CONSTRAINT bus_geofence_log_pkey PRIMARY KEY (id);
 
-ALTER TABLE ONLY bus_routes
+
+--
+-- Name: bus_routes bus_routes_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.bus_routes
     ADD CONSTRAINT bus_routes_pkey PRIMARY KEY (id);
 
-ALTER TABLE ONLY calendar_groups
+
+--
+-- Name: calendar_groups calendar_groups_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.calendar_groups
     ADD CONSTRAINT calendar_groups_pkey PRIMARY KEY (id);
 
-ALTER TABLE ONLY calendar_sources
+
+--
+-- Name: calendar_notes calendar_notes_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.calendar_notes
+    ADD CONSTRAINT calendar_notes_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: calendar_sources calendar_sources_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.calendar_sources
     ADD CONSTRAINT calendar_sources_pkey PRIMARY KEY (id);
 
-ALTER TABLE ONLY chore_completions
+
+--
+-- Name: chore_completions chore_completions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.chore_completions
     ADD CONSTRAINT chore_completions_pkey PRIMARY KEY (id);
 
-ALTER TABLE ONLY chores
+
+--
+-- Name: chores chores_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.chores
     ADD CONSTRAINT chores_pkey PRIMARY KEY (id);
 
-ALTER TABLE ONLY events
+
+--
+-- Name: events events_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.events
     ADD CONSTRAINT events_pkey PRIMARY KEY (id);
 
-ALTER TABLE ONLY family_messages
+
+--
+-- Name: family_messages family_messages_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.family_messages
     ADD CONSTRAINT family_messages_pkey PRIMARY KEY (id);
 
-ALTER TABLE ONLY goal_achievements
+
+--
+-- Name: goal_achievements goal_achievements_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.goal_achievements
     ADD CONSTRAINT goal_achievements_pkey PRIMARY KEY (id);
 
-ALTER TABLE ONLY goals
+
+--
+-- Name: goals goals_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.goals
     ADD CONSTRAINT goals_pkey PRIMARY KEY (id);
 
-ALTER TABLE ONLY layouts
+
+--
+-- Name: layouts layouts_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.layouts
     ADD CONSTRAINT layouts_pkey PRIMARY KEY (id);
 
-ALTER TABLE ONLY layouts
+
+--
+-- Name: layouts layouts_slug_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.layouts
     ADD CONSTRAINT layouts_slug_key UNIQUE (slug);
 
-ALTER TABLE ONLY maintenance_completions
+
+--
+-- Name: maintenance_completions maintenance_completions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.maintenance_completions
     ADD CONSTRAINT maintenance_completions_pkey PRIMARY KEY (id);
 
-ALTER TABLE ONLY maintenance_reminders
+
+--
+-- Name: maintenance_reminders maintenance_reminders_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.maintenance_reminders
     ADD CONSTRAINT maintenance_reminders_pkey PRIMARY KEY (id);
 
-ALTER TABLE ONLY meals
+
+--
+-- Name: meals meals_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.meals
     ADD CONSTRAINT meals_pkey PRIMARY KEY (id);
 
-ALTER TABLE ONLY photo_sources
+
+--
+-- Name: photo_sources photo_sources_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.photo_sources
     ADD CONSTRAINT photo_sources_pkey PRIMARY KEY (id);
 
-ALTER TABLE ONLY photos
+
+--
+-- Name: photos photos_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.photos
     ADD CONSTRAINT photos_pkey PRIMARY KEY (id);
 
-ALTER TABLE ONLY recipes
+
+--
+-- Name: recipes recipes_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.recipes
     ADD CONSTRAINT recipes_pkey PRIMARY KEY (id);
 
-ALTER TABLE ONLY settings
+
+--
+-- Name: settings settings_key_unique; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.settings
     ADD CONSTRAINT settings_key_unique UNIQUE (key);
 
-ALTER TABLE ONLY settings
+
+--
+-- Name: settings settings_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.settings
     ADD CONSTRAINT settings_pkey PRIMARY KEY (id);
 
-ALTER TABLE ONLY shopping_items
+
+--
+-- Name: shopping_items shopping_items_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.shopping_items
     ADD CONSTRAINT shopping_items_pkey PRIMARY KEY (id);
 
-ALTER TABLE ONLY shopping_list_sources
+
+--
+-- Name: shopping_list_sources shopping_list_sources_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.shopping_list_sources
     ADD CONSTRAINT shopping_list_sources_pkey PRIMARY KEY (id);
 
-ALTER TABLE ONLY shopping_lists
+
+--
+-- Name: shopping_lists shopping_lists_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.shopping_lists
     ADD CONSTRAINT shopping_lists_pkey PRIMARY KEY (id);
 
-ALTER TABLE ONLY task_lists
+
+--
+-- Name: task_lists task_lists_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.task_lists
     ADD CONSTRAINT task_lists_pkey PRIMARY KEY (id);
 
-ALTER TABLE ONLY task_sources
+
+--
+-- Name: task_sources task_sources_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.task_sources
     ADD CONSTRAINT task_sources_pkey PRIMARY KEY (id);
 
-ALTER TABLE ONLY tasks
+
+--
+-- Name: tasks tasks_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.tasks
     ADD CONSTRAINT tasks_pkey PRIMARY KEY (id);
 
-ALTER TABLE ONLY users
+
+--
+-- Name: users users_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.users
     ADD CONSTRAINT users_pkey PRIMARY KEY (id);
 
-ALTER TABLE ONLY wish_item_sources
+
+--
+-- Name: wish_item_sources wish_item_sources_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.wish_item_sources
     ADD CONSTRAINT wish_item_sources_pkey PRIMARY KEY (id);
 
-ALTER TABLE ONLY wish_items
+
+--
+-- Name: wish_items wish_items_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.wish_items
     ADD CONSTRAINT wish_items_pkey PRIMARY KEY (id);
 
-ALTER TABLE ONLY api_tokens
-    ADD CONSTRAINT api_tokens_created_by_fkey FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE;
 
-ALTER TABLE ONLY audit_logs
-    ADD CONSTRAINT audit_logs_user_id_users_id_fk FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL;
+--
+-- Name: api_tokens_created_by_idx; Type: INDEX; Schema: public; Owner: -
+--
 
-ALTER TABLE ONLY birthdays
-    ADD CONSTRAINT birthdays_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS api_tokens_created_by_idx ON public.api_tokens USING btree (created_by);
 
-ALTER TABLE ONLY birthdays
-    ADD CONSTRAINT birthdays_user_id_users_id_fk FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL;
 
-ALTER TABLE ONLY bus_geofence_log
-    ADD CONSTRAINT bus_geofence_log_route_id_fkey FOREIGN KEY (route_id) REFERENCES bus_routes(id) ON DELETE CASCADE;
+--
+-- Name: api_tokens_token_hash_idx; Type: INDEX; Schema: public; Owner: -
+--
 
-ALTER TABLE ONLY bus_routes
-    ADD CONSTRAINT bus_routes_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS api_tokens_token_hash_idx ON public.api_tokens USING btree (token_hash);
 
-ALTER TABLE ONLY calendar_groups
-    ADD CONSTRAINT calendar_groups_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
 
-ALTER TABLE ONLY calendar_groups
-    ADD CONSTRAINT calendar_groups_user_id_users_id_fk FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+--
+-- Name: audit_logs_created_at_idx; Type: INDEX; Schema: public; Owner: -
+--
 
-ALTER TABLE ONLY calendar_sources
-    ADD CONSTRAINT calendar_sources_group_id_calendar_groups_id_fk FOREIGN KEY (group_id) REFERENCES calendar_groups(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS audit_logs_created_at_idx ON public.audit_logs USING btree (created_at);
 
-ALTER TABLE ONLY calendar_sources
-    ADD CONSTRAINT calendar_sources_group_id_fkey FOREIGN KEY (group_id) REFERENCES calendar_groups(id) ON DELETE SET NULL;
 
-ALTER TABLE ONLY calendar_sources
-    ADD CONSTRAINT calendar_sources_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+--
+-- Name: audit_logs_entity_type_idx; Type: INDEX; Schema: public; Owner: -
+--
 
-ALTER TABLE ONLY calendar_sources
-    ADD CONSTRAINT calendar_sources_user_id_users_id_fk FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+CREATE INDEX IF NOT EXISTS audit_logs_entity_type_idx ON public.audit_logs USING btree (entity_type);
 
-ALTER TABLE ONLY chore_completions
-    ADD CONSTRAINT chore_completions_approved_by_fkey FOREIGN KEY (approved_by) REFERENCES users(id) ON DELETE SET NULL;
 
-ALTER TABLE ONLY chore_completions
-    ADD CONSTRAINT chore_completions_approved_by_users_id_fk FOREIGN KEY (approved_by) REFERENCES users(id) ON DELETE SET NULL;
+--
+-- Name: audit_logs_user_id_idx; Type: INDEX; Schema: public; Owner: -
+--
 
-ALTER TABLE ONLY chore_completions
-    ADD CONSTRAINT chore_completions_chore_id_chores_id_fk FOREIGN KEY (chore_id) REFERENCES chores(id) ON DELETE CASCADE;
+CREATE INDEX IF NOT EXISTS audit_logs_user_id_idx ON public.audit_logs USING btree (user_id);
 
-ALTER TABLE ONLY chore_completions
-    ADD CONSTRAINT chore_completions_chore_id_fkey FOREIGN KEY (chore_id) REFERENCES chores(id) ON DELETE CASCADE;
 
-ALTER TABLE ONLY chore_completions
-    ADD CONSTRAINT chore_completions_completed_by_fkey FOREIGN KEY (completed_by) REFERENCES users(id) ON DELETE CASCADE;
+--
+-- Name: babysitter_info_section_idx; Type: INDEX; Schema: public; Owner: -
+--
 
-ALTER TABLE ONLY chore_completions
-    ADD CONSTRAINT chore_completions_completed_by_users_id_fk FOREIGN KEY (completed_by) REFERENCES users(id) ON DELETE CASCADE;
+CREATE INDEX IF NOT EXISTS babysitter_info_section_idx ON public.babysitter_info USING btree (section);
 
-ALTER TABLE ONLY chores
-    ADD CONSTRAINT chores_assigned_to_fkey FOREIGN KEY (assigned_to) REFERENCES users(id) ON DELETE SET NULL;
 
-ALTER TABLE ONLY chores
-    ADD CONSTRAINT chores_assigned_to_users_id_fk FOREIGN KEY (assigned_to) REFERENCES users(id) ON DELETE SET NULL;
+--
+-- Name: babysitter_info_sort_order_idx; Type: INDEX; Schema: public; Owner: -
+--
 
-ALTER TABLE ONLY chores
-    ADD CONSTRAINT chores_created_by_fkey FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS babysitter_info_sort_order_idx ON public.babysitter_info USING btree (sort_order);
 
-ALTER TABLE ONLY chores
-    ADD CONSTRAINT chores_created_by_users_id_fk FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL;
 
-ALTER TABLE ONLY events
-    ADD CONSTRAINT events_calendar_source_id_calendar_sources_id_fk FOREIGN KEY (calendar_source_id) REFERENCES calendar_sources(id) ON DELETE CASCADE;
+--
+-- Name: birthdays_name_event_type_idx; Type: INDEX; Schema: public; Owner: -
+--
 
-ALTER TABLE ONLY events
-    ADD CONSTRAINT events_calendar_source_id_fkey FOREIGN KEY (calendar_source_id) REFERENCES calendar_sources(id) ON DELETE CASCADE;
+CREATE UNIQUE INDEX IF NOT EXISTS birthdays_name_event_type_idx ON public.birthdays USING btree (name, event_type);
 
-ALTER TABLE ONLY events
-    ADD CONSTRAINT events_created_by_fkey FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL;
 
-ALTER TABLE ONLY events
-    ADD CONSTRAINT events_created_by_users_id_fk FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL;
+--
+-- Name: bus_geofence_log_event_time_idx; Type: INDEX; Schema: public; Owner: -
+--
 
-ALTER TABLE ONLY family_messages
-    ADD CONSTRAINT family_messages_author_id_fkey FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE CASCADE;
+CREATE INDEX IF NOT EXISTS bus_geofence_log_event_time_idx ON public.bus_geofence_log USING btree (event_time);
 
-ALTER TABLE ONLY family_messages
-    ADD CONSTRAINT family_messages_author_id_users_id_fk FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE CASCADE;
 
-ALTER TABLE ONLY goal_achievements
-    ADD CONSTRAINT goal_achievements_goal_id_fkey FOREIGN KEY (goal_id) REFERENCES goals(id) ON DELETE CASCADE;
+--
+-- Name: bus_geofence_log_gmail_message_id_idx; Type: INDEX; Schema: public; Owner: -
+--
 
-ALTER TABLE ONLY goal_achievements
-    ADD CONSTRAINT goal_achievements_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+CREATE UNIQUE INDEX IF NOT EXISTS bus_geofence_log_gmail_message_id_idx ON public.bus_geofence_log USING btree (gmail_message_id);
 
-ALTER TABLE ONLY layouts
-    ADD CONSTRAINT layouts_created_by_fkey FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL;
 
-ALTER TABLE ONLY layouts
-    ADD CONSTRAINT layouts_created_by_users_id_fk FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL;
+--
+-- Name: bus_geofence_log_route_id_idx; Type: INDEX; Schema: public; Owner: -
+--
 
-ALTER TABLE ONLY maintenance_completions
-    ADD CONSTRAINT maintenance_completions_completed_by_fkey FOREIGN KEY (completed_by) REFERENCES users(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS bus_geofence_log_route_id_idx ON public.bus_geofence_log USING btree (route_id);
 
-ALTER TABLE ONLY maintenance_completions
-    ADD CONSTRAINT maintenance_completions_completed_by_users_id_fk FOREIGN KEY (completed_by) REFERENCES users(id) ON DELETE SET NULL;
 
-ALTER TABLE ONLY maintenance_completions
-    ADD CONSTRAINT maintenance_completions_reminder_id_fkey FOREIGN KEY (reminder_id) REFERENCES maintenance_reminders(id) ON DELETE CASCADE;
+--
+-- Name: bus_geofence_log_trip_date_idx; Type: INDEX; Schema: public; Owner: -
+--
 
-ALTER TABLE ONLY maintenance_completions
-    ADD CONSTRAINT maintenance_completions_reminder_id_maintenance_reminders_id_fk FOREIGN KEY (reminder_id) REFERENCES maintenance_reminders(id) ON DELETE CASCADE;
+CREATE INDEX IF NOT EXISTS bus_geofence_log_trip_date_idx ON public.bus_geofence_log USING btree (trip_date);
 
-ALTER TABLE ONLY maintenance_reminders
-    ADD CONSTRAINT maintenance_reminders_assigned_to_fkey FOREIGN KEY (assigned_to) REFERENCES users(id) ON DELETE SET NULL;
 
-ALTER TABLE ONLY maintenance_reminders
-    ADD CONSTRAINT maintenance_reminders_assigned_to_users_id_fk FOREIGN KEY (assigned_to) REFERENCES users(id) ON DELETE SET NULL;
+--
+-- Name: bus_routes_enabled_idx; Type: INDEX; Schema: public; Owner: -
+--
 
-ALTER TABLE ONLY maintenance_reminders
-    ADD CONSTRAINT maintenance_reminders_created_by_fkey FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS bus_routes_enabled_idx ON public.bus_routes USING btree (enabled);
 
-ALTER TABLE ONLY maintenance_reminders
-    ADD CONSTRAINT maintenance_reminders_created_by_users_id_fk FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL;
 
-ALTER TABLE ONLY meals
-    ADD CONSTRAINT meals_cooked_by_fkey FOREIGN KEY (cooked_by) REFERENCES users(id) ON DELETE SET NULL;
+--
+-- Name: bus_routes_trip_direction_idx; Type: INDEX; Schema: public; Owner: -
+--
 
-ALTER TABLE ONLY meals
-    ADD CONSTRAINT meals_cooked_by_users_id_fk FOREIGN KEY (cooked_by) REFERENCES users(id) ON DELETE SET NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS bus_routes_trip_direction_idx ON public.bus_routes USING btree (trip_id, direction);
 
-ALTER TABLE ONLY meals
-    ADD CONSTRAINT meals_created_by_fkey FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL;
 
-ALTER TABLE ONLY meals
-    ADD CONSTRAINT meals_created_by_users_id_fk FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL;
+--
+-- Name: calendar_groups_type_idx; Type: INDEX; Schema: public; Owner: -
+--
 
-ALTER TABLE ONLY meals
-    ADD CONSTRAINT meals_recipe_id_fkey FOREIGN KEY (recipe_id) REFERENCES recipes(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS calendar_groups_type_idx ON public.calendar_groups USING btree (type);
 
-ALTER TABLE ONLY photos
-    ADD CONSTRAINT photos_source_id_fkey FOREIGN KEY (source_id) REFERENCES photo_sources(id) ON DELETE CASCADE;
 
-ALTER TABLE ONLY photos
-    ADD CONSTRAINT photos_source_id_photo_sources_id_fk FOREIGN KEY (source_id) REFERENCES photo_sources(id) ON DELETE CASCADE;
+--
+-- Name: calendar_notes_date_idx; Type: INDEX; Schema: public; Owner: -
+--
 
-ALTER TABLE ONLY recipes
-    ADD CONSTRAINT recipes_created_by_fkey FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS calendar_notes_date_idx ON public.calendar_notes USING btree (date);
 
-ALTER TABLE ONLY shopping_items
-    ADD CONSTRAINT shopping_items_added_by_fkey FOREIGN KEY (added_by) REFERENCES users(id) ON DELETE SET NULL;
 
-ALTER TABLE ONLY shopping_items
-    ADD CONSTRAINT shopping_items_added_by_users_id_fk FOREIGN KEY (added_by) REFERENCES users(id) ON DELETE SET NULL;
+--
+-- Name: calendar_sources_enabled_idx; Type: INDEX; Schema: public; Owner: -
+--
 
-ALTER TABLE ONLY shopping_items
-    ADD CONSTRAINT shopping_items_list_id_fkey FOREIGN KEY (list_id) REFERENCES shopping_lists(id) ON DELETE CASCADE;
+CREATE INDEX IF NOT EXISTS calendar_sources_enabled_idx ON public.calendar_sources USING btree (enabled);
 
-ALTER TABLE ONLY shopping_items
-    ADD CONSTRAINT shopping_items_list_id_shopping_lists_id_fk FOREIGN KEY (list_id) REFERENCES shopping_lists(id) ON DELETE CASCADE;
 
-ALTER TABLE ONLY shopping_items
-    ADD CONSTRAINT shopping_items_shopping_list_source_id_fkey FOREIGN KEY (shopping_list_source_id) REFERENCES shopping_list_sources(id) ON DELETE SET NULL;
+--
+-- Name: calendar_sources_user_id_idx; Type: INDEX; Schema: public; Owner: -
+--
 
-ALTER TABLE ONLY shopping_list_sources
-    ADD CONSTRAINT shopping_list_sources_shopping_list_id_fkey FOREIGN KEY (shopping_list_id) REFERENCES shopping_lists(id) ON DELETE CASCADE;
+CREATE INDEX IF NOT EXISTS calendar_sources_user_id_idx ON public.calendar_sources USING btree (user_id);
 
-ALTER TABLE ONLY shopping_list_sources
-    ADD CONSTRAINT shopping_list_sources_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
 
-ALTER TABLE ONLY shopping_lists
-    ADD CONSTRAINT shopping_lists_assigned_to_fkey FOREIGN KEY (assigned_to) REFERENCES users(id) ON DELETE SET NULL;
+--
+-- Name: chore_completions_approved_by_idx; Type: INDEX; Schema: public; Owner: -
+--
 
-ALTER TABLE ONLY shopping_lists
-    ADD CONSTRAINT shopping_lists_assigned_to_users_id_fk FOREIGN KEY (assigned_to) REFERENCES users(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS chore_completions_approved_by_idx ON public.chore_completions USING btree (approved_by);
 
-ALTER TABLE ONLY shopping_lists
-    ADD CONSTRAINT shopping_lists_created_by_fkey FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL;
 
-ALTER TABLE ONLY shopping_lists
-    ADD CONSTRAINT shopping_lists_created_by_users_id_fk FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL;
+--
+-- Name: chore_completions_chore_approved_by_idx; Type: INDEX; Schema: public; Owner: -
+--
 
-ALTER TABLE ONLY task_lists
-    ADD CONSTRAINT task_lists_created_by_fkey FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS chore_completions_chore_approved_by_idx ON public.chore_completions USING btree (chore_id, approved_by);
 
-ALTER TABLE ONLY task_sources
-    ADD CONSTRAINT task_sources_task_list_id_fkey FOREIGN KEY (task_list_id) REFERENCES task_lists(id) ON DELETE CASCADE;
 
-ALTER TABLE ONLY task_sources
-    ADD CONSTRAINT task_sources_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+--
+-- Name: chore_completions_chore_id_idx; Type: INDEX; Schema: public; Owner: -
+--
 
-ALTER TABLE ONLY tasks
-    ADD CONSTRAINT tasks_assigned_to_fkey FOREIGN KEY (assigned_to) REFERENCES users(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS chore_completions_chore_id_idx ON public.chore_completions USING btree (chore_id);
 
-ALTER TABLE ONLY tasks
-    ADD CONSTRAINT tasks_assigned_to_users_id_fk FOREIGN KEY (assigned_to) REFERENCES users(id) ON DELETE SET NULL;
 
-ALTER TABLE ONLY tasks
-    ADD CONSTRAINT tasks_completed_by_fkey FOREIGN KEY (completed_by) REFERENCES users(id) ON DELETE SET NULL;
+--
+-- Name: chore_completions_completed_at_idx; Type: INDEX; Schema: public; Owner: -
+--
 
-ALTER TABLE ONLY tasks
-    ADD CONSTRAINT tasks_completed_by_users_id_fk FOREIGN KEY (completed_by) REFERENCES users(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS chore_completions_completed_at_idx ON public.chore_completions USING btree (completed_at);
 
-ALTER TABLE ONLY tasks
-    ADD CONSTRAINT tasks_created_by_fkey FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL;
 
-ALTER TABLE ONLY tasks
-    ADD CONSTRAINT tasks_created_by_users_id_fk FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL;
+--
+-- Name: chores_assigned_to_idx; Type: INDEX; Schema: public; Owner: -
+--
 
-ALTER TABLE ONLY tasks
-    ADD CONSTRAINT tasks_list_id_fkey FOREIGN KEY (list_id) REFERENCES task_lists(id) ON DELETE CASCADE;
+CREATE INDEX IF NOT EXISTS chores_assigned_to_idx ON public.chores USING btree (assigned_to);
 
-ALTER TABLE ONLY tasks
-    ADD CONSTRAINT tasks_task_source_id_fkey FOREIGN KEY (task_source_id) REFERENCES task_sources(id) ON DELETE SET NULL;
 
-ALTER TABLE ONLY wish_item_sources
-    ADD CONSTRAINT wish_item_sources_member_id_fkey FOREIGN KEY (member_id) REFERENCES users(id) ON DELETE CASCADE;
+--
+-- Name: chores_next_due_idx; Type: INDEX; Schema: public; Owner: -
+--
 
-ALTER TABLE ONLY wish_item_sources
-    ADD CONSTRAINT wish_item_sources_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+CREATE INDEX IF NOT EXISTS chores_next_due_idx ON public.chores USING btree (next_due);
 
-ALTER TABLE ONLY wish_items
-    ADD CONSTRAINT wish_items_added_by_fkey FOREIGN KEY (added_by) REFERENCES users(id) ON DELETE SET NULL;
 
-ALTER TABLE ONLY wish_items
-    ADD CONSTRAINT wish_items_claimed_by_fkey FOREIGN KEY (claimed_by) REFERENCES users(id) ON DELETE SET NULL;
+--
+-- Name: events_calendar_source_idx; Type: INDEX; Schema: public; Owner: -
+--
 
-ALTER TABLE ONLY wish_items
-    ADD CONSTRAINT wish_items_member_id_fkey FOREIGN KEY (member_id) REFERENCES users(id) ON DELETE CASCADE;
+CREATE INDEX IF NOT EXISTS events_calendar_source_idx ON public.events USING btree (calendar_source_id);
 
-ALTER TABLE ONLY wish_items
-    ADD CONSTRAINT wish_items_wish_item_source_id_fkey FOREIGN KEY (wish_item_source_id) REFERENCES wish_item_sources(id) ON DELETE SET NULL;
 
-CREATE INDEX IF NOT EXISTS api_tokens_created_by_idx ON api_tokens USING btree (created_by);
+--
+-- Name: events_end_time_idx; Type: INDEX; Schema: public; Owner: -
+--
 
-CREATE UNIQUE INDEX IF NOT EXISTS api_tokens_token_hash_idx ON api_tokens USING btree (token_hash);
+CREATE INDEX IF NOT EXISTS events_end_time_idx ON public.events USING btree (end_time);
 
-CREATE INDEX IF NOT EXISTS audit_logs_created_at_idx ON audit_logs USING btree (created_at);
 
-CREATE INDEX IF NOT EXISTS audit_logs_entity_type_idx ON audit_logs USING btree (entity_type);
+--
+-- Name: events_source_external_unique; Type: INDEX; Schema: public; Owner: -
+--
 
-CREATE INDEX IF NOT EXISTS audit_logs_user_id_idx ON audit_logs USING btree (user_id);
+CREATE UNIQUE INDEX IF NOT EXISTS events_source_external_unique ON public.events USING btree (calendar_source_id, external_event_id);
 
-CREATE INDEX IF NOT EXISTS babysitter_info_section_idx ON babysitter_info USING btree (section);
 
-CREATE INDEX IF NOT EXISTS babysitter_info_sort_order_idx ON babysitter_info USING btree (sort_order);
+--
+-- Name: events_start_time_idx; Type: INDEX; Schema: public; Owner: -
+--
 
-CREATE UNIQUE INDEX IF NOT EXISTS birthdays_name_event_type_idx ON birthdays USING btree (name, event_type);
+CREATE INDEX IF NOT EXISTS events_start_time_idx ON public.events USING btree (start_time);
 
-CREATE INDEX IF NOT EXISTS bus_geofence_log_event_time_idx ON bus_geofence_log USING btree (event_time);
 
-CREATE UNIQUE INDEX IF NOT EXISTS bus_geofence_log_gmail_message_id_idx ON bus_geofence_log USING btree (gmail_message_id);
+--
+-- Name: family_messages_created_at_idx; Type: INDEX; Schema: public; Owner: -
+--
 
-CREATE INDEX IF NOT EXISTS bus_geofence_log_route_id_idx ON bus_geofence_log USING btree (route_id);
+CREATE INDEX IF NOT EXISTS family_messages_created_at_idx ON public.family_messages USING btree (created_at);
 
-CREATE INDEX IF NOT EXISTS bus_geofence_log_trip_date_idx ON bus_geofence_log USING btree (trip_date);
 
-CREATE INDEX IF NOT EXISTS bus_routes_enabled_idx ON bus_routes USING btree (enabled);
+--
+-- Name: family_messages_expires_at_idx; Type: INDEX; Schema: public; Owner: -
+--
 
-CREATE UNIQUE INDEX IF NOT EXISTS bus_routes_trip_direction_idx ON bus_routes USING btree (trip_id, direction);
+CREATE INDEX IF NOT EXISTS family_messages_expires_at_idx ON public.family_messages USING btree (expires_at);
 
-CREATE INDEX IF NOT EXISTS calendar_groups_type_idx ON calendar_groups USING btree (type);
 
-CREATE INDEX IF NOT EXISTS calendar_sources_enabled_idx ON calendar_sources USING btree (enabled);
+--
+-- Name: goal_achievements_goal_id_idx; Type: INDEX; Schema: public; Owner: -
+--
 
-CREATE INDEX IF NOT EXISTS calendar_sources_user_id_idx ON calendar_sources USING btree (user_id);
+CREATE INDEX IF NOT EXISTS goal_achievements_goal_id_idx ON public.goal_achievements USING btree (goal_id);
 
-CREATE INDEX IF NOT EXISTS chore_completions_approved_by_idx ON chore_completions USING btree (approved_by);
 
-CREATE INDEX IF NOT EXISTS chore_completions_chore_approved_by_idx ON chore_completions USING btree (chore_id, approved_by);
+--
+-- Name: goal_achievements_goal_user_period_idx; Type: INDEX; Schema: public; Owner: -
+--
 
-CREATE INDEX IF NOT EXISTS chore_completions_chore_id_idx ON chore_completions USING btree (chore_id);
+CREATE UNIQUE INDEX IF NOT EXISTS goal_achievements_goal_user_period_idx ON public.goal_achievements USING btree (goal_id, user_id, period_start);
 
-CREATE INDEX IF NOT EXISTS chore_completions_completed_at_idx ON chore_completions USING btree (completed_at);
 
-CREATE INDEX IF NOT EXISTS chores_assigned_to_idx ON chores USING btree (assigned_to);
+--
+-- Name: goal_achievements_user_id_idx; Type: INDEX; Schema: public; Owner: -
+--
 
-CREATE INDEX IF NOT EXISTS chores_next_due_idx ON chores USING btree (next_due);
+CREATE INDEX IF NOT EXISTS goal_achievements_user_id_idx ON public.goal_achievements USING btree (user_id);
 
-CREATE INDEX IF NOT EXISTS events_calendar_source_idx ON events USING btree (calendar_source_id);
 
-CREATE INDEX IF NOT EXISTS events_end_time_idx ON events USING btree (end_time);
+--
+-- Name: goals_active_idx; Type: INDEX; Schema: public; Owner: -
+--
 
-CREATE UNIQUE INDEX IF NOT EXISTS events_source_external_unique ON events USING btree (calendar_source_id, external_event_id);
+CREATE INDEX IF NOT EXISTS goals_active_idx ON public.goals USING btree (active);
 
-CREATE INDEX IF NOT EXISTS events_start_time_idx ON events USING btree (start_time);
 
-CREATE INDEX IF NOT EXISTS family_messages_created_at_idx ON family_messages USING btree (created_at);
+--
+-- Name: goals_active_priority_idx; Type: INDEX; Schema: public; Owner: -
+--
 
-CREATE INDEX IF NOT EXISTS family_messages_expires_at_idx ON family_messages USING btree (expires_at);
+CREATE INDEX IF NOT EXISTS goals_active_priority_idx ON public.goals USING btree (active, priority);
 
-CREATE INDEX IF NOT EXISTS goal_achievements_goal_id_idx ON goal_achievements USING btree (goal_id);
 
-CREATE UNIQUE INDEX IF NOT EXISTS goal_achievements_goal_user_period_idx ON goal_achievements USING btree (goal_id, user_id, period_start);
+--
+-- Name: maintenance_reminders_next_due_idx; Type: INDEX; Schema: public; Owner: -
+--
 
-CREATE INDEX IF NOT EXISTS goal_achievements_user_id_idx ON goal_achievements USING btree (user_id);
+CREATE INDEX IF NOT EXISTS maintenance_reminders_next_due_idx ON public.maintenance_reminders USING btree (next_due);
 
-CREATE INDEX IF NOT EXISTS goals_active_idx ON goals USING btree (active);
 
-CREATE INDEX IF NOT EXISTS goals_active_priority_idx ON goals USING btree (active, priority);
+--
+-- Name: meals_day_of_week_idx; Type: INDEX; Schema: public; Owner: -
+--
 
-CREATE INDEX IF NOT EXISTS maintenance_reminders_next_due_idx ON maintenance_reminders USING btree (next_due);
+CREATE INDEX IF NOT EXISTS meals_day_of_week_idx ON public.meals USING btree (day_of_week);
 
-CREATE INDEX IF NOT EXISTS meals_day_of_week_idx ON meals USING btree (day_of_week);
 
-CREATE INDEX IF NOT EXISTS meals_week_of_idx ON meals USING btree (week_of);
+--
+-- Name: meals_week_of_idx; Type: INDEX; Schema: public; Owner: -
+--
 
-CREATE INDEX IF NOT EXISTS photos_favorite_idx ON photos USING btree (favorite);
+CREATE INDEX IF NOT EXISTS meals_week_of_idx ON public.meals USING btree (week_of);
 
-CREATE INDEX IF NOT EXISTS photos_source_id_idx ON photos USING btree (source_id);
 
-CREATE INDEX IF NOT EXISTS photos_taken_at_idx ON photos USING btree (taken_at);
+--
+-- Name: photos_favorite_idx; Type: INDEX; Schema: public; Owner: -
+--
 
-CREATE INDEX IF NOT EXISTS photos_usage_idx ON photos USING btree (usage);
+CREATE INDEX IF NOT EXISTS photos_favorite_idx ON public.photos USING btree (favorite);
 
-CREATE INDEX IF NOT EXISTS recipes_favorite_idx ON recipes USING btree (is_favorite);
 
-CREATE INDEX IF NOT EXISTS recipes_name_idx ON recipes USING btree (name);
+--
+-- Name: photos_source_id_idx; Type: INDEX; Schema: public; Owner: -
+--
 
-CREATE INDEX IF NOT EXISTS recipes_source_type_idx ON recipes USING btree (source_type);
+CREATE INDEX IF NOT EXISTS photos_source_id_idx ON public.photos USING btree (source_id);
 
-CREATE INDEX IF NOT EXISTS shopping_items_category_idx ON shopping_items USING btree (category);
 
-CREATE INDEX IF NOT EXISTS shopping_items_checked_idx ON shopping_items USING btree (checked);
+--
+-- Name: photos_taken_at_idx; Type: INDEX; Schema: public; Owner: -
+--
 
-CREATE INDEX IF NOT EXISTS shopping_items_external_id_idx ON shopping_items USING btree (external_id);
+CREATE INDEX IF NOT EXISTS photos_taken_at_idx ON public.photos USING btree (taken_at);
 
-CREATE INDEX IF NOT EXISTS shopping_items_list_id_idx ON shopping_items USING btree (list_id);
 
-CREATE INDEX IF NOT EXISTS shopping_items_source_idx ON shopping_items USING btree (shopping_list_source_id);
+--
+-- Name: photos_usage_idx; Type: INDEX; Schema: public; Owner: -
+--
 
-CREATE INDEX IF NOT EXISTS shopping_list_sources_shopping_list_idx ON shopping_list_sources USING btree (shopping_list_id);
+CREATE INDEX IF NOT EXISTS photos_usage_idx ON public.photos USING btree (usage);
 
-CREATE INDEX IF NOT EXISTS shopping_list_sources_user_provider_idx ON shopping_list_sources USING btree (user_id, provider);
 
-CREATE INDEX IF NOT EXISTS task_sources_task_list_idx ON task_sources USING btree (task_list_id);
+--
+-- Name: recipes_favorite_idx; Type: INDEX; Schema: public; Owner: -
+--
 
-CREATE INDEX IF NOT EXISTS task_sources_user_provider_idx ON task_sources USING btree (user_id, provider);
+CREATE INDEX IF NOT EXISTS recipes_favorite_idx ON public.recipes USING btree (is_favorite);
 
-CREATE INDEX IF NOT EXISTS tasks_assigned_to_idx ON tasks USING btree (assigned_to);
 
-CREATE INDEX IF NOT EXISTS tasks_completed_idx ON tasks USING btree (completed);
+--
+-- Name: recipes_name_idx; Type: INDEX; Schema: public; Owner: -
+--
 
-CREATE INDEX IF NOT EXISTS tasks_due_date_idx ON tasks USING btree (due_date);
+CREATE INDEX IF NOT EXISTS recipes_name_idx ON public.recipes USING btree (name);
 
-CREATE INDEX IF NOT EXISTS tasks_external_id_idx ON tasks USING btree (external_id);
 
-CREATE INDEX IF NOT EXISTS tasks_list_id_idx ON tasks USING btree (list_id);
+--
+-- Name: recipes_source_type_idx; Type: INDEX; Schema: public; Owner: -
+--
 
-CREATE INDEX IF NOT EXISTS tasks_task_source_idx ON tasks USING btree (task_source_id);
+CREATE INDEX IF NOT EXISTS recipes_source_type_idx ON public.recipes USING btree (source_type);
 
-CREATE INDEX IF NOT EXISTS users_email_idx ON users USING btree (email);
 
-CREATE INDEX IF NOT EXISTS wish_item_sources_member_idx ON wish_item_sources USING btree (member_id);
+--
+-- Name: shopping_items_category_idx; Type: INDEX; Schema: public; Owner: -
+--
 
-CREATE INDEX IF NOT EXISTS wish_item_sources_user_provider_idx ON wish_item_sources USING btree (user_id, provider);
+CREATE INDEX IF NOT EXISTS shopping_items_category_idx ON public.shopping_items USING btree (category);
 
-CREATE INDEX IF NOT EXISTS wish_items_claimed_idx ON wish_items USING btree (claimed);
 
-CREATE INDEX IF NOT EXISTS wish_items_external_id_idx ON wish_items USING btree (external_id);
+--
+-- Name: shopping_items_checked_idx; Type: INDEX; Schema: public; Owner: -
+--
 
-CREATE INDEX IF NOT EXISTS wish_items_member_id_idx ON wish_items USING btree (member_id);
+CREATE INDEX IF NOT EXISTS shopping_items_checked_idx ON public.shopping_items USING btree (checked);
 
-CREATE INDEX IF NOT EXISTS wish_items_source_idx ON wish_items USING btree (wish_item_source_id);
+
+--
+-- Name: shopping_items_external_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS shopping_items_external_id_idx ON public.shopping_items USING btree (external_id);
+
+
+--
+-- Name: shopping_items_list_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS shopping_items_list_id_idx ON public.shopping_items USING btree (list_id);
+
+
+--
+-- Name: shopping_items_source_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS shopping_items_source_idx ON public.shopping_items USING btree (shopping_list_source_id);
+
+
+--
+-- Name: shopping_list_sources_shopping_list_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS shopping_list_sources_shopping_list_idx ON public.shopping_list_sources USING btree (shopping_list_id);
+
+
+--
+-- Name: shopping_list_sources_user_provider_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS shopping_list_sources_user_provider_idx ON public.shopping_list_sources USING btree (user_id, provider);
+
+
+--
+-- Name: task_sources_task_list_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS task_sources_task_list_idx ON public.task_sources USING btree (task_list_id);
+
+
+--
+-- Name: task_sources_user_provider_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS task_sources_user_provider_idx ON public.task_sources USING btree (user_id, provider);
+
+
+--
+-- Name: tasks_assigned_to_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS tasks_assigned_to_idx ON public.tasks USING btree (assigned_to);
+
+
+--
+-- Name: tasks_completed_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS tasks_completed_idx ON public.tasks USING btree (completed);
+
+
+--
+-- Name: tasks_due_date_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS tasks_due_date_idx ON public.tasks USING btree (due_date);
+
+
+--
+-- Name: tasks_external_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS tasks_external_id_idx ON public.tasks USING btree (external_id);
+
+
+--
+-- Name: tasks_list_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS tasks_list_id_idx ON public.tasks USING btree (list_id);
+
+
+--
+-- Name: tasks_task_source_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS tasks_task_source_idx ON public.tasks USING btree (task_source_id);
+
+
+--
+-- Name: users_email_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS users_email_idx ON public.users USING btree (email);
+
+
+--
+-- Name: wish_item_sources_member_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS wish_item_sources_member_idx ON public.wish_item_sources USING btree (member_id);
+
+
+--
+-- Name: wish_item_sources_user_provider_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS wish_item_sources_user_provider_idx ON public.wish_item_sources USING btree (user_id, provider);
+
+
+--
+-- Name: wish_items_claimed_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS wish_items_claimed_idx ON public.wish_items USING btree (claimed);
+
+
+--
+-- Name: wish_items_external_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS wish_items_external_id_idx ON public.wish_items USING btree (external_id);
+
+
+--
+-- Name: wish_items_member_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS wish_items_member_id_idx ON public.wish_items USING btree (member_id);
+
+
+--
+-- Name: wish_items_source_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS wish_items_source_idx ON public.wish_items USING btree (wish_item_source_id);
+
+
+--
+-- Name: api_tokens api_tokens_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.api_tokens
+    ADD CONSTRAINT api_tokens_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: audit_logs audit_logs_user_id_users_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.audit_logs
+    ADD CONSTRAINT audit_logs_user_id_users_id_fk FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: birthdays birthdays_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.birthdays
+    ADD CONSTRAINT birthdays_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: birthdays birthdays_user_id_users_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.birthdays
+    ADD CONSTRAINT birthdays_user_id_users_id_fk FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: bus_geofence_log bus_geofence_log_route_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.bus_geofence_log
+    ADD CONSTRAINT bus_geofence_log_route_id_fkey FOREIGN KEY (route_id) REFERENCES public.bus_routes(id) ON DELETE CASCADE;
+
+
+--
+-- Name: bus_routes bus_routes_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.bus_routes
+    ADD CONSTRAINT bus_routes_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: calendar_groups calendar_groups_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.calendar_groups
+    ADD CONSTRAINT calendar_groups_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: calendar_groups calendar_groups_user_id_users_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.calendar_groups
+    ADD CONSTRAINT calendar_groups_user_id_users_id_fk FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: calendar_notes calendar_notes_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.calendar_notes
+    ADD CONSTRAINT calendar_notes_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: calendar_sources calendar_sources_group_id_calendar_groups_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.calendar_sources
+    ADD CONSTRAINT calendar_sources_group_id_calendar_groups_id_fk FOREIGN KEY (group_id) REFERENCES public.calendar_groups(id) ON DELETE SET NULL;
+
+
+--
+-- Name: calendar_sources calendar_sources_group_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.calendar_sources
+    ADD CONSTRAINT calendar_sources_group_id_fkey FOREIGN KEY (group_id) REFERENCES public.calendar_groups(id) ON DELETE SET NULL;
+
+
+--
+-- Name: calendar_sources calendar_sources_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.calendar_sources
+    ADD CONSTRAINT calendar_sources_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: calendar_sources calendar_sources_user_id_users_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.calendar_sources
+    ADD CONSTRAINT calendar_sources_user_id_users_id_fk FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: chore_completions chore_completions_approved_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.chore_completions
+    ADD CONSTRAINT chore_completions_approved_by_fkey FOREIGN KEY (approved_by) REFERENCES public.users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: chore_completions chore_completions_approved_by_users_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.chore_completions
+    ADD CONSTRAINT chore_completions_approved_by_users_id_fk FOREIGN KEY (approved_by) REFERENCES public.users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: chore_completions chore_completions_chore_id_chores_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.chore_completions
+    ADD CONSTRAINT chore_completions_chore_id_chores_id_fk FOREIGN KEY (chore_id) REFERENCES public.chores(id) ON DELETE CASCADE;
+
+
+--
+-- Name: chore_completions chore_completions_chore_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.chore_completions
+    ADD CONSTRAINT chore_completions_chore_id_fkey FOREIGN KEY (chore_id) REFERENCES public.chores(id) ON DELETE CASCADE;
+
+
+--
+-- Name: chore_completions chore_completions_completed_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.chore_completions
+    ADD CONSTRAINT chore_completions_completed_by_fkey FOREIGN KEY (completed_by) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: chore_completions chore_completions_completed_by_users_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.chore_completions
+    ADD CONSTRAINT chore_completions_completed_by_users_id_fk FOREIGN KEY (completed_by) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: chores chores_assigned_to_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.chores
+    ADD CONSTRAINT chores_assigned_to_fkey FOREIGN KEY (assigned_to) REFERENCES public.users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: chores chores_assigned_to_users_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.chores
+    ADD CONSTRAINT chores_assigned_to_users_id_fk FOREIGN KEY (assigned_to) REFERENCES public.users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: chores chores_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.chores
+    ADD CONSTRAINT chores_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: chores chores_created_by_users_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.chores
+    ADD CONSTRAINT chores_created_by_users_id_fk FOREIGN KEY (created_by) REFERENCES public.users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: events events_calendar_source_id_calendar_sources_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.events
+    ADD CONSTRAINT events_calendar_source_id_calendar_sources_id_fk FOREIGN KEY (calendar_source_id) REFERENCES public.calendar_sources(id) ON DELETE CASCADE;
+
+
+--
+-- Name: events events_calendar_source_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.events
+    ADD CONSTRAINT events_calendar_source_id_fkey FOREIGN KEY (calendar_source_id) REFERENCES public.calendar_sources(id) ON DELETE CASCADE;
+
+
+--
+-- Name: events events_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.events
+    ADD CONSTRAINT events_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: events events_created_by_users_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.events
+    ADD CONSTRAINT events_created_by_users_id_fk FOREIGN KEY (created_by) REFERENCES public.users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: family_messages family_messages_author_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.family_messages
+    ADD CONSTRAINT family_messages_author_id_fkey FOREIGN KEY (author_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: family_messages family_messages_author_id_users_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.family_messages
+    ADD CONSTRAINT family_messages_author_id_users_id_fk FOREIGN KEY (author_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: goal_achievements goal_achievements_goal_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.goal_achievements
+    ADD CONSTRAINT goal_achievements_goal_id_fkey FOREIGN KEY (goal_id) REFERENCES public.goals(id) ON DELETE CASCADE;
+
+
+--
+-- Name: goal_achievements goal_achievements_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.goal_achievements
+    ADD CONSTRAINT goal_achievements_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: layouts layouts_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.layouts
+    ADD CONSTRAINT layouts_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: layouts layouts_created_by_users_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.layouts
+    ADD CONSTRAINT layouts_created_by_users_id_fk FOREIGN KEY (created_by) REFERENCES public.users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: maintenance_completions maintenance_completions_completed_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.maintenance_completions
+    ADD CONSTRAINT maintenance_completions_completed_by_fkey FOREIGN KEY (completed_by) REFERENCES public.users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: maintenance_completions maintenance_completions_completed_by_users_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.maintenance_completions
+    ADD CONSTRAINT maintenance_completions_completed_by_users_id_fk FOREIGN KEY (completed_by) REFERENCES public.users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: maintenance_completions maintenance_completions_reminder_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.maintenance_completions
+    ADD CONSTRAINT maintenance_completions_reminder_id_fkey FOREIGN KEY (reminder_id) REFERENCES public.maintenance_reminders(id) ON DELETE CASCADE;
+
+
+--
+-- Name: maintenance_completions maintenance_completions_reminder_id_maintenance_reminders_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.maintenance_completions
+    ADD CONSTRAINT maintenance_completions_reminder_id_maintenance_reminders_id_fk FOREIGN KEY (reminder_id) REFERENCES public.maintenance_reminders(id) ON DELETE CASCADE;
+
+
+--
+-- Name: maintenance_reminders maintenance_reminders_assigned_to_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.maintenance_reminders
+    ADD CONSTRAINT maintenance_reminders_assigned_to_fkey FOREIGN KEY (assigned_to) REFERENCES public.users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: maintenance_reminders maintenance_reminders_assigned_to_users_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.maintenance_reminders
+    ADD CONSTRAINT maintenance_reminders_assigned_to_users_id_fk FOREIGN KEY (assigned_to) REFERENCES public.users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: maintenance_reminders maintenance_reminders_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.maintenance_reminders
+    ADD CONSTRAINT maintenance_reminders_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: maintenance_reminders maintenance_reminders_created_by_users_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.maintenance_reminders
+    ADD CONSTRAINT maintenance_reminders_created_by_users_id_fk FOREIGN KEY (created_by) REFERENCES public.users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: meals meals_cooked_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.meals
+    ADD CONSTRAINT meals_cooked_by_fkey FOREIGN KEY (cooked_by) REFERENCES public.users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: meals meals_cooked_by_users_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.meals
+    ADD CONSTRAINT meals_cooked_by_users_id_fk FOREIGN KEY (cooked_by) REFERENCES public.users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: meals meals_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.meals
+    ADD CONSTRAINT meals_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: meals meals_created_by_users_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.meals
+    ADD CONSTRAINT meals_created_by_users_id_fk FOREIGN KEY (created_by) REFERENCES public.users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: meals meals_recipe_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.meals
+    ADD CONSTRAINT meals_recipe_id_fkey FOREIGN KEY (recipe_id) REFERENCES public.recipes(id) ON DELETE SET NULL;
+
+
+--
+-- Name: photos photos_source_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.photos
+    ADD CONSTRAINT photos_source_id_fkey FOREIGN KEY (source_id) REFERENCES public.photo_sources(id) ON DELETE CASCADE;
+
+
+--
+-- Name: photos photos_source_id_photo_sources_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.photos
+    ADD CONSTRAINT photos_source_id_photo_sources_id_fk FOREIGN KEY (source_id) REFERENCES public.photo_sources(id) ON DELETE CASCADE;
+
+
+--
+-- Name: recipes recipes_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.recipes
+    ADD CONSTRAINT recipes_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: shopping_items shopping_items_added_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.shopping_items
+    ADD CONSTRAINT shopping_items_added_by_fkey FOREIGN KEY (added_by) REFERENCES public.users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: shopping_items shopping_items_added_by_users_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.shopping_items
+    ADD CONSTRAINT shopping_items_added_by_users_id_fk FOREIGN KEY (added_by) REFERENCES public.users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: shopping_items shopping_items_list_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.shopping_items
+    ADD CONSTRAINT shopping_items_list_id_fkey FOREIGN KEY (list_id) REFERENCES public.shopping_lists(id) ON DELETE CASCADE;
+
+
+--
+-- Name: shopping_items shopping_items_list_id_shopping_lists_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.shopping_items
+    ADD CONSTRAINT shopping_items_list_id_shopping_lists_id_fk FOREIGN KEY (list_id) REFERENCES public.shopping_lists(id) ON DELETE CASCADE;
+
+
+--
+-- Name: shopping_items shopping_items_shopping_list_source_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.shopping_items
+    ADD CONSTRAINT shopping_items_shopping_list_source_id_fkey FOREIGN KEY (shopping_list_source_id) REFERENCES public.shopping_list_sources(id) ON DELETE SET NULL;
+
+
+--
+-- Name: shopping_list_sources shopping_list_sources_shopping_list_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.shopping_list_sources
+    ADD CONSTRAINT shopping_list_sources_shopping_list_id_fkey FOREIGN KEY (shopping_list_id) REFERENCES public.shopping_lists(id) ON DELETE CASCADE;
+
+
+--
+-- Name: shopping_list_sources shopping_list_sources_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.shopping_list_sources
+    ADD CONSTRAINT shopping_list_sources_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: shopping_lists shopping_lists_assigned_to_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.shopping_lists
+    ADD CONSTRAINT shopping_lists_assigned_to_fkey FOREIGN KEY (assigned_to) REFERENCES public.users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: shopping_lists shopping_lists_assigned_to_users_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.shopping_lists
+    ADD CONSTRAINT shopping_lists_assigned_to_users_id_fk FOREIGN KEY (assigned_to) REFERENCES public.users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: shopping_lists shopping_lists_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.shopping_lists
+    ADD CONSTRAINT shopping_lists_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: shopping_lists shopping_lists_created_by_users_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.shopping_lists
+    ADD CONSTRAINT shopping_lists_created_by_users_id_fk FOREIGN KEY (created_by) REFERENCES public.users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: task_lists task_lists_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.task_lists
+    ADD CONSTRAINT task_lists_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: task_sources task_sources_task_list_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.task_sources
+    ADD CONSTRAINT task_sources_task_list_id_fkey FOREIGN KEY (task_list_id) REFERENCES public.task_lists(id) ON DELETE CASCADE;
+
+
+--
+-- Name: task_sources task_sources_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.task_sources
+    ADD CONSTRAINT task_sources_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: tasks tasks_assigned_to_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.tasks
+    ADD CONSTRAINT tasks_assigned_to_fkey FOREIGN KEY (assigned_to) REFERENCES public.users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: tasks tasks_assigned_to_users_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.tasks
+    ADD CONSTRAINT tasks_assigned_to_users_id_fk FOREIGN KEY (assigned_to) REFERENCES public.users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: tasks tasks_completed_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.tasks
+    ADD CONSTRAINT tasks_completed_by_fkey FOREIGN KEY (completed_by) REFERENCES public.users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: tasks tasks_completed_by_users_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.tasks
+    ADD CONSTRAINT tasks_completed_by_users_id_fk FOREIGN KEY (completed_by) REFERENCES public.users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: tasks tasks_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.tasks
+    ADD CONSTRAINT tasks_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: tasks tasks_created_by_users_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.tasks
+    ADD CONSTRAINT tasks_created_by_users_id_fk FOREIGN KEY (created_by) REFERENCES public.users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: tasks tasks_list_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.tasks
+    ADD CONSTRAINT tasks_list_id_fkey FOREIGN KEY (list_id) REFERENCES public.task_lists(id) ON DELETE CASCADE;
+
+
+--
+-- Name: tasks tasks_task_source_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.tasks
+    ADD CONSTRAINT tasks_task_source_id_fkey FOREIGN KEY (task_source_id) REFERENCES public.task_sources(id) ON DELETE SET NULL;
+
+
+--
+-- Name: wish_item_sources wish_item_sources_member_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.wish_item_sources
+    ADD CONSTRAINT wish_item_sources_member_id_fkey FOREIGN KEY (member_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: wish_item_sources wish_item_sources_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.wish_item_sources
+    ADD CONSTRAINT wish_item_sources_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: wish_items wish_items_added_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.wish_items
+    ADD CONSTRAINT wish_items_added_by_fkey FOREIGN KEY (added_by) REFERENCES public.users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: wish_items wish_items_claimed_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.wish_items
+    ADD CONSTRAINT wish_items_claimed_by_fkey FOREIGN KEY (claimed_by) REFERENCES public.users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: wish_items wish_items_member_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.wish_items
+    ADD CONSTRAINT wish_items_member_id_fkey FOREIGN KEY (member_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: wish_items wish_items_wish_item_source_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.wish_items
+    ADD CONSTRAINT wish_items_wish_item_source_id_fkey FOREIGN KEY (wish_item_source_id) REFERENCES public.wish_item_sources(id) ON DELETE SET NULL;
+
+
