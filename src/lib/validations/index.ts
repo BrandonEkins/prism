@@ -273,6 +273,10 @@ const widgetConfigSchema = z.object({
   outlineOpacity: z.number().min(0).max(1).optional(),
   textColor: z.string().optional(),
   textOpacity: z.number().min(0).max(1).optional(),
+  textScale: z.number().min(0.5).max(3).optional(),
+  gridLineOpacity: z.number().min(0).max(1).optional(),
+  cellBackgroundColor: z.string().optional(),
+  cellBackgroundOpacity: z.number().min(0).max(1).optional(),
   settings: z.record(z.unknown()).optional(),
 });
 

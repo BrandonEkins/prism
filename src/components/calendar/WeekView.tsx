@@ -15,21 +15,27 @@ import { useWidgetBgOverride } from '@/components/widgets/WidgetContainer';
 import { useOrientation } from '@/lib/hooks/useOrientation';
 import { useHiddenHours } from '@/lib/hooks/useHiddenHours';
 import { calculateEventPositions, positionToCSS } from '@/lib/utils/eventLayout';
+import { hexToRgba } from '@/lib/utils/color';
 import type { CalendarEvent } from '@/types/calendar';
 
 export interface WeekViewProps {
   currentDate: Date;
   events: CalendarEvent[];
   onEventClick: (event: CalendarEvent) => void;
+  bordered?: boolean;
 }
 
 export function WeekView({
   currentDate,
   events,
   onEventClick,
+  bordered = true,
 }: WeekViewProps) {
   const bgOverride = useWidgetBgOverride();
   const transparentMode = bgOverride?.hasCustomBg === true;
+  const cellBg = bgOverride?.cellBackgroundColor;
+  const cellBgOpacity = bgOverride?.cellBackgroundOpacity ?? 1;
+  const cellBgStyle = cellBg ? { backgroundColor: hexToRgba(cellBg, cellBgOpacity) } : undefined;
   const weekStart = startOfWeek(currentDate);
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
   const orientation = useOrientation();
@@ -87,13 +93,13 @@ export function WeekView({
 
         {/* All-day events - scrollable */}
         {allDayEvents.length > 0 && (
-          <div className={cn('shrink-0 border-b border-border p-0.5 max-h-16 overflow-y-auto', !transparentMode && 'bg-card/50', !transparentMode && isPast && 'bg-muted/30')}>
+          <div className={cn('shrink-0 border-b border-border p-0.5 max-h-16 overflow-y-auto', !transparentMode && 'bg-card/50')}>
             {allDayEvents.map((event, idx) => (
               <button
                 key={event.id}
                 onClick={() => onEventClick(event)}
                 className="w-full text-left text-xs px-1 py-px rounded truncate hover:opacity-80 transition-all"
-                style={{ backgroundColor: event.color + '20', borderLeft: `2px solid ${event.color}` }}
+                style={{ backgroundColor: event.color, color: '#fff', borderLeft: `2px solid ${event.color}` }}
               >
                 {event.title}
               </button>
@@ -110,7 +116,7 @@ export function WeekView({
             const hourEvents = getHourEvents(date, hour);
             const positions = calculateEventPositions(hourEvents);
             return (
-              <div key={hour} className="border-t border-border/50 relative min-h-0">
+              <div key={hour} className={cn('relative min-h-0', bordered && 'border-t border-border/50')} style={cellBgStyle}>
                 {hourEvents.map((event) => {
                   const pos = positions.get(event.id);
                   if (!pos) return null;
@@ -119,16 +125,17 @@ export function WeekView({
                     <button
                       key={event.id}
                       onClick={() => onEventClick(event)}
-                      className="absolute text-left text-xs px-0.5 rounded truncate hover:opacity-80 hover:ring-1 hover:ring-seasonal-accent/50 transition-all z-10"
+                      className="absolute text-left text-xs px-0.5 rounded truncate hover:opacity-90 hover:ring-1 hover:ring-seasonal-accent/50 transition-all z-10"
                       style={{
-                        backgroundColor: event.color + '20',
+                        backgroundColor: event.color,
+                        color: '#fff',
                         borderLeft: `2px solid ${event.color}`,
                         top: `${(event.startTime.getMinutes() / 60) * 100}%`,
                         left: css.left,
                         width: css.width,
                       }}
                     >
-                      <span className="text-[10px] text-muted-foreground mr-1">
+                      <span className="text-[10px] opacity-80 mr-1">
                         {format(event.startTime, 'h:mm')}
                       </span>
                       {event.title}
@@ -237,6 +244,7 @@ export function WeekView({
                 <div className="text-sm font-bold uppercase">{format(date, 'EEE')}</div>
                 <div className="text-2xl font-bold">{format(date, 'd')}</div>
               </div>
+              <div className="border-b border-border" />
               {/* All-day events - scrollable */}
               {allDayEvents.length > 0 && (
                 <div className={cn('px-1 py-0.5 border-b border-border max-h-20 overflow-y-auto', !transparentMode && 'bg-card/50')}>
@@ -245,7 +253,7 @@ export function WeekView({
                       key={event.id}
                       onClick={() => onEventClick(event)}
                       className="w-full text-left text-xs px-1 py-px rounded truncate hover:opacity-80 transition-all"
-                      style={{ backgroundColor: event.color + '20', borderLeft: `2px solid ${event.color}` }}
+                      style={{ backgroundColor: event.color, color: '#fff', borderLeft: `2px solid ${event.color}` }}
                     >
                       {event.title}
                     </button>
@@ -262,7 +270,7 @@ export function WeekView({
         {/* Time column */}
         <div className="w-14 shrink-0 grid" style={{ gridTemplateRows: `repeat(${hours.length}, minmax(28px, 1fr))` }}>
           {hours.map((hour) => (
-            <div key={hour} className="pl-1 pr-1 text-right text-xs text-muted-foreground border-t border-border flex items-start pt-0.5 min-h-0">
+            <div key={hour} className={cn('pl-1 pr-1 text-right text-xs text-muted-foreground flex items-start pt-0.5 min-h-0', bordered && 'border-t border-border')}>
               {format(new Date().setHours(hour, 0), 'h a')}
             </div>
           ))}
@@ -280,7 +288,7 @@ export function WeekView({
                 const hourEvents = getHourEvents(date, hour);
                 const positions = calculateEventPositions(hourEvents);
                 return (
-                  <div key={hour} className="border-t border-border relative min-h-0">
+                  <div key={hour} className={cn('relative min-h-0', bordered && 'border-t border-border')} style={cellBgStyle}>
                     {hourEvents.map((event) => {
                       const pos = positions.get(event.id);
                       if (!pos) return null;
@@ -289,9 +297,10 @@ export function WeekView({
                         <button
                           key={event.id}
                           onClick={() => onEventClick(event)}
-                          className="absolute p-0.5 rounded text-left text-xs z-10 hover:opacity-80 hover:ring-2 hover:ring-seasonal-accent/50 transition-all"
+                          className="absolute p-0.5 rounded text-left text-xs z-10 hover:opacity-90 hover:ring-2 hover:ring-seasonal-accent/50 transition-all"
                           style={{
-                            backgroundColor: event.color + '20',
+                            backgroundColor: event.color,
+                            color: '#fff',
                             borderLeft: `2px solid ${event.color}`,
                             top: `${(event.startTime.getMinutes() / 60) * 100}%`,
                             left: css.left,

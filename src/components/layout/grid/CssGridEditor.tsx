@@ -280,7 +280,7 @@ function DragOverlayContent({
       }}
       className={`rounded-lg border-2 border-primary shadow-lg ${textClass}`}
     >
-      <WidgetBgOverrideProvider value={{ hasCustomBg: !!widget.backgroundColor, textColor: widget.textColor, textOpacity: widget.textOpacity }}>
+      <WidgetBgOverrideProvider value={{ hasCustomBg: !!widget.backgroundColor, textColor: widget.textColor, textOpacity: widget.textOpacity, gridLineOpacity: widget.gridLineOpacity, cellBackgroundColor: widget.cellBackgroundColor, cellBackgroundOpacity: widget.cellBackgroundOpacity }}>
         <div className="h-full w-full overflow-hidden">
           {renderWidget(widget)}
         </div>
@@ -358,7 +358,7 @@ function DraggableWidget({
       } rounded-lg pointer-events-none`} />
 
       {/* Widget content */}
-      <WidgetBgOverrideProvider value={{ hasCustomBg, textColor: widget.textColor, textOpacity: widget.textOpacity }}>
+      <WidgetBgOverrideProvider value={{ hasCustomBg, textColor: widget.textColor, textOpacity: widget.textOpacity, gridLineOpacity: widget.gridLineOpacity, cellBackgroundColor: widget.cellBackgroundColor, cellBackgroundOpacity: widget.cellBackgroundOpacity }}>
         <div className={`h-full w-full overflow-hidden ${textClass}`}>
           {renderWidget(widget)}
         </div>

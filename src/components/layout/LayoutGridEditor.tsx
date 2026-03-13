@@ -4,6 +4,7 @@ import * as React from 'react';
 import { useMemo, useRef, useState, useCallback, useEffect } from 'react';
 import { PaintBucket, Square, Type } from 'lucide-react';
 import { isLightColor } from '@/lib/utils/color';
+import { WIDGET_REGISTRY } from '@/components/widgets/widgetRegistry';
 import { useScreenSafeZones } from '@/lib/hooks/useScreenSafeZones';
 import { useTheme } from '@/components/providers';
 import { getColorPalette, FIXED_COLORS, PALETTE_ORDER, type PaletteId } from '@/lib/constants/colorPalettes';
@@ -50,6 +51,7 @@ export function LayoutGridEditor({
   const [selectedWidget, setSelectedWidget] = useState<string | null>(null);
   const colorPickerRef = useRef<HTMLInputElement | null>(null);
   const [colorTarget, setColorTarget] = useState<'fill' | 'outline' | 'text'>('fill');
+  const [openPopover, setOpenPopover] = useState<'fill' | 'outline' | 'text' | 'grid' | null>(null);
   const [measureMode, setMeasureMode] = useState(false);
   const [measureHideNav, setMeasureHideNav] = useState(true);
 
@@ -163,7 +165,7 @@ export function LayoutGridEditor({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [layoutJson]);
 
-  const updateWidgetColor = useCallback((widgetId: string, updates: { backgroundColor?: string | null; backgroundOpacity?: number; outlineColor?: string | null; outlineOpacity?: number; textColor?: string | null; textOpacity?: number }) => {
+  const updateWidgetColor = useCallback((widgetId: string, updates: { backgroundColor?: string | null; backgroundOpacity?: number; outlineColor?: string | null; outlineOpacity?: number; textColor?: string | null; textOpacity?: number; textScale?: number; gridLineOpacity?: number; cellBackgroundColor?: string | null; cellBackgroundOpacity?: number }) => {
     const updated = layoutRef.current.map(w => {
       if (w.i === widgetId) {
         return {
@@ -174,6 +176,10 @@ export function LayoutGridEditor({
           outlineOpacity: updates.outlineOpacity ?? w.outlineOpacity,
           textColor: updates.textColor === null ? undefined : (updates.textColor ?? w.textColor),
           textOpacity: updates.textOpacity ?? w.textOpacity,
+          textScale: updates.textScale ?? w.textScale,
+          gridLineOpacity: updates.gridLineOpacity ?? w.gridLineOpacity,
+          cellBackgroundColor: updates.cellBackgroundColor === null ? undefined : (updates.cellBackgroundColor ?? w.cellBackgroundColor),
+          cellBackgroundOpacity: updates.cellBackgroundOpacity ?? w.cellBackgroundOpacity,
         };
       }
       return w;
@@ -210,6 +216,161 @@ export function LayoutGridEditor({
     }
   };
 
+  // Helper: render a Harvey ball indicator
+  const renderHarveyBall = (color: string | undefined, opacity: number, size = 16) => {
+    const fillColor = color && color !== 'transparent' && color !== 'frosted' ? color : (color === 'frosted' ? '#b0c4de' : undefined);
+    const fillLevel = !color || color === 'transparent' ? 0 : (color === 'frosted' ? 1 : opacity);
+    if (!fillColor || fillLevel === 0) return null;
+    const r = size / 2 - 1;
+    const cx = size / 2;
+    const cy = size / 2;
+    const slices = Math.round(fillLevel * 4);
+    if (slices >= 4) {
+      return <svg viewBox={`0 0 ${size} ${size}`} className="w-3 h-3"><circle cx={cx} cy={cy} r={r} fill={fillColor} stroke={isLightColor(fillColor) ? '#333' : '#fff'} strokeWidth="0.5" /></svg>;
+    }
+    const endAngle = (slices / 4) * 2 * Math.PI - Math.PI / 2;
+    const ex = cx + r * Math.cos(endAngle);
+    const ey = cy + r * Math.sin(endAngle);
+    const largeArc = slices > 2 ? 1 : 0;
+    return (
+      <svg viewBox={`0 0 ${size} ${size}`} className="w-3 h-3">
+        <circle cx={cx} cy={cy} r={r} fill="#e5e5e5" stroke="#999" strokeWidth="0.5" />
+        <path d={`M${cx},${cx} L${cx},1 A${r},${r} 0 ${largeArc},1 ${ex.toFixed(2)},${ey.toFixed(2)} Z`} fill={fillColor} stroke={isLightColor(fillColor) ? '#333' : '#fff'} strokeWidth="0.5" />
+      </svg>
+    );
+  };
+
+  // Helper: render color swatches popover content for fill/outline/text
+  const renderColorPopover = (target: 'fill' | 'outline' | 'text') => {
+    if (!selectedWidgetConfig || !selectedWidget) return null;
+    const bgColor = selectedWidgetConfig.backgroundColor;
+    const olColor = selectedWidgetConfig.outlineColor;
+    const txtColor = selectedWidgetConfig.textColor;
+    const bgOpacity = selectedWidgetConfig.backgroundOpacity ?? 1;
+    const olOpacity = selectedWidgetConfig.outlineOpacity ?? 1;
+
+    const color = target === 'fill' ? bgColor : target === 'outline' ? olColor : txtColor;
+    const palette = getColorPalette(paletteId, isDark);
+    const swatchColors = palette.colors;
+    const fixedColors = paletteId === 'mono' ? [] : FIXED_COLORS;
+    const isSelected = (hex: string) => color === hex;
+    const apply = (c: string | null) => {
+      if (target === 'fill') updateWidgetColor(selectedWidget, { backgroundColor: c });
+      else if (target === 'outline') updateWidgetColor(selectedWidget, { outlineColor: c });
+      else updateWidgetColor(selectedWidget, { textColor: c });
+    };
+    const reset = () => {
+      if (target === 'fill') updateWidgetColor(selectedWidget, { backgroundColor: null, backgroundOpacity: 1 });
+      else if (target === 'outline') updateWidgetColor(selectedWidget, { outlineColor: null, outlineOpacity: 1 });
+      else updateWidgetColor(selectedWidget, { textColor: null, textOpacity: 1 });
+    };
+    const isDefault = !color;
+    const hasColor = target === 'fill' ? (bgColor && bgColor !== 'transparent') : target === 'outline' ? !!olColor : false;
+    const isFrosted = target === 'fill' && bgColor === 'frosted';
+
+    return (
+      <div className="p-2.5 space-y-2">
+        {/* Palette pills */}
+        <div className="flex gap-1 flex-wrap">
+          {PALETTE_ORDER.map((id) => {
+            const p = getColorPalette(id, isDark);
+            return (
+              <button key={id} onClick={() => setPaletteId(id)} onPointerDown={(e) => e.stopPropagation()}
+                className={`px-2 py-0.5 text-[10px] rounded-full border transition-colors touch-manipulation ${paletteId === id ? 'bg-primary text-primary-foreground border-primary' : 'border-border hover:bg-accent/50 text-muted-foreground'}`}
+              >{p.label}</button>
+            );
+          })}
+        </div>
+        {/* Swatches */}
+        <div className="flex items-center gap-1 flex-wrap">
+          {/* Reset */}
+          <button onClick={reset} onPointerDown={(e) => e.stopPropagation()}
+            className={`w-7 h-7 rounded-full border border-gray-300 overflow-hidden transition-transform hover:scale-110 touch-manipulation ${isDefault ? 'ring-2 ring-primary ring-offset-1' : ''}`}
+            title="Default">
+            <div className="w-full h-full bg-card/85 flex items-center justify-center">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" /><path d="M3 3v5h5" /></svg>
+            </div>
+          </button>
+          {/* Transparent (fill only) */}
+          {target === 'fill' && (
+            <button onClick={() => apply('transparent')} onPointerDown={(e) => e.stopPropagation()}
+              className={`w-7 h-7 rounded-full border border-gray-300 overflow-hidden transition-transform hover:scale-110 touch-manipulation ${bgColor === 'transparent' ? 'ring-2 ring-primary ring-offset-1' : ''}`}
+              title="Transparent">
+              <svg viewBox="0 0 32 32" className="w-full h-full"><pattern id="chk-pop" width="8" height="8" patternUnits="userSpaceOnUse"><rect width="4" height="4" fill="#ccc" /><rect x="4" y="4" width="4" height="4" fill="#ccc" /><rect x="4" width="4" height="4" fill="#fff" /><rect y="4" width="4" height="4" fill="#fff" /></pattern><circle cx="16" cy="16" r="16" fill="url(#chk-pop)" /></svg>
+            </button>
+          )}
+          {/* Frosted (fill only) */}
+          {target === 'fill' && (
+            <button onClick={() => apply('frosted')} onPointerDown={(e) => e.stopPropagation()}
+              className={`w-7 h-7 rounded-full border border-gray-300 overflow-hidden transition-transform hover:scale-110 touch-manipulation ${bgColor === 'frosted' ? 'ring-2 ring-primary ring-offset-1' : ''}`}
+              title="Frosted glass">
+              <svg viewBox="0 0 32 32" className="w-full h-full"><defs><radialGradient id="frost-pop" cx="30%" cy="30%"><stop offset="0%" stopColor="rgba(255,255,255,0.7)" /><stop offset="100%" stopColor="rgba(200,210,230,0.4)" /></radialGradient></defs><circle cx="16" cy="16" r="16" fill="url(#frost-pop)" /><circle cx="10" cy="12" r="4" fill="rgba(255,255,255,0.3)" /><circle cx="20" cy="18" r="3" fill="rgba(255,255,255,0.2)" /></svg>
+            </button>
+          )}
+          <div className="w-px h-5 bg-border" />
+          {swatchColors.map((hex) => (
+            <button key={hex} onClick={() => apply(hex)} onPointerDown={(e) => e.stopPropagation()}
+              className={`w-7 h-7 rounded-full border border-gray-400 transition-transform hover:scale-110 touch-manipulation ${isSelected(hex) ? 'ring-2 ring-primary ring-offset-1' : ''}`}
+              style={{ backgroundColor: hex }} title={hex} />
+          ))}
+          {fixedColors.map((hex) => (
+            <button key={hex} onClick={() => apply(hex)} onPointerDown={(e) => e.stopPropagation()}
+              className={`w-7 h-7 rounded-full border border-gray-400 transition-transform hover:scale-110 touch-manipulation ${isSelected(hex) ? 'ring-2 ring-primary ring-offset-1' : ''}`}
+              style={{ backgroundColor: hex }} title={hex} />
+          ))}
+          {/* Custom picker */}
+          <div className="relative">
+            <button onClick={() => colorPickerRef.current?.click()} onPointerDown={(e) => e.stopPropagation()}
+              className="w-7 h-7 rounded-full border border-gray-400 transition-transform hover:scale-110 touch-manipulation overflow-hidden"
+              style={{ background: 'conic-gradient(red, yellow, lime, aqua, blue, magenta, red)' }} title="Custom" />
+            <input ref={(el) => { (colorPickerRef as React.MutableRefObject<HTMLInputElement | null>).current = el; }}
+              type="color" className="sr-only" value={color || '#3B82F6'} onChange={(e) => apply(e.target.value)} />
+          </div>
+        </div>
+        {/* Text scale (text only) */}
+        {target === 'text' && (
+          <div className="flex items-center gap-1">
+            <span className="text-[10px] text-muted-foreground w-10 shrink-0">Size</span>
+            {[
+              { value: 0.75, label: 'S' },
+              { value: 1, label: 'M' },
+              { value: 1.25, label: 'L' },
+              { value: 1.5, label: 'XL' },
+            ].map(({ value, label }) => (
+              <button key={value} onClick={() => updateWidgetColor(selectedWidget!, { textScale: value })} onPointerDown={(e) => e.stopPropagation()}
+                className={`w-7 h-7 rounded-full text-[10px] border transition-colors touch-manipulation ${
+                  (selectedWidgetConfig!.textScale ?? 1) === value
+                    ? 'bg-primary text-primary-foreground border-primary'
+                    : 'border-border hover:bg-accent/50'
+                }`}>{label}</button>
+            ))}
+          </div>
+        )}
+        {/* Opacity (fill/outline only, not text) */}
+        {target !== 'text' && (hasColor || isFrosted) && (
+          <div className="flex items-center gap-1">
+            <span className="text-[10px] text-muted-foreground w-10 shrink-0">{isFrosted ? 'Blur' : 'Opacity'}</span>
+            {isFrosted ? (
+              [{ v: 0.25, l: 'Light' }, { v: 0.5, l: 'Med' }, { v: 0.75, l: 'Heavy' }, { v: 1, l: 'Max' }].map(({ v, l }) => (
+                <button key={v} onClick={() => updateWidgetColor(selectedWidget, { backgroundOpacity: v })} onPointerDown={(e) => e.stopPropagation()}
+                  className={`px-2 py-1 text-[10px] rounded border transition-colors touch-manipulation ${bgOpacity === v ? 'bg-primary text-primary-foreground border-primary' : 'border-border hover:bg-accent/50'}`}>{l}</button>
+              ))
+            ) : (
+              [0, 0.25, 0.5, 0.75, 1].map((o) => {
+                const cur = target === 'fill' ? bgOpacity : olOpacity;
+                const set = () => target === 'fill' ? updateWidgetColor(selectedWidget, { backgroundOpacity: o }) : updateWidgetColor(selectedWidget, { outlineOpacity: o });
+                return (
+                  <button key={o} onClick={set} onPointerDown={(e) => e.stopPropagation()}
+                    className={`w-7 h-7 rounded-full text-[10px] border transition-colors touch-manipulation ${cur === o ? 'bg-primary text-primary-foreground border-primary' : 'border-border hover:bg-accent/50'}`}>{Math.round(o * 100)}%</button>
+                );
+              })
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const renderPropertiesBar = () => {
     if (!selectedWidgetConfig || !selectedWidget) return null;
     const bgColor = selectedWidgetConfig.backgroundColor;
@@ -217,325 +378,135 @@ export function LayoutGridEditor({
     const txtColor = selectedWidgetConfig.textColor;
     const bgOpacity = selectedWidgetConfig.backgroundOpacity ?? 1;
     const olOpacity = selectedWidgetConfig.outlineOpacity ?? 1;
-    const txtOpacity = selectedWidgetConfig.textOpacity ?? 1;
     const displayName = selectedWidgetConfig.i.charAt(0).toUpperCase() + selectedWidgetConfig.i.slice(1);
-    const hasColorFill = bgColor && bgColor !== 'transparent';
-    const hasColorOutline = !!olColor;
-    const hasColorText = !!txtColor;
-    const activeColor = getActiveColor(selectedWidgetConfig);
-
-    const palette = getColorPalette(paletteId, isDark);
-    const swatchColors = palette.colors;
-    // Append black + white unless monochrome (which already has them)
-    const fixedColors = paletteId === 'mono' ? [] : FIXED_COLORS;
-
-    // Determine which swatch is selected based on active target
-    const isSwatchSelected = (hex: string) => activeColor === hex;
+    const registryEntry = WIDGET_REGISTRY[selectedWidgetConfig.i];
+    const widgetHasGrid = registryEntry?.hasGrid === true;
 
     return (
-      <div className="bg-card/95 backdrop-blur-sm border-b border-border" onPointerDown={(e) => e.stopPropagation()}>
-        {/* Row 1: Widget name + close */}
-        <div className="flex items-center justify-between px-3 pt-2 pb-1">
-          <span className="text-sm font-medium">{displayName} Widget</span>
-          <button
-            onClick={() => setSelectedWidget(null)}
-            className="p-1.5 hover:bg-accent rounded transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center touch-manipulation"
-            aria-label="Close properties"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M18 6 6 18" /><path d="m6 6 12 12" />
-            </svg>
-          </button>
-        </div>
-
-        {/* Row 2: Theme selector pills */}
-        <div className="flex gap-1 px-3 pb-1.5">
-          {PALETTE_ORDER.map((id) => {
-            const p = getColorPalette(id, isDark);
-            return (
-              <button
-                key={id}
-                onClick={() => setPaletteId(id)}
-                onPointerDown={(e) => e.stopPropagation()}
-                className={`px-2.5 py-1 text-xs rounded-full border transition-colors touch-manipulation ${
-                  paletteId === id
-                    ? 'bg-primary text-primary-foreground border-primary'
-                    : 'border-border hover:bg-accent/50 text-muted-foreground'
-                }`}
-              >
-                {p.label}
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Row 3: Special swatch + themed colors + B/W + custom picker */}
-        <div className="flex items-center gap-1 px-3 pb-1.5">
-          {/* Default swatch — resets current target to theme default */}
-          {(() => {
-            const isDefault = colorTarget === 'fill' ? !bgColor
-              : colorTarget === 'outline' ? !olColor : !txtColor;
-            const resetTarget = () => {
-              if (colorTarget === 'fill') updateWidgetColor(selectedWidget, { backgroundColor: null, backgroundOpacity: 1 });
-              else if (colorTarget === 'outline') updateWidgetColor(selectedWidget, { outlineColor: null, outlineOpacity: 1 });
-              else updateWidgetColor(selectedWidget, { textColor: null, textOpacity: 1 });
-            };
-            return (
-              <button
-                onClick={resetTarget}
-                onPointerDown={(e) => e.stopPropagation()}
-                className={`w-8 h-8 rounded-full border border-gray-300 overflow-hidden transition-transform hover:scale-110 touch-manipulation ${
-                  isDefault ? 'ring-2 ring-primary ring-offset-1' : ''
-                }`}
-                title="Theme default"
-              >
-                <div className="w-full h-full bg-card/85 flex items-center justify-center">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground">
-                    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-                    <path d="M3 3v5h5" />
-                  </svg>
-                </div>
-              </button>
-            );
-          })()}
-          {/* Special swatches — checkerboard (transparent) + frosted glass */}
-          {(() => {
-            const specialValue = colorTarget === 'fill' ? 'transparent' : null;
-            const isSpecialSelected = colorTarget === 'fill'
-              ? bgColor === 'transparent'
-              : colorTarget === 'outline' ? !olColor : !txtColor;
-            const title = colorTarget === 'fill' ? 'Transparent' : colorTarget === 'outline' ? 'None' : 'Auto';
-            return (
-              <button
-                onClick={() => applyColorToTarget(selectedWidget, specialValue)}
-                onPointerDown={(e) => e.stopPropagation()}
-                className={`w-8 h-8 rounded-full border border-gray-300 overflow-hidden transition-transform hover:scale-110 touch-manipulation ${
-                  isSpecialSelected ? 'ring-2 ring-primary ring-offset-1' : ''
-                }`}
-                title={title}
-              >
-                <svg viewBox="0 0 32 32" className="w-full h-full">
-                  <pattern id="checker-props" width="8" height="8" patternUnits="userSpaceOnUse">
-                    <rect width="4" height="4" fill="#ccc" />
-                    <rect x="4" y="4" width="4" height="4" fill="#ccc" />
-                    <rect x="4" width="4" height="4" fill="#fff" />
-                    <rect y="4" width="4" height="4" fill="#fff" />
-                  </pattern>
-                  <circle cx="16" cy="16" r="16" fill="url(#checker-props)" />
-                </svg>
-              </button>
-            );
-          })()}
-          {/* Frosted glass swatch — only for fill target */}
-          {colorTarget === 'fill' && (
-            <button
-              onClick={() => applyColorToTarget(selectedWidget, 'frosted')}
-              onPointerDown={(e) => e.stopPropagation()}
-              className={`w-8 h-8 rounded-full border border-gray-300 overflow-hidden transition-transform hover:scale-110 touch-manipulation ${
-                bgColor === 'frosted' ? 'ring-2 ring-primary ring-offset-1' : ''
-              }`}
-              title="Frosted glass"
-            >
-              <svg viewBox="0 0 32 32" className="w-full h-full">
-                <defs>
-                  <radialGradient id="frost-grad" cx="30%" cy="30%">
-                    <stop offset="0%" stopColor="rgba(255,255,255,0.7)" />
-                    <stop offset="100%" stopColor="rgba(200,210,230,0.4)" />
-                  </radialGradient>
-                </defs>
-                <circle cx="16" cy="16" r="16" fill="url(#frost-grad)" />
-                <circle cx="10" cy="12" r="4" fill="rgba(255,255,255,0.3)" />
-                <circle cx="20" cy="18" r="3" fill="rgba(255,255,255,0.2)" />
-              </svg>
-            </button>
-          )}
-
-          <div className="w-px h-6 bg-border mx-0.5" />
-
-          {/* Themed color swatches */}
-          {swatchColors.map((hex) => (
-            <button
-              key={hex}
-              onClick={() => applyColorToTarget(selectedWidget, hex)}
-              onPointerDown={(e) => e.stopPropagation()}
-              className={`w-8 h-8 rounded-full border border-gray-400 transition-transform hover:scale-110 touch-manipulation ${
-                isSwatchSelected(hex) ? 'ring-2 ring-primary ring-offset-1' : ''
-              }`}
-              style={{ backgroundColor: hex }}
-              title={hex}
-            />
-          ))}
-
-          {/* Fixed colors: black + white (unless mono) */}
-          {fixedColors.map((hex) => (
-            <button
-              key={hex}
-              onClick={() => applyColorToTarget(selectedWidget, hex)}
-              onPointerDown={(e) => e.stopPropagation()}
-              className={`w-8 h-8 rounded-full border border-gray-400 transition-transform hover:scale-110 touch-manipulation ${
-                isSwatchSelected(hex) ? 'ring-2 ring-primary ring-offset-1' : ''
-              }`}
-              style={{ backgroundColor: hex }}
-              title={hex}
-            />
-          ))}
-
-          {/* Custom color picker (rainbow button) */}
-          <div className="relative">
-            <button
-              onClick={() => colorPickerRef.current?.click()}
-              onPointerDown={(e) => e.stopPropagation()}
-              className="w-8 h-8 rounded-full border border-gray-400 transition-transform hover:scale-110 touch-manipulation overflow-hidden"
-              style={{ background: 'conic-gradient(red, yellow, lime, aqua, blue, magenta, red)' }}
-              title="Custom color"
-            />
-            <input
-              ref={(el) => { (colorPickerRef as React.MutableRefObject<HTMLInputElement | null>).current = el; }}
-              type="color"
-              className="sr-only"
-              value={activeColor || '#3B82F6'}
-              onChange={(e) => applyColorToTarget(selectedWidget, e.target.value)}
-            />
-          </div>
-
-          {/* Opacity / blur intensity — inline on swatch row */}
-          {(() => {
-            const isFrosted = colorTarget === 'fill' && bgColor === 'frosted';
-            const showOpacity = !isFrosted && ((colorTarget === 'fill' && hasColorFill) || (colorTarget === 'outline' && hasColorOutline) || (colorTarget === 'text' && hasColorText));
-            const showBlur = isFrosted;
-            if (!showOpacity && !showBlur) return null;
-
-            if (showBlur) {
-              // Blur intensity: repurpose backgroundOpacity for frosted blur level
-              const blurLevels = [
-                { value: 0.25, label: 'Light' },
-                { value: 0.5, label: 'Med' },
-                { value: 0.75, label: 'Heavy' },
-                { value: 1, label: 'Max' },
-              ];
-              return (
-                <>
-                  <div className="w-px h-6 bg-border mx-0.5" />
-                  {blurLevels.map(({ value, label }) => (
-                    <button
-                      key={value}
-                      onClick={() => updateWidgetColor(selectedWidget, { backgroundOpacity: value })}
-                      onPointerDown={(e) => e.stopPropagation()}
-                      className={`w-8 h-8 rounded-full text-[10px] border transition-colors touch-manipulation ${
-                        bgOpacity === value
-                          ? 'bg-primary text-primary-foreground border-primary'
-                          : 'border-border hover:bg-accent/50'
-                      }`}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </>
-              );
-            }
+      <div className="bg-card/95 backdrop-blur-sm border-b border-border relative z-[150]" onPointerDown={(e) => e.stopPropagation()}>
+        {/* Single row: Widget name + property buttons + close */}
+        <div className="flex items-center gap-1.5 px-3 py-2">
+          <span className="text-sm font-medium mr-1">{displayName}</span>
+          {([
+            { id: 'fill' as const, icon: PaintBucket, label: 'Fill', color: bgColor, opacity: bgOpacity },
+            { id: 'outline' as const, icon: Square, label: 'Outline', color: olColor, opacity: olOpacity },
+            { id: 'text' as const, icon: Type, label: 'Text', color: txtColor, opacity: 1 },
+          ]).map(({ id, icon: Icon, label, color, opacity }) => {
+            const isOpen = openPopover === id;
+            const indicator = renderHarveyBall(color, opacity);
+            const hasValue = !!color && color !== 'transparent';
 
             return (
-              <>
-                <div className="w-px h-6 bg-border mx-0.5" />
-                {[0, 0.25, 0.5, 0.75, 1].map((o) => {
-                  const currentOpacity = colorTarget === 'fill' ? bgOpacity : colorTarget === 'outline' ? olOpacity : txtOpacity;
-                  const handleOpacityClick = () => {
-                    if (colorTarget === 'fill') updateWidgetColor(selectedWidget, { backgroundOpacity: o });
-                    else if (colorTarget === 'outline') updateWidgetColor(selectedWidget, { outlineOpacity: o });
-                    else updateWidgetColor(selectedWidget, { textOpacity: o });
-                  };
-                  return (
-                    <button
-                      key={o}
-                      onClick={handleOpacityClick}
-                      onPointerDown={(e) => e.stopPropagation()}
-                      className={`w-8 h-8 rounded-full text-[10px] border transition-colors touch-manipulation ${
-                        currentOpacity === o
-                          ? 'bg-primary text-primary-foreground border-primary'
-                          : 'border-border hover:bg-accent/50'
-                      }`}
-                    >
-                      {Math.round(o * 100)}%
-                    </button>
-                  );
-                })}
-              </>
-            );
-          })()}
-        </div>
-
-        {/* Row 4: Target buttons with harvey ball indicators + Reset */}
-        <div className="flex items-center gap-2 px-3 pb-2">
-          <div className="flex gap-1">
-            {([
-              { id: 'fill' as const, icon: PaintBucket, label: 'Fill', color: bgColor, opacity: bgOpacity },
-              { id: 'outline' as const, icon: Square, label: 'Outline', color: olColor, opacity: olOpacity },
-              { id: 'text' as const, icon: Type, label: 'Text', color: txtColor, opacity: txtOpacity },
-            ]).map(({ id, icon: Icon, label, color, opacity }) => {
-              const fillColor = color && color !== 'transparent' && color !== 'frosted' ? color : (color === 'frosted' ? '#b0c4de' : '#999');
-              const fillLevel = !color || color === 'transparent' ? 0 : (color === 'frosted' ? 1 : opacity);
-              const isActive = colorTarget === id;
-              // Contrasting stroke: light stroke on dark fills, dark stroke on light fills
-              const ballStroke = fillLevel > 0 && color && color !== 'transparent'
-                ? (isLightColor(color) ? '#333' : '#fff')
-                : (isActive ? 'rgba(255,255,255,0.6)' : '#999');
-
-              return (
+              <div key={id} className="relative">
                 <button
-                  key={id}
-                  onClick={() => setColorTarget(id)}
+                  onClick={() => { setColorTarget(id); setOpenPopover(isOpen ? null : id); }}
                   onPointerDown={(e) => e.stopPropagation()}
-                  className={`relative flex items-center gap-1.5 px-2.5 min-h-[44px] min-w-[44px] text-xs rounded border transition-colors touch-manipulation ${
-                    isActive
+                  className={`flex items-center gap-1.5 px-2.5 py-2 text-xs rounded-md border transition-colors touch-manipulation min-h-[40px] ${
+                    isOpen
                       ? 'bg-primary text-primary-foreground border-primary'
                       : 'border-border hover:bg-accent/50'
                   }`}
                 >
                   <Icon className="w-3.5 h-3.5" />
                   <span>{label}</span>
-                  {/* Harvey ball pie-slice indicator: 25% per slice, starting from 12 o'clock clockwise */}
-                  <svg viewBox="0 0 16 16" className="w-4 h-4 shrink-0">
-                    <circle cx="8" cy="8" r="7" fill={isActive ? 'rgba(255,255,255,0.3)' : '#e5e5e5'} stroke={ballStroke} strokeWidth="1" />
-                    {fillLevel > 0 && (() => {
-                      // Each 25% = one quarter pie slice; compute arc path
-                      const slices = Math.round(fillLevel * 4); // 0-4 slices
-                      if (slices >= 4) {
-                        // Full circle
-                        return <circle cx="8" cy="8" r="7" fill={fillColor} stroke={ballStroke} strokeWidth="0.5" />;
-                      }
-                      // SVG arc from 12 o'clock clockwise
-                      const endAngle = (slices / 4) * 2 * Math.PI - Math.PI / 2;
-                      const ex = 8 + 7 * Math.cos(endAngle);
-                      const ey = 8 + 7 * Math.sin(endAngle);
-                      const largeArc = slices > 2 ? 1 : 0;
-                      return (
-                        <path
-                          d={`M8,8 L8,1 A7,7 0 ${largeArc},1 ${ex.toFixed(2)},${ey.toFixed(2)} Z`}
-                          fill={fillColor}
-                          stroke={ballStroke}
-                          strokeWidth="0.5"
-                        />
-                      );
-                    })()}
-                    {color === 'transparent' && (
-                      <>
-                        <defs>
-                          <pattern id={`hb-checker-${id}`} width="4" height="4" patternUnits="userSpaceOnUse">
-                            <rect width="2" height="2" fill="#ccc" />
-                            <rect x="2" y="2" width="2" height="2" fill="#ccc" />
-                            <rect x="2" width="2" height="2" fill="#fff" />
-                            <rect y="2" width="2" height="2" fill="#fff" />
-                          </pattern>
-                        </defs>
-                        <circle cx="8" cy="8" r="7" fill={`url(#hb-checker-${id})`} stroke={ballStroke} strokeWidth="0.5" />
-                      </>
-                    )}
-                  </svg>
+                  {indicator}
+                  {/* Colored underline indicator */}
+                  {hasValue && (
+                    <div className="absolute bottom-0.5 left-2 right-2 h-0.5 rounded-full" style={{ backgroundColor: color === 'frosted' ? '#b0c4de' : color! }} />
+                  )}
                 </button>
-              );
-            })}
-          </div>
+                {/* Popover */}
+                {isOpen && (
+                  <div className="absolute top-full left-0 mt-1 z-[200] bg-card border border-border rounded-lg shadow-lg min-w-[320px]">
+                    {renderColorPopover(id)}
+                  </div>
+                )}
+              </div>
+            );
+          })}
 
+          {/* Grid button (calendar only) */}
+          {/* Grid button (calendar only) */}
+          {widgetHasGrid && (() => {
+            const isOpen = openPopover === 'grid';
+            const gridLineOp = selectedWidgetConfig.gridLineOpacity ?? 1;
+            const cellBgColor = selectedWidgetConfig.cellBackgroundColor;
+            const cellBgOp = selectedWidgetConfig.cellBackgroundOpacity ?? 1;
+            const hasGridConfig = gridLineOp < 1 || !!cellBgColor;
+            const palette = getColorPalette(paletteId, isDark);
+            const cellSwatches = palette.colors;
+
+            return (
+              <div className="relative">
+                <button
+                  onClick={() => setOpenPopover(isOpen ? null : 'grid')}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  className={`flex items-center gap-1.5 px-2.5 py-2 text-xs rounded-md border transition-colors touch-manipulation min-h-[40px] ${
+                    isOpen
+                      ? 'bg-primary text-primary-foreground border-primary'
+                      : 'border-border hover:bg-accent/50'
+                  }`}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" /><path d="M3 9h18" /><path d="M3 15h18" /><path d="M9 3v18" /><path d="M15 3v18" /></svg>
+                  <span>Grid</span>
+                  {hasGridConfig && <div className="w-1.5 h-1.5 rounded-full bg-primary" />}
+                </button>
+                {/* Grid popover */}
+                {isOpen && (
+                  <div className="absolute top-full left-0 mt-1 z-[200] bg-card border border-border rounded-lg shadow-lg min-w-[280px] p-2.5 space-y-2.5">
+                    {/* Lines opacity */}
+                    <div>
+                      <div className="text-[10px] text-muted-foreground mb-1 font-medium uppercase tracking-wide">Line Opacity</div>
+                      <div className="flex items-center gap-1">
+                        {[0, 0.25, 0.5, 0.75, 1].map((o) => (
+                          <button key={o} onClick={() => updateWidgetColor(selectedWidget, { gridLineOpacity: o })} onPointerDown={(e) => e.stopPropagation()}
+                            className={`w-8 h-8 rounded-full text-[10px] border transition-colors touch-manipulation ${gridLineOp === o ? 'bg-primary text-primary-foreground border-primary' : 'border-border hover:bg-accent/50'}`}>{Math.round(o * 100)}%</button>
+                        ))}
+                      </div>
+                    </div>
+                    {/* Cell background */}
+                    <div>
+                      <div className="text-[10px] text-muted-foreground mb-1 font-medium uppercase tracking-wide">Cell Background</div>
+                      <div className="flex items-center gap-1 flex-wrap">
+                        <button onClick={() => updateWidgetColor(selectedWidget, { cellBackgroundColor: null, cellBackgroundOpacity: 1 })} onPointerDown={(e) => e.stopPropagation()}
+                          className={`w-7 h-7 rounded-full border border-gray-300 overflow-hidden transition-transform hover:scale-110 touch-manipulation ${!cellBgColor ? 'ring-2 ring-primary ring-offset-1' : ''}`} title="Default">
+                          <div className="w-full h-full bg-card/85 flex items-center justify-center">
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" /><path d="M3 3v5h5" /></svg>
+                          </div>
+                        </button>
+                        {cellSwatches.slice(0, 6).map((hex) => (
+                          <button key={hex} onClick={() => updateWidgetColor(selectedWidget, { cellBackgroundColor: hex })} onPointerDown={(e) => e.stopPropagation()}
+                            className={`w-7 h-7 rounded-full border border-gray-400 transition-transform hover:scale-110 touch-manipulation ${cellBgColor === hex ? 'ring-2 ring-primary ring-offset-1' : ''}`}
+                            style={{ backgroundColor: hex }} title={hex} />
+                        ))}
+                      </div>
+                      {cellBgColor && (
+                        <div className="flex items-center gap-1 mt-1.5">
+                          <span className="text-[10px] text-muted-foreground w-10 shrink-0">Opacity</span>
+                          {[0, 0.1, 0.25, 0.5, 0.75, 1].map((o) => (
+                            <button key={o} onClick={() => updateWidgetColor(selectedWidget, { cellBackgroundOpacity: o })} onPointerDown={(e) => e.stopPropagation()}
+                              className={`w-7 h-7 rounded-full text-[9px] border transition-colors touch-manipulation ${cellBgOp === o ? 'bg-primary text-primary-foreground border-primary' : 'border-border hover:bg-accent/50'}`}>{Math.round(o * 100)}%</button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
+          {/* Spacer + close */}
+          <div className="flex-1" />
+          <button
+            onClick={() => setSelectedWidget(null)}
+            className="p-1 hover:bg-accent rounded transition-colors min-w-[36px] min-h-[36px] flex items-center justify-center touch-manipulation"
+            aria-label="Close properties"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M18 6 6 18" /><path d="m6 6 12 12" />
+            </svg>
+          </button>
         </div>
       </div>
     );

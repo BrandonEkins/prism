@@ -10,6 +10,8 @@ import {
   isSameDay,
 } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { useWidgetBgOverride } from '@/components/widgets/WidgetContainer';
+import { hexToRgba } from '@/lib/utils/color';
 import type { CalendarEvent } from '@/types/calendar';
 
 export interface WeekVerticalViewProps {
@@ -18,6 +20,7 @@ export interface WeekVerticalViewProps {
   calendarGroups?: Array<{ id: string; name: string; color: string }>;
   selectedCalendarIds?: Set<string>;
   mergedView?: boolean;
+  bordered?: boolean;
   onEventClick: (event: CalendarEvent) => void;
 }
 
@@ -27,8 +30,13 @@ export function WeekVerticalView({
   calendarGroups = [],
   selectedCalendarIds,
   mergedView = false,
+  bordered = true,
   onEventClick,
 }: WeekVerticalViewProps) {
+  const bgOverride = useWidgetBgOverride();
+  const cellBg = bgOverride?.cellBackgroundColor;
+  const cellBgOpacity = bgOverride?.cellBackgroundOpacity ?? 1;
+  const cellBgStyle = cellBg ? { backgroundColor: hexToRgba(cellBg, cellBgOpacity) } : undefined;
   const weekStart = startOfWeek(currentDate);
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
   const now = new Date();
@@ -41,7 +49,7 @@ export function WeekVerticalView({
     ? calendarGroups.filter((g) => selectedCalendarIds.has(g.id))
     : calendarGroups;
   const displayGroups = showAllInOne || filteredGroups.length === 0
-    ? [{ id: 'all', name: 'All Calendars', color: '#3B82F6' }]
+    ? [{ id: 'all', name: 'All Events', color: '#3B82F6' }]
     : filteredGroups;
 
   const getEventsForGroup = (dayEvents: CalendarEvent[], groupId: string) => {
@@ -57,15 +65,15 @@ export function WeekVerticalView({
 
   return (
     <div className="h-full overflow-y-auto">
-      {/* Group column headers (sticky) */}
-      {displayGroups.length > 1 && (
-        <div className="sticky top-0 z-10 bg-card/95 backdrop-blur-sm border-b border-border flex">
+      {/* Group column headers (no background bar to match day view) */}
+      {calendarGroups.length > 0 && (
+        <div className="sticky top-0 z-10 flex">
           <div className="w-20 md:w-28 shrink-0" />
           {displayGroups.map((group) => (
-            <div key={group.id} className="flex-1 min-w-0 border-l border-border px-1 py-1.5">
+            <div key={group.id} className="flex-1 min-w-0 px-1 py-1.5">
               <div
                 className="text-xs font-medium text-center py-0.5 rounded"
-                style={{ backgroundColor: group.color + '20', color: group.color }}
+                style={{ backgroundColor: group.color, color: '#fff' }}
               >
                 {group.name}
               </div>
@@ -95,15 +103,18 @@ export function WeekVerticalView({
           <div
             key={day.toISOString()}
             className={cn(
-              'flex border-b border-border',
-              isPast && !isCurrentDay && 'bg-muted/55'
+              'flex',
+              bordered && 'border-b border-border',
+              isPast && !isCurrentDay && !cellBgStyle && 'bg-muted/15'
             )}
+            style={cellBgStyle}
           >
             {/* Day label */}
             <div
               className={cn(
-                'w-20 md:w-28 shrink-0 p-2 md:p-3 border-r border-border flex flex-col items-center justify-start',
-                isPast && !isCurrentDay && 'bg-muted/45',
+                'w-20 md:w-28 shrink-0 p-2 md:p-3 flex flex-col items-center justify-start',
+                bordered && 'border-r border-border',
+                isPast && !isCurrentDay && 'bg-muted/15',
                 isCurrentDay && 'bg-primary text-primary-foreground',
               )}
             >
@@ -183,7 +194,7 @@ function DayEventList({
   currentHour?: number;
 }) {
   if (allDayEvents.length === 0 && timedEvents.length === 0) {
-    return <span className="text-[11px] text-muted-foreground/30 italic px-1 py-0.5 block">—</span>;
+    return null;
   }
 
   return (
@@ -193,9 +204,9 @@ function DayEventList({
           key={event.id}
           onClick={() => onEventClick(event)}
           className="w-full text-left text-xs px-1.5 py-1 rounded hover:opacity-80 transition-opacity truncate block"
-          style={{ backgroundColor: event.color + '20', borderLeft: `3px solid ${event.color}` }}
+          style={{ backgroundColor: event.color, borderLeft: `3px solid ${event.color}` }}
         >
-          <span className="font-medium" style={{ color: event.color }}>{event.title}</span>
+          <span className="font-medium text-white">{event.title}</span>
         </button>
       ))}
       {timedEvents.map((event) => {
@@ -204,11 +215,11 @@ function DayEventList({
           <button
             key={event.id}
             onClick={() => onEventClick(event)}
-            className={cn('w-full text-left text-xs px-1.5 py-1 rounded hover:opacity-80 transition-opacity truncate block', isPastEvent && 'opacity-40')}
-            style={{ backgroundColor: event.color + '20', borderLeft: `3px solid ${event.color}` }}
+            className={cn('w-full text-left text-xs px-1.5 py-1 rounded hover:opacity-90 transition-opacity truncate block text-white', isPastEvent && 'opacity-70')}
+            style={{ backgroundColor: event.color, borderLeft: `3px solid ${event.color}` }}
           >
-            <span className="text-muted-foreground mr-1">{format(new Date(event.startTime), 'h:mm a')}</span>
-            <span className="font-medium" style={{ color: event.color }}>{event.title}</span>
+            <span className="opacity-80 mr-1">{format(new Date(event.startTime), 'h:mm a')}</span>
+            <span className="font-medium">{event.title}</span>
           </button>
         );
       })}

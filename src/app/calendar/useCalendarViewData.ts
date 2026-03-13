@@ -16,7 +16,7 @@ import { useCalendarEvents, useCalendarFilter } from '@/lib/hooks';
 import { deduplicateEvents } from '@/lib/utils/calendarDedup';
 import type { CalendarEvent } from '@/types/calendar';
 
-export type CalendarViewType = 'day' | 'week' | 'weekVertical' | 'multiWeek' | 'month' | 'threeMonth';
+export type CalendarViewType = 'agenda' | 'day' | 'week' | 'weekVertical' | 'multiWeek' | 'month' | 'threeMonth';
 export type MultiWeekCount = 1 | 2 | 3 | 4;
 
 export type { CalendarGroup } from '@/lib/hooks';
@@ -63,6 +63,7 @@ export function useCalendarViewData() {
   const goToPrevious = useCallback(() => {
     setCurrentDate(prev => {
       switch (viewType) {
+        case 'agenda': return prev; // no navigation
         case 'day': return subDays(prev, 1);
         case 'week': return subWeeks(prev, 1);
         case 'weekVertical': return subWeeks(prev, 1);
@@ -76,6 +77,7 @@ export function useCalendarViewData() {
   const goToNext = useCallback(() => {
     setCurrentDate(prev => {
       switch (viewType) {
+        case 'agenda': return prev; // no navigation
         case 'day': return addDays(prev, 1);
         case 'week': return addWeeks(prev, 1);
         case 'weekVertical': return addWeeks(prev, 1);
@@ -88,6 +90,8 @@ export function useCalendarViewData() {
 
   const getDateRangeTitle = useCallback((): string => {
     switch (viewType) {
+      case 'agenda':
+        return 'Upcoming Events';
       case 'day':
         return format(currentDate, 'EEEE, MMMM d, yyyy');
       case 'week':

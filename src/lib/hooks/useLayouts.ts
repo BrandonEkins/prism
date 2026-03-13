@@ -15,6 +15,10 @@ export interface WidgetConfig {
   outlineOpacity?: number;
   textColor?: string;
   textOpacity?: number;
+  textScale?: number;
+  gridLineOpacity?: number;
+  cellBackgroundColor?: string;
+  cellBackgroundOpacity?: number;
   settings?: Record<string, unknown>;
 }
 

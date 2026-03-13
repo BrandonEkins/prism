@@ -34,6 +34,7 @@ export interface WidgetRegistryEntry {
   defaultH: number;
   maxW?: number;
   maxH?: number;
+  hasGrid?: boolean;
 }
 
 export const WIDGET_REGISTRY: Record<string, WidgetRegistryEntry> = {
@@ -63,6 +64,7 @@ export const WIDGET_REGISTRY: Record<string, WidgetRegistryEntry> = {
     minH: 16,
     defaultW: 24,
     defaultH: 24,
+    hasGrid: true,
   },
   tasks: {
     component: TasksWidget,

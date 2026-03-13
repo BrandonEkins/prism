@@ -4,6 +4,25 @@ All notable changes to Prism are documented in this file.
 
 ## [Unreleased]
 
+### Added
+- **Calendar Widget**: Agenda view available on dashboard widget; List (vertical week) view also available on widget
+- **Calendar Widget**: Merge/Split toggle for day and list views when multiple calendar groups exist
+- **Calendar Widget**: Month view grid toggle (bordered/borderless cells)
+- **Calendar**: Agenda view added to calendar subpage
+- **Dashboard Editor**: Single-row properties toolbar (widget name + Fill/Outline/Text/Grid + close)
+- **Dashboard Editor**: Text size (S/M/L/XL) moved inside the Text color popover alongside swatches
+
+### Improved
+- **Calendar**: Multi-week 3W/4W event text size increased to match month view
+- **Calendar**: Today cell border in multi-week view uses standard grid line instead of separate white line
+- **Dashboard Editor**: Color popover z-index raised above widgets so dropdowns appear on top
+- **Auth**: Settings PIN login now carries over to main app session (eliminates double-login)
+- **SideNav**: Logo background made transparent to match nav toolbar color in both themes
+
+### Fixed
+- **Calendar**: All-day events fully opaque (no transparency)
+- **Calendar**: Event backgrounds fully opaque in week/day views
+
 ## [1.1.0] - 2026-03-09
 
 ### Added

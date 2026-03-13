@@ -13,6 +13,7 @@ import {
   CalendarRange,
   LayoutGrid,
   List,
+  ListChecks,
   Merge,
   Plus,
   Loader2,
@@ -28,6 +29,7 @@ const MultiWeekView = lazy(() => import('@/components/calendar/MultiWeekView').t
 const ThreeMonthView = lazy(() => import('@/components/calendar/ThreeMonthView').then(m => ({ default: m.ThreeMonthView })));
 const DayViewSideBySide = lazy(() => import('@/components/calendar/DayViewSideBySide').then(m => ({ default: m.DayViewSideBySide })));
 const WeekVerticalView = lazy(() => import('@/components/calendar/WeekVerticalView').then(m => ({ default: m.WeekVerticalView })));
+const AgendaView = lazy(() => import('@/components/calendar/AgendaView').then(m => ({ default: m.AgendaView })));
 import { useCalendarViewData } from './useCalendarViewData';
 import { useIsMobile, useSwipeNavigation } from '@/lib/hooks';
 import { useAuth } from '@/components/providers';
@@ -90,7 +92,10 @@ export function CalendarView() {
             </div>
             {/* View switcher - hidden on mobile (mobile always shows day/agenda view) */}
             <div className="hidden md:flex items-center border rounded-md">
-              <Button variant={viewType === 'day' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewType('day')} className="rounded-r-none">
+              <Button variant={viewType === 'agenda' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewType('agenda')} className="rounded-r-none">
+                <ListChecks className="h-4 w-4 mr-1" />Agenda
+              </Button>
+              <Button variant={viewType === 'day' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewType('day')} className="rounded-none border-l">
                 <CalendarDays className="h-4 w-4 mr-1" />Day
               </Button>
               <Button variant={viewType === 'week' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewType('week')} className="rounded-none border-x">
@@ -104,17 +109,11 @@ export function CalendarView() {
                   variant={viewType === 'multiWeek' ? 'secondary' : 'ghost'}
                   size="sm"
                   className="rounded-none"
-                  onClick={() => {
-                    if (viewType === 'multiWeek') {
-                      setWeeksBordered(!weeksBordered);
-                    } else {
-                      setViewType('multiWeek');
-                    }
-                  }}
+                  onClick={() => setViewType('multiWeek')}
                   asChild
                 >
                   <label className="cursor-pointer">
-                    <Grid3X3 className={cn('h-4 w-4 mr-1', viewType === 'multiWeek' && weeksBordered && 'text-primary')} />{weekCount}W
+                    <CalendarRange className="h-4 w-4 mr-1" />{weekCount}W
                     {viewType === 'multiWeek' && (
                       <select
                         value={weekCount}
@@ -136,6 +135,18 @@ export function CalendarView() {
               </Button>
               <Button variant={viewType === 'threeMonth' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewType('threeMonth')} className="rounded-l-none">
                 <LayoutGrid className="h-4 w-4 mr-1" />3 Mo
+              </Button>
+            </div>
+            {/* Grid lines toggle - works on all applicable views */}
+            <div className="hidden md:flex">
+              <Button
+                variant={weeksBordered ? 'secondary' : 'ghost'}
+                size="sm"
+                onClick={() => setWeeksBordered(!weeksBordered)}
+                title={weeksBordered ? 'Hide grid lines' : 'Show grid lines'}
+                aria-label="Toggle grid lines"
+              >
+                <Grid3X3 className={cn('h-4 w-4', weeksBordered && 'text-primary')} />
               </Button>
             </div>
             <Button size="sm" onClick={handleAddWithAuth}>
@@ -202,25 +213,28 @@ export function CalendarView() {
           )}
           {!loading && !error && (
             <Suspense fallback={<div className="h-full flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>}>
+              {viewType === 'agenda' && (
+                <AgendaView events={events} days={30} onEventClick={setSelectedEvent} />
+              )}
               {viewType === 'month' && (
                 <MonthView currentDate={currentDate} events={events} onEventClick={setSelectedEvent}
-                  onDateClick={(date) => { setCurrentDate(date); setViewType('day'); }} />
+                  onDateClick={(date) => { setCurrentDate(date); setViewType('day'); }} bordered={weeksBordered} />
               )}
               {viewType === 'week' && (
-                <WeekView currentDate={currentDate} events={events} onEventClick={setSelectedEvent} />
+                <WeekView currentDate={currentDate} events={events} onEventClick={setSelectedEvent} bordered={weeksBordered} />
               )}
               {viewType === 'weekVertical' && (
-                <WeekVerticalView currentDate={currentDate} events={events} calendarGroups={calendarGroups} selectedCalendarIds={selectedCalendarIds} mergedView={mergedView} onEventClick={setSelectedEvent} />
+                <WeekVerticalView currentDate={currentDate} events={events} calendarGroups={calendarGroups} selectedCalendarIds={selectedCalendarIds} mergedView={mergedView} bordered={weeksBordered} onEventClick={setSelectedEvent} />
               )}
               {viewType === 'multiWeek' && (
                 <MultiWeekView currentDate={currentDate} events={events} onEventClick={setSelectedEvent} weekCount={weekCount} bordered={weeksBordered} />
               )}
               {viewType === 'threeMonth' && (
                 <ThreeMonthView currentDate={currentDate} events={events} onEventClick={setSelectedEvent}
-                  onDateClick={(date) => { setCurrentDate(date); setViewType('month'); }} />
+                  onDateClick={(date) => { setCurrentDate(date); setViewType('month'); }} bordered={weeksBordered} />
               )}
               {viewType === 'day' && (
-                <DayViewSideBySide currentDate={currentDate} events={events} calendarGroups={calendarGroups} selectedCalendarIds={selectedCalendarIds} mergedView={mergedView} onEventClick={setSelectedEvent} />
+                <DayViewSideBySide currentDate={currentDate} events={events} calendarGroups={calendarGroups} selectedCalendarIds={selectedCalendarIds} mergedView={mergedView} bordered={weeksBordered} onEventClick={setSelectedEvent} />
               )}
             </Suspense>
           )}

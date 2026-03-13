@@ -1,0 +1,177 @@
+'use client';
+
+import {
+  format,
+  isToday,
+  isTomorrow,
+  isSameDay,
+  addDays,
+  startOfDay,
+} from 'date-fns';
+import { Calendar } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { Badge } from '@/components/ui';
+import type { CalendarEvent } from '@/types/calendar';
+
+export interface AgendaViewProps {
+  events: CalendarEvent[];
+  days?: number;
+  maxEventsPerDay?: number;
+  onEventClick?: (event: CalendarEvent) => void;
+  emptyMessage?: string;
+}
+
+export function AgendaView({
+  events,
+  days = 14,
+  maxEventsPerDay = 0,
+  onEventClick,
+  emptyMessage = 'No upcoming events',
+}: AgendaViewProps) {
+  const startDate = startOfDay(new Date());
+  const endDate = addDays(startDate, days);
+
+  const filteredEvents = events
+    .filter(e => {
+      const ed = startOfDay(e.startTime);
+      return ed >= startDate && ed < endDate;
+    })
+    .sort((a, b) => {
+      const dc = startOfDay(a.startTime).getTime() - startOfDay(b.startTime).getTime();
+      if (dc !== 0) return dc;
+      if (a.allDay && !b.allDay) return -1;
+      if (!a.allDay && b.allDay) return 1;
+      return a.startTime.getTime() - b.startTime.getTime();
+    });
+
+  const eventsByDay: Array<{ date: Date; events: CalendarEvent[] }> = [];
+  for (let i = 0; i < days; i++) {
+    const date = addDays(startDate, i);
+    const dayStart = startOfDay(date);
+    const dayEvents = filteredEvents.filter(e =>
+      e.allDay
+        ? e.startTime <= dayStart && e.endTime > dayStart
+        : isSameDay(e.startTime, date)
+    );
+    if (dayEvents.length > 0) eventsByDay.push({ date, events: dayEvents });
+  }
+
+  if (filteredEvents.length === 0) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center text-muted-foreground gap-2">
+        <Calendar className="h-8 w-8" />
+        <span className="text-sm">{emptyMessage}</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="overflow-auto h-full -mr-2 pr-2">
+      <div className="space-y-4">
+        {eventsByDay.map(({ date, events: dayEvts }) => (
+          <AgendaDaySection
+            key={date.toISOString()}
+            date={date}
+            events={dayEvts}
+            maxEvents={maxEventsPerDay}
+            onEventClick={onEventClick}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function AgendaDaySection({
+  date,
+  events,
+  maxEvents,
+  onEventClick,
+}: {
+  date: Date;
+  events: CalendarEvent[];
+  maxEvents: number;
+  onEventClick?: (event: CalendarEvent) => void;
+}) {
+  const displayEvents = maxEvents > 0 ? events.slice(0, maxEvents) : events;
+  const remainingCount = maxEvents > 0 ? events.length - maxEvents : 0;
+
+  return (
+    <div>
+      <div className="flex items-center gap-2 mb-2">
+        <span
+          className={cn(
+            'text-sm font-semibold',
+            isToday(date) && 'text-seasonal-accent'
+          )}
+        >
+          {formatAgendaDayHeader(date)}
+        </span>
+        {isToday(date) && (
+          <Badge className="text-[10px] px-1.5 py-0 bg-seasonal-highlight text-foreground">
+            Today
+          </Badge>
+        )}
+      </div>
+
+      <div className="space-y-1.5 pl-2 border-l-2 border-border">
+        {displayEvents.map((event) => (
+          <AgendaEventRow
+            key={event.id}
+            event={event}
+            onClick={() => onEventClick?.(event)}
+          />
+        ))}
+        {remainingCount > 0 && (
+          <div className="text-xs text-muted-foreground pl-2">
+            +{remainingCount} more events
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function AgendaEventRow({
+  event,
+  onClick,
+}: {
+  event: CalendarEvent;
+  onClick?: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        'w-full text-left flex items-start gap-2 p-1.5 rounded',
+        'hover:bg-accent/50 transition-colors',
+        'touch-action-manipulation'
+      )}
+    >
+      <div
+        className="w-1 h-full min-h-[24px] rounded-full flex-shrink-0"
+        style={{ backgroundColor: event.color }}
+      />
+      <div className="flex-1 min-w-0">
+        <div className="text-xs text-muted-foreground">
+          {event.allDay ? 'All day' : format(event.startTime, 'h:mm a')}
+        </div>
+        <div className="text-sm font-medium truncate">
+          {event.title}
+        </div>
+        {event.location && (
+          <div className="text-xs text-muted-foreground truncate">
+            {event.location}
+          </div>
+        )}
+      </div>
+    </button>
+  );
+}
+
+function formatAgendaDayHeader(date: Date): string {
+  const dayName = format(date, 'EEEE, MMMM d, yyyy');
+  if (isToday(date)) return `Today - ${dayName}`;
+  if (isTomorrow(date)) return `Tomorrow - ${dayName}`;
+  return dayName;
+}

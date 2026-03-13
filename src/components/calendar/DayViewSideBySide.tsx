@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils';
 import { useWidgetBgOverride } from '@/components/widgets/WidgetContainer';
 import { useHiddenHours } from '@/lib/hooks/useHiddenHours';
 import { calculateEventPositions, positionToCSS } from '@/lib/utils/eventLayout';
+import { hexToRgba } from '@/lib/utils/color';
 import type { CalendarEvent } from '@/types/calendar';
 
 export interface DayViewSideBySideProps {
@@ -19,6 +20,7 @@ export interface DayViewSideBySideProps {
   calendarGroups: Array<{ id: string; name: string; color: string }>;
   selectedCalendarIds?: Set<string>;
   mergedView?: boolean;
+  bordered?: boolean;
   onEventClick: (event: CalendarEvent) => void;
 }
 
@@ -28,10 +30,14 @@ export function DayViewSideBySide({
   calendarGroups,
   selectedCalendarIds,
   mergedView = false,
+  bordered = true,
   onEventClick,
 }: DayViewSideBySideProps) {
   const bgOverride = useWidgetBgOverride();
   const transparentMode = bgOverride?.hasCustomBg === true;
+  const cellBg = bgOverride?.cellBackgroundColor;
+  const cellBgOpacity = bgOverride?.cellBackgroundOpacity ?? 1;
+  const cellBgStyle = cellBg ? { backgroundColor: hexToRgba(cellBg, cellBgOpacity) } : undefined;
 
   // Hidden hours hook
   const { settings: hiddenSettings, toggleHidden, getVisibleHours } = useHiddenHours();
@@ -127,8 +133,8 @@ export function DayViewSideBySide({
                 className="flex-1 min-w-0 border-l border-border p-1"
               >
                 <div
-                  className="text-sm font-medium text-center py-1 mb-1 rounded"
-                  style={{ backgroundColor: group.color + '20', color: group.color }}
+                  className="text-sm font-medium text-center py-1 mb-1 rounded text-white"
+                  style={{ backgroundColor: group.color }}
                 >
                   {group.name}
                 </div>
@@ -139,7 +145,7 @@ export function DayViewSideBySide({
                         key={event.id}
                         onClick={() => onEventClick(event)}
                         className="w-full text-left text-xs px-1 py-0.5 rounded truncate hover:opacity-80 hover:ring-2 hover:ring-seasonal-accent/50 transition-all"
-                        style={{ backgroundColor: event.color + '20', borderLeft: `2px solid ${event.color}` }}
+                        style={{ backgroundColor: event.color, color: '#fff', borderLeft: `2px solid ${event.color}` }}
                       >
                         {event.title}
                       </button>
@@ -162,9 +168,10 @@ export function DayViewSideBySide({
             const isNowHour = isCurrentDay && hour === currentHour;
             return (
               <div key={hour} className={cn(
-                'pl-1 pr-2 text-right text-xs border-t border-border flex items-start pt-0.5 min-h-0 relative text-muted-foreground',
-                isPastHour && 'bg-muted/55',
-                isNowHour && 'text-primary font-semibold'
+                'pl-1 pr-2 text-right text-xs flex items-start pt-0.5 min-h-0 relative text-muted-foreground',
+                bordered && 'border-t border-border',
+                isPastHour && 'bg-muted/15',
+                isNowHour && 'bg-primary text-primary-foreground font-semibold rounded-sm'
               )}>
                 {format(new Date().setHours(hour, 0), 'h a')}
                 {isNowHour && (
@@ -192,9 +199,10 @@ export function DayViewSideBySide({
 
                 return (
                   <div key={hour} className={cn(
-                    'border-t border-border relative min-h-0',
-                    isPastHour && 'bg-muted/55'
-                  )}>
+                    'relative min-h-0',
+                    bordered && 'border-t border-border',
+                    isPastHour && !cellBgStyle && 'bg-muted/15'
+                  )} style={cellBgStyle}>
                     {isNowHour && (
                       <div className="absolute left-0 right-0 border-t-2 border-t-primary z-20 pointer-events-none" style={{ top: `${currentMinuteSnapped}%` }} />
                     )}
@@ -206,9 +214,10 @@ export function DayViewSideBySide({
                         <button
                           key={event.id}
                           onClick={() => onEventClick(event)}
-                          className="absolute p-0.5 rounded text-left text-xs z-10 hover:opacity-80 hover:ring-2 hover:ring-seasonal-accent/50 transition-all"
+                          className="absolute p-0.5 rounded text-left text-xs z-10 hover:opacity-90 hover:ring-2 hover:ring-seasonal-accent/50 transition-all"
                           style={{
-                            backgroundColor: event.color + '20',
+                            backgroundColor: event.color,
+                            color: '#fff',
                             borderLeft: `2px solid ${event.color}`,
                             top: `${(event.startTime.getMinutes() / 60) * 100}%`,
                             left: css.left,

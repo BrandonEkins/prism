@@ -4,8 +4,12 @@ import { db } from '@/lib/db/client';
 import { users } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import bcrypt from 'bcryptjs';
-import { isLoginLockedOut, recordFailedLogin, clearLoginAttempts } from '@/lib/auth/session';
+import { createSession, isLoginLockedOut, recordFailedLogin, clearLoginAttempts } from '@/lib/auth/session';
 import { setSettingsVerified } from '@/lib/auth/settingsAuth';
+import { logActivity } from '@/lib/services/auditLog';
+
+const appUrl = process.env.APP_URL || process.env.BASE_URL;
+const isSecure = appUrl ? appUrl.startsWith('https://') : process.env.NODE_ENV === 'production';
 
 export async function POST(request: NextRequest) {
   try {
@@ -34,7 +38,7 @@ export async function POST(request: NextRequest) {
 
     // Verify user exists and is a parent
     const [user] = await db
-      .select({ id: users.id, role: users.role, pin: users.pin })
+      .select({ id: users.id, name: users.name, role: users.role, color: users.color, avatarUrl: users.avatarUrl, pin: users.pin })
       .from(users)
       .where(eq(users.id, userId));
 
@@ -63,14 +67,59 @@ export async function POST(request: NextRequest) {
     // Clear failed attempts on success
     await clearLoginAttempts(userId);
 
-    // Set Redis flag for settings verification
     const cookieStore = await cookies();
-    const sessionToken = cookieStore.get('prism_session')?.value;
+    let sessionToken = cookieStore.get('prism_session')?.value;
+
+    // If no app session exists, create one so the login carries over
+    if (!sessionToken) {
+      const session = await createSession(user.id, user.role as 'parent', {
+        userAgent: request.headers.get('user-agent') || undefined,
+        ipAddress: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || undefined,
+      });
+
+      if (session) {
+        sessionToken = session.token;
+
+        cookieStore.set('prism_session', session.token, {
+          httpOnly: true,
+          secure: isSecure,
+          sameSite: 'lax',
+          expires: session.expiresAt,
+          path: '/',
+        });
+
+        cookieStore.set('prism_user', user.id, {
+          httpOnly: false,
+          secure: isSecure,
+          sameSite: 'lax',
+          expires: session.expiresAt,
+          path: '/',
+        });
+
+        logActivity({
+          userId: user.id,
+          action: 'login',
+          entityType: 'session',
+          summary: `Logged in via settings: ${user.name}`,
+        });
+      }
+    }
+
+    // Set Redis flag for settings verification
     if (sessionToken) {
       await setSettingsVerified(sessionToken);
     }
 
-    return NextResponse.json({ verified: true });
+    return NextResponse.json({
+      verified: true,
+      user: {
+        id: user.id,
+        name: user.name,
+        role: user.role,
+        color: user.color,
+        avatarUrl: user.avatarUrl,
+      },
+    });
   } catch (error) {
     console.error('Error verifying PIN:', error);
     return NextResponse.json(

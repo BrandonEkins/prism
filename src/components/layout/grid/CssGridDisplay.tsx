@@ -74,7 +74,7 @@ export function CssGridDisplay({
                 ...widgetStyle,
               }}
             >
-              <WidgetBgOverrideProvider value={{ hasCustomBg, textColor: w.textColor, textOpacity: w.textOpacity }}>
+              <WidgetBgOverrideProvider value={{ hasCustomBg, textColor: w.textColor, textOpacity: w.textOpacity, gridLineOpacity: w.gridLineOpacity, cellBackgroundColor: w.cellBackgroundColor, cellBackgroundOpacity: w.cellBackgroundOpacity }}>
                 <div className="h-full w-full overflow-hidden">
                   {renderWidget(w)}
                 </div>

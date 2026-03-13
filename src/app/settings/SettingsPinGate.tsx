@@ -7,13 +7,14 @@ import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/ui/avatar';
-import { useFamily } from '@/components/providers';
+import { useFamily, useAuth } from '@/components/providers';
 import { SettingsView } from './SettingsView';
 
 type GateState = 'checking' | 'prompt' | 'verified';
 
 export function SettingsPinGate() {
   const router = useRouter();
+  const { setActiveUser } = useAuth();
   const [state, setState] = useState<GateState>('checking');
 
   // Check if already verified (within 10-minute window)
@@ -26,9 +27,19 @@ export function SettingsPinGate() {
       .catch(() => setState('prompt'));
   }, []);
 
-  const handleVerified = useCallback(() => {
+  const handleVerified = useCallback((user?: { id: string; name: string; role: string; color: string; avatarUrl?: string | null }) => {
     setState('verified');
-  }, []);
+    // Set the active user in AuthProvider so the login carries over to the app
+    if (user) {
+      setActiveUser({
+        id: user.id,
+        name: user.name,
+        role: user.role as 'parent' | 'child' | 'guest',
+        color: user.color,
+        avatarUrl: user.avatarUrl ?? undefined,
+      });
+    }
+  }, [setActiveUser]);
 
   const handleDismiss = useCallback(() => {
     router.push('/');
@@ -53,7 +64,7 @@ function SettingsPinPrompt({
   onVerified,
   onDismiss,
 }: {
-  onVerified: () => void;
+  onVerified: (user?: { id: string; name: string; role: string; color: string; avatarUrl?: string | null }) => void;
   onDismiss: () => void;
 }) {
   const { members, loading } = useFamily();
@@ -142,7 +153,8 @@ function SettingsPinPrompt({
         });
 
         if (response.ok) {
-          onVerified();
+          const data = await response.json();
+          onVerified(data.user);
         } else {
           const data = await response.json();
           setError(data.error || 'Incorrect PIN');

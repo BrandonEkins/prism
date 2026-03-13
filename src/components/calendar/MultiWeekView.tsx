@@ -10,6 +10,8 @@ import {
   startOfDay,
 } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { useWidgetBgOverride } from '@/components/widgets/WidgetContainer';
+import { hexToRgba } from '@/lib/utils/color';
 import type { CalendarEvent } from '@/types/calendar';
 
 export interface MultiWeekViewProps {
@@ -27,6 +29,10 @@ export function MultiWeekView({
   weekCount = 2,
   bordered = false,
 }: MultiWeekViewProps) {
+  const bgOverride = useWidgetBgOverride();
+  const cellBg = bgOverride?.cellBackgroundColor;
+  const cellBgOpacity = bgOverride?.cellBackgroundOpacity ?? 1;
+  const cellBgStyle = cellBg ? { backgroundColor: hexToRgba(cellBg, cellBgOpacity) } : undefined;
   const weekStart = startOfWeek(currentDate);
 
   const totalDays = weekCount * 7;
@@ -70,6 +76,7 @@ export function MultiWeekView({
                 onEventClick={onEventClick}
                 compact={compact}
                 bordered={bordered}
+                cellBgStyle={cellBgStyle}
               />
             ))}
           </div>
@@ -85,12 +92,14 @@ function DayCell({
   onEventClick,
   compact,
   bordered,
+  cellBgStyle,
 }: {
   date: Date;
   events: CalendarEvent[];
   onEventClick: (event: CalendarEvent) => void;
   compact: boolean;
   bordered: boolean;
+  cellBgStyle?: React.CSSProperties;
 }) {
   const dayStart = startOfDay(date);
   const dayEvents = events.filter((event) =>
@@ -109,10 +118,12 @@ function DayCell({
     <div
       className={cn(
         'flex flex-col',
-        isPast && 'opacity-50',
-        bordered && 'border border-border rounded-md bg-card/85',
-        bordered && isPast && 'bg-muted/65',
+        isPast && !cellBgStyle && 'opacity-50',
+        bordered && !cellBgStyle && 'border border-border rounded-md bg-card/85',
+        bordered && cellBgStyle && 'border border-border rounded-md',
+        bordered && isPast && !cellBgStyle && 'bg-muted/65',
       )}
+      style={cellBgStyle}
     >
       {/* Date header */}
       <div
@@ -131,7 +142,10 @@ function DayCell({
           <span className="font-bold">{format(date, 'd')}</span>
           <span className={cn('text-xs', isToday(date) ? 'text-primary-foreground/80' : 'text-muted-foreground')}>{format(date, 'MMM')}</span>
         </div>
-        {!isToday(date) && !bordered && <div className="border-b border-border mt-0.5" />}
+        <div className={cn(
+          'mt-0.5',
+          !bordered && 'border-b border-border',
+        )} />
       </div>
 
       {/* Events */}
@@ -142,10 +156,10 @@ function DayCell({
             onClick={(e) => { e.stopPropagation(); onEventClick(event); }}
             className={cn(
               'w-full text-left rounded truncate hover:opacity-80 hover:ring-1 hover:ring-seasonal-accent/50 transition-all',
-              compact ? 'text-[10px] px-0.5 py-px' : 'text-xs px-1 py-0.5'
+              compact ? 'text-xs px-0.5 py-px' : 'text-xs px-1 py-0.5'
             )}
             style={event.allDay
-              ? { backgroundColor: event.color + '20', borderLeft: `2px solid ${event.color}` }
+              ? { backgroundColor: event.color, color: '#fff', borderLeft: `2px solid ${event.color}` }
               : { color: event.color }
             }
           >

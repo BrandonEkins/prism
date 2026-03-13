@@ -33,6 +33,7 @@ export interface ThreeMonthViewProps {
   events: CalendarEvent[];
   onEventClick: (event: CalendarEvent) => void;
   onDateClick: (date: Date) => void;
+  bordered?: boolean;
 }
 
 const DAY_NAMES = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
@@ -43,12 +44,14 @@ function MiniMonth({
   onEventClick,
   onDateClick,
   isCenter,
+  bordered = false,
 }: {
   month: Date;
   events: CalendarEvent[];
   onEventClick: (event: CalendarEvent) => void;
   onDateClick: (date: Date) => void;
   isCenter: boolean;
+  bordered?: boolean;
 }) {
   const monthStart = startOfMonth(month);
   const monthEnd = endOfMonth(month);
@@ -117,6 +120,7 @@ function MiniMonth({
                   onClick={() => onDateClick(date)}
                   className={cn(
                     'flex flex-col rounded text-xs cursor-pointer overflow-hidden p-0.5',
+                    bordered && 'border border-border',
                     !inMonth && 'text-muted-foreground/40',
                     isPast && inMonth && 'bg-gray-200 text-gray-600 dark:bg-muted/30 dark:text-muted-foreground',
                     today && 'bg-seasonal-highlight/20',
@@ -164,6 +168,7 @@ export function ThreeMonthView({
   events,
   onEventClick,
   onDateClick,
+  bordered = false,
 }: ThreeMonthViewProps) {
   const prevMonth = subMonths(currentDate, 1);
   const nextMonth = addMonths(currentDate, 1);
@@ -175,9 +180,9 @@ export function ThreeMonthView({
       "h-full gap-2 overflow-y-auto pb-4 md:pb-20",
       isPortrait ? "flex flex-col" : "flex flex-row"
     )}>
-      <MiniMonth month={prevMonth} events={events} onEventClick={onEventClick} onDateClick={onDateClick} isCenter={false} />
-      <MiniMonth month={currentDate} events={events} onEventClick={onEventClick} onDateClick={onDateClick} isCenter={true} />
-      <MiniMonth month={nextMonth} events={events} onEventClick={onEventClick} onDateClick={onDateClick} isCenter={false} />
+      <MiniMonth month={prevMonth} events={events} onEventClick={onEventClick} onDateClick={onDateClick} isCenter={false} bordered={bordered} />
+      <MiniMonth month={currentDate} events={events} onEventClick={onEventClick} onDateClick={onDateClick} isCenter={true} bordered={bordered} />
+      <MiniMonth month={nextMonth} events={events} onEventClick={onEventClick} onDateClick={onDateClick} isCenter={false} bordered={bordered} />
     </div>
   );
 }

@@ -79,7 +79,7 @@ export const WidgetAlignmentProvider = WidgetAlignmentContext.Provider;
 // Context for grid-level background override — when the grid wrapper applies a custom
 // background, the Card strips its own bg/border/shadow so there's no double background.
 // Also carries explicit textColor so WidgetContainer can apply it on the Card.
-const WidgetBgOverrideContext = React.createContext<{ hasCustomBg: boolean; textColor?: string; textOpacity?: number } | null>(null);
+const WidgetBgOverrideContext = React.createContext<{ hasCustomBg: boolean; textColor?: string; textOpacity?: number; gridLineOpacity?: number; cellBackgroundColor?: string; cellBackgroundOpacity?: number } | null>(null);
 export const WidgetBgOverrideProvider = WidgetBgOverrideContext.Provider;
 
 /** Hook for sub-components (e.g. calendar views) to check if widget has custom bg */
@@ -200,7 +200,7 @@ export function WidgetContainer({
   const bgOverride = React.useContext(WidgetBgOverrideContext);
   const stripCardBg = bgOverride?.hasCustomBg === true;
   const overrideTextColor = bgOverride?.textColor;
-  const overrideTextOpacity = bgOverride?.textOpacity ?? 1;
+  const overrideGridLineOpacity = bgOverride?.gridLineOpacity ?? 1;
 
   // Size classes for the grid
   const sizeClasses: Record<WidgetSize, string> = {
@@ -238,22 +238,23 @@ export function WidgetContainer({
           : backgroundColor ? { backgroundColor } : {}),
         ...(overrideTextColor ? (() => {
           const hsl = hexToHslValues(overrideTextColor);
-          // When text opacity < 1, append alpha to HSL values so Tailwind's hsl() picks it up
-          const hslVal = overrideTextOpacity < 1 ? `${hsl} / ${overrideTextOpacity}` : hsl;
-          // Muted text gets 60% of the main text opacity to preserve visual hierarchy
-          const mutedOpacity = (overrideTextOpacity < 1 ? overrideTextOpacity : 1) * 0.6;
-          const mutedHslVal = `${hsl} / ${mutedOpacity}`;
+          // Text always renders at full opacity for readability
+          const fullHslVal = hsl;
+          // Muted text gets 60% opacity to preserve visual hierarchy
+          const mutedHslVal = `${hsl} / 0.6`;
+          // Grid lines / borders use the dedicated gridLineOpacity control
+          const borderOpacity = overrideGridLineOpacity < 1 ? overrideGridLineOpacity : 1;
+          const borderHslVal = borderOpacity < 1 ? `${hsl} / ${borderOpacity}` : hsl;
           return {
-            color: overrideTextOpacity < 1 ? hexToRgba(overrideTextColor, overrideTextOpacity) : overrideTextColor,
-            // Override Tailwind CSS custom properties so text-foreground, text-muted-foreground,
-            // text-card-foreground, text-primary, text-seasonal-accent etc. all resolve to the chosen color
-            '--foreground': hslVal,
-            '--card-foreground': hslVal,
+            color: overrideTextColor,
+            // Override Tailwind CSS custom properties — text stays fully opaque
+            '--foreground': fullHslVal,
+            '--card-foreground': fullHslVal,
             '--muted-foreground': mutedHslVal,
-            '--seasonal-accent': hslVal,
-            // Override border colors so Select/dropdown outlines pick up the custom color
-            '--input': hslVal,
-            '--border': hslVal,
+            '--seasonal-accent': fullHslVal,
+            // Border/grid lines use the opacity control so they can be faded on busy backgrounds
+            '--input': borderHslVal,
+            '--border': borderHslVal,
           } as React.CSSProperties;
         })() : {}),
       }}

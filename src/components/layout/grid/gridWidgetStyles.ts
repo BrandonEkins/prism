@@ -37,6 +37,12 @@ export function getWidgetStyle(w: WidgetConfig): CSSProperties | undefined {
       : w.textColor;
   }
 
+  if (w.textScale && w.textScale !== 1) {
+    // Use zoom instead of fontSize because Tailwind text classes use rem (root-relative),
+    // which ignores parent em/font-size. Zoom scales everything proportionally.
+    (style as Record<string, unknown>).zoom = w.textScale;
+  }
+
   return style;
 }
 
