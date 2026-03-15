@@ -71,5 +71,31 @@ export function useMessages(options: UseMessagesOptions = {}) {
     [setMessages, refresh]
   );
 
-  return { messages, loading, error, refresh, deleteMessage };
+  const updateMessage = useCallback(
+    async (messageId: string, updates: { message?: string; pinned?: boolean; important?: boolean }) => {
+      try {
+        const response = await fetch(`/api/messages/${messageId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(updates),
+        });
+        if (!response.ok) throw new Error('Failed to update message');
+        const updated = await response.json();
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === messageId
+              ? { ...msg, message: updated.message, pinned: updated.pinned, important: updated.important }
+              : msg
+          )
+        );
+      } catch (err) {
+        console.error('Error updating message:', err);
+        refresh();
+        throw err;
+      }
+    },
+    [setMessages, refresh]
+  );
+
+  return { messages, loading, error, refresh, deleteMessage, updateMessage };
 }

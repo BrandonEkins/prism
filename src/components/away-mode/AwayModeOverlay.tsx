@@ -95,11 +95,17 @@ export function AwayModeOverlay() {
       {/* Dark overlay */}
       <div className="absolute inset-0 bg-black/40" />
 
-      {/* Content */}
-      <div className="absolute inset-0 flex flex-col items-center justify-center p-8">
-        <AwayModeClock />
-        <AwayModeWeather />
-        <div className="mt-8 text-white/50 text-sm">
+      {/* Header bar — clock left, weather right */}
+      <div className="absolute top-0 left-0 right-0 z-10 bg-black/30 backdrop-blur-sm border-b border-white/10">
+        <div className="flex items-center justify-between px-6 py-4">
+          <AwayModeClock />
+          <AwayModeWeather />
+        </div>
+      </div>
+
+      {/* Center tap prompt */}
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+        <div className="text-white/40 text-sm">
           Tap anywhere to unlock
         </div>
       </div>
@@ -123,12 +129,12 @@ function AwayModeClock() {
   }, []);
 
   return (
-    <div className="text-center text-white">
-      <div className="text-8xl font-light tabular-nums">
+    <div className="flex items-center gap-3 text-white">
+      <div className="text-3xl font-light tabular-nums">
         {format(time, 'h:mm')}
-        <span className="text-4xl ml-3 opacity-70">{format(time, 'a')}</span>
+        <span className="text-lg ml-1 opacity-70">{format(time, 'a')}</span>
       </div>
-      <div className="text-2xl mt-2 text-white/60">
+      <div className="text-sm text-white/60">
         {format(time, 'EEEE, MMMM d')}
       </div>
     </div>
@@ -166,28 +172,20 @@ function AwayModeWeather() {
   const icon = getWeatherIcon(weather.condition);
 
   return (
-    <div className="flex items-center gap-6 mt-6 text-white/80">
-      <div className="text-5xl">{icon}</div>
-      <div>
-        <div className="text-4xl font-light">{Math.round(weather.temperature)}°F</div>
-        <div className="text-lg text-white/50 capitalize">{weather.description}</div>
-      </div>
-      <div className="ml-4 text-sm text-white/40 space-y-1">
-        <div className="flex items-center gap-1">
-          <Droplets className="h-4 w-4" />
-          {weather.humidity}%
-        </div>
-        <div className="flex items-center gap-1">
-          <Wind className="h-4 w-4" />
-          {weather.windSpeed} mph
-        </div>
+    <div className="flex items-center gap-3 text-white/80">
+      <div className="text-2xl">{icon}</div>
+      <div className="text-xl font-light">{Math.round(weather.temperature)}°F</div>
+      <div className="text-sm text-white/50 capitalize">{weather.description}</div>
+      <div className="flex items-center gap-3 ml-2 text-xs text-white/40">
+        <span className="flex items-center gap-1"><Droplets className="h-3 w-3" />{weather.humidity}%</span>
+        <span className="flex items-center gap-1"><Wind className="h-3 w-3" />{weather.windSpeed} mph</span>
       </div>
     </div>
   );
 }
 
 function getWeatherIcon(condition: string) {
-  const cls = 'h-12 w-12 text-white/70';
+  const cls = 'h-6 w-6 text-white/70';
   switch (condition) {
     case 'sunny':
       return <Sun className={cls} />;

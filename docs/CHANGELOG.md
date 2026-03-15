@@ -6,7 +6,8 @@ All notable changes to Prism are documented in this file.
 
 ### Added
 - **Chores**: Reset Day picker in Add/Edit Chore modals — set which day weekly chores reset (Sun-Sat), day-of-month for monthly, or MM-DD for annual
-- **Goals**: Seasonal celebration animation when a goal is fully achieved — leprechaun & gold (March), Easter bunny (April), bald eagle (July), Santa's bag (December), trophy (default)
+- **Goals**: Seasonal celebration animations when a goal is fully achieved — week-based holidays: Valentine's, St. Patrick's, Easter, Spring, Memorial Day, July 4th, Halloween, Thanksgiving, Christmas, New Year's (plus default trophy)
+- **Messages**: Inline edit support — pencil icon on hover, click to edit in place, Ctrl+Enter to save
 - **Calendar Notes**: Day-tied notes panel on calendar widget list and day views — click the sticky note icon to toggle
 - **Calendar Notes**: Inline contentEditable editing with auto-save (2s debounce + save on blur)
 - **Calendar Notes**: Formatting shortcuts: Ctrl+B bold, Ctrl+I italic, Ctrl+U underline, Ctrl+Shift+S strikethrough, Ctrl+Shift+L bullet list, `- ` auto-converts to list
@@ -23,6 +24,7 @@ All notable changes to Prism are documented in this file.
 - **Auto-Hide UI**: Only wakes on mouse click, keyboard press, or touch — mouse movement/drag no longer triggers reappear
 
 ### Improved
+- **Away Mode**: Header layout matches babysitter mode — clock top-left, weather top-right in a compact bar
 - **Calendar**: Multi-week 3W/4W event text size increased to match month view
 - **Calendar**: Today cell border in multi-week view uses standard grid line instead of separate white line
 - **Dashboard Editor**: Color popover z-index raised above widgets so dropdowns appear on top
@@ -30,6 +32,7 @@ All notable changes to Prism are documented in this file.
 - **SideNav**: Logo background made transparent to match nav toolbar color in both themes
 
 ### Fixed
+- **Calendar**: Day widget notes column no longer shows redundant date header when viewing a single day
 - **Calendar**: Events now span their full duration in week and day views (previously showed as ~30min blocks)
 - **Calendar**: Event text top-aligned with start–end time byline below title
 - **Calendar**: All-day events fully opaque (no transparency)

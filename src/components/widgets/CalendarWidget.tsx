@@ -441,6 +441,7 @@ export const CalendarWidget = React.memo(function CalendarWidget({
                       days={notesDays}
                       notesByDate={notesByDate}
                       onNoteChange={activeUser ? upsertNote : undefined}
+                      hideDateHeaders={notesDays.length <= 1}
                     />
                   </Suspense>
                 </div>

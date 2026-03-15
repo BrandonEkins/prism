@@ -9,12 +9,14 @@ interface CalendarNotesColumnProps {
   days: Date[];
   notesByDate: Map<string, CalendarNote>;
   onNoteChange?: (date: string, content: string) => void;
+  hideDateHeaders?: boolean;
 }
 
 export function CalendarNotesColumn({
   days,
   notesByDate,
   onNoteChange,
+  hideDateHeaders,
 }: CalendarNotesColumnProps) {
   return (
     <div className="h-full overflow-auto">
@@ -28,6 +30,7 @@ export function CalendarNotesColumn({
             day={day}
             content={note?.content || ''}
             onNoteChange={onNoteChange}
+            hideDateHeader={hideDateHeaders}
           />
         );
       })}
@@ -40,11 +43,13 @@ function NoteDayRow({
   day,
   content,
   onNoteChange,
+  hideDateHeader,
 }: {
   dateKey: string;
   day: Date;
   content: string;
   onNoteChange?: (date: string, content: string) => void;
+  hideDateHeader?: boolean;
 }) {
   const editable = !!onNoteChange;
   const editorRef = useRef<HTMLDivElement>(null);
@@ -137,11 +142,13 @@ function NoteDayRow({
   return (
     <div className="border-b border-border/50">
       {/* Day header */}
-      <div className="px-3 pt-2 pb-1">
-        <span className="text-xs font-medium text-muted-foreground">
-          {format(day, 'EEE, MMM d')}
-        </span>
-      </div>
+      {!hideDateHeader && (
+        <div className="px-3 pt-2 pb-1">
+          <span className="text-xs font-medium text-muted-foreground">
+            {format(day, 'EEE, MMM d')}
+          </span>
+        </div>
+      )}
       {/* Editable content area */}
       <div
         ref={editorRef}

@@ -25,6 +25,9 @@ import {
   Pin,
   AlertTriangle,
   Trash2,
+  Pencil,
+  Check,
+  X as XIcon,
   Clock,
   Users,
 } from 'lucide-react';
@@ -51,7 +54,7 @@ export function MessagesView() {
   const { confirm: confirmDelete, dialogProps: confirmDialogProps } = useConfirmDialog();
 
   // State
-  const { messages, loading, error, refresh, deleteMessage } = useMessages();
+  const { messages, loading, error, refresh, deleteMessage, updateMessage } = useMessages();
   const [filterAuthor, setFilterAuthor] = useState<string | null>(null);
   const [groupByPerson, setGroupByPerson] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -143,6 +146,31 @@ export function MessagesView() {
 
     if (await confirmDelete('Delete this message?', 'This action cannot be undone.')) {
       await deleteMessage(messageId);
+    }
+  };
+
+  // Handle edit - requires auth and ownership check
+  const handleEdit = async (messageId: string, newText: string): Promise<boolean> => {
+    const message = messages.find((m) => m.id === messageId);
+    if (!message) return false;
+
+    const user = await requireAuth("Who's editing this message?");
+    if (!user) return false;
+
+    const isParent = user.role === 'parent';
+    const isOwnMessage = message.author.id === user.id;
+
+    if (!isParent && !isOwnMessage) {
+      toast({ title: `This message was posted by ${message.author.name}. Only they or a parent can edit it.`, variant: 'warning' });
+      return false;
+    }
+
+    try {
+      await updateMessage(messageId, { message: newText });
+      return true;
+    } catch {
+      toast({ title: 'Failed to update message', variant: 'destructive' });
+      return false;
     }
   };
 
@@ -273,6 +301,7 @@ export function MessagesView() {
                         key={message.id}
                         message={message}
                         onDelete={() => handleDelete(message.id)}
+                        onEdit={(newText) => handleEdit(message.id, newText)}
                         compact
                       />
                     ))}
@@ -287,6 +316,7 @@ export function MessagesView() {
                   key={message.id}
                   message={message}
                   onDelete={() => handleDelete(message.id)}
+                  onEdit={(newText) => handleEdit(message.id, newText)}
                 />
               ))}
             </div>
@@ -321,12 +351,50 @@ export function MessagesView() {
 function MessageCard({
   message,
   onDelete,
+  onEdit,
   compact,
 }: {
   message: FamilyMessage;
   onDelete: () => void;
+  onEdit: (newText: string) => Promise<boolean>;
   compact?: boolean;
 }) {
+  const [editing, setEditing] = React.useState(false);
+  const [editText, setEditText] = React.useState(message.message);
+  const [saving, setSaving] = React.useState(false);
+  const textareaRef = React.useRef<HTMLTextAreaElement>(null);
+
+  const startEdit = () => {
+    setEditText(message.message);
+    setEditing(true);
+    setTimeout(() => textareaRef.current?.focus(), 0);
+  };
+
+  const cancelEdit = () => {
+    setEditing(false);
+    setEditText(message.message);
+  };
+
+  const saveEdit = async () => {
+    const trimmed = editText.trim();
+    if (!trimmed || trimmed === message.message) {
+      cancelEdit();
+      return;
+    }
+    setSaving(true);
+    const ok = await onEdit(trimmed);
+    setSaving(false);
+    if (ok) setEditing(false);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Escape') cancelEdit();
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      saveEdit();
+    }
+  };
+
   const timeAgo = formatDistanceToNow(message.createdAt, { addSuffix: true });
   const fullDate = format(message.createdAt, 'PPp');
 
@@ -341,30 +409,69 @@ function MessageCard({
       >
         <div className="flex items-start justify-between gap-1">
           <div className="flex-1 min-w-0">
-            <p className="text-sm whitespace-pre-wrap">{message.message}</p>
-            <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-              <span className="text-xs text-muted-foreground" title={fullDate}>{timeAgo}</span>
-              {message.pinned && (
-                <Badge variant="outline" className="gap-0.5 text-[10px] h-4 px-1">
-                  <Pin className="h-2.5 w-2.5" />Pinned
-                </Badge>
-              )}
-              {message.important && (
-                <Badge variant="destructive" className="gap-0.5 text-[10px] h-4 px-1">
-                  <AlertTriangle className="h-2.5 w-2.5" />
-                </Badge>
-              )}
-            </div>
+            {editing ? (
+              <div className="space-y-1.5">
+                <textarea
+                  ref={textareaRef}
+                  value={editText}
+                  onChange={(e) => setEditText(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  className="w-full text-sm rounded-md border border-border bg-background p-1.5 resize-none focus:outline-none focus:ring-1 focus:ring-primary"
+                  rows={2}
+                  maxLength={500}
+                  disabled={saving}
+                />
+                <div className="flex items-center gap-1">
+                  <Button size="sm" className="h-6 text-xs px-2" onClick={saveEdit} disabled={saving || !editText.trim()}>
+                    <Check className="h-3 w-3 mr-0.5" />{saving ? '...' : 'Save'}
+                  </Button>
+                  <Button size="sm" variant="ghost" className="h-6 text-xs px-2" onClick={cancelEdit} disabled={saving}>
+                    Cancel
+                  </Button>
+                  <span className="text-[10px] text-muted-foreground ml-auto">Ctrl+Enter</span>
+                </div>
+              </div>
+            ) : (
+              <>
+                <p className="text-sm whitespace-pre-wrap">{message.message}</p>
+                <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                  <span className="text-xs text-muted-foreground" title={fullDate}>{timeAgo}</span>
+                  {message.pinned && (
+                    <Badge variant="outline" className="gap-0.5 text-[10px] h-4 px-1">
+                      <Pin className="h-2.5 w-2.5" />Pinned
+                    </Badge>
+                  )}
+                  {message.important && (
+                    <Badge variant="destructive" className="gap-0.5 text-[10px] h-4 px-1">
+                      <AlertTriangle className="h-2.5 w-2.5" />
+                    </Badge>
+                  )}
+                </div>
+              </>
+            )}
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onDelete}
-            className="opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6 shrink-0 text-destructive"
-            title="Delete message"
-          >
-            <Trash2 className="h-3 w-3" />
-          </Button>
+          {!editing && (
+            <div className="flex items-center gap-0.5 shrink-0">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={startEdit}
+                className="opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6"
+                title="Edit message"
+              >
+                <Pencil className="h-3 w-3" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onDelete}
+                className="opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6 text-destructive"
+                title="Delete message"
+              >
+                <Trash2 className="h-3 w-3" />
+              </Button>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -422,22 +529,59 @@ function MessageCard({
           </div>
         </div>
 
-        {/* Delete button */}
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={onDelete}
-          className="opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8 text-destructive"
-          title="Delete message"
-        >
-          <Trash2 className="h-4 w-4" />
-        </Button>
+        {/* Edit + Delete buttons */}
+        {!editing && (
+          <div className="flex items-center gap-0.5">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={startEdit}
+              className="opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8"
+              title="Edit message"
+            >
+              <Pencil className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onDelete}
+              className="opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8 text-destructive"
+              title="Delete message"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Message content */}
-      <p className="text-sm text-foreground whitespace-pre-wrap pl-10">
-        {message.message}
-      </p>
+      {editing ? (
+        <div className="pl-10 space-y-2">
+          <textarea
+            ref={textareaRef}
+            value={editText}
+            onChange={(e) => setEditText(e.target.value)}
+            onKeyDown={handleKeyDown}
+            className="w-full text-sm rounded-md border border-border bg-background p-2 resize-none focus:outline-none focus:ring-2 focus:ring-primary"
+            rows={3}
+            maxLength={500}
+            disabled={saving}
+          />
+          <div className="flex items-center gap-2">
+            <Button size="sm" onClick={saveEdit} disabled={saving || !editText.trim()}>
+              <Check className="h-3.5 w-3.5 mr-1" />{saving ? 'Saving...' : 'Save'}
+            </Button>
+            <Button size="sm" variant="ghost" onClick={cancelEdit} disabled={saving}>
+              <XIcon className="h-3.5 w-3.5 mr-1" />Cancel
+            </Button>
+            <span className="text-xs text-muted-foreground ml-auto">Ctrl+Enter to save</span>
+          </div>
+        </div>
+      ) : (
+        <p className="text-sm text-foreground whitespace-pre-wrap pl-10">
+          {message.message}
+        </p>
+      )}
     </div>
   );
 }
