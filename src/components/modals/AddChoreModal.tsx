@@ -60,6 +60,7 @@ export interface ChoreToEdit {
   category: 'cleaning' | 'laundry' | 'dishes' | 'yard' | 'pets' | 'trash' | 'other';
   frequency: 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'quarterly' | 'semi-annually' | 'annually' | 'custom';
   customIntervalDays?: number;
+  startDay?: string | null;
   pointValue: number;
   requiresApproval: boolean;
   assignedTo?: {
@@ -115,6 +116,7 @@ export function AddChoreModal({
   const [category, setCategory] = useState<'cleaning' | 'laundry' | 'dishes' | 'yard' | 'pets' | 'trash' | 'other'>('cleaning');
   const [frequency, setFrequency] = useState<'daily' | 'weekly' | 'biweekly' | 'monthly' | 'quarterly' | 'semi-annually' | 'annually' | 'custom'>('weekly');
   const [customIntervalDays, setCustomIntervalDays] = useState<number>(7);
+  const [startDay, setStartDay] = useState<string>('');
   const [pointValue, setPointValue] = useState(5);
   const [requiresApproval, setRequiresApproval] = useState(false);
   const [assignedTo, setAssignedTo] = useState<string>('');
@@ -134,6 +136,7 @@ export function AddChoreModal({
       setCategory(chore.category);
       setFrequency(chore.frequency);
       setCustomIntervalDays(chore.customIntervalDays || 7);
+      setStartDay(chore.startDay || '');
       setPointValue(chore.pointValue);
       setRequiresApproval(chore.requiresApproval);
       setAssignedTo(chore.assignedTo?.id || '');
@@ -148,6 +151,7 @@ export function AddChoreModal({
       setCategory('cleaning');
       setFrequency('weekly');
       setCustomIntervalDays(7);
+      setStartDay('');
       setPointValue(5);
       setRequiresApproval(false);
       setAssignedTo('');
@@ -175,6 +179,12 @@ export function AddChoreModal({
 
       if (frequency === 'custom') {
         payload.customIntervalDays = customIntervalDays;
+      }
+
+      if (startDay) {
+        payload.startDay = startDay;
+      } else {
+        payload.startDay = null;
       }
 
       const url = isEditMode ? `/api/chores/${chore.id}` : '/api/chores';
@@ -294,6 +304,58 @@ export function AddChoreModal({
             </div>
           )}
 
+          {/* Start Day / Reset Day */}
+          {(['weekly', 'biweekly'].includes(frequency)) && (
+            <div className="space-y-2">
+              <Label>Reset Day</Label>
+              <div className="flex gap-2 flex-wrap">
+                {(['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as const).map((day, idx) => (
+                  <Button
+                    key={day}
+                    type="button"
+                    variant={startDay === String(idx) ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setStartDay(startDay === String(idx) ? '' : String(idx))}
+                  >
+                    {day}
+                  </Button>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {startDay ? `Resets every ${['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][parseInt(startDay)]}` : 'Defaults to Sunday'}
+              </p>
+            </div>
+          )}
+
+          {(['monthly', 'quarterly', 'semi-annually'].includes(frequency)) && (
+            <div className="space-y-2">
+              <Label htmlFor="start-day-month">Reset Day of Month</Label>
+              <Input
+                id="start-day-month"
+                type="number"
+                value={startDay || '1'}
+                onChange={(e) => setStartDay(e.target.value)}
+                min="1"
+                max="28"
+              />
+              <p className="text-xs text-muted-foreground">Day of the month the chore resets (1-28)</p>
+            </div>
+          )}
+
+          {frequency === 'annually' && (
+            <div className="space-y-2">
+              <Label htmlFor="start-day-annual">Reset Date (MM-DD)</Label>
+              <Input
+                id="start-day-annual"
+                value={startDay || ''}
+                onChange={(e) => setStartDay(e.target.value)}
+                placeholder="03-15"
+                pattern="\d{2}-\d{2}"
+              />
+              <p className="text-xs text-muted-foreground">Month and day the chore resets (e.g., 03-15 for March 15)</p>
+            </div>
+          )}
+
           {/* Points */}
           <div className="space-y-2">
             <Label htmlFor="chore-points">Points</Label>
@@ -303,7 +365,7 @@ export function AddChoreModal({
               value={pointValue}
               onChange={(e) => setPointValue(parseInt(e.target.value) || 0)}
               min="0"
-              max="100"
+              max="1000"
             />
           </div>
 

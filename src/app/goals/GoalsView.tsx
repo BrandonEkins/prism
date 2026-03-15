@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import {
   Trophy,
   Plus,
@@ -39,6 +39,7 @@ import { PageWrapper, SubpageHeader } from '@/components/layout';
 import { useGoals, type Goal } from '@/lib/hooks/useGoals';
 import { usePoints } from '@/lib/hooks/usePoints';
 import { useAuth } from '@/components/providers';
+import { GoalCelebration } from '@/components/ui/GoalCelebration';
 import { cn } from '@/lib/utils';
 
 const EMOJI_OPTIONS = ['🎯', '🍦', '🎬', '🎮', '📱', '🎁', '🏖️', '🎪', '⭐', '💰', '🍕', '🎵'];
@@ -55,6 +56,31 @@ export function GoalsView() {
 
   const [showGoalModal, setShowGoalModal] = useState(false);
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
+  const [celebratingGoal, setCelebratingGoal] = useState<string | null>(null);
+
+  // Celebrate fully achieved goals once per session per goal.
+  // Uses sessionStorage so the animation fires on first visit and on real-time transitions,
+  // but not repeatedly if the user navigates away and back.
+  useEffect(() => {
+    if (goals.length === 0) return;
+    const celebrated = new Set<string>(
+      JSON.parse(sessionStorage.getItem('prism:celebrated-goals') || '[]')
+    );
+    for (const goal of goals) {
+      if (goal.fullyAchieved && !celebrated.has(goal.id)) {
+        celebrated.add(goal.id);
+        sessionStorage.setItem('prism:celebrated-goals', JSON.stringify([...celebrated]));
+        setCelebratingGoal(goal.name);
+        break; // Only celebrate one at a time
+      }
+    }
+    // Clean up stale IDs for goals no longer achieved (e.g. after reset)
+    const activeIds = new Set(goals.filter(g => g.fullyAchieved).map(g => g.id));
+    const cleaned = [...celebrated].filter(id => activeIds.has(id));
+    if (cleaned.length !== celebrated.size) {
+      sessionStorage.setItem('prism:celebrated-goals', JSON.stringify(cleaned));
+    }
+  }, [goals]);
 
   // Form state
   const [formName, setFormName] = useState('');
@@ -359,6 +385,12 @@ export function GoalsView() {
             )}
           </section>
         </div>
+
+        <GoalCelebration
+          show={!!celebratingGoal}
+          goalName={celebratingGoal || ''}
+          onComplete={() => setCelebratingGoal(null)}
+        />
 
         {/* Add/Edit Goal Modal */}
         {showGoalModal && (

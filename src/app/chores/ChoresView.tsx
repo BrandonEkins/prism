@@ -11,6 +11,7 @@ import {
   Clock,
   History,
   CheckCircle2,
+  Hourglass,
   ShieldCheck,
   Users,
   CalendarDays,
@@ -155,12 +156,14 @@ function ChoreGroupGrid({
                 const daysUntil = nextDue ? differenceInDays(nextDue, new Date()) : null;
                 const isCompletedToday = chore.lastCompleted &&
                   new Date(chore.lastCompleted) > new Date(Date.now() - 24 * 60 * 60 * 1000);
+                const isPendingApproval = !!chore.pendingApproval;
 
                 return (
                   <div
                     key={chore.id}
                     className={cn(
                       'p-2 rounded-md border cursor-pointer hover:bg-muted/50 transition-colors group',
+                      isPendingApproval ? 'bg-amber-50/80 dark:bg-amber-950/30 border-amber-500/50' :
                       isCompletedToday ? 'opacity-60 bg-green-50/50 dark:bg-green-950/20 border-green-500/30' :
                       isOverdue ? 'border-red-500/50 bg-red-50/50 dark:bg-red-950/20' : 'border-border'
                     )}
@@ -179,11 +182,25 @@ function ChoreGroupGrid({
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1 min-w-0">
-                        <p className={cn(
-                          'font-medium text-sm truncate',
-                          isCompletedToday && 'line-through'
-                        )}>{chore.title}</p>
-                        {nextDue && !isCompletedToday && (
+                        <div className="flex items-center gap-1.5">
+                          {isPendingApproval && (
+                            <Hourglass className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+                          )}
+                          <p className={cn(
+                            'font-medium text-sm truncate',
+                            isCompletedToday && !isPendingApproval && 'line-through',
+                            isPendingApproval && 'text-amber-700 dark:text-amber-400'
+                          )}>{chore.title}</p>
+                        </div>
+                        {isPendingApproval && chore.pendingApproval && (
+                          <div className="flex items-center gap-1 text-xs mt-0.5 text-amber-600 dark:text-amber-400">
+                            <span>Awaiting approval</span>
+                            <span className="text-muted-foreground">
+                              &middot; {chore.pendingApproval.completedBy.name}
+                            </span>
+                          </div>
+                        )}
+                        {!isPendingApproval && nextDue && !isCompletedToday && (
                           <div className={cn(
                             'flex items-center gap-1 text-xs mt-0.5',
                             isOverdue ? 'text-red-600 dark:text-red-400' : 'text-muted-foreground'
@@ -202,6 +219,11 @@ function ChoreGroupGrid({
                         )}
                       </div>
                       <div className="flex items-center gap-1 shrink-0">
+                        {isPendingApproval && (
+                          <Badge variant="default" className="text-[10px] bg-amber-500 hover:bg-amber-500 px-1.5 py-0">
+                            Pending
+                          </Badge>
+                        )}
                         {chore.pointValue > 0 && (
                           <Badge variant="secondary" className="text-xs">
                             {chore.pointValue} pts
@@ -528,7 +550,7 @@ export function ChoresView() {
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({
                     title: chore.title, description: chore.description, category: chore.category,
-                    frequency: chore.frequency, pointValue: chore.pointValue,
+                    frequency: chore.frequency, startDay: chore.startDay || null, pointValue: chore.pointValue,
                     requiresApproval: chore.requiresApproval, assignedTo: chore.assignedTo?.id,
                   }),
                 });
@@ -562,7 +584,7 @@ export function ChoresView() {
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({
                     title: updatedChore.title, description: updatedChore.description, category: updatedChore.category,
-                    frequency: updatedChore.frequency, pointValue: updatedChore.pointValue,
+                    frequency: updatedChore.frequency, startDay: updatedChore.startDay || null, pointValue: updatedChore.pointValue,
                     requiresApproval: updatedChore.requiresApproval, assignedTo: updatedChore.assignedTo?.id,
                     enabled: updatedChore.enabled,
                   }),

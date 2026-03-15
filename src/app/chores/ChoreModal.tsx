@@ -28,6 +28,7 @@ export function ChoreModal({
   const [description, setDescription] = useState(chore?.description || '');
   const [category, setCategory] = useState<Chore['category']>(chore?.category || 'cleaning');
   const [frequency, setFrequency] = useState<Chore['frequency']>(chore?.frequency || 'weekly');
+  const [startDay, setStartDay] = useState(chore?.startDay || '');
   const [pointValue, setPointValue] = useState(chore?.pointValue || 5);
   const [requiresApproval, setRequiresApproval] = useState(chore?.requiresApproval || false);
   const [enabled, setEnabled] = useState(chore?.enabled ?? true);
@@ -44,6 +45,7 @@ export function ChoreModal({
       description: description.trim() || undefined,
       category,
       frequency,
+      startDay: startDay || undefined,
       pointValue,
       requiresApproval,
       assignedTo: selectedMember || undefined,
@@ -127,6 +129,58 @@ export function ChoreModal({
             </div>
           </div>
 
+          {/* Start Day / Reset Day */}
+          {(['weekly', 'biweekly'].includes(frequency)) && (
+            <div>
+              <label className="text-sm font-medium">Reset Day</label>
+              <div className="flex gap-2 mt-1 flex-wrap">
+                {(['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as const).map((day, idx) => (
+                  <Button
+                    key={day}
+                    type="button"
+                    variant={startDay === String(idx) ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setStartDay(startDay === String(idx) ? '' : String(idx))}
+                  >
+                    {day}
+                  </Button>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                {startDay ? `Resets every ${['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][parseInt(startDay)]}` : 'Defaults to Sunday'}
+              </p>
+            </div>
+          )}
+
+          {(['monthly', 'quarterly', 'semi-annually'].includes(frequency)) && (
+            <div>
+              <label className="text-sm font-medium">Reset Day of Month</label>
+              <Input
+                type="number"
+                value={startDay || '1'}
+                onChange={(e) => setStartDay(e.target.value)}
+                min="1"
+                max="28"
+                className="mt-1"
+              />
+              <p className="text-xs text-muted-foreground mt-1">Day of the month the chore resets (1-28)</p>
+            </div>
+          )}
+
+          {frequency === 'annually' && (
+            <div>
+              <label className="text-sm font-medium">Reset Date (MM-DD)</label>
+              <Input
+                value={startDay || ''}
+                onChange={(e) => setStartDay(e.target.value)}
+                placeholder="03-15"
+                pattern="\d{2}-\d{2}"
+                className="mt-1"
+              />
+              <p className="text-xs text-muted-foreground mt-1">Month and day the chore resets (e.g., 03-15 for March 15)</p>
+            </div>
+          )}
+
           <div>
             <label className="text-sm font-medium">Points</label>
             <Input
@@ -134,7 +188,7 @@ export function ChoreModal({
               value={pointValue}
               onChange={(e) => setPointValue(parseInt(e.target.value) || 0)}
               min="0"
-              max="100"
+              max="1000"
             />
           </div>
 

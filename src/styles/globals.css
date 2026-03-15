@@ -365,6 +365,15 @@
   animation: float 3s ease-in-out infinite;
 }
 
+@keyframes wiggle {
+  0%, 100% { transform: rotate(-3deg); }
+  50% { transform: rotate(3deg); }
+}
+
+.animate-wiggle {
+  animation: wiggle 1.5s ease-in-out infinite;
+}
+
 /* Allow color picker dropdowns to overflow grid items */
 .react-grid-item {
   overflow: visible !important;

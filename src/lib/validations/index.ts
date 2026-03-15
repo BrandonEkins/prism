@@ -64,6 +64,7 @@ export const createChoreSchema = z.object({
   assignedTo: uuidSchema.optional(),
   frequency: z.enum(['daily', 'weekly', 'biweekly', 'monthly', 'quarterly', 'semi-annually', 'annually', 'custom']),
   customIntervalDays: z.number().int().min(1).max(365).optional(),
+  startDay: z.string().max(10).optional().nullable(),
   pointValue: z.number().int().min(0).max(1000).optional().default(0),
   requiresApproval: z.boolean().optional().default(false),
   createdBy: uuidSchema.optional(),

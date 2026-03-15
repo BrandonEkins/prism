@@ -116,29 +116,32 @@ export function WeekView({
             const hourEvents = getHourEvents(date, hour);
             const positions = calculateEventPositions(hourEvents);
             return (
-              <div key={hour} className={cn('relative min-h-0', bordered && 'border-t border-border/50')} style={cellBgStyle}>
+              <div key={hour} className={cn('relative min-h-0 overflow-visible', bordered && 'border-t border-border/50')} style={cellBgStyle}>
                 {hourEvents.map((event) => {
                   const pos = positions.get(event.id);
                   if (!pos) return null;
                   const css = positionToCSS(pos);
+                  const durationMin = ((event.endTime?.getTime() ?? (event.startTime.getTime() + 3600000)) - event.startTime.getTime()) / 60000;
+                  const heightPct = Math.max((durationMin / 60) * 100, 20);
                   return (
                     <button
                       key={event.id}
                       onClick={() => onEventClick(event)}
-                      className="absolute text-left text-xs px-0.5 rounded truncate hover:opacity-90 hover:ring-1 hover:ring-seasonal-accent/50 transition-all z-10"
+                      className="absolute text-left text-xs px-0.5 pt-0.5 rounded overflow-hidden hover:opacity-90 hover:ring-1 hover:ring-seasonal-accent/50 transition-all z-10 flex flex-col items-start"
                       style={{
                         backgroundColor: event.color,
                         color: '#fff',
                         borderLeft: `2px solid ${event.color}`,
                         top: `${(event.startTime.getMinutes() / 60) * 100}%`,
+                        height: `${heightPct}%`,
                         left: css.left,
                         width: css.width,
                       }}
                     >
-                      <span className="text-[10px] opacity-80 mr-1">
-                        {format(event.startTime, 'h:mm')}
+                      <span className="truncate w-full text-[10px] font-medium leading-tight">{event.title}</span>
+                      <span className="text-[9px] opacity-70 leading-tight">
+                        {format(event.startTime, 'h:mm')}&ndash;{format(event.endTime ?? new Date(event.startTime.getTime() + 3600000), 'h:mm a')}
                       </span>
-                      {event.title}
                     </button>
                   );
                 })}
@@ -288,26 +291,32 @@ export function WeekView({
                 const hourEvents = getHourEvents(date, hour);
                 const positions = calculateEventPositions(hourEvents);
                 return (
-                  <div key={hour} className={cn('relative min-h-0', bordered && 'border-t border-border')} style={cellBgStyle}>
+                  <div key={hour} className={cn('relative min-h-0 overflow-visible', bordered && 'border-t border-border')} style={cellBgStyle}>
                     {hourEvents.map((event) => {
                       const pos = positions.get(event.id);
                       if (!pos) return null;
                       const css = positionToCSS(pos);
+                      const durationMin = ((event.endTime?.getTime() ?? (event.startTime.getTime() + 3600000)) - event.startTime.getTime()) / 60000;
+                      const heightPct = Math.max((durationMin / 60) * 100, 20);
                       return (
                         <button
                           key={event.id}
                           onClick={() => onEventClick(event)}
-                          className="absolute p-0.5 rounded text-left text-xs z-10 hover:opacity-90 hover:ring-2 hover:ring-seasonal-accent/50 transition-all"
+                          className="absolute p-0.5 rounded text-left text-xs z-10 overflow-hidden hover:opacity-90 hover:ring-2 hover:ring-seasonal-accent/50 transition-all flex flex-col items-start"
                           style={{
                             backgroundColor: event.color,
                             color: '#fff',
                             borderLeft: `2px solid ${event.color}`,
                             top: `${(event.startTime.getMinutes() / 60) * 100}%`,
+                            height: `${heightPct}%`,
                             left: css.left,
                             width: css.width,
                           }}
                         >
-                          <div className="font-medium truncate text-[10px]">{event.title}</div>
+                          <div className="font-medium truncate w-full text-[10px] leading-tight">{event.title}</div>
+                          <div className="text-[9px] opacity-70 leading-tight">
+                            {format(event.startTime, 'h:mm')}&ndash;{format(event.endTime ?? new Date(event.startTime.getTime() + 3600000), 'h:mm a')}
+                          </div>
                         </button>
                       );
                     })}

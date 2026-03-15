@@ -199,7 +199,7 @@ export function DayViewSideBySide({
 
                 return (
                   <div key={hour} className={cn(
-                    'relative min-h-0',
+                    'relative min-h-0 overflow-visible',
                     bordered && 'border-t border-border',
                     isPastHour && !cellBgStyle && 'bg-muted/15'
                   )} style={cellBgStyle}>
@@ -210,21 +210,27 @@ export function DayViewSideBySide({
                       const pos = positions.get(event.id);
                       if (!pos) return null;
                       const css = positionToCSS(pos);
+                      const durationMin = ((event.endTime?.getTime() ?? (event.startTime.getTime() + 3600000)) - event.startTime.getTime()) / 60000;
+                      const heightPct = Math.max((durationMin / 60) * 100, 20);
                       return (
                         <button
                           key={event.id}
                           onClick={() => onEventClick(event)}
-                          className="absolute p-0.5 rounded text-left text-xs z-10 hover:opacity-90 hover:ring-2 hover:ring-seasonal-accent/50 transition-all"
+                          className="absolute p-0.5 rounded text-left text-xs z-10 overflow-hidden hover:opacity-90 hover:ring-2 hover:ring-seasonal-accent/50 transition-all flex flex-col items-start"
                           style={{
                             backgroundColor: event.color,
                             color: '#fff',
                             borderLeft: `2px solid ${event.color}`,
                             top: `${(event.startTime.getMinutes() / 60) * 100}%`,
+                            height: `${heightPct}%`,
                             left: css.left,
                             width: css.width,
                           }}
                         >
-                          <div className="font-medium truncate text-[11px]">{event.title}</div>
+                          <div className="font-medium truncate w-full text-[11px] leading-tight">{event.title}</div>
+                          <div className="text-[9px] opacity-70 leading-tight">
+                            {format(event.startTime, 'h:mm')}&ndash;{format(event.endTime ?? new Date(event.startTime.getTime() + 3600000), 'h:mm a')}
+                          </div>
                         </button>
                       );
                     })}

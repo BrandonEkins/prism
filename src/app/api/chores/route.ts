@@ -115,11 +115,14 @@ export async function GET(request: NextRequest) {
       // Filter to show chores that are either:
       // 1. Due today or earlier (nextDue <= today or no nextDue)
       // 2. Have a pending completion awaiting approval
+      // 3. Were completed within the last 24 hours (so they still appear as "done" in the UI)
       const today = format(new Date(), 'yyyy-MM-dd');
+      const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
       const filteredResults = results.filter(row => {
         const isDue = !row.nextDue || row.nextDue <= today;
         const hasPending = choreIdsWithPending.has(row.id);
-        return isDue || hasPending;
+        const recentlyCompleted = row.lastCompleted && row.lastCompleted > oneDayAgo;
+        return isDue || hasPending || recentlyCompleted;
       });
 
       const formattedChores = filteredResults.map(row => {
@@ -186,6 +189,7 @@ export async function POST(request: NextRequest) {
       assignedTo,
       frequency,
       customIntervalDays,
+      startDay,
       pointValue,
       requiresApproval,
       createdBy,
@@ -201,6 +205,7 @@ export async function POST(request: NextRequest) {
         assignedTo: assignedTo || null,
         frequency,
         customIntervalDays: customIntervalDays || null,
+        startDay: startDay || null,
         pointValue: pointValue || 0,
         requiresApproval: requiresApproval || false,
         createdBy: createdBy || null,
