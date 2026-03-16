@@ -8,7 +8,6 @@ import { useRouter } from 'next/navigation';
 import { AppShell } from '@/components/layout/AppShell';
 import { DashboardLayout, DashboardHeader } from '@/components/layout/DashboardGrid';
 import { LayoutGridEditor, SCREENSAVER_THEME } from '@/components/layout/LayoutGridEditor';
-const LayoutEditor = dynamic(() => import('@/components/layout/LayoutEditor').then(m => ({ default: m.LayoutEditor })), { ssr: false });
 import { useAuth } from '@/components/providers';
 import { GRID_COLS } from '@/lib/constants/grid';
 import { useScreenSafeZones } from '@/lib/hooks/useScreenSafeZones';
@@ -18,6 +17,7 @@ import { useAutoHideUI } from '@/lib/hooks/useAutoHideUI';
 import { MobileDashboard } from './MobileDashboard';
 import dynamic from 'next/dynamic';
 
+const LayoutEditor = dynamic(() => import('@/components/layout/LayoutEditor').then(m => ({ default: m.LayoutEditor })), { ssr: false });
 const AddTaskModal = dynamic(() => import('@/components/modals/AddTaskModal').then(m => ({ default: m.AddTaskModal })));
 const AddMessageModal = dynamic(() => import('@/components/modals/AddMessageModal').then(m => ({ default: m.AddMessageModal })));
 const AddChoreModal = dynamic(() => import('@/components/modals/AddChoreModal').then(m => ({ default: m.AddChoreModal })));

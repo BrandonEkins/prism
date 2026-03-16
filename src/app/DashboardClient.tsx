@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import dynamic from 'next/dynamic';
 
 const Dashboard = dynamic(
@@ -8,6 +9,12 @@ const Dashboard = dynamic(
 );
 
 export function DashboardClient() {
+  // Hide SSR placeholder once client dashboard renders
+  useEffect(() => {
+    const el = document.getElementById('ssr-placeholder');
+    if (el) el.style.display = 'none';
+  }, []);
+
   return (
     <Dashboard />
   );
