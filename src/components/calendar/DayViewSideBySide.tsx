@@ -6,6 +6,7 @@ import {
   isBefore,
   startOfDay,
 } from 'date-fns';
+import { useRef, useCallback, useEffect } from 'react';
 import { Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useWidgetBgOverride } from '@/components/widgets/WidgetContainer';
@@ -13,6 +14,7 @@ import { useHiddenHours } from '@/lib/hooks/useHiddenHours';
 import { calculateEventPositions, positionToCSS } from '@/lib/utils/eventLayout';
 import { hexToRgba } from '@/lib/utils/color';
 import type { CalendarEvent } from '@/types/calendar';
+import type { CalendarNote } from '@/lib/hooks/useCalendarNotes';
 
 export interface DayViewSideBySideProps {
   currentDate: Date;
@@ -22,6 +24,9 @@ export interface DayViewSideBySideProps {
   mergedView?: boolean;
   bordered?: boolean;
   onEventClick: (event: CalendarEvent) => void;
+  showNotes?: boolean;
+  notesByDate?: Map<string, CalendarNote>;
+  onNoteChange?: (date: string, content: string) => void;
 }
 
 export function DayViewSideBySide({
@@ -32,6 +37,9 @@ export function DayViewSideBySide({
   mergedView = false,
   bordered = true,
   onEventClick,
+  showNotes = false,
+  notesByDate,
+  onNoteChange,
 }: DayViewSideBySideProps) {
   const bgOverride = useWidgetBgOverride();
   const transparentMode = bgOverride?.hasCustomBg === true;
@@ -155,6 +163,16 @@ export function DayViewSideBySide({
               </div>
             );
           })}
+          {showNotes && (
+            <div className="w-2/5 min-w-[180px] border-l border-border p-1">
+              <div
+                className="text-sm font-medium text-center py-1 mb-1 rounded text-white"
+                style={{ backgroundColor: '#6366f1' }}
+              >
+                Notes
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -240,8 +258,105 @@ export function DayViewSideBySide({
             </div>
           );
         })}
+        {/* Notes column in hourly grid */}
+        {showNotes && (
+          <div
+            className="w-2/5 min-w-[180px] border-l border-border flex flex-col"
+          >
+            {/* First grid line to match the first hour row border */}
+            <div className={cn('shrink-0', bordered && 'border-t border-border')} />
+            <div className="flex-1 min-h-0">
+              <DayNoteCell
+                dateKey={format(currentDate, 'yyyy-MM-dd')}
+                content={notesByDate?.get(format(currentDate, 'yyyy-MM-dd'))?.content || ''}
+                onNoteChange={onNoteChange}
+              />
+            </div>
+          </div>
+        )}
         </div>
       </div>
     </div>
+  );
+}
+
+/** Inline note editor for the day view */
+function DayNoteCell({
+  dateKey,
+  content,
+  onNoteChange,
+}: {
+  dateKey: string;
+  content: string;
+  onNoteChange?: (date: string, content: string) => void;
+}) {
+  const editable = !!onNoteChange;
+  const editorRef = useRef<HTMLDivElement>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastSavedRef = useRef(content);
+
+  useEffect(() => {
+    if (editorRef.current && content) {
+      editorRef.current.innerHTML = content;
+      lastSavedRef.current = content;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (editorRef.current && content !== lastSavedRef.current) {
+      if (document.activeElement !== editorRef.current) {
+        editorRef.current.innerHTML = content;
+        lastSavedRef.current = content;
+      }
+    }
+  }, [content]);
+
+  const save = useCallback(() => {
+    if (!editorRef.current) return;
+    const html = editorRef.current.innerHTML;
+    const isEmpty = !html || html === '<br>' || html.replace(/<br\s*\/?>/g, '').trim() === '';
+    const value = isEmpty ? '' : html;
+    if (value !== lastSavedRef.current) {
+      lastSavedRef.current = value;
+      onNoteChange?.(dateKey, value);
+    }
+  }, [dateKey, onNoteChange]);
+
+  const handleInput = useCallback(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(save, 2000);
+  }, [save]);
+
+  const handleBlur = useCallback(() => {
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+      debounceRef.current = null;
+    }
+    save();
+  }, [save]);
+
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'b') { e.preventDefault(); document.execCommand('bold'); }
+    if ((e.ctrlKey || e.metaKey) && e.key === 'i') { e.preventDefault(); document.execCommand('italic'); }
+    if ((e.ctrlKey || e.metaKey) && e.key === 'u') { e.preventDefault(); document.execCommand('underline'); }
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'S') { e.preventDefault(); document.execCommand('strikeThrough'); }
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'L') { e.preventDefault(); document.execCommand('insertUnorderedList'); }
+  }, []);
+
+  return (
+    <div
+      ref={editorRef}
+      contentEditable={editable}
+      suppressContentEditableWarning
+      onInput={editable ? handleInput : undefined}
+      onBlur={editable ? handleBlur : undefined}
+      onKeyDown={editable ? handleKeyDown : undefined}
+      className={cn(
+        'px-3 py-2 text-sm outline-none h-full',
+        editable && 'empty:before:content-[attr(data-placeholder)] empty:before:text-muted-foreground/40 empty:before:pointer-events-none',
+      )}
+      data-placeholder={editable ? 'Add notes...' : undefined}
+    />
   );
 }

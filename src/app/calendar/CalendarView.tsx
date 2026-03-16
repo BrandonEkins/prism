@@ -31,7 +31,6 @@ const ThreeMonthView = lazy(() => import('@/components/calendar/ThreeMonthView')
 const DayViewSideBySide = lazy(() => import('@/components/calendar/DayViewSideBySide').then(m => ({ default: m.DayViewSideBySide })));
 const WeekVerticalView = lazy(() => import('@/components/calendar/WeekVerticalView').then(m => ({ default: m.WeekVerticalView })));
 const AgendaView = lazy(() => import('@/components/calendar/AgendaView').then(m => ({ default: m.AgendaView })));
-const CalendarNotesColumn = lazy(() => import('@/components/calendar/CalendarNotesColumn').then(m => ({ default: m.CalendarNotesColumn })));
 import { useCalendarViewData } from './useCalendarViewData';
 import { useCalendarNotes } from '@/lib/hooks/useCalendarNotes';
 import { useIsMobile, useSwipeNavigation } from '@/lib/hooks';
@@ -278,23 +277,18 @@ export function CalendarView() {
                   onDateClick={(date) => { setCurrentDate(date); setViewType('month'); }} bordered={weeksBordered} />
               )}
               {viewType === 'day' && (
-                <div className={cn('h-full', showNotes && 'flex')}>
-                  <div className={cn('h-full', showNotes ? 'flex-1 min-w-0' : 'w-full')}>
-                    <DayViewSideBySide currentDate={currentDate} events={events} calendarGroups={calendarGroups} selectedCalendarIds={selectedCalendarIds} mergedView={mergedView} bordered={weeksBordered} onEventClick={setSelectedEvent} />
-                  </div>
-                  {showNotes && (
-                    <div className="w-2/5 min-w-[180px] border-l border-border overflow-auto">
-                      <Suspense fallback={null}>
-                        <CalendarNotesColumn
-                          days={notesDays}
-                          notesByDate={notesByDate}
-                          onNoteChange={activeUser ? upsertNote : undefined}
-                          hideDateHeaders
-                        />
-                      </Suspense>
-                    </div>
-                  )}
-                </div>
+                <DayViewSideBySide
+                  currentDate={currentDate}
+                  events={events}
+                  calendarGroups={calendarGroups}
+                  selectedCalendarIds={selectedCalendarIds}
+                  mergedView={mergedView}
+                  bordered={weeksBordered}
+                  onEventClick={setSelectedEvent}
+                  showNotes={showNotes}
+                  notesByDate={notesByDate}
+                  onNoteChange={activeUser ? upsertNote : undefined}
+                />
               )}
             </Suspense>
             </div>
