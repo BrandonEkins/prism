@@ -17,6 +17,8 @@ export interface CalendarEvent {
   color: string;
   calendarName: string;
   calendarId: string;
+  /** The calendar group this event belongs to (for split-column views) */
+  groupId?: string;
 }
 
 /**

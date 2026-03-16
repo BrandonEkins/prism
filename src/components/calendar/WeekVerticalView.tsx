@@ -64,15 +64,9 @@ export function WeekVerticalView({
     ? [{ id: 'all', name: 'All Events', color: '#3B82F6' }]
     : filteredGroups;
 
-  const getEventsForGroup = (dayEvents: CalendarEvent[], groupId: string) => {
-    if (showAllInOne || groupId === 'all') return dayEvents;
-    const group = calendarGroups.find((g) => g.id === groupId);
-    if (!group) return [];
-    return dayEvents.filter((e) => {
-      if (e.color === group.color) return true;
-      if (e.calendarName?.toLowerCase().includes(group.name.toLowerCase())) return true;
-      return false;
-    });
+  const getEventsForGroup = (dayEvents: CalendarEvent[], gid: string) => {
+    if (showAllInOne || gid === 'all') return dayEvents;
+    return dayEvents.filter((e) => e.groupId === gid);
   };
 
   return (

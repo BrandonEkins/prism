@@ -84,33 +84,18 @@ export function DayViewSideBySide({
     ? [{ id: 'all', name: 'All Events', color: '#3B82F6' }]
     : filteredGroups;
 
-  const getEventsForGroup = (groupId: string) => {
-    if (showAllInOne || groupId === 'all') {
+  const getEventsForGroup = (gid: string) => {
+    if (showAllInOne || gid === 'all') {
       return timedEvents;
     }
-    // Match events by their color to the group color, or by calendarName containing group name
-    const group = calendarGroups.find((g) => g.id === groupId);
-    if (!group) return [];
-    return timedEvents.filter((e) => {
-      // Primary: match by event color to group color
-      if (e.color === group.color) return true;
-      // Fallback: match by calendar name containing group name
-      if (e.calendarName?.toLowerCase().includes(group.name.toLowerCase())) return true;
-      return false;
-    });
+    return timedEvents.filter((e) => e.groupId === gid);
   };
 
-  const getAllDayEventsForGroup = (groupId: string) => {
-    if (showAllInOne || groupId === 'all') {
+  const getAllDayEventsForGroup = (gid: string) => {
+    if (showAllInOne || gid === 'all') {
       return allDayEvents;
     }
-    const group = calendarGroups.find((g) => g.id === groupId);
-    if (!group) return [];
-    return allDayEvents.filter((e) => {
-      if (e.color === group.color) return true;
-      if (e.calendarName?.toLowerCase().includes(group.name.toLowerCase())) return true;
-      return false;
-    });
+    return allDayEvents.filter((e) => e.groupId === gid);
   };
 
   return (
