@@ -418,7 +418,7 @@ export function LayoutEditor({
 
   return (
     <>
-      <div ref={toolbarRef} className="relative z-[200] bg-card/85 backdrop-blur-sm border-b border-border px-4 py-2">
+      <div ref={toolbarRef} className="relative z-[200] bg-card/85 backdrop-blur-sm px-4 py-2">
         <div className="flex items-center justify-between gap-2 flex-wrap">
           {/* Left group */}
           <div className="flex items-center gap-1.5 flex-wrap">

@@ -121,7 +121,7 @@ export function SideNav({ user, onLogout, onLogin, uiHidden, className }: SideNa
         onClick={handleAsideClick}
         className={cn(
           'fixed left-0 top-0 z-40 h-screen',
-          'bg-card/85 backdrop-blur-sm border-r border-border',
+          'bg-card/85 backdrop-blur-sm',
           'flex flex-col',
           'transition-all duration-500 ease-in-out',
           expanded ? 'w-60 shadow-xl' : 'w-16',
@@ -174,7 +174,7 @@ export function SideNav({ user, onLogout, onLogin, uiHidden, className }: SideNa
         </nav>
 
         {/* USER AVATAR AT BOTTOM */}
-        <div className="border-t border-border p-2">
+        <div className="p-2">
           <button
             onClick={user ? onLogout : onLogin}
             className={cn(
