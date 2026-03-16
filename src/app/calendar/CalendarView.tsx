@@ -256,23 +256,18 @@ export function CalendarView() {
                 <WeekView currentDate={currentDate} events={events} onEventClick={setSelectedEvent} bordered={weeksBordered} />
               )}
               {viewType === 'weekVertical' && (
-                <div className="h-full flex gap-0">
-                  <div className={cn('flex-1 min-w-0', showNotes && 'flex-[3]')}>
-                    <WeekVerticalView currentDate={currentDate} events={events} calendarGroups={calendarGroups} selectedCalendarIds={selectedCalendarIds} mergedView={mergedView} bordered={weeksBordered} onEventClick={setSelectedEvent} />
-                  </div>
-                  {showNotes && (
-                    <div className="flex-1 border-l border-border overflow-auto bg-card/50">
-                      <div className="sticky top-0 z-10 bg-card border-b border-border px-3 py-1.5">
-                        <span className="text-xs font-medium text-muted-foreground">Notes</span>
-                      </div>
-                      <CalendarNotesColumn
-                        days={notesDays}
-                        notesByDate={notesByDate}
-                        onNoteChange={activeUser ? upsertNote : undefined}
-                      />
-                    </div>
-                  )}
-                </div>
+                <WeekVerticalView
+                  currentDate={currentDate}
+                  events={events}
+                  calendarGroups={calendarGroups}
+                  selectedCalendarIds={selectedCalendarIds}
+                  mergedView={mergedView}
+                  bordered={weeksBordered}
+                  onEventClick={setSelectedEvent}
+                  showNotes={showNotes}
+                  notesByDate={notesByDate}
+                  onNoteChange={activeUser ? upsertNote : undefined}
+                />
               )}
               {viewType === 'multiWeek' && (
                 <MultiWeekView currentDate={currentDate} events={events} onEventClick={setSelectedEvent} weekCount={weekCount} bordered={weeksBordered} />
@@ -282,21 +277,30 @@ export function CalendarView() {
                   onDateClick={(date) => { setCurrentDate(date); setViewType('month'); }} bordered={weeksBordered} />
               )}
               {viewType === 'day' && (
-                <div className="h-full flex gap-0">
-                  <div className={cn('flex-1 min-w-0', showNotes && 'flex-[3]')}>
+                <div className={cn('h-full', showNotes && 'flex')}>
+                  <div className={cn('h-full', showNotes ? 'flex-1 min-w-0' : 'w-full')}>
                     <DayViewSideBySide currentDate={currentDate} events={events} calendarGroups={calendarGroups} selectedCalendarIds={selectedCalendarIds} mergedView={mergedView} bordered={weeksBordered} onEventClick={setSelectedEvent} />
                   </div>
                   {showNotes && (
-                    <div className="flex-1 border-l border-border overflow-auto bg-card/50">
-                      <div className="sticky top-0 z-10 bg-card border-b border-border px-3 py-1.5">
-                        <span className="text-xs font-medium text-muted-foreground">Notes</span>
+                    <div className="w-2/5 min-w-[180px] border-l border-border flex flex-col">
+                      <div className="shrink-0 px-1 py-1.5">
+                        <div
+                          className="text-xs font-medium text-center py-0.5 rounded text-white"
+                          style={{ backgroundColor: '#6366f1' }}
+                        >
+                          Notes
+                        </div>
                       </div>
-                      <CalendarNotesColumn
-                        days={notesDays}
-                        notesByDate={notesByDate}
-                        onNoteChange={activeUser ? upsertNote : undefined}
-                        hideDateHeaders={notesDays.length <= 1}
-                      />
+                      <div className="flex-1 overflow-auto">
+                        <Suspense fallback={null}>
+                          <CalendarNotesColumn
+                            days={notesDays}
+                            notesByDate={notesByDate}
+                            onNoteChange={activeUser ? upsertNote : undefined}
+                            hideDateHeaders
+                          />
+                        </Suspense>
+                      </div>
                     </div>
                   )}
                 </div>
