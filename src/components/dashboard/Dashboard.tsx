@@ -15,6 +15,7 @@ import { useScreenSafeZones } from '@/lib/hooks/useScreenSafeZones';
 import { useOrientation } from '@/lib/hooks/useOrientation';
 import { useIsMobile } from '@/lib/hooks/useIsMobile';
 import { useAutoHideUI } from '@/lib/hooks/useAutoHideUI';
+import { MobileDashboard } from './MobileDashboard';
 import dynamic from 'next/dynamic';
 
 const AddTaskModal = dynamic(() => import('@/components/modals/AddTaskModal').then(m => ({ default: m.AddTaskModal })));
@@ -277,6 +278,18 @@ export function Dashboard({
     );
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data]);
+
+  if (isMobile) {
+    return (
+      <AppShell
+        user={activeUser ? { id: activeUser.id, name: activeUser.name, avatarUrl: activeUser.avatarUrl, color: activeUser.color } : undefined}
+        onLogout={activeUser ? clearActiveUser : undefined}
+        onLogin={handleLogin}
+      >
+        <MobileDashboard />
+      </AppShell>
+    );
+  }
 
   return (
     <AppShell

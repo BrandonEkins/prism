@@ -2,6 +2,8 @@
 
 import Link from 'next/link';
 import { Home, MoreVertical } from 'lucide-react';
+import { useIsMobile } from '@/lib/hooks/useIsMobile';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -31,9 +33,11 @@ export interface SubpageHeaderProps {
 }
 
 export function SubpageHeader({ icon, title, badge, actions, overflow }: SubpageHeaderProps) {
+  const isMobile = useIsMobile();
+
   return (
     <header className="flex-shrink-0 border-b border-border bg-card/85 backdrop-blur-sm px-4 safe-area-top">
-      <div className="flex items-center justify-between h-16">
+      <div className={cn('flex items-center justify-between', isMobile ? 'h-11' : 'h-16')}>
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" asChild className="hidden md:inline-flex">
             <Link href="/" aria-label="Back to dashboard">
@@ -41,8 +45,8 @@ export function SubpageHeader({ icon, title, badge, actions, overflow }: Subpage
             </Link>
           </Button>
           <div className="flex items-center gap-2">
-            {icon}
-            <h1 className="text-xl font-bold">{title}</h1>
+            {!isMobile && icon}
+            <h1 className={cn('font-bold', isMobile ? 'text-base' : 'text-xl')}>{title}</h1>
             {badge}
           </div>
         </div>

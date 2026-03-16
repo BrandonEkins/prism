@@ -8,6 +8,9 @@ All notable changes to Prism are documented in this file.
 - **Gift Ideas**: New "Gift Ideas" tab on the Wishes page — private per-user gift tracking for other family members
 - **Gift Ideas**: Per-person columns with quick-add, edit, delete, and purchased toggle
 - **Gift Ideas**: Privacy-enforced — only the idea creator can see their ideas; recipients never see them
+- **Mobile PWA**: Compact subpage headers on mobile (reduced height, smaller text, hidden icons)
+- **Mobile PWA**: Collapsible filter bars on mobile — tap "Filters" to expand/collapse
+- **Mobile PWA**: Mobile dashboard — summary card layout with weather, calendar, chores, tasks, shopping, meals, messages, birthdays
 - **Chores**: Reset Day picker in Add/Edit Chore modals — set which day weekly chores reset (Sun-Sat), day-of-month for monthly, or MM-DD for annual
 - **Goals**: Seasonal celebration animations when a goal is fully achieved — week-based holidays: Valentine's, St. Patrick's, Easter, Spring, Memorial Day, July 4th, Halloween, Thanksgiving, Christmas, New Year's (plus default trophy)
 - **Messages**: Inline edit support — pencil icon on hover, click to edit in place, Ctrl+Enter to save
