@@ -132,12 +132,14 @@ export function AppShell({
       <main
         className={cn(
           'min-h-screen',
+          // Transition only on desktop (mobile gets instant to avoid flash)
           !isMobile && 'transition-[margin,padding] duration-500 ease-in-out',
           // Left margin only when SideNav is visible and not hidden
           !hideNav && showSideNav && !uiHidden && !measureHideNav && 'ml-16',
           // Bottom padding when bottom nav is visible (portrait or mobile)
           !hideNav && showPortraitNav && !uiHidden && !measureHideNav && 'pb-24',
-          !hideNav && showMobileNav && !uiHidden && !measureHideNav && 'pb-16',
+          // Mobile bottom padding via CSS media query to avoid hydration flash
+          !hideNav && !uiHidden && !measureHideNav && 'max-md:pb-16',
           className
         )}
       >
