@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, lazy, Suspense } from 'react';
-import { format } from 'date-fns';
+import { useState, useEffect, useMemo, lazy, Suspense } from 'react';
+import { format, startOfWeek, addDays } from 'date-fns';
 import { toast } from '@/components/ui/use-toast';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useConfirmDialog } from '@/lib/hooks/useConfirmDialog';
@@ -18,6 +18,7 @@ import {
   Plus,
   Loader2,
   Grid3X3,
+  StickyNote,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -30,12 +31,14 @@ const ThreeMonthView = lazy(() => import('@/components/calendar/ThreeMonthView')
 const DayViewSideBySide = lazy(() => import('@/components/calendar/DayViewSideBySide').then(m => ({ default: m.DayViewSideBySide })));
 const WeekVerticalView = lazy(() => import('@/components/calendar/WeekVerticalView').then(m => ({ default: m.WeekVerticalView })));
 const AgendaView = lazy(() => import('@/components/calendar/AgendaView').then(m => ({ default: m.AgendaView })));
+const CalendarNotesColumn = lazy(() => import('@/components/calendar/CalendarNotesColumn').then(m => ({ default: m.CalendarNotesColumn })));
 import { useCalendarViewData } from './useCalendarViewData';
+import { useCalendarNotes } from '@/lib/hooks/useCalendarNotes';
 import { useIsMobile, useSwipeNavigation } from '@/lib/hooks';
 import { useAuth } from '@/components/providers';
 
 export function CalendarView() {
-  const { requireAuth } = useAuth();
+  const { activeUser, requireAuth } = useAuth();
   const {
     currentDate, setCurrentDate,
     viewType, setViewType,
@@ -53,6 +56,24 @@ export function CalendarView() {
   } = useCalendarViewData();
 
   const isMobile = useIsMobile();
+
+  // Notes support for day and list views
+  const [showNotes, setShowNotes] = useState(false);
+  const notesSupported = viewType === 'day' || viewType === 'weekVertical';
+  const notesDays = useMemo(() => {
+    if (!notesSupported || !showNotes) return [];
+    if (viewType === 'day') return [currentDate];
+    const ws = startOfWeek(currentDate);
+    return Array.from({ length: 7 }, (_, i) => addDays(ws, i));
+  }, [notesSupported, showNotes, viewType, currentDate]);
+
+  const notesFrom = notesDays.length > 0 ? format(notesDays[0]!, 'yyyy-MM-dd') : '';
+  const notesTo = notesDays.length > 0 ? format(notesDays[notesDays.length - 1]!, 'yyyy-MM-dd') : '';
+  const { notesByDate, upsertNote } = useCalendarNotes({
+    from: notesFrom,
+    to: notesTo,
+    enabled: showNotes && notesSupported,
+  });
 
   // Swipe navigation for touch devices
   const swipeRef = useSwipeNavigation<HTMLDivElement>({
@@ -138,7 +159,18 @@ export function CalendarView() {
               </Button>
             </div>
             {/* Grid lines toggle - works on all applicable views */}
-            <div className="hidden md:flex">
+            <div className="hidden md:flex items-center gap-1">
+              {notesSupported && (
+                <Button
+                  variant={showNotes ? 'secondary' : 'ghost'}
+                  size="sm"
+                  onClick={() => setShowNotes(!showNotes)}
+                  title={showNotes ? 'Hide notes' : 'Show notes'}
+                  aria-label="Toggle notes"
+                >
+                  <StickyNote className={cn('h-4 w-4', showNotes && 'text-primary')} />
+                </Button>
+              )}
               <Button
                 variant={weeksBordered ? 'secondary' : 'ghost'}
                 size="sm"
@@ -224,7 +256,23 @@ export function CalendarView() {
                 <WeekView currentDate={currentDate} events={events} onEventClick={setSelectedEvent} bordered={weeksBordered} />
               )}
               {viewType === 'weekVertical' && (
-                <WeekVerticalView currentDate={currentDate} events={events} calendarGroups={calendarGroups} selectedCalendarIds={selectedCalendarIds} mergedView={mergedView} bordered={weeksBordered} onEventClick={setSelectedEvent} />
+                <div className="h-full flex gap-0">
+                  <div className={cn('flex-1 min-w-0', showNotes && 'flex-[3]')}>
+                    <WeekVerticalView currentDate={currentDate} events={events} calendarGroups={calendarGroups} selectedCalendarIds={selectedCalendarIds} mergedView={mergedView} bordered={weeksBordered} onEventClick={setSelectedEvent} />
+                  </div>
+                  {showNotes && (
+                    <div className="flex-1 border-l border-border overflow-auto bg-card/50">
+                      <div className="sticky top-0 z-10 bg-card border-b border-border px-3 py-1.5">
+                        <span className="text-xs font-medium text-muted-foreground">Notes</span>
+                      </div>
+                      <CalendarNotesColumn
+                        days={notesDays}
+                        notesByDate={notesByDate}
+                        onNoteChange={activeUser ? upsertNote : undefined}
+                      />
+                    </div>
+                  )}
+                </div>
               )}
               {viewType === 'multiWeek' && (
                 <MultiWeekView currentDate={currentDate} events={events} onEventClick={setSelectedEvent} weekCount={weekCount} bordered={weeksBordered} />
@@ -234,7 +282,24 @@ export function CalendarView() {
                   onDateClick={(date) => { setCurrentDate(date); setViewType('month'); }} bordered={weeksBordered} />
               )}
               {viewType === 'day' && (
-                <DayViewSideBySide currentDate={currentDate} events={events} calendarGroups={calendarGroups} selectedCalendarIds={selectedCalendarIds} mergedView={mergedView} bordered={weeksBordered} onEventClick={setSelectedEvent} />
+                <div className="h-full flex gap-0">
+                  <div className={cn('flex-1 min-w-0', showNotes && 'flex-[3]')}>
+                    <DayViewSideBySide currentDate={currentDate} events={events} calendarGroups={calendarGroups} selectedCalendarIds={selectedCalendarIds} mergedView={mergedView} bordered={weeksBordered} onEventClick={setSelectedEvent} />
+                  </div>
+                  {showNotes && (
+                    <div className="flex-1 border-l border-border overflow-auto bg-card/50">
+                      <div className="sticky top-0 z-10 bg-card border-b border-border px-3 py-1.5">
+                        <span className="text-xs font-medium text-muted-foreground">Notes</span>
+                      </div>
+                      <CalendarNotesColumn
+                        days={notesDays}
+                        notesByDate={notesByDate}
+                        onNoteChange={activeUser ? upsertNote : undefined}
+                        hideDateHeaders={notesDays.length <= 1}
+                      />
+                    </div>
+                  )}
+                </div>
               )}
             </Suspense>
           )}
