@@ -428,9 +428,9 @@ export const CalendarWidget = React.memo(function CalendarWidget({
               </div>
               {showNotes && (
                 <div className="w-2/5 min-w-[180px] border-l border-border flex flex-col">
-                  <div className="shrink-0 px-1 py-1.5">
+                  <div className="shrink-0 border-b border-border bg-card/85 backdrop-blur-sm p-1">
                     <div
-                      className="text-xs font-medium text-center py-0.5 rounded text-white"
+                      className="text-sm font-medium text-center py-1 mb-1 rounded text-white"
                       style={{ backgroundColor: '#6366f1' }}
                     >
                       Notes
