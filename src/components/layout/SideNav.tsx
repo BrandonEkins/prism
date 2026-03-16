@@ -130,7 +130,7 @@ export function SideNav({ user, onLogout, onLogin, uiHidden, className }: SideNa
         )}
       >
         {/* HEADER WITH LOGO */}
-        <div className={cn('flex items-center h-16 px-2 border-b border-border', expanded ? 'justify-start' : 'justify-center')}>
+        <div className={cn('flex items-center h-16 px-2', expanded ? 'justify-start' : 'justify-center')}>
           <Link href="/" className="flex items-center gap-2" aria-label="Prism home">
             <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 overflow-hidden">
               <PrismIcon size={24} />
