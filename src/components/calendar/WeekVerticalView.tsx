@@ -14,6 +14,7 @@ import {
   startOfDay,
   isSameDay,
 } from 'date-fns';
+import DOMPurify from 'dompurify';
 import { cn } from '@/lib/utils';
 import { useWidgetBgOverride } from '@/components/widgets/WidgetContainer';
 import { hexToRgba } from '@/lib/utils/color';
@@ -274,7 +275,7 @@ function NoteCell({
   // Set initial content on mount
   useEffect(() => {
     if (editorRef.current && content) {
-      editorRef.current.innerHTML = content;
+      editorRef.current.innerHTML = DOMPurify.sanitize(content);
       lastSavedRef.current = content;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -284,7 +285,7 @@ function NoteCell({
   useEffect(() => {
     if (editorRef.current && content !== lastSavedRef.current) {
       if (document.activeElement !== editorRef.current) {
-        editorRef.current.innerHTML = content;
+        editorRef.current.innerHTML = DOMPurify.sanitize(content);
         lastSavedRef.current = content;
       }
     }

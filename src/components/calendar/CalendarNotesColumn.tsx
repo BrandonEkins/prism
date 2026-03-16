@@ -2,6 +2,7 @@
 
 import { useRef, useCallback, useEffect } from 'react';
 import { format } from 'date-fns';
+import DOMPurify from 'dompurify';
 import { cn } from '@/lib/utils';
 import type { CalendarNote } from '@/lib/hooks/useCalendarNotes';
 
@@ -61,7 +62,7 @@ function NoteDayRow({
     if (editorRef.current && content !== lastSavedRef.current) {
       // Only update DOM if the editor isn't focused (avoid overwriting active edits)
       if (document.activeElement !== editorRef.current) {
-        editorRef.current.innerHTML = content;
+        editorRef.current.innerHTML = DOMPurify.sanitize(content);
         lastSavedRef.current = content;
       }
     }
@@ -70,7 +71,7 @@ function NoteDayRow({
   // Set initial content
   useEffect(() => {
     if (editorRef.current && content) {
-      editorRef.current.innerHTML = content;
+      editorRef.current.innerHTML = DOMPurify.sanitize(content);
       lastSavedRef.current = content;
     }
     // Only run on mount

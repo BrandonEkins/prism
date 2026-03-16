@@ -405,6 +405,7 @@ function MemberSelection({
           <button
             key={member.id}
             onClick={() => onSelect(member)}
+            aria-label={`Select ${member.name}`}
             className={cn(
               'flex flex-col items-center p-4 rounded-xl',
               'hover:bg-accent/50 active:bg-accent transition-colors',
@@ -521,6 +522,7 @@ function NumberPad({
                   onClick={onClear}
                   disabled={disabled}
                   variant="secondary"
+                  aria-label="Clear PIN"
                 >
                   <X className="h-5 w-5" />
                 </NumberKey>
@@ -534,6 +536,7 @@ function NumberPad({
                   onClick={onBackspace}
                   disabled={disabled}
                   variant="secondary"
+                  aria-label="Delete last digit"
                 >
                   <Delete className="h-5 w-5" />
                 </NumberKey>
@@ -546,6 +549,7 @@ function NumberPad({
                 key={key}
                 onClick={() => onKeyPress(key)}
                 disabled={disabled}
+                aria-label={`Enter digit ${key}`}
               >
                 {key}
               </NumberKey>
@@ -567,16 +571,19 @@ function NumberKey({
   onClick,
   disabled = false,
   variant = 'default',
+  'aria-label': ariaLabel,
 }: {
   children: React.ReactNode;
   onClick: () => void;
   disabled?: boolean;
   variant?: 'default' | 'secondary';
+  'aria-label'?: string;
 }) {
   return (
     <button
       onClick={onClick}
       disabled={disabled}
+      aria-label={ariaLabel}
       className={cn(
         // Size: 64x64px for comfortable touch targets
         'w-16 h-16 rounded-full',

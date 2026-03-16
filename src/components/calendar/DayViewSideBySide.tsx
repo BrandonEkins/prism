@@ -7,6 +7,7 @@ import {
   startOfDay,
 } from 'date-fns';
 import { useRef, useCallback, useEffect } from 'react';
+import DOMPurify from 'dompurify';
 import { Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useWidgetBgOverride } from '@/components/widgets/WidgetContainer';
@@ -282,7 +283,7 @@ function DayNoteCell({
 
   useEffect(() => {
     if (editorRef.current && content) {
-      editorRef.current.innerHTML = content;
+      editorRef.current.innerHTML = DOMPurify.sanitize(content);
       lastSavedRef.current = content;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -291,7 +292,7 @@ function DayNoteCell({
   useEffect(() => {
     if (editorRef.current && content !== lastSavedRef.current) {
       if (document.activeElement !== editorRef.current) {
-        editorRef.current.innerHTML = content;
+        editorRef.current.innerHTML = DOMPurify.sanitize(content);
         lastSavedRef.current = content;
       }
     }

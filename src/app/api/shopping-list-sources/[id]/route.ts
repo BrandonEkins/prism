@@ -105,27 +105,31 @@ export async function PATCH(
       .where(eq(shoppingListSources.id, id))
       .returning();
 
+    if (!updated) {
+      return NextResponse.json({ error: 'Failed to update shopping list source' }, { status: 500 });
+    }
+
     await invalidateCache('shopping-list-sources:*');
 
     logActivity({
       userId: auth.userId,
       action: 'update',
       entityType: 'integration',
-      entityId: updated!.id,
-      summary: `Updated shopping list source: ${updated!.provider} (${updated!.externalListName || updated!.externalListId})`,
+      entityId: updated.id,
+      summary: `Updated shopping list source: ${updated.provider} (${updated.externalListName || updated.externalListId})`,
     });
 
     return NextResponse.json({
-      id: updated!.id,
-      userId: updated!.userId,
-      provider: updated!.provider,
-      externalListId: updated!.externalListId,
-      externalListName: updated!.externalListName,
-      shoppingListId: updated!.shoppingListId,
-      syncEnabled: updated!.syncEnabled,
-      lastSyncAt: updated!.lastSyncAt,
-      lastSyncError: updated!.lastSyncError,
-      createdAt: updated!.createdAt,
+      id: updated.id,
+      userId: updated.userId,
+      provider: updated.provider,
+      externalListId: updated.externalListId,
+      externalListName: updated.externalListName,
+      shoppingListId: updated.shoppingListId,
+      syncEnabled: updated.syncEnabled,
+      lastSyncAt: updated.lastSyncAt,
+      lastSyncError: updated.lastSyncError,
+      createdAt: updated.createdAt,
     });
   } catch (error) {
     console.error('Error updating shopping list source:', error);

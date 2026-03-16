@@ -104,7 +104,10 @@ export async function POST(request: NextRequest) {
           .insert(photoSources)
           .values({ type: 'local', name: 'Local Uploads' })
           .returning();
-        localSourceId = newSource!.id;
+        if (!newSource) {
+          return NextResponse.json({ error: 'Failed to create photo source' }, { status: 500 });
+        }
+        localSourceId = newSource.id;
       }
     }
 

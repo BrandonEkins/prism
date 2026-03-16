@@ -86,18 +86,22 @@ export async function POST(request: NextRequest) {
       })
       .returning();
 
+    if (!item) {
+      return NextResponse.json({ error: 'Failed to create babysitter info' }, { status: 500 });
+    }
+
     await invalidateCache('babysitter-info:*');
 
     return NextResponse.json(
       {
         item: {
-          id: item!.id,
-          section: item!.section,
-          sortOrder: item!.sortOrder,
-          content: item!.content,
-          isSensitive: item!.isSensitive,
-          createdAt: item!.createdAt.toISOString(),
-          updatedAt: item!.updatedAt.toISOString(),
+          id: item.id,
+          section: item.section,
+          sortOrder: item.sortOrder,
+          content: item.content,
+          isSensitive: item.isSensitive,
+          createdAt: item.createdAt.toISOString(),
+          updatedAt: item.updatedAt.toISOString(),
         },
       },
       { status: 201 }

@@ -175,6 +175,10 @@ export async function POST(request: NextRequest) {
       })
       .returning();
 
+    if (!newRecipe) {
+      return NextResponse.json({ error: 'Failed to create recipe' }, { status: 500 });
+    }
+
     await invalidateCache('recipes:*');
 
     // Re-query with user join to get createdByName for the formatter
@@ -206,7 +210,7 @@ export async function POST(request: NextRequest) {
       })
       .from(recipes)
       .leftJoin(users, eq(recipes.createdBy, users.id))
-      .where(eq(recipes.id, newRecipe!.id));
+      .where(eq(recipes.id, newRecipe.id));
 
     if (!fullRecipe) {
       return NextResponse.json(

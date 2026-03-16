@@ -105,27 +105,31 @@ export async function PATCH(
       .where(eq(wishItemSources.id, id))
       .returning();
 
+    if (!updated) {
+      return NextResponse.json({ error: 'Failed to update wish item source' }, { status: 500 });
+    }
+
     await invalidateCache('wish-item-sources:*');
 
     logActivity({
       userId: auth.userId,
       action: 'update',
       entityType: 'integration',
-      entityId: updated!.id,
-      summary: `Updated wish item source: ${updated!.provider} (${updated!.externalListName || updated!.externalListId})`,
+      entityId: updated.id,
+      summary: `Updated wish item source: ${updated.provider} (${updated.externalListName || updated.externalListId})`,
     });
 
     return NextResponse.json({
-      id: updated!.id,
-      userId: updated!.userId,
-      provider: updated!.provider,
-      externalListId: updated!.externalListId,
-      externalListName: updated!.externalListName,
-      memberId: updated!.memberId,
-      syncEnabled: updated!.syncEnabled,
-      lastSyncAt: updated!.lastSyncAt,
-      lastSyncError: updated!.lastSyncError,
-      createdAt: updated!.createdAt,
+      id: updated.id,
+      userId: updated.userId,
+      provider: updated.provider,
+      externalListId: updated.externalListId,
+      externalListName: updated.externalListName,
+      memberId: updated.memberId,
+      syncEnabled: updated.syncEnabled,
+      lastSyncAt: updated.lastSyncAt,
+      lastSyncError: updated.lastSyncError,
+      createdAt: updated.createdAt,
     });
   } catch (error) {
     console.error('Error updating wish item source:', error);

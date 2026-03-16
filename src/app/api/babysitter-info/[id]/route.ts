@@ -56,17 +56,21 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       .where(eq(babysitterInfo.id, id))
       .returning();
 
+    if (!updated) {
+      return NextResponse.json({ error: 'Failed to update babysitter info' }, { status: 500 });
+    }
+
     await invalidateCache('babysitter-info:*');
 
     return NextResponse.json({
       item: {
-        id: updated!.id,
-        section: updated!.section,
-        sortOrder: updated!.sortOrder,
-        content: updated!.content,
-        isSensitive: updated!.isSensitive,
-        createdAt: updated!.createdAt.toISOString(),
-        updatedAt: updated!.updatedAt.toISOString(),
+        id: updated.id,
+        section: updated.section,
+        sortOrder: updated.sortOrder,
+        content: updated.content,
+        isSensitive: updated.isSensitive,
+        createdAt: updated.createdAt.toISOString(),
+        updatedAt: updated.updatedAt.toISOString(),
       },
     });
   } catch (error) {
