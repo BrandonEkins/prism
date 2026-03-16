@@ -282,13 +282,99 @@ describe('computeWaterfall', () => {
       expect(result.weeklyEarned).toBe(0);
     });
   });
+
+  describe('weekStartsOn parameter', () => {
+    // NOW = 2026-02-16 (Monday)
+    // With weekStartsOn=0 (Sunday): week runs Sun Feb 15 – Sat Feb 21
+    // With weekStartsOn=1 (Monday): week runs Mon Feb 16 – Sun Feb 22
+
+    it('weekStartsOn=0: Saturday completion counts in current week (Sun-Sat)', () => {
+      // Saturday Feb 21 is within the Sun Feb 15 – Sat Feb 21 week
+      const saturdayCompletion = new Date('2026-02-21T12:00:00Z');
+      const completions = [makeCompletion(5, saturdayCompletion)];
+      const goal = makeGoal({ pointCost: 10, recurring: false });
+
+      // Use a "now" that is also in that week but after Saturday
+      const nowSat = new Date('2026-02-21T18:00:00Z'); // Saturday evening
+      const result = computeWaterfall([goal], completions, nowSat, 0);
+
+      expect(result.weeklyEarned).toBe(5);
+      expect(result.goals[0]!.allocated).toBe(5);
+    });
+
+    it('weekStartsOn=1: Sunday completion counts in current week (Mon-Sun)', () => {
+      // Sunday Feb 22 is the last day of the Mon Feb 16 – Sun Feb 22 week
+      const sundayCompletion = new Date('2026-02-22T12:00:00Z');
+      const completions = [makeCompletion(5, sundayCompletion)];
+      const goal = makeGoal({ pointCost: 10, recurring: false });
+
+      const nowSun = new Date('2026-02-22T18:00:00Z'); // Sunday evening
+      const result = computeWaterfall([goal], completions, nowSun, 1);
+
+      expect(result.weeklyEarned).toBe(5);
+      expect(result.goals[0]!.allocated).toBe(5);
+    });
+
+    it('weekly earned respects weekStartsOn boundary across different weeks', () => {
+      // With weekStartsOn=0 (Sunday): Sun Feb 15 starts a new week
+      // So Sat Feb 14 is in the PREVIOUS week, Sun Feb 15 starts the current week
+      const satFeb14 = new Date('2026-02-14T12:00:00Z'); // Saturday
+      const sunFeb15 = new Date('2026-02-15T12:00:00Z'); // Sunday
+
+      const completions = [
+        makeCompletion(3, satFeb14),
+        makeCompletion(7, sunFeb15),
+      ];
+      const goal = makeGoal({ pointCost: 20, recurring: false });
+
+      const result = computeWaterfall([goal], completions, NOW, 0);
+
+      // With Sunday start: Sun Feb 15 is current week (7 pts), Sat Feb 14 is previous week (3 pts)
+      expect(result.weeklyEarned).toBe(7);
+
+      // With weekStartsOn=1 (Monday): Mon Feb 16 starts the current week
+      // Both Sat Feb 14 and Sun Feb 15 are in the PREVIOUS week
+      const result1 = computeWaterfall([goal], completions, NOW, 1);
+      expect(result1.weeklyEarned).toBe(0);
+    });
+
+    it('recurring weekly goal resets based on weekStartsOn boundary', () => {
+      // With weekStartsOn=0 (Sunday): week starts Sun Feb 15
+      // With weekStartsOn=1 (Monday): week starts Mon Feb 16
+      const sunFeb15 = new Date('2026-02-15T12:00:00Z'); // Sunday
+      const monFeb16 = new Date('2026-02-16T12:00:00Z'); // Monday
+
+      const goal = makeGoal({
+        pointCost: 5,
+        priority: 1,
+        recurring: true,
+        recurrencePeriod: 'weekly',
+      });
+
+      // weekStartsOn=0: Both Sunday and Monday are in the same current week (starting Sun Feb 15)
+      const completions = [
+        makeCompletion(3, sunFeb15),
+        makeCompletion(3, monFeb16),
+      ];
+      const result0 = computeWaterfall([goal], completions, NOW, 0);
+      // Both completions fall in the same week bucket (Sun Feb 15), total 6 pts, capped at 5
+      expect(result0.goals[0]!.allocated).toBe(5);
+      expect(result0.goals[0]!.achieved).toBe(true);
+
+      // weekStartsOn=1: Sunday is PREVIOUS week, Monday is current week
+      const result1 = computeWaterfall([goal], completions, NOW, 1);
+      // Only Monday's 3 pts are in the current week bucket
+      expect(result1.goals[0]!.allocated).toBe(3);
+      expect(result1.goals[0]!.achieved).toBe(false);
+    });
+  });
 });
 
 describe('getGoalPeriodKey', () => {
   it('returns weekly period start for recurring weekly goal', () => {
     const goal = makeGoal({ recurring: true, recurrencePeriod: 'weekly' });
     const key = getGoalPeriodKey(goal, NOW);
-    expect(key).toBe('2026-02-16'); // Monday of the week
+    expect(key).toBe('2026-02-15'); // Sunday (default weekStartsOn=0)
   });
 
   it('returns monthly period start for recurring monthly goal', () => {

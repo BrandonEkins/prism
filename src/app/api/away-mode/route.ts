@@ -56,6 +56,10 @@ export async function POST(request: NextRequest) {
       const forbidden = requireRole(auth, 'canToggleAwayMode');
       if (forbidden) return forbidden;
 
+      const { rateLimitGuard } = await import('@/lib/cache/rateLimit');
+      const limited = await rateLimitGuard(auth.userId, 'away-mode', 10, 60);
+      if (limited) return limited;
+
       authUserId = auth.userId;
     }
 
