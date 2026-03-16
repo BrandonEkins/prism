@@ -241,6 +241,12 @@ export function SettingsView() {
                               </a>
                             </p>
                             <p><strong>Version:</strong> 1.0.2</p>
+                            <p>
+                              <strong>Help Guide:</strong>{' '}
+                              <a href="/help" className="text-primary hover:underline">
+                                View the user guide
+                              </a>
+                            </p>
                           </div>
                           <p className="pt-2 text-xs">
                             Built with Claude Code.

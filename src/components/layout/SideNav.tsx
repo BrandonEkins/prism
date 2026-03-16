@@ -25,6 +25,7 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { HelpCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { PrismIcon } from '@/components/ui/PrismIcon';
 import { ALL_NAV_ITEMS } from '@/lib/constants/navItems';
@@ -172,6 +173,21 @@ export function SideNav({ user, onLogout, onLogin, uiHidden, className }: SideNa
             })}
           </ul>
         </nav>
+
+        {/* HELP LINK */}
+        <div className={cn('px-2 pb-1', expanded ? 'text-left' : 'text-center')}>
+          <Link
+            href="/help"
+            aria-label="Help"
+            className={cn(
+              'flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-muted-foreground/50 hover:text-muted-foreground hover:bg-accent transition-colors',
+              expanded ? 'justify-start' : 'justify-center'
+            )}
+          >
+            <HelpCircle className="h-4 w-4 flex-shrink-0" />
+            {expanded && <span>Help</span>}
+          </Link>
+        </div>
 
         {/* USER AVATAR AT BOTTOM */}
         <div className="p-2">

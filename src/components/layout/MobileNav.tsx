@@ -26,6 +26,7 @@ import {
   Monitor,
   User,
   LogOut,
+  HelpCircle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/components/providers/ThemeProvider';
@@ -117,6 +118,15 @@ export function MobileNav({ user, onLogin, onLogout, uiHidden }: MobileNavProps)
                 </Link>
               );
             })}
+            {/* Help */}
+            <Link
+              href="/help"
+              onClick={() => setShowMore(false)}
+              className="flex flex-col items-center gap-1 py-3 px-2 rounded-lg transition-colors text-muted-foreground hover:bg-accent"
+            >
+              <HelpCircle className="h-5 w-5" />
+              <span className="text-xs">Help</span>
+            </Link>
             {/* Theme toggle */}
             <button
               onClick={cycleTheme}
