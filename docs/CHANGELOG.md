@@ -58,7 +58,7 @@ All notable changes to Prism are documented in this file.
 - **Navigation**: Removed border lines from nav, header, and editor toolbars for cleaner appearance
 - **Tasks**: Scrolling works correctly on mobile PWA
 
-## [1.1.0] - 2026-03-09
+## [1.0.4] - 2026-03-09
 
 ### Added
 - **Calendar**: Multi-week view replaces the fixed 2-week view — configurable from 1 to 4 weeks on both the calendar page and dashboard widget
