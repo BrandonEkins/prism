@@ -150,17 +150,13 @@ Your database, settings, and uploaded files are stored in Docker volumes and are
 
 ### Why I Built This
 
-I’ve always had a clearer vision of what I want to build than the ability to build it. Software development is a skill I’ve tried to pick up more than once - it never stuck, not for lack of trying, but because it wasn’t where I was investing my time.
+I wanted a family dashboard that connected to the tools we already use and didn’t require a monthly subscription. DAKboard is configurable but feels like a solo project that outgrew itself. Skylight is clean but fairly limited. Both offer free tiers that don’t go very far, and the paid versions cost money on an ongoing basis, which I couldn’t get past.
 
-When I saw what Claude Code could do with a real, scoped project, I wanted to test it seriously. Not a toy. A full application with actual requirements, real integrations, and a UI that worked across devices.
+I looked at open-source alternatives like MagicMirror², Homarr, Home Assistant, and many others, but they were all built for somewhat different use cases. Browsing the forums, I found a small group of people who wanted the same thing and had nothing that quite fit.
 
-The problem I wanted to solve was real: I wanted a family dashboard that connected to the tools we already use, ran on my own hardware, and didn’t cost $10/month indefinitely. I admire DAKboard’s configurability and Skylight’s simplicity, but neither felt right. DAKboard feels like a solo project that outgrew itself; Skylight is a locked room. I wanted something open.
+The integrations reflect the tools my family actually uses — Microsoft To Do for tasks and shopping, Google Calendar for scheduling, OneDrive for photos, OpenWeatherMap for weather. I have limited experience with other ecosystems, so if there’s a service you’d like to see supported, open an issue or submit a PR. I did look into Apple Notes integration since my spouse uses it, but the reverse engineering required more ongoing maintenance than I was willing to take on.
 
-So I defined what I wanted, worked through it piece by piece, and pushed back hard when things didn’t work. I made product decisions, UX decisions, and integration choices. I did the competitive research - using Playwright to crawl DAKboard and Skylight and analyze how they handled layouts, integrations, and real-time updates. I tested everything on my own family’s hardware before shipping it.
-
-The code was written by Claude Code. That’s not a footnote - it’s the whole point. I wanted to see what was possible when someone who isn’t a software developer brings enough clarity and persistence to the process. The answer, apparently, is this.
-
-I’m sharing it as open source because others might find it useful, and because the only way it gets better is if more people use it and contribute to it.
+I’m not a software developer, but I work in a technical field where AI tools are increasingly central to how work gets done. I pay for a Claude Code subscription and justify that cost as staying current in my field. I spent around two months on this, from research through testing and iteration. I hope you find it useful. If something is missing or broken, open an issue or submit a PR.
 
 ### How It Was Built
 
