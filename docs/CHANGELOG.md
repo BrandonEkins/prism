@@ -4,6 +4,10 @@ All notable changes to Prism are documented in this file.
 
 ## [Unreleased]
 
+*No changes yet.*
+
+## [1.1.0] - 2026-03-16
+
 ### Added
 - **Gift Ideas**: New "Gift Ideas" tab on the Wishes page — private per-user gift tracking for other family members
 - **Gift Ideas**: Per-person columns with quick-add, edit, delete, and purchased toggle

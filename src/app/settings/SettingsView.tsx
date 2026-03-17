@@ -240,7 +240,7 @@ export function SettingsView() {
                                 github.com/sandydargoport/prism/projects
                               </a>
                             </p>
-                            <p><strong>Version:</strong> 1.0.2</p>
+                            <p><strong>Version:</strong> 1.1.0</p>
                             <p>
                               <strong>Help Guide:</strong>{' '}
                               <a href="/help" className="text-primary hover:underline">
