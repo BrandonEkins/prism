@@ -28,6 +28,7 @@ export async function PUT(request: NextRequest) {
       }
 
       await invalidateCache('family:*');
+      await invalidateCache('calendar-groups:*');
 
       return NextResponse.json({ success: true });
     } catch (error) {

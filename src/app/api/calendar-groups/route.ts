@@ -29,13 +29,18 @@ export async function GET() {
           type: calendarGroups.type,
           userId: calendarGroups.userId,
           sortOrder: calendarGroups.sortOrder,
+          userSortOrder: users.sortOrder,
           sourceCount: sql<number>`(SELECT count(*)::int FROM calendar_sources WHERE calendar_sources.group_id = ${calendarGroups.id})`,
           userName: users.name,
           userColor: users.color,
         })
         .from(calendarGroups)
         .leftJoin(users, eq(calendarGroups.userId, users.id))
-        .orderBy(asc(calendarGroups.sortOrder), asc(calendarGroups.name));
+        .orderBy(
+          // User groups follow family member sort order; others use their own sortOrder
+          sql`CASE WHEN ${calendarGroups.type} = 'user' THEN COALESCE(${users.sortOrder}, 999) ELSE ${calendarGroups.sortOrder} END`,
+          asc(calendarGroups.name)
+        );
 
       // For user-type groups, use the current user name but preserve the stored color
       // (allows users to customize calendar colors independently of their profile color)
