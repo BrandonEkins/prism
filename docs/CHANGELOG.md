@@ -4,7 +4,18 @@ All notable changes to Prism are documented in this file.
 
 ## [Unreleased]
 
-*No changes yet.*
+### Added
+- **Docker**: Multi-arch builds (amd64 + arm64) — Raspberry Pi support via pre-built GHCR image
+- **Calendar**: Profile columns now follow family member sort order from Settings
+
+### Fixed
+- **Calendar**: Day view with hidden hours now fills full available height
+- **Calendar**: Week view with hidden hours now fills full available height
+- **Docker**: App health check uses node instead of curl (not available in Alpine)
+- **Docker**: Fresh install schema fixed (removed duplicate function and restrict lines from pg_dump)
+- **Database**: Truncate operation now includes all tables (gift_ideas, calendar_notes, wish_items, bus_tracking, audit_logs)
+- **CI**: GitHub Actions upgraded from Node.js 20 to 22
+- **CI**: Layout validation size constraints downgraded to warnings
 
 ## [1.1.0] - 2026-03-16
 
