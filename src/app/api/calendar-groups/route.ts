@@ -37,7 +37,8 @@ export async function GET() {
         .from(calendarGroups)
         .leftJoin(users, eq(calendarGroups.userId, users.id))
         .orderBy(
-          // User groups follow family member sort order; others use their own sortOrder
+          // Non-user groups (Family, etc.) come first, then user groups in family member order
+          sql`CASE WHEN ${calendarGroups.type} = 'user' THEN 1 ELSE 0 END`,
           sql`CASE WHEN ${calendarGroups.type} = 'user' THEN COALESCE(${users.sortOrder}, 999) ELSE ${calendarGroups.sortOrder} END`,
           asc(calendarGroups.name)
         );
