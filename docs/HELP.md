@@ -62,29 +62,50 @@ The dashboard is the main hub, displaying live data through customizable widgets
 
 ### Editing the Layout
 
-1. Tap the **pencil icon** in the dashboard header (parent only)
-2. **Drag** widgets to reposition, **resize** by dragging corners
-3. Use the **Widgets** menu to show/hide widgets
-4. Adjust **background color and opacity** per widget
-5. **Save** when done, or **Save As** to create a named layout
-6. Load **Templates** for pre-designed layouts
+1. Tap the **grid icon** (four squares) in the dashboard header to enter edit mode (parent only)
+2. **Drag** widgets to reposition, **resize** by dragging corner handles
+3. Use the **Widgets** button to show/hide widgets and adjust their coordinates
+4. Click a widget to select it, then use the **properties toolbar** to adjust background color, opacity, outline, text color, and text size
+5. Load pre-designed arrangements from the **Templates** button
+6. **Save** to overwrite the current layout, or use the dropdown arrow for **Save As** to create a named copy
+
+### Preview & Validation
+
+Click **Preview** in the editor toolbar to see a miniature map of your layout. It highlights widget positions, shows screen safe zones for different display sizes, and flags any issues like overlapping or undersized widgets. Click on the preview map to scroll the grid to that area.
+
+### Measure Mode
+
+Click **Measure** (or press Ctrl+Shift+M) to temporarily hide the editor toolbar and see your layout as it will actually appear. Use the "Show Nav / Hide Nav" toggle to check how it looks with and without the navigation sidebar. This is useful for fine-tuning layouts on dedicated displays.
+
+For a permanent clean look, enable **Auto-Hide Navigation** in Settings > Display. The nav and toolbar will automatically hide after a period of inactivity and reappear on click or keyboard input.
+
+### Screensaver Layout
+
+Each dashboard has its own screensaver layout. In edit mode, click the **Screensaver** button to switch to editing the screensaver widget arrangement. The screensaver activates after a configurable idle period (Settings > Display) and shows a photo slideshow with your chosen widgets overlaid.
+
+Configure in Settings > Display:
+- **Screensaver timeout** — How long before it activates
+- **Photo rotation interval** — How often photos change
+- **Pin a photo** — Use one static image instead of rotating
+
+### Import, Export & Community Layouts
+
+- **Export** — Copy your current layout as JSON to share with others (More > Export)
+- **Import** — Paste a layout JSON to load someone else's design (More > Import)
+- **Share** — Submit your layout to the Prism community gallery via GitHub (More > Share)
+- **Community** — Browse and apply layouts shared by other Prism users from the Community button in the editor toolbar
 
 ### Multiple Dashboards
 
-Create separate dashboards for different rooms or purposes:
+Create separate dashboards for different rooms or displays. Click the dashboard name dropdown in the editor toolbar to switch between dashboards or create new ones.
 - Default dashboard lives at `/`
 - Named dashboards get URLs like `/d/kitchen` or `/d/living-room`
-- Each has its own widget layout, screensaver layout, and orientation
-- Switch between them via the dropdown in the editor toolbar
+- Each has independent widget layout, screensaver layout, and orientation (landscape/portrait)
+- Bookmark a dashboard URL on a dedicated device for instant access
 
-### Screensaver
+### Orientation
 
-Activates automatically after a configurable idle period. Shows a photo slideshow with optional widgets (clock, weather, etc.). Edit the screensaver layout separately using the "Screensaver" toggle in edit mode.
-
-Configure in Settings > Display:
-- **Screensaver timeout** - How long before it activates
-- **Photo rotation interval** - How often photos change
-- **Pin a photo** - Use one static image instead of rotating
+Toggle between **Landscape** and **Portrait** mode using the orientation button in the editor toolbar. This controls which screen safe zone guides are shown and how the layout is optimized for your display.
 
 ### Mobile Dashboard
 
@@ -93,6 +114,30 @@ On phones, the dashboard shows a simplified single-column layout with summary ca
 ---
 
 ## Calendar
+
+### Setting Up Calendars
+
+Connect your calendars in **Settings > Connected Accounts** (Google Calendar via OAuth). Once connected, individual calendars appear in **Settings > Calendars** where you can:
+
+- **Enable/disable** individual calendars from showing on the dashboard
+- **Assign to a family member** — each calendar is linked to a person or marked as "Family" (shared)
+- **Set display names** — customize how a calendar appears in the UI
+- **Change colors** — override the default color for any calendar
+
+### Calendar Groups & Columns
+
+In Day and List views, events are organized into **columns by calendar group**. Groups are created automatically based on your calendar assignments:
+
+- The **Family** group always appears first (for shared/family calendars)
+- **Person columns** appear after Family, ordered by the family member sort order in Settings > Family Members
+- Reorder family members in Settings to change the column order
+- Use the **Merge/Split** toggle to combine all events into a single column or separate by person
+
+Filter buttons at the top of the calendar let you show/hide specific calendar groups. Click **All** to show everything.
+
+### Color Coding
+
+Events inherit their color from the calendar source they belong to. When calendars are assigned to family members, each person's events appear in their column with the calendar's color. You can customize colors per calendar in Settings > Calendars.
 
 ### Views
 
@@ -104,9 +149,7 @@ On phones, the dashboard shows a simplified single-column layout with summary ca
 - **Month** - Full month grid
 - **3 Month** - Three months side-by-side
 
-### Calendar Groups
-
-Events are organized by calendar source. In split views (Day, List), events appear in separate columns per calendar group. Use the **Merge/Split** toggle to combine into one column.
+The grid lines toggle (grid icon) shows or hides cell borders across all grid-based views.
 
 ### Calendar Notes
 
@@ -117,14 +160,13 @@ Click the **sticky note icon** to show a notes panel alongside Day or List views
 
 ### Hidden Hours
 
-Hide a time range from day and week views (e.g., hide midnight to 6 AM). Configure in Settings > Display > Calendar Hours. Toggle visibility with the clock button in calendar views.
+Hide a time range from day and week views (e.g., midnight to 6 AM). The remaining hours auto-resize to fill the available space. Configure the range in Settings > Display > Calendar Hours, and toggle visibility with the clock button in calendar views.
 
 ### Navigation
 
 - **Previous/Next** arrows to move between periods
 - **Today** button to jump back to current date
 - **Swipe** left/right on touch devices to navigate
-- **Grid lines** toggle for bordered/borderless cell display
 
 ---
 

@@ -190,19 +190,50 @@ function Roles() {
 function DashboardHelp() {
   return (
     <>
-      <P>The dashboard displays live data through customizable widgets on a grid layout.</P>
+      <P>The dashboard displays live data through customizable widgets on a 48-column grid layout.</P>
+
       <H2>Available Widgets</H2>
       <P>Clock, Weather, Calendar, Tasks, Chores, Shopping, Meals, Messages, Photos, Points/Goals, Birthdays, Wishes, and Bus Tracker.</P>
+
       <H2>Editing the Layout</H2>
       <Ul>
-        <Li>Tap the <strong>pencil icon</strong> in the header (parent only)</Li>
-        <Li><strong>Drag</strong> widgets to reposition, <strong>resize</strong> by dragging corners</Li>
-        <Li>Use the <strong>Widgets</strong> menu to show/hide widgets</Li>
-        <Li>Adjust <strong>background color and opacity</strong> per widget</Li>
-        <Li><strong>Save</strong>, <strong>Save As</strong>, or load <strong>Templates</strong></Li>
+        <Li>Tap the <strong>grid icon</strong> (four squares) in the dashboard header to enter edit mode (parent only)</Li>
+        <Li><strong>Drag</strong> widgets to reposition, <strong>resize</strong> by dragging corner handles</Li>
+        <Li>Use the <strong>Widgets</strong> button to show/hide widgets and adjust their coordinates</Li>
+        <Li>Click a widget to select it, then use the <strong>properties toolbar</strong> to adjust background color, opacity, outline, text color, and text size</Li>
+        <Li>Load pre-designed arrangements from the <strong>Templates</strong> button</Li>
+        <Li><strong>Save</strong> to overwrite the current layout, or use the dropdown arrow for <strong>Save As</strong> to create a named copy</Li>
       </Ul>
+
+      <H2>Preview &amp; Validation</H2>
+      <P>Click <strong>Preview</strong> in the editor toolbar to see a miniature map of your layout. It highlights widget positions, shows screen safe zones for different display sizes, and flags any issues like overlapping or undersized widgets. Click on the preview map to scroll the grid to that area.</P>
+
+      <H2>Measure Mode</H2>
+      <P>Click <strong>Measure</strong> (or press Ctrl+Shift+M) to temporarily hide the editor toolbar and see your layout as it will actually appear. Use the &quot;Show Nav / Hide Nav&quot; toggle to check how it looks with and without the navigation sidebar. This is useful for fine-tuning layouts on dedicated displays.</P>
+      <P>For a permanent clean look, enable <strong>Auto-Hide Navigation</strong> in Settings &gt; Display. The nav and toolbar will automatically hide after a period of inactivity and reappear on click or keyboard input.</P>
+
+      <H2>Screensaver Layout</H2>
+      <P>Each dashboard has its own screensaver layout. In edit mode, click the <strong>Screensaver</strong> button to switch to editing the screensaver widget arrangement. The screensaver activates after a configurable idle period (Settings &gt; Display) and shows a photo slideshow with your chosen widgets overlaid.</P>
+
+      <H2>Import, Export &amp; Community Layouts</H2>
+      <Ul>
+        <Li><strong>Export</strong>: Copy your current layout as JSON to share with others (More &gt; Export)</Li>
+        <Li><strong>Import</strong>: Paste a layout JSON to load someone else&apos;s design (More &gt; Import)</Li>
+        <Li><strong>Share</strong>: Submit your layout to the Prism community gallery via GitHub (More &gt; Share)</Li>
+        <Li><strong>Community</strong>: Browse and apply layouts shared by other Prism users from the Community button in the editor toolbar</Li>
+      </Ul>
+
       <H2>Multiple Dashboards</H2>
-      <P>Create separate dashboards for different rooms (e.g., /d/kitchen, /d/living-room). Each has its own widget layout, screensaver, and orientation. Switch via the dropdown in the editor toolbar.</P>
+      <P>Create separate dashboards for different rooms or displays. Click the dashboard name dropdown in the editor toolbar to switch between dashboards or create new ones.</P>
+      <Ul>
+        <Li>Default dashboard lives at <strong>/</strong></Li>
+        <Li>Named dashboards get URLs like <strong>/d/kitchen</strong> or <strong>/d/living-room</strong></Li>
+        <Li>Each has independent widget layout, screensaver layout, and orientation (landscape/portrait)</Li>
+        <Li>Bookmark a dashboard URL on a dedicated device for instant access</Li>
+      </Ul>
+
+      <H2>Orientation</H2>
+      <P>Toggle between <strong>Landscape</strong> and <strong>Portrait</strong> mode using the orientation button in the editor toolbar. This controls which screen safe zone guides are shown and how the layout is optimized for your display.</P>
     </>
   );
 }
@@ -220,16 +251,42 @@ function CalendarHelp({ isMobile }: { isMobile: boolean }) {
   return (
     <>
       <P>View and manage events from Google Calendar, Microsoft, and local calendars.</P>
+
+      <H2>Setting Up Calendars</H2>
+      <P>Connect your calendars in <strong>Settings &gt; Connected Accounts</strong> (Google Calendar via OAuth). Once connected, individual calendars appear in <strong>Settings &gt; Calendars</strong> where you can:</P>
+      <Ul>
+        <Li><strong>Enable/disable</strong> individual calendars from showing on the dashboard</Li>
+        <Li><strong>Assign to a family member</strong> — each calendar is linked to a person or marked as &quot;Family&quot; (shared)</Li>
+        <Li><strong>Set display names</strong> — customize how a calendar appears in the UI</Li>
+        <Li><strong>Change colors</strong> — override the default color for any calendar</Li>
+      </Ul>
+
+      <H2>Calendar Groups &amp; Columns</H2>
+      <P>In Day and List views, events are organized into <strong>columns by calendar group</strong>. Groups are created automatically based on your calendar assignments:</P>
+      <Ul>
+        <Li>The <strong>Family</strong> group always appears first (for shared/family calendars)</Li>
+        <Li><strong>Person columns</strong> appear after Family, ordered by the family member sort order in Settings &gt; Family Members</Li>
+        <Li>Reorder family members in Settings to change the column order</Li>
+        <Li>Use the <strong>Merge/Split</strong> toggle to combine all events into a single column or separate by person</Li>
+      </Ul>
+      <P>Filter buttons at the top of the calendar let you show/hide specific calendar groups. Click <strong>All</strong> to show everything.</P>
+
+      <H2>Color Coding</H2>
+      <P>Events inherit their color from the calendar source they belong to. When calendars are assigned to family members, each person&apos;s events appear in their column with the calendar&apos;s color. You can customize colors per calendar in Settings &gt; Calendars.</P>
+
       {!isMobile && (
         <>
           <H2>Views</H2>
-          <P>Agenda, Day, Week, List, Multi-Week (1-4W), Month, and 3-Month. Switch views using the toolbar buttons.</P>
+          <P>Agenda, Day, Week, List, Multi-Week (1-4W), Month, and 3-Month. Switch views using the toolbar buttons. The grid lines toggle (grid icon) shows or hides cell borders across all grid-based views.</P>
+
           <H2>Calendar Notes</H2>
-          <P>Click the sticky note icon to show a notes panel alongside Day or List views. Notes are shared across the family and support formatting (Ctrl+B bold, Ctrl+I italic, Ctrl+U underline).</P>
+          <P>Click the sticky note icon to show a notes panel alongside Day or List views. Notes are day-tied, shared across the family, and support formatting shortcuts: Ctrl+B bold, Ctrl+I italic, Ctrl+U underline, Ctrl+Shift+S strikethrough, Ctrl+Shift+L bullet list. Type &quot;- &quot; at the start of a line to auto-convert to a bullet.</P>
+
           <H2>Hidden Hours</H2>
-          <P>Hide a time range from day and week views (e.g., midnight to 6 AM). Configure in Settings &gt; Display &gt; Calendar Hours.</P>
+          <P>Hide a time range from day and week views (e.g., midnight to 6 AM). The remaining hours auto-resize to fill the available space. Configure the range in Settings &gt; Display &gt; Calendar Hours, and toggle visibility with the clock button in calendar views.</P>
         </>
       )}
+
       <H2>Navigation</H2>
       <P>Use Previous/Next arrows or swipe left/right on touch devices. Tap &quot;Today&quot; to jump back to the current date.</P>
     </>
