@@ -7,10 +7,17 @@ All notable changes to Prism are documented in this file.
 ### Added
 - **Docker**: Multi-arch builds (amd64 + arm64) — Raspberry Pi support via pre-built GHCR image
 - **Calendar**: Profile columns now follow family member sort order from Settings
+- **Calendar**: Family calendar group always sorts first before person columns
+
+### Improved
+- **Bus Tracker**: Large minute values now display as hours and minutes (e.g., "15h 25m" instead of "925m")
+- **README**: Replaced GIF demos with static screenshots for faster loading
 
 ### Fixed
 - **Calendar**: Day view with hidden hours now fills full available height
 - **Calendar**: Week view with hidden hours now fills full available height
+- **Calendar**: Day name headers rotate correctly when week starts on Monday
+- **Mobile**: Navigation no longer causes flash/slide animation on page transitions
 - **Docker**: App health check uses node instead of curl (not available in Alpine)
 - **Docker**: Fresh install schema fixed (removed duplicate function and restrict lines from pg_dump)
 - **Database**: Truncate operation now includes all tables (gift_ideas, calendar_notes, wish_items, bus_tracking, audit_logs)
