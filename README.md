@@ -13,38 +13,28 @@ If Prism is useful to you, a star helps others find it.
 
 ---
 
-## Demo
-
-*Prism is built for wall-mounted displays and tablets, with a mobile PWA as a companion for on-the-go. Large-format screenshots coming soon - the demos below were captured on laptop, iPad, and iPhone.*
+## Screenshots
 
 <table>
   <tr>
-    <td align="center"><b>Dashboard & Login</b><br><img src="docs/demos/dashboard-overview.gif" width="400" alt="Dashboard overview with PIN login"></td>
-    <td align="center"><b>Light & Dark Mode</b><br><img src="docs/demos/light-dark-toggle.gif" width="400" alt="Light and dark mode toggle"></td>
+    <td align="center"><b>Dashboard (Dark Mode)</b><br><img src="docs/demos/dashboard-dark.png" width="500" alt="Dashboard with widgets in dark mode"></td>
   </tr>
   <tr>
-    <td align="center"><b>Grocery Shopping</b><br><img src="docs/demos/grocery-shopping.gif" width="400" alt="Grocery list check-off with celebration"></td>
-    <td align="center"><b>Recipe View</b><br><img src="docs/demos/recipe-view.gif" width="400" alt="Recipe browsing with ingredient check-off"></td>
+    <td align="center"><b>Screensaver</b><br><img src="docs/demos/screensaver_light.png" width="500" alt="Screensaver with photo slideshow and clock"></td>
   </tr>
   <tr>
-    <td align="center"><b>Away Mode</b><br><img src="docs/demos/away-mode.gif" width="400" alt="Away mode overlay with clock and photos"></td>
-    <td align="center"><b>Babysitter Mode</b><br><img src="docs/demos/babysitter-mode.gif" width="400" alt="Babysitter mode with emergency contacts and house rules"></td>
+    <td align="center"><b>Calendar</b><br><img src="docs/demos/calendar_light.png" width="500" alt="Calendar week view with events"></td>
   </tr>
 </table>
 
-**iPad & iPhone** *(installable as a PWA for on-the-go access)*
-
 <table>
   <tr>
-    <td align="center"><b>Dashboard & Designer</b><br><img src="docs/demos/ipad-dashboard.gif" width="400" alt="iPad dashboard and layout designer"></td>
-    <td align="center"><b>Calendar Views</b><br><img src="docs/demos/ipad-calendar.gif" width="400" alt="iPad calendar day, week, two-week, month, and three-month views"></td>
+    <td align="center"><b>Chores</b><br><img src="docs/demos/chores.png" width="400" alt="Chores grouped by person"></td>
+    <td align="center"><b>Shopping</b><br><img src="docs/demos/shopping.png" width="400" alt="Shopping list with items"></td>
   </tr>
   <tr>
-    <td align="center"><b>Tasks, Chores & Meals</b><br><img src="docs/demos/ipad-features.gif" width="400" alt="iPad tasks, chores, meal planner, and recipe cook mode"></td>
-    <td align="center"><b>Settings</b><br><img src="docs/demos/ipad-settings.gif" width="400" alt="iPad settings for display, photos, and security"></td>
-  </tr>
-  <tr>
-    <td align="center" colspan="2"><b>iPhone</b><br><img src="docs/demos/iphone-mobile.gif" width="300" alt="iPhone shopping list and messages"></td>
+    <td align="center"><b>Wishes & Gift Ideas</b><br><img src="docs/demos/wishes.png" width="400" alt="Wish lists and private gift ideas"></td>
+    <td align="center"><b>Mobile PWA</b><br><img src="docs/demos/mobile.jpg" width="250" alt="Mobile dashboard with summary cards"></td>
   </tr>
 </table>
 
