@@ -2,6 +2,13 @@
 
 All notable changes to Prism are documented in this file.
 
+## [1.2.0] - 2026-03-29
+
+### Added
+- **Google Tasks**: Bidirectional sync with Google Tasks — OAuth flow, list selection, task sync provider
+- **Google Tasks**: Google Tasks option in Settings → Task Sync provider picker alongside Microsoft To-Do
+- **Google Tasks**: Connected Accounts page dynamically shows "Used for: Calendars, Tasks" when Google Tasks connected
+
 ## [Unreleased]
 
 ### Added

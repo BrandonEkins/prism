@@ -1,0 +1,53 @@
+import { NextResponse } from 'next/server';
+import { requireAuth, requireRole } from '@/lib/auth';
+
+const GOOGLE_AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth';
+const SCOPES = 'https://www.googleapis.com/auth/tasks';
+
+export async function GET(request: Request) {
+  const auth = await requireAuth();
+  if (auth instanceof NextResponse) return auth;
+
+  const forbidden = requireRole(auth, 'canManageIntegrations');
+  if (forbidden) return forbidden;
+
+  const clientId = process.env.GOOGLE_CLIENT_ID;
+  const redirectUri = process.env.GOOGLE_TASKS_REDIRECT_URI ||
+    `${process.env.BASE_URL || 'http://localhost:3000'}/api/auth/google-tasks/callback`;
+
+  if (!clientId) {
+    return NextResponse.json(
+      { error: 'Google OAuth not configured' },
+      { status: 500 }
+    );
+  }
+
+  try {
+    const { searchParams } = new URL(request.url);
+    const taskListId = searchParams.get('taskListId');
+    const returnSection = searchParams.get('returnSection') || 'tasks';
+
+    const state = JSON.stringify({
+      taskListId: taskListId || null,
+      returnSection,
+    });
+
+    const params = new URLSearchParams({
+      client_id: clientId,
+      redirect_uri: redirectUri,
+      response_type: 'code',
+      scope: SCOPES,
+      access_type: 'offline',
+      prompt: 'consent',
+      state,
+    });
+
+    return NextResponse.redirect(`${GOOGLE_AUTH_URL}?${params.toString()}`);
+  } catch (error) {
+    console.error('Failed to initiate Google Tasks OAuth:', error);
+    return NextResponse.json(
+      { error: 'Failed to initiate Google authentication' },
+      { status: 500 }
+    );
+  }
+}

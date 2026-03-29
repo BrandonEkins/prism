@@ -23,10 +23,11 @@ import { useTaskLists } from '@/lib/hooks/useTaskLists';
 import { useIntegrationSources } from './integrations/useIntegrationSources';
 import { TASK_CONFIG } from './integrations/constants';
 import type { TaskSource, MsList } from './integrations/types';
+import { GOOGLE_TASKS_ICON_SM, MS_TODO_ICON_SM } from './integrations/constants';
 import {
   StatusBanner,
   ConnectedSourcesCard,
-  MsListSelectionModal,
+  ListSelectionModal,
   ProviderPickerModal,
   EntityListCard,
   ConfirmDialog,
@@ -74,6 +75,8 @@ export function TaskIntegrationsSection() {
   const handleFinalizeNewConnection = async (taskListId: string | null, newListNameVal: string | null) => {
     if (!selectedMsListForNew) return;
 
+    const providerName = integration.listSelectionProvider === 'google_tasks' ? 'Google Tasks' : 'Microsoft To-Do';
+
     setFinalizingNewConnection(true);
     try {
       const res = await fetch('/api/task-sources/finalize', {
@@ -85,6 +88,7 @@ export function TaskIntegrationsSection() {
           externalListId: selectedMsListForNew.id,
           externalListName: selectedMsListForNew.name,
           newConnection: true,
+          provider: integration.listSelectionProvider,
         }),
       });
 
@@ -92,10 +96,9 @@ export function TaskIntegrationsSection() {
         setShowPrismListPickerModal(false);
         setSelectedMsListForNew(null);
         setNewPrismListName('');
-        // isNewConnection is managed by the shared hook
         integration.setStatusMessage({
           type: 'success',
-          text: `Connected "${selectedMsListForNew.name}" from Microsoft To-Do!`,
+          text: `Connected "${selectedMsListForNew.name}" from ${providerName}!`,
         });
         await integration.fetchSources();
         window.history.replaceState({}, '', '/settings?section=tasks');
@@ -242,7 +245,7 @@ export function TaskIntegrationsSection() {
         config={TASK_CONFIG}
         emptyIcon={<ListTodo className="h-5 w-5" />}
         emptyText="No task sources connected yet"
-        emptySubtext="Connect Microsoft To-Do from your task list below"
+        emptySubtext="Connect Microsoft To-Do or Google Tasks from your task list below"
         emptyExtra={
           <p className="text-sm mt-1">
             or set up your account in{' '}
@@ -285,8 +288,9 @@ export function TaskIntegrationsSection() {
           />
         )}
         sources={integration.sources}
+        config={TASK_CONFIG}
         getSourceForEntity={(list) =>
-          integration.sources.find((s) => s.taskListId === list.id && s.provider === 'microsoft_todo')
+          integration.sources.find((s) => s.taskListId === list.id)
         }
         onConnect={integration.handleConnectProvider}
         headerActions={
@@ -370,6 +374,12 @@ export function TaskIntegrationsSection() {
             window.location.href = `/api/auth/microsoft-tasks?taskListId=${integration.connectingEntityId}`;
           }
         }}
+        onSelectGoogleTasks={() => {
+          integration.setShowProviderPickerModal(false);
+          if (integration.connectingEntityId) {
+            window.location.href = `/api/auth/google-tasks?taskListId=${integration.connectingEntityId}`;
+          }
+        }}
         disabledProviders={[
           {
             icon: (
@@ -392,15 +402,25 @@ export function TaskIntegrationsSection() {
         ]}
       />
 
-      {/* MS List Selection Modal */}
-      <MsListSelectionModal
+      {/* External List Selection Modal */}
+      <ListSelectionModal
         open={integration.showMsListModal}
         onClose={integration.closeMsListModal}
-        msLists={integration.msLists}
+        lists={integration.msLists}
         loading={integration.loadingMsLists}
         finalizingConnection={integration.finalizingConnection}
         onSelect={handleSelectMsListOverride}
-        description="Choose which Microsoft To-Do list to sync with your Prism list"
+        title={integration.listSelectionProvider === 'google_tasks' ? 'Select Google Tasks List' : 'Select Microsoft To-Do List'}
+        description={integration.listSelectionProvider === 'google_tasks'
+          ? 'Choose which Google Tasks list to sync with your Prism list'
+          : 'Choose which Microsoft To-Do list to sync with your Prism list'}
+        loadingText={integration.listSelectionProvider === 'google_tasks'
+          ? 'Loading lists from Google Tasks...'
+          : 'Loading lists from Microsoft To-Do...'}
+        emptyText={integration.listSelectionProvider === 'google_tasks'
+          ? 'No lists found in Google Tasks'
+          : 'No lists found in Microsoft To-Do'}
+        listIcon={integration.listSelectionProvider === 'google_tasks' ? GOOGLE_TASKS_ICON_SM : MS_TODO_ICON_SM}
       />
 
       {/* New List Modal */}
@@ -473,17 +493,18 @@ export function TaskIntegrationsSection() {
       </Dialog>
 
       {/* Change External List Modal */}
-      <MsListSelectionModal
+      <ListSelectionModal
         open={showChangeListModal}
         onClose={() => {
           setShowChangeListModal(false);
           setChangingSourceId(null);
           setChangingSourceLists([]);
         }}
-        msLists={changingSourceLists}
+        lists={changingSourceLists}
         loading={loadingSourceLists}
         finalizingConnection={savingSourceList}
         onSelect={handleSelectNewSourceList}
+        title="Change External List"
         description="Select a different list to sync with"
       />
 
@@ -503,7 +524,8 @@ export function TaskIntegrationsSection() {
           </DialogHeader>
           <div className="py-4">
             <p className="text-sm text-muted-foreground mb-4">
-              Syncing with <strong>{selectedMsListForNew?.name}</strong> from Microsoft To-Do.
+              Syncing with <strong>{selectedMsListForNew?.name}</strong> from{' '}
+              {integration.listSelectionProvider === 'google_tasks' ? 'Google Tasks' : 'Microsoft To-Do'}.
               Where should these tasks go in Prism?
             </p>
 

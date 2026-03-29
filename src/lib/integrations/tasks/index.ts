@@ -1,7 +1,9 @@
 export * from './types';
 export { microsoftTodoProvider } from './microsoft-todo';
+export { googleTasksProvider } from './google-tasks';
 
 import { microsoftTodoProvider } from './microsoft-todo';
+import { googleTasksProvider } from './google-tasks';
 import type { TaskProvider } from './types';
 
 /**
@@ -10,8 +12,7 @@ import type { TaskProvider } from './types';
  */
 export const taskProviders: Record<string, TaskProvider> = {
   microsoft_todo: microsoftTodoProvider,
-  // todoist: todoistProvider,  // TODO: Implement
-  // apple_reminders: appleRemindersProvider,  // TODO: Implement
+  google_tasks: googleTasksProvider,
 };
 
 /**

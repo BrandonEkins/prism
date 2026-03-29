@@ -26,6 +26,9 @@ export interface UseIntegrationSourcesResult<S extends BaseSource> {
   // New connection flag (for tasks OAuth without pre-selected entity)
   isNewConnection: boolean;
 
+  // Which provider the list selection modal is for
+  listSelectionProvider: 'microsoft_todo' | 'google_tasks';
+
   // Provider picker modal state
   showProviderPickerModal: boolean;
   setShowProviderPickerModal: (v: boolean) => void;
@@ -75,12 +78,16 @@ export function useIntegrationSources<S extends BaseSource>(
   // newConnection flag (tasks-specific: OAuth callback without a pre-selected entity)
   const [isNewConnection, setIsNewConnection] = useState(false);
 
+  // Provider for current list selection flow
+  const [listSelectionProvider, setListSelectionProvider] = useState<'microsoft_todo' | 'google_tasks'>('microsoft_todo');
+
   // Handle OAuth URL params
   useEffect(() => {
     const error = searchParams.get('error');
     const success = searchParams.get('success');
     const section = searchParams.get('section');
     const selectMsList = searchParams.get('selectMsList');
+    const selectGoogleTasksList = searchParams.get('selectGoogleTasksList');
     const entityId = searchParams.get(config.oauthEntityParam);
     const newConnection = searchParams.get('newConnection');
 
@@ -95,11 +102,23 @@ export function useIntegrationSources<S extends BaseSource>(
           type: 'success',
           text: config.successMessages[success] || 'Operation completed successfully!',
         });
+      } else if (selectGoogleTasksList === 'true') {
+        // Google Tasks OAuth callback
+        setListSelectionProvider('google_tasks');
+        if (newConnection === 'true') {
+          setIsNewConnection(true);
+          fetchListsWithUrl('/api/task-sources/google-lists');
+        } else if (entityId) {
+          setIsNewConnection(false);
+          setPendingEntityId(entityId);
+          fetchListsWithUrl(`/api/task-sources/google-lists?taskListId=${entityId}`);
+        }
       } else if (selectMsList === 'true') {
+        setListSelectionProvider('microsoft_todo');
         if (newConnection === 'true') {
           // New connection flow: fetch MS lists without a specific entity ID
           setIsNewConnection(true);
-          fetchMsListsWithUrl('/api/task-sources/microsoft-lists?newConnection=true');
+          fetchListsWithUrl('/api/task-sources/microsoft-lists?newConnection=true');
         } else if (entityId) {
           setIsNewConnection(false);
           setPendingEntityId(entityId);
@@ -128,7 +147,7 @@ export function useIntegrationSources<S extends BaseSource>(
     fetchSources();
   }, [fetchSources]);
 
-  const fetchMsListsWithUrl = async (url: string) => {
+  const fetchListsWithUrl = async (url: string) => {
     setLoadingMsLists(true);
     try {
       const res = await fetch(url);
@@ -140,13 +159,13 @@ export function useIntegrationSources<S extends BaseSource>(
         const data = await res.json();
         setStatusMessage({
           type: 'error',
-          text: data.error || 'Failed to fetch Microsoft To-Do lists',
+          text: data.error || 'Failed to fetch lists from provider',
         });
       }
     } catch {
       setStatusMessage({
         type: 'error',
-        text: 'Failed to fetch Microsoft To-Do lists',
+        text: 'Failed to fetch lists from provider',
       });
     } finally {
       setLoadingMsLists(false);
@@ -186,11 +205,14 @@ export function useIntegrationSources<S extends BaseSource>(
   const handleSelectMsList = async (externalListId: string, externalListName: string) => {
     if (!pendingEntityId) return;
 
+    const providerName = listSelectionProvider === 'google_tasks' ? 'Google Tasks' : 'Microsoft To-Do';
+
     setFinalizingConnection(true);
     try {
       const body: Record<string, string> = {
         externalListId,
         externalListName,
+        provider: listSelectionProvider,
       };
       // Map the entity param to its finalize body key
       if (config.oauthEntityParam === 'taskListId') body.taskListId = pendingEntityId;
@@ -209,7 +231,7 @@ export function useIntegrationSources<S extends BaseSource>(
         setPendingEntityId(null);
         setStatusMessage({
           type: 'success',
-          text: `Connected to "${externalListName}" in Microsoft To-Do!`,
+          text: `Connected to "${externalListName}" in ${providerName}!`,
         });
         await fetchSources();
         window.history.replaceState({}, '', `/settings?section=${config.section}`);
@@ -373,6 +395,7 @@ export function useIntegrationSources<S extends BaseSource>(
     statusMessage,
     setStatusMessage,
     isNewConnection,
+    listSelectionProvider,
     showMsListModal,
     setShowMsListModal,
     msLists,

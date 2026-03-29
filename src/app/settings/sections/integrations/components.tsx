@@ -22,7 +22,7 @@ import {
 } from '@/components/ui/dialog';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import type { BaseSource, IntegrationConfig, MsList, ProviderInfoEntry } from './types';
-import { MS_TODO_ICON_SM } from './constants';
+import { MS_TODO_ICON_SM, GOOGLE_TASKS_ICON_SM } from './constants';
 
 // ---- StatusBanner ----
 
@@ -267,53 +267,61 @@ export function ConnectedSourcesCard<S extends BaseSource>({
   );
 }
 
-// ---- MsListSelectionModal ----
+// ---- ListSelectionModal ----
 
-export function MsListSelectionModal({
+export function ListSelectionModal({
   open,
   onClose,
-  msLists,
+  lists,
   loading,
   finalizingConnection,
   onSelect,
+  title,
   description,
+  loadingText,
+  emptyText,
+  listIcon,
 }: {
   open: boolean;
   onClose: () => void;
-  msLists: MsList[];
+  lists: MsList[];
   loading: boolean;
   finalizingConnection: boolean;
   onSelect: (externalListId: string, externalListName: string) => void;
+  title?: string;
   description?: string;
+  loadingText?: string;
+  emptyText?: string;
+  listIcon?: React.ReactNode;
 }) {
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Select Microsoft To-Do List</DialogTitle>
+          <DialogTitle>{title || 'Select List'}</DialogTitle>
         </DialogHeader>
         <div className="py-4">
           <p className="text-sm text-muted-foreground mb-4">
-            {description || 'Choose which Microsoft To-Do list to sync'}
+            {description || 'Choose which list to sync'}
           </p>
           {loading ? (
             <div className="text-center py-4 text-muted-foreground">
-              Loading lists from Microsoft To-Do...
+              {loadingText || 'Loading lists...'}
             </div>
-          ) : msLists.length === 0 ? (
+          ) : lists.length === 0 ? (
             <div className="text-center py-4 text-muted-foreground">
-              No lists found in Microsoft To-Do
+              {emptyText || 'No lists found'}
             </div>
           ) : (
             <div className="space-y-2">
-              {msLists.map((list) => (
+              {lists.map((list) => (
                 <button
                   key={list.id}
                   onClick={() => onSelect(list.id, list.name)}
                   disabled={finalizingConnection}
                   className="w-full flex items-center gap-3 p-3 rounded-md border border-border hover:bg-accent transition-colors text-left disabled:opacity-50"
                 >
-                  {MS_TODO_ICON_SM}
+                  {listIcon || MS_TODO_ICON_SM}
                   <span className="font-medium">{list.name}</span>
                   {list.isDefault && (
                     <Badge variant="secondary" className="ml-auto text-xs">
@@ -335,6 +343,9 @@ export function MsListSelectionModal({
   );
 }
 
+/** @deprecated Use ListSelectionModal instead */
+export const MsListSelectionModal = ListSelectionModal;
+
 // ---- ProviderPickerModal ----
 
 export function ProviderPickerModal({
@@ -343,6 +354,7 @@ export function ProviderPickerModal({
   title,
   description,
   onSelectMsTodo,
+  onSelectGoogleTasks,
   disabledProviders,
 }: {
   open: boolean;
@@ -350,6 +362,7 @@ export function ProviderPickerModal({
   title: string;
   description: React.ReactNode;
   onSelectMsTodo: () => void;
+  onSelectGoogleTasks?: () => void;
   disabledProviders?: Array<{
     icon: React.ReactNode;
     name: string;
@@ -380,6 +393,25 @@ export function ProviderPickerModal({
               </div>
               <ExternalLink className="h-4 w-4 ml-auto text-muted-foreground" />
             </button>
+
+            {onSelectGoogleTasks && (
+              <button
+                onClick={onSelectGoogleTasks}
+                className="w-full flex items-center gap-3 p-3 rounded-md border border-border hover:bg-accent transition-colors text-left"
+              >
+                <svg className="h-5 w-5 shrink-0" viewBox="0 0 24 24">
+                  <path d="M22 5.18L10.59 16.6l-4.24-4.24 1.41-1.41 2.83 2.83 10-10L22 5.18z" fill="#4285F4" />
+                  <path d="M19.79 20.79H4.21V5.21h8.79V3H4.21C2.99 3 2 3.99 2 5.21v15.58C2 22.01 2.99 23 4.21 23h15.58C21.01 23 22 22.01 22 20.79V12h-2.21v8.79z" fill="#4285F4" />
+                </svg>
+                <div>
+                  <span className="font-medium">Google Tasks</span>
+                  <p className="text-xs text-muted-foreground">
+                    Sync items with Google Tasks
+                  </p>
+                </div>
+                <ExternalLink className="h-4 w-4 ml-auto text-muted-foreground" />
+              </button>
+            )}
 
             {disabledProviders?.map((p) => (
               <button
@@ -421,6 +453,7 @@ export function EntityListCard<T extends { id: string; name: string }>({
   onConnect,
   headerActions,
   renderEntityActions,
+  config,
 }: {
   title: string;
   description: string;
@@ -434,6 +467,7 @@ export function EntityListCard<T extends { id: string; name: string }>({
   onConnect: (entityId: string) => void;
   headerActions?: React.ReactNode;
   renderEntityActions?: (entity: T, connectedSource: BaseSource | undefined) => React.ReactNode;
+  config?: IntegrationConfig;
 }) {
   return (
     <Card>
@@ -468,10 +502,12 @@ export function EntityListCard<T extends { id: string; name: string }>({
                       <span className="font-medium">{entity.name}</span>
                       {connectedSource && (
                         <div className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
-                          <svg className="h-3 w-3" viewBox="0 0 24 24" fill="#0078D4">
-                            <path d="M0 0h11.377v11.377H0zm12.623 0H24v11.377H12.623zM0 12.623h11.377V24H0zm12.623 0H24V24H12.623z" />
-                          </svg>
-                          <span>Synced with: {connectedSource.externalListName || 'MS To-Do'}</span>
+                          {config?.providers[connectedSource.provider]?.icon || (
+                            <svg className="h-3 w-3" viewBox="0 0 24 24" fill="#0078D4">
+                              <path d="M0 0h11.377v11.377H0zm12.623 0H24v11.377H12.623zM0 12.623h11.377V24H0zm12.623 0H24V24H12.623z" />
+                            </svg>
+                          )}
+                          <span>Synced with: {connectedSource.externalListName || config?.providers[connectedSource.provider]?.name || 'External'}</span>
                         </div>
                       )}
                     </div>
