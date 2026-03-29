@@ -31,6 +31,12 @@ export async function GET() {
       .filter(Boolean)
       .sort((a, b) => (b!.getTime() - a!.getTime()));
 
+    // Google Tasks: check task_sources with provider='google_tasks'
+    const googleTaskSources = await db
+      .select({ id: taskSources.id })
+      .from(taskSources)
+      .where(eq(taskSources.provider, 'google_tasks'));
+
     // Microsoft: check task_sources and shopping_list_sources with provider='microsoft_todo'
     const msTaskSources = await db
       .select({ id: taskSources.id })
@@ -46,9 +52,10 @@ export async function GET() {
 
     return NextResponse.json({
       google: {
-        connected: googleConnected,
+        connected: googleConnected || googleTaskSources.length > 0,
         expired: googleExpired,
         calendarCount: googleSources.length,
+        taskSourceCount: googleTaskSources.length,
         lastSynced: lastSyncedDates[0]?.toISOString() || null,
       },
       microsoft: {

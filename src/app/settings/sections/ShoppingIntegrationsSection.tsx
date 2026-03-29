@@ -87,7 +87,7 @@ export function ShoppingIntegrationsSection() {
       <MsListSelectionModal
         open={integration.showMsListModal}
         onClose={integration.closeMsListModal}
-        msLists={integration.msLists}
+        lists={integration.msLists}
         loading={integration.loadingMsLists}
         finalizingConnection={integration.finalizingConnection}
         onSelect={integration.handleSelectMsList}

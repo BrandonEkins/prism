@@ -18,11 +18,28 @@ const MS_TODO_ICON_XS = (
   </svg>
 );
 
-export { MS_TODO_ICON, MS_TODO_ICON_SM, MS_TODO_ICON_XS };
+const GOOGLE_TASKS_ICON = (
+  <svg className="h-5 w-5" viewBox="0 0 24 24">
+    <path d="M22 5.18L10.59 16.6l-4.24-4.24 1.41-1.41 2.83 2.83 10-10L22 5.18z" fill="#4285F4" />
+    <path d="M19.79 20.79H4.21V5.21h8.79V3H4.21C2.99 3 2 3.99 2 5.21v15.58C2 22.01 2.99 23 4.21 23h15.58C21.01 23 22 22.01 22 20.79V12h-2.21v8.79z" fill="#4285F4" />
+  </svg>
+);
+
+const GOOGLE_TASKS_ICON_SM = (
+  <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24">
+    <path d="M22 5.18L10.59 16.6l-4.24-4.24 1.41-1.41 2.83 2.83 10-10L22 5.18z" fill="#4285F4" />
+    <path d="M19.79 20.79H4.21V5.21h8.79V3H4.21C2.99 3 2 3.99 2 5.21v15.58C2 22.01 2.99 23 4.21 23h15.58C21.01 23 22 22.01 22 20.79V12h-2.21v8.79z" fill="#4285F4" />
+  </svg>
+);
+
+export { MS_TODO_ICON, MS_TODO_ICON_SM, MS_TODO_ICON_XS, GOOGLE_TASKS_ICON, GOOGLE_TASKS_ICON_SM };
 
 const SHARED_ERROR_MESSAGES: Record<string, string> = {
   microsoft_auth_denied: 'Microsoft authorization was denied or cancelled.',
   microsoft_auth_failed: 'Microsoft authentication failed. Please try again.',
+  google_tasks_auth_denied: 'Google authorization was denied or cancelled.',
+  google_tasks_auth_failed: 'Google authentication failed. Please try again.',
+  redis_unavailable: 'Cache service unavailable. Please try again.',
   missing_code: 'Authorization code was missing. Please try again.',
 };
 
@@ -35,6 +52,7 @@ export const TASK_CONFIG: IntegrationConfig = {
   deleteConfirmSuffix: 'Tasks already synced will remain in Prism.',
   providers: {
     microsoft_todo: { name: 'Microsoft To-Do', icon: MS_TODO_ICON, color: '#0078D4' },
+    google_tasks: { name: 'Google Tasks', icon: GOOGLE_TASKS_ICON, color: '#4285F4' },
     todoist: {
       name: 'Todoist',
       icon: (
@@ -50,9 +68,11 @@ export const TASK_CONFIG: IntegrationConfig = {
     missing_task_list: 'No task list was selected. Please try again.',
     task_list_not_found: 'The selected task list was not found.',
     no_ms_lists: 'No task lists found in your Microsoft To-Do account.',
+    no_google_lists: 'No task lists found in your Google Tasks account.',
   },
   successMessages: {
     microsoft_tasks_connected: 'Microsoft To-Do connected successfully!',
+    google_tasks_connected: 'Google Tasks connected successfully!',
   },
 };
 

@@ -15,6 +15,7 @@ interface IntegrationStatus {
     connected: boolean;
     expired: boolean;
     calendarCount: number;
+    taskSourceCount: number;
     lastSynced: string | null;
   };
   microsoft: {
@@ -165,7 +166,12 @@ export function ConnectedAccountsSection() {
               <GoogleIcon />
               <div>
                 <CardTitle className="text-lg">Google</CardTitle>
-                <CardDescription>Used for: Calendars</CardDescription>
+                <CardDescription>
+                  Used for: {[
+                    status?.google.calendarCount ? 'Calendars' : null,
+                    status?.google.taskSourceCount ? 'Tasks' : null,
+                  ].filter(Boolean).join(', ') || 'Calendars'}
+                </CardDescription>
               </div>
             </div>
             {status?.google.connected ? (
@@ -184,6 +190,9 @@ export function ConnectedAccountsSection() {
             <div className="space-y-3">
               <p className="text-sm text-muted-foreground">
                 {status.google.calendarCount} calendar{status.google.calendarCount !== 1 ? 's' : ''} imported
+                {status.google.taskSourceCount > 0 && (
+                  <>, {status.google.taskSourceCount} task source{status.google.taskSourceCount !== 1 ? 's' : ''}</>
+                )}
                 {status.google.lastSynced && (
                   <> &middot; Last synced: {new Date(status.google.lastSynced).toLocaleString()}</>
                 )}

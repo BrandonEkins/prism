@@ -1,0 +1,125 @@
+import { NextResponse } from 'next/server';
+import { requireAuth, requireRole } from '@/lib/auth';
+import { encrypt } from '@/lib/utils/crypto';
+import { getRedisClient } from '@/lib/cache/getRedisClient';
+
+const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token';
+const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
+const TEMP_TOKEN_TTL = 300; // 5 minutes
+
+interface GoogleTokens {
+  access_token: string;
+  refresh_token?: string;
+  expires_in: number;
+}
+
+async function exchangeCodeForTokens(code: string): Promise<GoogleTokens> {
+  const clientId = process.env.GOOGLE_CLIENT_ID;
+  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+  const redirectUri = process.env.GOOGLE_TASKS_REDIRECT_URI ||
+    `${BASE_URL}/api/auth/google-tasks/callback`;
+
+  if (!clientId || !clientSecret) {
+    throw new Error('Google OAuth not configured');
+  }
+
+  const response = await fetch(GOOGLE_TOKEN_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      code,
+      client_id: clientId,
+      client_secret: clientSecret,
+      redirect_uri: redirectUri,
+      grant_type: 'authorization_code',
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Token exchange failed: ${error}`);
+  }
+
+  return response.json();
+}
+
+export async function GET(request: Request) {
+  const auth = await requireAuth();
+  if (auth instanceof NextResponse) return auth;
+
+  const forbidden = requireRole(auth, 'canManageIntegrations');
+  if (forbidden) return forbidden;
+
+  const { searchParams } = new URL(request.url);
+  const state = searchParams.get('state');
+
+  let taskListId: string | null = null;
+  let returnSection = 'tasks';
+  if (state) {
+    try {
+      const parsed = JSON.parse(state);
+      taskListId = parsed.taskListId || null;
+      returnSection = parsed.returnSection || 'tasks';
+    } catch { /* ignore */ }
+  }
+
+  try {
+    const code = searchParams.get('code');
+    const error = searchParams.get('error');
+
+    if (error) {
+      console.error('Google Tasks OAuth error:', error);
+      return NextResponse.redirect(
+        `${BASE_URL}/settings?section=${returnSection}&error=google_tasks_auth_denied`
+      );
+    }
+
+    if (!code) {
+      return NextResponse.redirect(
+        `${BASE_URL}/settings?section=${returnSection}&error=missing_code`
+      );
+    }
+
+    const tokens = await exchangeCodeForTokens(code);
+    const tokenExpiresAt = new Date(Date.now() + tokens.expires_in * 1000);
+
+    const encryptedAccessToken = encrypt(tokens.access_token);
+    const encryptedRefreshToken = tokens.refresh_token
+      ? encrypt(tokens.refresh_token)
+      : null;
+
+    // Store tokens temporarily in Redis
+    const redis = await getRedisClient();
+    if (!redis) {
+      return NextResponse.redirect(
+        `${BASE_URL}/settings?section=tasks&error=redis_unavailable`
+      );
+    }
+
+    const tempKey = taskListId
+      ? `google-tasks-temp:${auth.userId}:task:${taskListId}`
+      : `google-tasks-temp:${auth.userId}:task:new`;
+
+    await redis.setEx(
+      tempKey,
+      TEMP_TOKEN_TTL,
+      JSON.stringify({
+        accessToken: encryptedAccessToken,
+        refreshToken: encryptedRefreshToken,
+        tokenExpiresAt: tokenExpiresAt.toISOString(),
+        rawAccessToken: tokens.access_token,
+      })
+    );
+
+    const redirectUrl = taskListId
+      ? `${BASE_URL}/settings?section=tasks&selectGoogleTasksList=true&taskListId=${taskListId}`
+      : `${BASE_URL}/settings?section=tasks&selectGoogleTasksList=true&newConnection=true`;
+
+    return NextResponse.redirect(redirectUrl);
+  } catch (error) {
+    console.error('Google Tasks OAuth callback error:', error);
+    return NextResponse.redirect(
+      `${BASE_URL}/settings?section=${returnSection}&error=google_tasks_auth_failed`
+    );
+  }
+}

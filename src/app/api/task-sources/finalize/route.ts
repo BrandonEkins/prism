@@ -27,7 +27,9 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { taskListId, externalListId, externalListName, newListName, newConnection } = body;
+    const { taskListId, externalListId, externalListName, newListName, newConnection, provider: requestProvider } = body;
+    const provider = requestProvider || 'microsoft_todo';
+    const redisPrefix = provider === 'google_tasks' ? 'google-tasks-temp' : 'ms-todo-temp';
 
     if (!externalListId) {
       return NextResponse.json(
@@ -52,14 +54,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Try the appropriate temp key (new format includes key type segment)
+    // Try the appropriate temp key
     const tempKey = newConnection || !taskListId
-      ? `ms-todo-temp:${auth.userId}:task:new`
-      : `ms-todo-temp:${auth.userId}:task:${taskListId}`;
+      ? `${redisPrefix}:${auth.userId}:task:new`
+      : `${redisPrefix}:${auth.userId}:task:${taskListId}`;
     let stored = await redis.get(tempKey);
 
-    // Fallback for old key format (without key type segment)
-    if (!stored) {
+    // Fallback for old MS key format (without key type segment)
+    if (!stored && provider === 'microsoft_todo') {
       const fallbackKey = newConnection || !taskListId
         ? `ms-todo-temp:${auth.userId}:new`
         : `ms-todo-temp:${auth.userId}:${taskListId}`;
@@ -67,8 +69,9 @@ export async function POST(request: NextRequest) {
     }
 
     if (!stored) {
+      const providerName = provider === 'google_tasks' ? 'Google Tasks' : 'Microsoft To-Do';
       return NextResponse.json(
-        { error: 'Session expired. Please reconnect Microsoft To-Do.' },
+        { error: `Session expired. Please reconnect ${providerName}.` },
         { status: 401 }
       );
     }
@@ -114,7 +117,7 @@ export async function POST(request: NextRequest) {
       .from(taskSources)
       .where(
         and(
-          eq(taskSources.provider, 'microsoft_todo'),
+          eq(taskSources.provider, provider),
           eq(taskSources.taskListId, finalTaskListId)
         )
       );
@@ -137,7 +140,7 @@ export async function POST(request: NextRequest) {
       // Create new source
       await db.insert(taskSources).values({
         userId: auth.userId,
-        provider: 'microsoft_todo',
+        provider,
         taskListId: finalTaskListId,
         externalListId,
         externalListName: externalListName || null,
@@ -157,14 +160,14 @@ export async function POST(request: NextRequest) {
       userId: auth.userId,
       action: existing ? 'update' : 'create',
       entityType: 'integration',
-      summary: `Finalized task sync connection: microsoft_todo (${externalListName || externalListId})`,
+      summary: `Finalized task sync connection: ${provider} (${externalListName || externalListId})`,
     });
 
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error finalizing MS connection:', error);
     return NextResponse.json(
-      { error: 'Failed to complete Microsoft To-Do connection' },
+      { error: 'Failed to complete task sync connection' },
       { status: 500 }
     );
   }
