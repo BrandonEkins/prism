@@ -24,7 +24,7 @@
 
 import * as React from 'react';
 import { SideNav } from './SideNav';
-import { MobileNav } from './MobileNav';
+import { MobileFab } from './MobileFab';
 import { PortraitNav } from './PortraitNav';
 import { WallpaperBackground } from './WallpaperBackground';
 import { cn } from '@/lib/utils';
@@ -138,8 +138,7 @@ export function AppShell({
           !hideNav && showSideNav && !uiHidden && !measureHideNav && 'ml-16',
           // Bottom padding when bottom nav is visible (portrait or mobile)
           !hideNav && showPortraitNav && !uiHidden && !measureHideNav && 'pb-24',
-          // Mobile bottom padding via CSS media query to avoid hydration flash
-          !hideNav && !uiHidden && !measureHideNav && 'max-md:pb-16',
+          // No mobile bottom padding needed — FAB floats over content
           className
         )}
       >
@@ -151,9 +150,9 @@ export function AppShell({
         <PortraitNav user={user} onLogin={onLogin} onLogout={onLogout} uiHidden={uiHidden || measureHideNav} />
       )}
 
-      {/* MOBILE BOTTOM NAVIGATION - small screens only */}
+      {/* MOBILE FAB - small screens only */}
       {!hideNav && showMobileNav && (
-        <MobileNav user={user} onLogin={onLogin} onLogout={onLogout} uiHidden={uiHidden || measureHideNav} />
+        <MobileFab user={user} onLogin={onLogin} onLogout={onLogout} uiHidden={uiHidden || measureHideNav} />
       )}
     </div>
   );

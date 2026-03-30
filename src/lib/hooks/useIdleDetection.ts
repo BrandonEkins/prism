@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useIsPWA } from './useIsPWA';
 
 const STORAGE_KEY = 'prism-screensaver-timeout';
 const AWAY_MODE_STORAGE_KEY = 'prism-away-mode-timeout';
@@ -32,6 +33,7 @@ function getLastActivity(): number {
 }
 
 export function useIdleDetection(initialTimeout?: number) {
+  const isPWA = useIsPWA();
   const [timeout, setTimeoutValue] = useState(() => initialTimeout ?? getStoredTimeout());
   const [awayModeTimeout, setAwayModeTimeout] = useState(() => getAwayModeTimeout());
   const [isIdle, setIsIdle] = useState(false);
@@ -90,7 +92,7 @@ export function useIdleDetection(initialTimeout?: number) {
   }, []);
 
   useEffect(() => {
-    if (timeout <= 0) return;
+    if (timeout <= 0 || isPWA) return;
 
     // Mousemove/scroll only reset the idle timer, they don't dismiss the screensaver
     const moveEvents = ['mousemove', 'scroll'] as const;
@@ -107,7 +109,7 @@ export function useIdleDetection(initialTimeout?: number) {
       dismissEvents.forEach((e) => window.removeEventListener(e, dismissIdle));
       if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [resetTimer, dismissIdle, timeout]);
+  }, [resetTimer, dismissIdle, timeout, isPWA]);
 
   // Listen for custom screensaver activation event
   useEffect(() => {
@@ -118,7 +120,7 @@ export function useIdleDetection(initialTimeout?: number) {
 
   // Away mode auto-activation based on extended inactivity
   useEffect(() => {
-    if (awayModeTimeout <= 0) {
+    if (awayModeTimeout <= 0 || isPWA) {
       // Clear timer if disabled
       if (awayModeTimerRef.current) {
         clearInterval(awayModeTimerRef.current);
@@ -165,7 +167,7 @@ export function useIdleDetection(initialTimeout?: number) {
         awayModeTimerRef.current = null;
       }
     };
-  }, [awayModeTimeout]);
+  }, [awayModeTimeout, isPWA]);
 
   return { isIdle, forceIdle };
 }

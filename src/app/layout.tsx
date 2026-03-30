@@ -253,7 +253,7 @@ export default function RootLayout({
           bg-background
           text-foreground
           min-h-screen
-          overflow-hidden
+          md:overflow-hidden
         `}
       >
         {/*
