@@ -8,6 +8,22 @@ All notable changes to Prism are documented in this file.
 - **Google Tasks**: Bidirectional sync with Google Tasks — OAuth flow, list selection, task sync provider
 - **Google Tasks**: Google Tasks option in Settings → Task Sync provider picker alongside Microsoft To-Do
 - **Google Tasks**: Connected Accounts page dynamically shows "Used for: Calendars, Tasks" when Google Tasks connected
+- **Mobile PWA**: Floating action button (FAB) replaces bottom nav bar — Home, Reorder, Settings, Login
+- **Mobile PWA**: Dashboard card reorder mode (FAB → Reorder) with drag pills and amber indicator
+- **Mobile PWA**: Card visibility settings (FAB → Settings) to show/hide dashboard cards
+- **Mobile PWA**: All widget cards available — bus tracker, goals, wishes, photos, clock
+- **Mobile PWA**: Screensaver and away mode auto-disabled on PWA (useIsPWA hook)
+- **Mobile PWA**: Meals touch-drag between days on mobile
+- **Mobile PWA**: Light/dark PWA icon variants, apple-touch-icon support
+
+### Improved
+- **Mobile PWA**: All grouped list pages (Tasks, Chores, Shopping, Wishes, Gift Ideas) use single-column on mobile
+- **Mobile PWA**: Calendar simplified — short date, Day/Agenda toggle, no filter pills, read-only
+- **Mobile PWA**: Messages important/expires badges on own line, edit/delete buttons visible on mobile
+- **Mobile PWA**: Shopping extra bottom padding so FAB doesn't overlap last item
+- **Mobile PWA**: GripVertical drag icons hidden on mobile across all list pages
+- **Mobile PWA**: Card-level drag disabled on mobile to prevent scroll interference
+- **Mobile PWA**: Body overflow-hidden changed to md:overflow-hidden for mobile scrolling
 
 ## [Unreleased]
 
