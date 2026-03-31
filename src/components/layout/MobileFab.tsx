@@ -11,6 +11,7 @@ import {
   Monitor,
   User,
   LayoutGrid,
+  ArrowUpDown,
   Eye,
   EyeOff,
 } from 'lucide-react';
@@ -51,11 +52,19 @@ export function MobileFab({ user, onLogin, onLogout, uiHidden }: MobileFabProps)
   const [isOpen, setIsOpen] = useState(false);
   const [showCards, setShowCards] = useState(false);
   const [hiddenCards, setHiddenCards] = useState<string[]>([]);
+  const [reorderMode, setReorderMode] = useState(false);
   const { theme, setTheme } = useTheme();
 
   useEffect(() => {
     setHiddenCards(loadHiddenCards());
   }, []);
+
+  const toggleReorderMode = useCallback(() => {
+    const next = !reorderMode;
+    setReorderMode(next);
+    setIsOpen(false);
+    window.dispatchEvent(new CustomEvent('prism:mobile-reorder', { detail: { active: next } }));
+  }, [reorderMode]);
 
   const toggleCard = useCallback((cardId: string) => {
     setHiddenCards((prev) => {
@@ -86,12 +95,20 @@ export function MobileFab({ user, onLogin, onLogout, uiHidden }: MobileFabProps)
       onClick: () => setIsOpen(false),
       href: '/',
     },
-    ...(isDashboard ? [{
-      key: 'settings',
-      icon: <LayoutGrid className="h-5 w-5" />,
-      label: 'Settings',
-      onClick: () => { setIsOpen(false); setShowCards(true); },
-    }] : []),
+    ...(isDashboard ? [
+      {
+        key: 'reorder',
+        icon: <ArrowUpDown className="h-5 w-5" />,
+        label: reorderMode ? 'Done' : 'Reorder',
+        onClick: toggleReorderMode,
+      },
+      {
+        key: 'settings',
+        icon: <LayoutGrid className="h-5 w-5" />,
+        label: 'Settings',
+        onClick: () => { setIsOpen(false); setShowCards(true); },
+      },
+    ] : []),
     {
       key: 'auth',
       icon: user ? (
@@ -218,14 +235,16 @@ export function MobileFab({ user, onLogin, onLogout, uiHidden }: MobileFabProps)
       <button
         onClick={() => { if (showCards) { setShowCards(false); } else { setIsOpen(!isOpen); } }}
         className={cn(
-          'fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full',
+          'fixed right-6 z-50 w-14 h-14 rounded-full',
           'bg-primary text-primary-foreground shadow-lg',
           'flex items-center justify-center',
-          'transition-all duration-300 ease-in-out safe-area-bottom',
+          'transition-all duration-300 ease-in-out',
           'active:scale-95',
           (isOpen || showCards) && 'rotate-45 bg-muted text-muted-foreground',
+          reorderMode && !isOpen && 'bg-amber-500 text-white',
           uiHidden && !isOpen && !showCards && 'translate-y-24 opacity-0'
         )}
+        style={{ bottom: 'calc(1.5rem + env(safe-area-inset-bottom, 0px))' }}
       >
         <Plus className="h-6 w-6" />
       </button>

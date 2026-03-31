@@ -139,7 +139,7 @@ export const metadata: Metadata = {
       { url: '/icons/icon.svg', type: 'image/svg+xml' },
       { url: '/icons/icon-192.png', type: 'image/png', sizes: '192x192' },
     ],
-    apple: '/icons/icon-512.png',
+    apple: '/icons/apple-touch-icon.png',
   },
 
   // Open Graph metadata (for social sharing on Facebook, LinkedIn, etc.)
