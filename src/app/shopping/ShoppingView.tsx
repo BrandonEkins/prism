@@ -27,6 +27,7 @@ import { useShoppingDragReorder } from './useShoppingDragReorder';
 import { useShoppingInlineInput, BASE_EMPTY_LINES } from './useShoppingInlineInput';
 import { useShoppingCelebration } from './useShoppingCelebration';
 import { useOrientation } from '@/lib/hooks/useOrientation';
+import { useIsMobile } from '@/lib/hooks/useIsMobile';
 import { cn } from '@/lib/utils';
 import type { ShoppingItem } from '@/types';
 
@@ -83,6 +84,7 @@ export function ShoppingView() {
   const { showCelebration, setShowCelebration } = useShoppingCelebration(activeListId, checkedItems, totalItems);
 
   const orientation = useOrientation();
+  const isMobile = useIsMobile();
   const isPortrait = orientation === 'portrait';
   const [shoppingMode, setShoppingMode] = useState(false);
 
@@ -292,7 +294,7 @@ export function ShoppingView() {
           </div>
         )}
 
-        <div className="flex-1 overflow-y-auto p-2">
+        <div className="flex-1 overflow-y-auto p-2 pb-24">
           {loading ? (
             <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
               <ShoppingCart className="h-12 w-12 mb-4 opacity-50 animate-pulse" /><p className="text-lg">Loading shopping lists...</p>
@@ -312,7 +314,7 @@ export function ShoppingView() {
             <div className="max-w-7xl mx-auto">
               <div className={cn(
                 'grid gap-2',
-                isPortrait ? 'grid-cols-2' : 'grid-cols-3'
+                isMobile ? 'grid-cols-1' : isPortrait ? 'grid-cols-2' : 'grid-cols-3'
               )}>
                 {groceryCategoryItems.map(({ category, items }) => {
                   const categoryExtraRows = extraRows[category] || 0;
@@ -346,6 +348,7 @@ export function ShoppingView() {
                       onInlineKeyDown={handleInlineKeyDown}
                       onInlineBlur={handleInlineBlur}
                       onAddExtraRows={addExtraRows}
+                      isMobile={isMobile}
                     />
                   );
                 })}

@@ -89,9 +89,9 @@ export function CalendarView() {
     setShowAddEvent(true);
   };
 
-  // Force day view on mobile
+  // Force day or agenda view on mobile
   useEffect(() => {
-    if (isMobile && viewType !== 'day') {
+    if (isMobile && viewType !== 'day' && viewType !== 'agenda') {
       setViewType('day');
     }
   }, [isMobile, viewType, setViewType]);
@@ -100,18 +100,59 @@ export function CalendarView() {
     <PageWrapper>
       <div className="h-screen flex flex-col">
         <SubpageHeader
-          icon={<Calendar className="h-5 w-5 text-primary" />}
-          title={getDateRangeTitle()}
+          icon={!isMobile ? <Calendar className="h-5 w-5 text-primary" /> : undefined}
+          title={isMobile ? format(currentDate, 'MMM d, yyyy') : getDateRangeTitle()}
           actions={<>
-            <Button variant="outline" size="sm" onClick={goToToday}>Today</Button>
-            <div className="flex items-center">
-              <Button variant="ghost" size="icon" onClick={goToPrevious} aria-label="Previous">
-                <ChevronLeft className="h-5 w-5" />
-              </Button>
-              <Button variant="ghost" size="icon" onClick={goToNext} aria-label="Next">
-                <ChevronRight className="h-5 w-5" />
-              </Button>
-            </div>
+            {isMobile ? (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={goToToday}
+                  className="h-7 text-xs"
+                >
+                  Today
+                </Button>
+                <div className="flex items-center border rounded-md">
+                  <Button
+                    variant={viewType === 'day' ? 'secondary' : 'ghost'}
+                    size="sm"
+                    onClick={() => setViewType('day')}
+                    className="h-7 text-xs rounded-r-none"
+                  >
+                    Day
+                  </Button>
+                  <Button
+                    variant={viewType === 'agenda' ? 'secondary' : 'ghost'}
+                    size="sm"
+                    onClick={() => setViewType('agenda')}
+                    className="h-7 text-xs rounded-l-none border-l"
+                  >
+                    Agenda
+                  </Button>
+                </div>
+                <div className="flex items-center">
+                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={goToPrevious} aria-label="Previous">
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={goToNext} aria-label="Next">
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <>
+                <Button variant="outline" size="sm" onClick={goToToday}>Today</Button>
+                <div className="flex items-center">
+                  <Button variant="ghost" size="icon" onClick={goToPrevious} aria-label="Previous">
+                    <ChevronLeft className="h-5 w-5" />
+                  </Button>
+                  <Button variant="ghost" size="icon" onClick={goToNext} aria-label="Next">
+                    <ChevronRight className="h-5 w-5" />
+                  </Button>
+                </div>
+              </>
+            )}
             {/* View switcher - hidden on mobile (mobile always shows day/agenda view) */}
             <div className="hidden md:flex items-center border rounded-md">
               <Button variant={viewType === 'agenda' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewType('agenda')} className="rounded-r-none">
@@ -182,13 +223,15 @@ export function CalendarView() {
                 <Grid3X3 className={cn('h-4 w-4', weeksBordered && 'text-primary')} />
               </Button>
             </div>
-            <Button size="sm" onClick={handleAddWithAuth}>
-              <Plus className="h-4 w-4 mr-1" />Add Event
-            </Button>
+            {!isMobile && (
+              <Button size="sm" onClick={handleAddWithAuth}>
+                <Plus className="h-4 w-4 mr-1" />Add Event
+              </Button>
+            )}
           </>}
         />
 
-        {calendarGroups.length > 0 && (
+        {!isMobile && calendarGroups.length > 0 && (
           <FilterBar>
             <span className="text-sm text-muted-foreground shrink-0">Show:</span>
             <Button

@@ -28,6 +28,7 @@ import type { OverflowItem } from '@/components/layout';
 import { TaskModal } from '@/app/tasks/TaskModal';
 import { useTasksViewData } from './useTasksViewData';
 import { useAuth } from '@/components/providers';
+import { useIsMobile } from '@/lib/hooks/useIsMobile';
 import { useDragReorder } from '@/lib/hooks/useDragReorder';
 import type { Task } from '@/types';
 
@@ -144,12 +145,14 @@ function GroupedTaskGrid({
   editTask,
   setCelebratingUser,
   taskLists,
+  isMobile = false,
 }: {
   groups: GroupDef[];
   toggleTask: (id: string) => Promise<boolean>;
   editTask: (task: Task) => void;
   setCelebratingUser: (user: { id: string; name: string } | null) => void;
   taskLists: Array<{ id: string; name: string; color?: string | null }>;
+  isMobile?: boolean;
 }) {
   const groupKeys = useMemo(() => groups.map(g => g.key), [groups]);
   const [groupOrder, setGroupOrder] = useState<string[]>([]);
@@ -184,6 +187,7 @@ function GroupedTaskGrid({
   return (
     <div className={cn(
       'grid gap-2 h-full',
+      isMobile ? 'grid-cols-1' :
       sortedGroups.length <= 2 ? 'grid-cols-1 md:grid-cols-2' :
       sortedGroups.length <= 4 ? 'grid-cols-2' :
       'grid-cols-2 md:grid-cols-3'
@@ -194,9 +198,10 @@ function GroupedTaskGrid({
         return (
           <div
             key={group.key}
-            {...getDragProps(group.key)}
+            {...(isMobile ? {} : getDragProps(group.key))}
             className={cn(
-              'flex flex-col border-2 rounded-lg overflow-hidden bg-card/90 backdrop-blur-sm cursor-grab active:cursor-grabbing touch-none transition-all',
+              'flex flex-col border-2 rounded-lg overflow-hidden bg-card/90 backdrop-blur-sm transition-all',
+              !isMobile && 'cursor-grab active:cursor-grabbing touch-none',
               isDragging && 'opacity-50 scale-95 ring-4 ring-primary/50'
             )}
             style={{ borderColor: group.color }}
@@ -205,7 +210,7 @@ function GroupedTaskGrid({
               className="flex items-center gap-2 px-3 py-2 shrink-0"
               style={{ backgroundColor: group.color + '20' }}
             >
-              <GripVertical className="h-4 w-4 text-muted-foreground/50 shrink-0" />
+              <GripVertical className="h-4 w-4 text-muted-foreground/50 shrink-0 hidden md:block" />
               {group.avatar}
               <h3 className="font-bold text-lg" style={{ color: group.color }}>
                 {group.label}
@@ -282,6 +287,8 @@ export function TasksView() {
     autoSyncing,
     confirmDialogProps,
   } = useTasksViewData();
+
+  const isMobile = useIsMobile();
 
   // Group mode: 'none' | 'person' | 'list'
   const [groupMode, setGroupMode] = useState<'none' | 'person' | 'list'>('person');
@@ -446,26 +453,30 @@ export function TasksView() {
             selected={filterPerson}
             onSelect={setFilterPerson}
           />
-          <div className="w-px h-5 bg-border shrink-0" />
-          {/* Priority: inline 3-button group (too few options for a dropdown) */}
-          <div className="flex gap-1 shrink-0">
-            <Button variant={filterPriority === null ? 'secondary' : 'ghost'} size="sm" onClick={() => setFilterPriority(null)} className="h-8">All</Button>
-            {(['high', 'medium', 'low'] as const).map((priority) => (
-              <Button key={priority} variant={filterPriority === priority ? 'secondary' : 'ghost'} size="sm"
-                onClick={() => setFilterPriority(priority)} className="capitalize h-8">{priority}</Button>
-            ))}
-          </div>
-          {taskLists.length > 0 && (
+          {!isMobile && (
             <>
               <div className="w-px h-5 bg-border shrink-0" />
-              <FilterDropdown
-                label="List"
-                options={listOptions}
-                selected={filterList ? new Set([filterList]) : new Set()}
-                onSelectionChange={(s) => setFilterList(s.size > 0 ? [...s][0]! : null)}
-                mode="single"
-                icon={<List className="h-3.5 w-3.5" />}
-              />
+              {/* Priority: inline 3-button group (too few options for a dropdown) */}
+              <div className="flex gap-1 shrink-0">
+                <Button variant={filterPriority === null ? 'secondary' : 'ghost'} size="sm" onClick={() => setFilterPriority(null)} className="h-8">All</Button>
+                {(['high', 'medium', 'low'] as const).map((priority) => (
+                  <Button key={priority} variant={filterPriority === priority ? 'secondary' : 'ghost'} size="sm"
+                    onClick={() => setFilterPriority(priority)} className="capitalize h-8">{priority}</Button>
+                ))}
+              </div>
+              {taskLists.length > 0 && (
+                <>
+                  <div className="w-px h-5 bg-border shrink-0" />
+                  <FilterDropdown
+                    label="List"
+                    options={listOptions}
+                    selected={filterList ? new Set([filterList]) : new Set()}
+                    onSelectionChange={(s) => setFilterList(s.size > 0 ? [...s][0]! : null)}
+                    mode="single"
+                    icon={<List className="h-3.5 w-3.5" />}
+                  />
+                </>
+              )}
             </>
           )}
           <div className="w-px h-5 bg-border shrink-0" />
@@ -531,6 +542,7 @@ export function TasksView() {
               editTask={editTask}
               setCelebratingUser={setCelebratingUser}
               taskLists={taskLists}
+              isMobile={isMobile}
             />
           ) : groupMode === 'list' && tasksByList ? (
             <GroupedTaskGrid
@@ -548,6 +560,7 @@ export function TasksView() {
               editTask={editTask}
               setCelebratingUser={setCelebratingUser}
               taskLists={taskLists}
+              isMobile={isMobile}
             />
           ) : (
             <div className="space-y-1 max-w-4xl mx-auto">

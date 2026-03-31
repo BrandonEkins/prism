@@ -510,19 +510,23 @@ function MessageCard({
                   Pinned
                 </Badge>
               )}
-              {message.important && (
-                <Badge variant="destructive" className="gap-1 text-xs">
-                  <AlertTriangle className="h-3 w-3" />
-                  Important
-                </Badge>
-              )}
-              {message.expiresAt && (
-                <Badge variant="outline" className="gap-1 text-xs text-muted-foreground">
-                  <Clock className="h-3 w-3" />
-                  Expires {formatDistanceToNow(message.expiresAt, { addSuffix: true })}
-                </Badge>
-              )}
             </div>
+            {(message.important || message.expiresAt) && (
+              <div className="flex items-center gap-1.5 flex-wrap">
+                {message.important && (
+                  <Badge variant="destructive" className="gap-1 text-xs">
+                    <AlertTriangle className="h-3 w-3" />
+                    Important
+                  </Badge>
+                )}
+                {message.expiresAt && (
+                  <Badge variant="outline" className="gap-1 text-xs text-muted-foreground">
+                    <Clock className="h-3 w-3" />
+                    Expires {formatDistanceToNow(message.expiresAt, { addSuffix: true })}
+                  </Badge>
+                )}
+              </div>
+            )}
             <span className="text-xs text-muted-foreground" title={fullDate}>
               {timeAgo}
             </span>
@@ -536,7 +540,7 @@ function MessageCard({
               variant="ghost"
               size="icon"
               onClick={startEdit}
-              className="opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8"
+              className="opacity-0 group-hover:opacity-100 max-md:opacity-60 transition-opacity h-8 w-8"
               title="Edit message"
             >
               <Pencil className="h-4 w-4" />
@@ -545,7 +549,7 @@ function MessageCard({
               variant="ghost"
               size="icon"
               onClick={onDelete}
-              className="opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8 text-destructive"
+              className="opacity-0 group-hover:opacity-100 max-md:opacity-60 transition-opacity h-8 w-8 text-destructive"
               title="Delete message"
             >
               <Trash2 className="h-4 w-4" />

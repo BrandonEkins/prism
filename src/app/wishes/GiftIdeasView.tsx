@@ -22,6 +22,7 @@ import { useAuth } from '@/components/providers';
 import { useGiftIdeas } from '@/lib/hooks/useGiftIdeas';
 import { cn } from '@/lib/utils';
 import { useOrientation } from '@/lib/hooks/useOrientation';
+import { useIsMobile } from '@/lib/hooks/useIsMobile';
 import type { GiftIdea, FamilyMember } from '@/types';
 
 export function GiftIdeasView() {
@@ -30,6 +31,7 @@ export function GiftIdeasView() {
   const { ideas, loading, error, addIdea, updateIdea, deleteIdea, togglePurchased } = useGiftIdeas(activeUser?.id);
   const { confirm, dialogProps } = useConfirmDialog();
   const orientation = useOrientation();
+  const isMobile = useIsMobile();
   const isPortrait = orientation === 'portrait';
 
   const [editingIdea, setEditingIdea] = useState<GiftIdea | null>(null);
@@ -104,6 +106,7 @@ export function GiftIdeasView() {
     <>
       <div className={cn(
         'grid gap-3 h-full',
+        isMobile ? 'grid-cols-1' :
         isPortrait
           ? otherMembers.length <= 2 ? 'grid-cols-1' : 'grid-cols-2'
           : otherMembers.length <= 2 ? 'grid-cols-2' : 'grid-cols-3'

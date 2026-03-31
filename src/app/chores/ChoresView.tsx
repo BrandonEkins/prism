@@ -21,6 +21,7 @@ import {
   X,
 } from 'lucide-react';
 import { useOrientation } from '@/lib/hooks/useOrientation';
+import { useIsMobile } from '@/lib/hooks/useIsMobile';
 import { useDragReorder } from '@/lib/hooks/useDragReorder';
 import { PlaneCelebration } from '@/components/ui/PlaneCelebration';
 import { Button } from '@/components/ui/button';
@@ -55,6 +56,7 @@ interface ChoreGroupGridProps {
   editChore: (chore: any) => void;
   deleteChore: (id: string) => void;
   setCelebratingUser: (user: { id: string; name: string } | null) => void;
+  isMobile?: boolean;
 }
 
 function ChoreGroupGrid({
@@ -66,6 +68,7 @@ function ChoreGroupGrid({
   editChore,
   deleteChore,
   setCelebratingUser,
+  isMobile = false,
 }: ChoreGroupGridProps) {
   const groupKeys = useMemo(() => choresByUser.map(g => g.user?.id || 'unassigned'), [choresByUser]);
   const [groupOrder, setGroupOrder] = useState<string[]>(() => {
@@ -96,6 +99,7 @@ function ChoreGroupGrid({
   return (
     <div className={cn(
       'grid gap-2 h-full',
+      isMobile ? 'grid-cols-1' :
       sortedGroups.length <= 2 ? 'grid-cols-1 md:grid-cols-2' :
       sortedGroups.length <= 4 ? 'grid-cols-2' :
       'grid-cols-2 md:grid-cols-3'
@@ -107,9 +111,10 @@ function ChoreGroupGrid({
         return (
           <div
             key={key}
-            {...getDragProps(key)}
+            {...(isMobile ? {} : getDragProps(key))}
             className={cn(
-              'flex flex-col border-2 rounded-lg overflow-hidden bg-card/90 backdrop-blur-sm cursor-grab active:cursor-grabbing touch-none transition-all',
+              'flex flex-col border-2 rounded-lg overflow-hidden bg-card/90 backdrop-blur-sm transition-all',
+              !isMobile && 'cursor-grab active:cursor-grabbing touch-none',
               isDragging && 'opacity-50 scale-95 ring-4 ring-primary/50'
             )}
             style={{ borderColor: userColor }}
@@ -118,7 +123,7 @@ function ChoreGroupGrid({
               className="flex items-center gap-2 px-3 py-2 shrink-0"
               style={{ backgroundColor: userColor + '20' }}
             >
-              <GripVertical className="h-4 w-4 text-muted-foreground/50 shrink-0" />
+              <GripVertical className="h-4 w-4 text-muted-foreground/50 shrink-0 hidden md:block" />
               {user ? (
                 <UserAvatar name={user.name} color={user.color} size="sm" className="h-7 w-7" />
               ) : (
@@ -268,6 +273,7 @@ function ChoreGroupGrid({
 }
 
 export function ChoresView() {
+  const isMobile = useIsMobile();
   const { requireAuth } = useAuth();
   const {
     loading, error, refreshChores, familyMembers,
@@ -512,6 +518,7 @@ export function ChoresView() {
               editChore={editChore}
               deleteChore={deleteChore}
               setCelebratingUser={setCelebratingUser}
+              isMobile={isMobile}
             />
           ) : (
             <div className="space-y-2 max-w-4xl mx-auto">

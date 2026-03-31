@@ -29,6 +29,7 @@ import { WishItemModal } from './WishItemModal';
 import { GiftIdeasView } from './GiftIdeasView';
 import { cn } from '@/lib/utils';
 import { useOrientation } from '@/lib/hooks/useOrientation';
+import { useIsMobile } from '@/lib/hooks/useIsMobile';
 import type { WishItem, FamilyMember } from '@/types';
 
 export function WishesView() {
@@ -63,6 +64,7 @@ export function WishesView() {
   const { confirm, dialogProps } = useConfirmDialog();
 
   const orientation = useOrientation();
+  const isMobile = useIsMobile();
   const isPortrait = orientation === 'portrait';
   const showingAll = selectedMemberId === null;
 
@@ -275,7 +277,7 @@ export function WishesView() {
           /* Grid view: one card per family member, draggable */
           <div className={cn(
             'grid gap-3 h-full',
-            isPortrait ? 'grid-cols-2' : 'grid-cols-3'
+            isMobile ? 'grid-cols-1' : isPortrait ? 'grid-cols-2' : 'grid-cols-3'
           )}>
             {orderedMembers.map(member => {
               const memberItems = groupedItems?.[member.id] || [];
@@ -288,7 +290,8 @@ export function WishesView() {
                   isOwnList={isOwnList(member.id)}
                   viewerId={viewerId}
                   isDragging={isDragging}
-                  dragProps={getDragProps(member.id)}
+                  dragProps={isMobile ? {} : getDragProps(member.id)}
+                  isMobile={isMobile}
                   onEdit={handleOpenEditModal}
                   onDelete={handleDelete}
                   onClaim={handleClaim}
@@ -344,6 +347,7 @@ function MemberWishCard({
   viewerId,
   isDragging,
   dragProps,
+  isMobile = false,
   onEdit,
   onDelete,
   onClaim,
@@ -355,6 +359,7 @@ function MemberWishCard({
   viewerId?: string;
   isDragging: boolean;
   dragProps: Record<string, unknown>;
+  isMobile?: boolean;
   onEdit: (item: WishItem) => void;
   onDelete: (item: WishItem) => void;
   onClaim: (item: WishItem) => void;
@@ -365,7 +370,8 @@ function MemberWishCard({
       {...dragProps}
       className={cn(
         'flex flex-col rounded-xl border-2 bg-card/50 overflow-hidden min-h-0',
-        'cursor-grab active:cursor-grabbing transition-all touch-none',
+        'transition-all',
+        !isMobile && 'cursor-grab active:cursor-grabbing touch-none',
         isDragging && 'opacity-50 scale-95 ring-4 ring-primary/50',
       )}
       style={{ borderColor: member.color }}
@@ -375,7 +381,7 @@ function MemberWishCard({
         className="flex items-center gap-1 px-2 py-1.5 shrink-0 select-none"
         style={{ backgroundColor: member.color + '20' }}
       >
-        <GripVertical className="h-4 w-4 text-muted-foreground/50 shrink-0" />
+        <GripVertical className="h-4 w-4 text-muted-foreground/50 shrink-0 hidden md:block" />
         <div
           className="w-3 h-3 rounded-full shrink-0"
           style={{ backgroundColor: member.color }}

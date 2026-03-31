@@ -170,6 +170,7 @@ function DayRow({ day, date, meals, isToday, isPast, onAddMeal, onMarkCooked, on
   const [dragOver, setDragOver] = React.useState(false);
   return (
     <div
+      data-meal-day={day}
       className={cn(
         'border border-border rounded-lg p-4 bg-card/85 backdrop-blur-sm transition-colors',
         isToday && 'bg-accent/80 dark:bg-accent/50 border-primary',
@@ -195,7 +196,7 @@ function DayRow({ day, date, meals, isToday, isPast, onAddMeal, onMarkCooked, on
           {meals.map((meal) => (
             <MealCard key={meal.id} meal={meal}
               onMarkCooked={() => onMarkCooked(meal.id)} onUnmarkCooked={() => onUnmarkCooked(meal.id)}
-              onEdit={() => onEdit(meal)} onDelete={() => onDelete(meal.id)} />
+              onEdit={() => onEdit(meal)} onDelete={() => onDelete(meal.id)} onDropMeal={onDropMeal} />
           ))}
         </div>
       )}
@@ -204,18 +205,61 @@ function DayRow({ day, date, meals, isToday, isPast, onAddMeal, onMarkCooked, on
 }
 
 
-function MealCard({ meal, onMarkCooked, onUnmarkCooked, onEdit, onDelete }: {
+function MealCard({ meal, onMarkCooked, onUnmarkCooked, onEdit, onDelete, onDropMeal }: {
   meal: Meal; onMarkCooked: () => void; onUnmarkCooked: () => void; onEdit: () => void; onDelete: () => void;
+  onDropMeal?: (id: string, day: Meal['dayOfWeek']) => void;
 }) {
   const isCooked = !!meal.cookedAt;
   const totalTime = (meal.prepTime || 0) + (meal.cookTime || 0);
+  const [touchDragging, setTouchDragging] = React.useState(false);
+  const touchRef = React.useRef<{ startY: number; mealId: string } | null>(null);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    const t = e.touches[0];
+    if (!t) return;
+    touchRef.current = { startY: t.clientY, mealId: meal.id };
+  };
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!touchRef.current) return;
+    const t = e.touches[0];
+    if (!t) return;
+    const dy = Math.abs(t.clientY - touchRef.current.startY);
+    if (dy > 10 && !touchDragging) setTouchDragging(true);
+    if (touchDragging) {
+      // Highlight the DayRow under the touch point
+      const els = document.elementsFromPoint(t.clientX, t.clientY);
+      document.querySelectorAll('[data-meal-day]').forEach(el => el.classList.remove('ring-2', 'ring-primary'));
+      const dayEl = els.find(el => el.hasAttribute('data-meal-day'));
+      if (dayEl) dayEl.classList.add('ring-2', 'ring-primary');
+    }
+  };
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchDragging && touchRef.current && onDropMeal) {
+      const touch = e.changedTouches[0];
+      if (!touch) { setTouchDragging(false); touchRef.current = null; return; }
+      const els = document.elementsFromPoint(touch.clientX, touch.clientY);
+      const dayEl = els.find(el => el.hasAttribute('data-meal-day'));
+      if (dayEl) {
+        const targetDay = dayEl.getAttribute('data-meal-day') as Meal['dayOfWeek'];
+        onDropMeal(touchRef.current.mealId, targetDay);
+      }
+    }
+    document.querySelectorAll('[data-meal-day]').forEach(el => el.classList.remove('ring-2', 'ring-primary'));
+    setTouchDragging(false);
+    touchRef.current = null;
+  };
+
   return (
     <div
       draggable onDragStart={(e) => { e.dataTransfer.setData('text/meal-id', meal.id); e.dataTransfer.effectAllowed = 'move'; }}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
       className={cn(
         'flex items-start gap-3 p-3 rounded-md border border-border/50 bg-card/85 backdrop-blur-sm',
         'hover:border-seasonal-accent hover:ring-2 hover:ring-seasonal-accent/50 transition-all group cursor-grab active:cursor-grabbing',
-        isCooked && 'opacity-60'
+        isCooked && 'opacity-60',
+        touchDragging && 'opacity-50 scale-95'
       )}
     >
       <span className="text-lg shrink-0">{getMealTypeEmoji(meal.mealType)}</span>
@@ -246,12 +290,12 @@ function MealCard({ meal, onMarkCooked, onUnmarkCooked, onEdit, onDelete }: {
       </div>
       <div className="flex items-center gap-1">
         {isCooked ? (
-          <Button variant="ghost" size="icon" onClick={onUnmarkCooked} className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity" title="Undo cooked"><Undo2 className="h-4 w-4" /></Button>
+          <Button variant="ghost" size="icon" onClick={onUnmarkCooked} className="h-7 w-7 opacity-0 group-hover:opacity-100 max-md:opacity-60 transition-opacity" title="Undo cooked"><Undo2 className="h-4 w-4" /></Button>
         ) : (
-          <Button variant="ghost" size="icon" onClick={onMarkCooked} className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity" title="Mark as cooked"><CheckCircle2 className="h-4 w-4" /></Button>
+          <Button variant="ghost" size="icon" onClick={onMarkCooked} className="h-7 w-7 opacity-0 group-hover:opacity-100 max-md:opacity-60 transition-opacity" title="Mark as cooked"><CheckCircle2 className="h-4 w-4" /></Button>
         )}
-        <Button variant="ghost" size="icon" onClick={onEdit} className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity" aria-label="Edit meal"><Edit2 className="h-3 w-3" /></Button>
-        <Button variant="ghost" size="icon" onClick={onDelete} className="h-7 w-7 text-destructive opacity-0 group-hover:opacity-100 transition-opacity" aria-label="Delete meal"><Trash2 className="h-3 w-3" /></Button>
+        <Button variant="ghost" size="icon" onClick={onEdit} className="h-7 w-7 opacity-0 group-hover:opacity-100 max-md:opacity-60 transition-opacity" aria-label="Edit meal"><Edit2 className="h-3 w-3" /></Button>
+        <Button variant="ghost" size="icon" onClick={onDelete} className="h-7 w-7 text-destructive opacity-0 group-hover:opacity-100 max-md:opacity-60 transition-opacity" aria-label="Delete meal"><Trash2 className="h-3 w-3" /></Button>
       </div>
     </div>
   );

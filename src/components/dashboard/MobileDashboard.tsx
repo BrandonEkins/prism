@@ -1,6 +1,6 @@
 'use client';
 
-import React, { memo, useMemo, useState, useCallback } from 'react';
+import React, { memo, useMemo, useState, useCallback, useEffect } from 'react';
 import {
   DndContext,
   closestCenter,
@@ -18,7 +18,6 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
-import { GripVertical } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useDashboardData } from './useDashboardData';
 import { useMobileCardOrder, loadHiddenCards } from './useMobileCardOrder';
@@ -49,19 +48,22 @@ function SortableCard({ id, children }: { id: string; children: React.ReactNode 
     <div
       ref={setNodeRef}
       style={style}
-      className={cn('flex items-stretch gap-0', isDragging && 'opacity-50 scale-[1.02] z-10 relative')}
+      className={cn(
+        'relative transition-shadow',
+        isDragging && 'scale-[1.03] shadow-xl z-10 opacity-90 rounded-xl'
+      )}
     >
-      {/* Drag handle */}
+      {/* Drag handle — wide touch target at top of card */}
       <div
         {...attributes}
         {...listeners}
         onContextMenu={(e) => e.preventDefault()}
-        className="flex items-center px-1 cursor-grab active:cursor-grabbing text-muted-foreground/40 shrink-0"
+        className="absolute top-0 left-1/2 -translate-x-1/2 z-10 w-2/3 py-3 flex justify-center cursor-grab active:cursor-grabbing"
         style={{ touchAction: 'none', WebkitTouchCallout: 'none' } as React.CSSProperties}
       >
-        <GripVertical className="h-4 w-4" />
+        <div className="w-10 h-1 rounded-full bg-muted-foreground/40" />
       </div>
-      <div className="flex-1 min-w-0">{children}</div>
+      {children}
     </div>
   );
 }
@@ -71,10 +73,21 @@ export const MobileDashboard = memo(function MobileDashboard() {
   const { order, setOrder } = useMobileCardOrder();
   const { routes: busRoutes } = useBusTracking();
   const [hiddenCards] = useState(loadHiddenCards);
+  const [reorderMode, setReorderMode] = useState(false);
+
+  // Listen for reorder mode toggle from FAB
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      setReorderMode(detail?.active ?? false);
+    };
+    window.addEventListener('prism:mobile-reorder', handler);
+    return () => window.removeEventListener('prism:mobile-reorder', handler);
+  }, []);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 300, tolerance: 5 } }),
   );
 
   const handleDragEnd = useCallback((event: DragEndEvent) => {
@@ -102,27 +115,56 @@ export const MobileDashboard = memo(function MobileDashboard() {
     busTracking: <BusTrackingCard routes={busRoutes} />,
   }), [data, busRoutes]);
 
+  const cardHasContent: Record<string, boolean> = useMemo(() => ({
+    weather: !data.weather.loading && !!data.weather.data,
+    clock: true,
+    calendar: true,
+    chores: true,
+    tasks: true,
+    shopping: true,
+    meals: true,
+    messages: true,
+    birthdays: (data.birthdays.birthdays?.length ?? 0) > 0,
+    points: !data.points.loading && (data.points.goals?.length ?? 0) > 0,
+    wishes: true,
+    photos: true,
+    busTracking: (busRoutes?.length ?? 0) > 0,
+  }), [data, busRoutes]);
+
   const visibleOrder = useMemo(
-    () => order.filter((id) => !hiddenCards.includes(id)),
-    [order, hiddenCards],
+    () => order.filter((id) => !hiddenCards.includes(id) && cardHasContent[id] !== false),
+    [order, hiddenCards, cardHasContent],
   );
 
+  if (reorderMode) {
+    return (
+      <div className="p-4 pb-24 space-y-3 max-w-lg mx-auto">
+        <div className="text-center text-sm text-muted-foreground py-2">
+          Drag cards to reorder
+        </div>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+          modifiers={[restrictToVerticalAxis]}
+        >
+          <SortableContext items={visibleOrder} strategy={verticalListSortingStrategy}>
+            {visibleOrder.map((id) => (
+              <SortableCard key={id} id={id}>
+                {cardMap[id]}
+              </SortableCard>
+            ))}
+          </SortableContext>
+        </DndContext>
+      </div>
+    );
+  }
+
   return (
-    <div className="p-4 pb-8 space-y-3 max-w-lg mx-auto">
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCenter}
-        onDragEnd={handleDragEnd}
-        modifiers={[restrictToVerticalAxis]}
-      >
-        <SortableContext items={visibleOrder} strategy={verticalListSortingStrategy}>
-          {visibleOrder.map((id) => (
-            <SortableCard key={id} id={id}>
-              {cardMap[id]}
-            </SortableCard>
-          ))}
-        </SortableContext>
-      </DndContext>
+    <div className="p-4 pb-24 space-y-3 max-w-lg mx-auto">
+      {visibleOrder.map((id) => (
+        <div key={id}>{cardMap[id]}</div>
+      ))}
     </div>
   );
 });

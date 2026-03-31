@@ -34,6 +34,7 @@ interface ShoppingCategoryCardProps {
   onInlineKeyDown: (e: KeyboardEvent<HTMLInputElement>, category: string) => void;
   onInlineBlur: (e: FocusEvent<HTMLInputElement>, category: string) => void;
   onAddExtraRows: (category: string, count: number) => void;
+  isMobile?: boolean;
 }
 
 export function ShoppingCategoryCard({
@@ -61,20 +62,22 @@ export function ShoppingCategoryCard({
   onInlineKeyDown,
   onInlineBlur,
   onAddExtraRows,
+  isMobile = false,
 }: ShoppingCategoryCardProps) {
   return (
     <div
       data-category={category}
-      draggable
-      onDragStart={onDragStart}
-      onDragOver={onDragOver}
-      onDragEnd={onDragEnd}
-      onTouchStart={onTouchStart}
-      onTouchMove={onTouchMove}
-      onTouchEnd={onTouchEnd}
+      draggable={!isMobile}
+      onDragStart={!isMobile ? onDragStart : undefined}
+      onDragOver={!isMobile ? onDragOver : undefined}
+      onDragEnd={!isMobile ? onDragEnd : undefined}
+      onTouchStart={!isMobile ? onTouchStart : undefined}
+      onTouchMove={!isMobile ? onTouchMove : undefined}
+      onTouchEnd={!isMobile ? onTouchEnd : undefined}
       className={cn(
         'border-2 rounded-lg overflow-hidden bg-card/90 backdrop-blur-sm',
-        'flex flex-col cursor-grab active:cursor-grabbing transition-all touch-none',
+        'flex flex-col transition-all',
+        !isMobile && 'cursor-grab active:cursor-grabbing touch-none',
         isDragging && 'opacity-50 scale-95 ring-4 ring-primary/50'
       )}
       style={{ borderColor: categoryColor }}
@@ -83,7 +86,7 @@ export function ShoppingCategoryCard({
         className="px-2 py-1 flex items-center gap-1 select-none"
         style={{ backgroundColor: categoryColor + '20' }}
       >
-        <GripVertical className="h-4 w-4 text-muted-foreground/50 shrink-0" />
+        <GripVertical className="h-4 w-4 text-muted-foreground/50 shrink-0 hidden md:block" />
         <span className="text-xl">{categoryEmoji}</span>
         <h3
           className="text-base font-bold capitalize"
