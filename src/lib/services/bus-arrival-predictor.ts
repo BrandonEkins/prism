@@ -52,8 +52,20 @@ export async function predictArrival(routeId: string): Promise<ArrivalPrediction
   }
 
   const checkpoints = (route.checkpoints as { name: string; sortOrder: number }[]) || [];
-  // Total checkpoints = user-defined + stop + school
-  const totalCheckpoints = checkpoints.length + (route.stopName ? 1 : 0) + (route.schoolName ? 1 : 0);
+
+  // ETA target: find the stopName checkpoint within the named list.
+  // stopName is now selected from checkpoint names (e.g. "Home"), so ETA
+  // targets that index rather than the implicit school terminal.
+  const stopIdx = route.stopName
+    ? checkpoints.findIndex(cp => cp.name === route.stopName)
+    : -1;
+  // Upper bound for ETA segment calculation
+  const etaTargetCount = stopIdx >= 0
+    ? stopIdx + 1
+    : checkpoints.length + (route.stopName ? 1 : 0);  // fallback: implicit stop after named checkpoints
+
+  // Full display count (includes school for AM — used by widget progress display)
+  const totalCheckpoints = checkpoints.length + (route.stopName && stopIdx < 0 ? 1 : 0) + (route.schoolName ? 1 : 0);
 
   // Check if today is an active day for this route (default weekdays [1-5])
   const activeDays = (route.activeDays as number[]) || [1, 2, 3, 4, 5];
@@ -125,8 +137,8 @@ export async function predictArrival(routeId: string): Promise<ArrivalPrediction
     // PM: school is the origin — bus is starting its route, treat as in-transit
   }
 
-  // Bus is in transit — try to predict remaining time
-  const segments = await getSegmentStats(routeId, lastCheckpointIndex, totalCheckpoints);
+  // Bus is in transit — try to predict remaining time up to the ETA target
+  const segments = await getSegmentStats(routeId, lastCheckpointIndex, etaTargetCount);
 
   // Check if we have enough data for prediction
   const hasEnoughData = segments.every(s => s.sampleCount >= MIN_SAMPLES_FOR_PREDICTION);

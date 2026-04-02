@@ -261,6 +261,7 @@ export const createBusRouteSchema = z.object({
   stopName: z.string().max(255).optional(),
   schoolName: z.string().max(255).optional(),
   enabled: z.boolean().optional().default(true),
+  sortOrder: z.number().int().min(0).optional().default(0),
 });
 
 export const updateBusRouteSchema = createBusRouteSchema.partial();

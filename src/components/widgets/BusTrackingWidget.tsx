@@ -57,8 +57,12 @@ function RouteStatusCard({ route, compact }: { route: BusRouteStatus; compact: b
   const statusColor = getStatusColor(p);
   const statusText = getStatusText(p);
   const checkpoints = route.checkpoints || [];
+  // stopName may reference a checkpoint by name (new behavior) or be an implicit terminal (legacy)
+  const stopIsInCheckpoints = route.stopName
+    ? checkpoints.some(cp => cp.name === route.stopName)
+    : false;
   // PM routes: school is origin, not destination — don't count it as a progress dot
-  const totalDots = checkpoints.length + (route.stopName ? 1 : 0)
+  const totalDots = checkpoints.length + (route.stopName && !stopIsInCheckpoints ? 1 : 0)
     + (route.direction === 'AM' && route.schoolName ? 1 : 0);
 
   return (
@@ -88,12 +92,13 @@ function RouteStatusCard({ route, compact }: { route: BusRouteStatus; compact: b
                   index={i}
                   name={cp.name}
                   prediction={p}
-                  isStop={false}
+                  isStop={cp.name === route.stopName}
                   isSchool={false}
                   compact={compact}
                 />
               ))}
-              {route.stopName && (
+              {/* Legacy: stopName not in checkpoints list — show as implicit terminal dot */}
+              {route.stopName && !stopIsInCheckpoints && (
                 <CheckpointDot
                   index={checkpoints.length}
                   name={route.stopName}
@@ -105,7 +110,7 @@ function RouteStatusCard({ route, compact }: { route: BusRouteStatus; compact: b
               )}
               {route.schoolName && (
                 <CheckpointDot
-                  index={checkpoints.length + (route.stopName ? 1 : 0)}
+                  index={checkpoints.length + (route.stopName && !stopIsInCheckpoints ? 1 : 0)}
                   name={route.schoolName}
                   prediction={p}
                   isStop={false}
@@ -123,12 +128,13 @@ function RouteStatusCard({ route, compact }: { route: BusRouteStatus; compact: b
                   index={i}
                   name={cp.name}
                   prediction={p}
-                  isStop={false}
+                  isStop={cp.name === route.stopName}
                   isSchool={false}
                   compact={compact}
                 />
               ))}
-              {route.stopName && (
+              {/* Legacy: stopName not in checkpoints list */}
+              {route.stopName && !stopIsInCheckpoints && (
                 <CheckpointDot
                   index={checkpoints.length}
                   name={route.stopName}
