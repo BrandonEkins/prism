@@ -1278,6 +1278,7 @@ export const busRoutes = pgTable('bus_routes', {
   schoolName: varchar('school_name', { length: 255 }),
 
   enabled: boolean('enabled').default(true).notNull(),
+  sortOrder: integer('sort_order').default(0).notNull(),
 
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),

@@ -57,7 +57,13 @@ function RouteStatusCard({ route, compact }: { route: BusRouteStatus; compact: b
   const statusColor = getStatusColor(p);
   const statusText = getStatusText(p);
   const checkpoints = route.checkpoints || [];
-  const totalDots = checkpoints.length + (route.stopName ? 1 : 0) + (route.schoolName ? 1 : 0);
+  // stopName may reference a checkpoint by name (new behavior) or be an implicit terminal (legacy)
+  const stopIsInCheckpoints = route.stopName
+    ? checkpoints.some(cp => cp.name === route.stopName)
+    : false;
+  // PM routes: school is origin, not destination — don't count it as a progress dot
+  const totalDots = checkpoints.length + (route.stopName && !stopIsInCheckpoints ? 1 : 0)
+    + (route.direction === 'AM' && route.schoolName ? 1 : 0);
 
   return (
     <div className="space-y-1.5">
@@ -71,40 +77,74 @@ function RouteStatusCard({ route, compact }: { route: BusRouteStatus; compact: b
 
       {/* Status text with color indicator */}
       <div className="flex items-center gap-2">
-        <div className={cn('h-2 w-2 rounded-full flex-shrink-0', statusColor)} />
+        <div data-keep-bg className={cn('h-2 w-2 rounded-full flex-shrink-0', statusColor)} />
         <span className="text-xs text-muted-foreground">{statusText}</span>
       </div>
 
       {/* Progress dots */}
-      {!compact && totalDots > 0 && (
-        <div className="flex items-center gap-1.5 py-1">
-          {checkpoints.map((cp, i) => (
-            <CheckpointDot
-              key={cp.name}
-              index={i}
-              name={cp.name}
-              prediction={p}
-              isStop={false}
-              isSchool={false}
-            />
-          ))}
-          {route.stopName && (
-            <CheckpointDot
-              index={checkpoints.length}
-              name={route.stopName}
-              prediction={p}
-              isStop={true}
-              isSchool={false}
-            />
-          )}
-          {route.schoolName && (
-            <CheckpointDot
-              index={checkpoints.length + (route.stopName ? 1 : 0)}
-              name={route.schoolName}
-              prediction={p}
-              isStop={false}
-              isSchool={true}
-            />
+      {totalDots > 0 && (
+        <div className={cn('flex items-center py-1', compact ? 'gap-1' : 'gap-1.5')}>
+          {route.direction === 'AM' ? (
+            <>
+              {checkpoints.map((cp, i) => (
+                <CheckpointDot
+                  key={cp.name}
+                  index={i}
+                  name={cp.name}
+                  prediction={p}
+                  isStop={cp.name === route.stopName}
+                  isSchool={false}
+                  compact={compact}
+                />
+              ))}
+              {/* Legacy: stopName not in checkpoints list — show as implicit terminal dot */}
+              {route.stopName && !stopIsInCheckpoints && (
+                <CheckpointDot
+                  index={checkpoints.length}
+                  name={route.stopName}
+                  prediction={p}
+                  isStop={true}
+                  isSchool={false}
+                  compact={compact}
+                />
+              )}
+              {route.schoolName && (
+                <CheckpointDot
+                  index={checkpoints.length + (route.stopName && !stopIsInCheckpoints ? 1 : 0)}
+                  name={route.schoolName}
+                  prediction={p}
+                  isStop={false}
+                  isSchool={true}
+                  compact={compact}
+                />
+              )}
+            </>
+          ) : (
+            <>
+              {/* PM: checkpoints → stop (school is origin, not shown as destination) */}
+              {checkpoints.map((cp, i) => (
+                <CheckpointDot
+                  key={cp.name}
+                  index={i}
+                  name={cp.name}
+                  prediction={p}
+                  isStop={cp.name === route.stopName}
+                  isSchool={false}
+                  compact={compact}
+                />
+              ))}
+              {/* Legacy: stopName not in checkpoints list */}
+              {route.stopName && !stopIsInCheckpoints && (
+                <CheckpointDot
+                  index={checkpoints.length}
+                  name={route.stopName}
+                  prediction={p}
+                  isStop={true}
+                  isSchool={false}
+                  compact={compact}
+                />
+              )}
+            </>
           )}
         </div>
       )}
@@ -125,12 +165,14 @@ function CheckpointDot({
   prediction,
   isStop,
   isSchool,
+  compact,
 }: {
   index: number;
   name: string;
   prediction: BusPrediction;
   isStop: boolean;
   isSchool: boolean;
+  compact?: boolean;
 }) {
   const isReached = index <= prediction.lastCheckpointIndex;
   const isCurrent = index === prediction.lastCheckpointIndex;
@@ -146,8 +188,10 @@ function CheckpointDot({
   return (
     <div className="group relative flex flex-col items-center">
       <div
+        data-keep-bg
         className={cn(
-          'h-3 w-3 border-2 transition-all',
+          compact ? 'h-2.5 w-2.5 border-2' : 'h-3 w-3 border-2',
+          'transition-all',
           shapeClass,
           isReached
             ? cn('border-current', statusColor.replace('bg-', 'text-'), 'bg-current')

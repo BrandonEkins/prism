@@ -1,4 +1,5 @@
 import { NextResponse, NextRequest } from 'next/server';
+import { asc } from 'drizzle-orm';
 import { requireAuth } from '@/lib/auth';
 import { withAuth } from '@/lib/api/withAuth';
 import { db } from '@/lib/db/client';
@@ -11,7 +12,8 @@ export async function GET() {
   if (auth instanceof NextResponse) return auth;
 
   try {
-    const routes = await db.select().from(busRoutes).orderBy(busRoutes.label);
+    const routes = await db.select().from(busRoutes)
+      .orderBy(asc(busRoutes.sortOrder), asc(busRoutes.label));
     return NextResponse.json(routes);
   } catch (error) {
     console.error('Failed to fetch bus routes:', error);
@@ -43,6 +45,7 @@ export async function POST(request: NextRequest) {
         stopName: validation.data.stopName,
         schoolName: validation.data.schoolName,
         enabled: validation.data.enabled,
+        sortOrder: validation.data.sortOrder,
       }).returning();
 
       await invalidateCache('bus:*');

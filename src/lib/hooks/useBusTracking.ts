@@ -26,6 +26,7 @@ export interface BusRouteStatus {
   studentName: string;
   direction: 'AM' | 'PM';
   scheduledTime: string;
+  activeDays: number[];
   checkpoints: BusCheckpoint[];
   stopName: string | null;
   schoolName: string | null;
@@ -35,6 +36,25 @@ export interface BusRouteStatus {
 interface BusStatusResponse {
   routes: BusRouteStatus[];
   connected: boolean;
+}
+
+const DISPLAY_WINDOW_MS = 60 * 60 * 1000; // ±60 min of scheduledTime
+
+/** Returns true if the route should be visible right now. */
+function isRouteVisible(route: BusRouteStatus): boolean {
+  const now = new Date();
+  // Check activeDays (1=Mon..5=Fri; getDay() is 0=Sun..6=Sat)
+  const todayDow = now.getDay();
+  if (!route.activeDays?.includes(todayDow)) return false;
+
+  // Check ±60 min window around scheduledTime
+  const parts = route.scheduledTime.split(':').map(Number);
+  const hours = parts[0] ?? 0;
+  const minutes = parts[1] ?? 0;
+  const scheduled = new Date(now);
+  scheduled.setHours(hours, minutes, 0, 0);
+  const diffMs = Math.abs(now.getTime() - scheduled.getTime());
+  return diffMs <= DISPLAY_WINDOW_MS;
 }
 
 /**
@@ -50,16 +70,7 @@ function getPollingInterval(routes: BusRouteStatus[]): number {
   if (routes.length === 0) return 0;
 
   // Check if any route is within its bus window
-  const now = new Date();
-  const activeRoutes = routes.filter(route => {
-    const parts = route.scheduledTime.split(':').map(Number);
-    const hours = parts[0] ?? 0;
-    const minutes = parts[1] ?? 0;
-    const scheduled = new Date(now);
-    scheduled.setHours(hours, minutes, 0, 0);
-    const diffMs = Math.abs(now.getTime() - scheduled.getTime());
-    return diffMs <= 30 * 60 * 1000; // within ±30 min
-  });
+  const activeRoutes = routes.filter(isRouteVisible);
 
   if (activeRoutes.length === 0) return 0; // Outside bus window
 
@@ -112,8 +123,11 @@ export function useBusTracking() {
     fetchStatus();
   }, [fetchStatus]);
 
+  // Filter to routes that are active today and within the ±60 min display window
+  const visibleRoutes = useMemo(() => routes.filter(isRouteVisible), [routes]);
+
   // Adaptive polling
-  const pollingInterval = useMemo(() => getPollingInterval(routes), [routes]);
+  const pollingInterval = useMemo(() => getPollingInterval(visibleRoutes), [visibleRoutes]);
   useVisibilityPolling(fetchStatus, pollingInterval);
 
   const refresh = useCallback(() => {
@@ -121,5 +135,5 @@ export function useBusTracking() {
     fetchStatus();
   }, [fetchStatus]);
 
-  return { routes, connected, loading, error, refresh };
+  return { routes: visibleRoutes, connected, loading, error, refresh };
 }

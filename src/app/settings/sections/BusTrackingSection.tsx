@@ -1,6 +1,23 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+  useSortable,
+  arrayMove,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
 import {
   Bus,
   Plus,
@@ -50,6 +67,7 @@ interface BusRoute {
   stopName: string | null;
   schoolName: string | null;
   enabled: boolean;
+  sortOrder: number;
 }
 
 interface ConnectionStatus {
@@ -69,6 +87,11 @@ export function BusTrackingSection() {
   const [disconnecting, setDisconnecting] = useState(false);
   const [discovering, setDiscovering] = useState(false);
   const [gmailLabel, setGmailLabel] = useState('');
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } }),
+  );
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -113,7 +136,6 @@ export function BusTrackingSection() {
   const handleDiscover = async () => {
     setDiscovering(true);
     try {
-      // Step 1: Scan emails for routes
       const discoverRes = await fetch('/api/bus-tracking/discover', { method: 'POST' });
       const discoverData = await discoverRes.json();
 
@@ -127,7 +149,6 @@ export function BusTrackingSection() {
         return;
       }
 
-      // Step 2: Auto-create the discovered routes
       const createRes = await fetch('/api/bus-tracking/discover', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -210,6 +231,30 @@ export function BusTrackingSection() {
     }
   };
 
+  const handleRouteDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = routes.findIndex(r => r.id === active.id);
+    const newIndex = routes.findIndex(r => r.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+
+    const reordered = arrayMove(routes, oldIndex, newIndex).map((r, i) => ({ ...r, sortOrder: i }));
+    setRoutes(reordered); // optimistic
+
+    try {
+      const res = await fetch('/api/bus-tracking/routes/reorder', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(reordered.map(r => ({ id: r.id, sortOrder: r.sortOrder }))),
+      });
+      if (!res.ok) throw new Error('Reorder failed');
+    } catch {
+      toast({ title: 'Failed to save route order', variant: 'destructive' });
+      fetchData(); // revert
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -219,7 +264,6 @@ export function BusTrackingSection() {
         </p>
       </div>
 
-      {/* Gmail Connection Card */}
       <GmailConnectionCard
         connection={connection}
         syncing={syncing}
@@ -230,7 +274,6 @@ export function BusTrackingSection() {
         onSaveLabel={handleSaveLabel}
       />
 
-      {/* Bus Routes Card */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -261,22 +304,30 @@ export function BusTrackingSection() {
               No bus routes configured yet. Add a route to start tracking.
             </p>
           ) : (
-            <div className="space-y-2">
-              {routes.map(route => (
-                <RouteRow
-                  key={route.id}
-                  route={route}
-                  onEdit={() => { setEditingRoute(route); setShowRouteDialog(true); }}
-                  onDelete={() => handleDeleteRoute(route.id)}
-                  onToggle={() => handleToggleRoute(route)}
-                />
-              ))}
-            </div>
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              modifiers={[restrictToVerticalAxis]}
+              onDragEnd={handleRouteDragEnd}
+            >
+              <SortableContext items={routes.map(r => r.id)} strategy={verticalListSortingStrategy}>
+                <div className="space-y-2">
+                  {routes.map(route => (
+                    <SortableRouteRow
+                      key={route.id}
+                      route={route}
+                      onEdit={() => { setEditingRoute(route); setShowRouteDialog(true); }}
+                      onDelete={() => handleDeleteRoute(route.id)}
+                      onToggle={() => handleToggleRoute(route)}
+                    />
+                  ))}
+                </div>
+              </SortableContext>
+            </DndContext>
           )}
         </CardContent>
       </Card>
 
-      {/* Route Add/Edit Dialog */}
       {showRouteDialog && (
         <RouteDialog
           route={editingRoute}
@@ -317,7 +368,6 @@ function GmailConnectionCard({
   const [labelInput, setLabelInput] = useState(gmailLabel);
   const labelDirty = labelInput.trim() !== gmailLabel;
 
-  // Sync external changes
   useEffect(() => { setLabelInput(gmailLabel); }, [gmailLabel]);
 
   return (
@@ -390,7 +440,7 @@ function GmailConnectionCard({
 }
 
 
-function RouteRow({
+function SortableRouteRow({
   route,
   onEdit,
   onDelete,
@@ -401,11 +451,25 @@ function RouteRow({
   onDelete: () => void;
   onToggle: () => void;
 }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: route.id });
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
   const geofenceCount = route.checkpoints?.length || 0;
 
   return (
-    <div className="flex items-center justify-between p-3 rounded-lg border">
+    <div ref={setNodeRef} style={style} className="flex items-center justify-between p-3 rounded-lg border">
       <div className="flex items-center gap-3 min-w-0">
+        <button
+          {...attributes}
+          {...listeners}
+          className="cursor-grab active:cursor-grabbing touch-none p-0.5 text-muted-foreground hover:text-foreground flex-shrink-0"
+          style={{ touchAction: 'none' }}
+        >
+          <GripVertical className="h-5 w-5" />
+        </button>
         <Bus className="h-5 w-5 text-muted-foreground flex-shrink-0" />
         <div className="min-w-0">
           <div className="flex items-center gap-2">
@@ -415,7 +479,7 @@ function RouteRow({
           <div className="text-xs text-muted-foreground">
             Trip {route.tripId} &middot; {route.scheduledTime}
             {geofenceCount > 0 && <> &middot; {geofenceCount} geofence{geofenceCount !== 1 ? 's' : ''}</>}
-            {route.stopName && <> &middot; Stop</>}
+            {route.stopName && <> &middot; Stop: {route.stopName}</>}
             {route.schoolName && <> &middot; School</>}
           </div>
         </div>
@@ -429,6 +493,58 @@ function RouteRow({
           <Trash2 className="h-4 w-4" />
         </Button>
       </div>
+    </div>
+  );
+}
+
+
+function SortableCheckpointItem({
+  cp,
+  index,
+  onNameChange,
+  onRemove,
+  isStop,
+}: {
+  cp: { name: string; sortOrder: number };
+  index: number;
+  onNameChange: (index: number, name: string) => void;
+  onRemove: (index: number) => void;
+  isStop: boolean;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: cp.name || `cp-${index}` });
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} className="flex items-center gap-2 p-1.5 rounded border text-sm">
+      <button
+        {...attributes}
+        {...listeners}
+        className="cursor-grab active:cursor-grabbing touch-none flex-shrink-0 text-muted-foreground hover:text-foreground"
+        style={{ touchAction: 'none' }}
+      >
+        <GripVertical className="h-4 w-4" />
+      </button>
+      <span className="text-xs text-muted-foreground w-5 flex-shrink-0">{index + 1}.</span>
+      <Input
+        value={cp.name}
+        onChange={e => onNameChange(index, e.target.value)}
+        className="flex-1 h-7 text-sm"
+      />
+      {isStop && (
+        <Badge variant="outline" className="text-[10px] flex-shrink-0">stop</Badge>
+      )}
+      <Button
+        size="icon"
+        variant="ghost"
+        className="h-6 w-6 text-destructive flex-shrink-0"
+        onClick={() => onRemove(index)}
+      >
+        <X className="h-3 w-3" />
+      </Button>
     </div>
   );
 }
@@ -460,6 +576,13 @@ function RouteDialog({
   });
   const [newCheckpointName, setNewCheckpointName] = useState('');
 
+  const checkpointSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } }),
+  );
+
+  const checkpointIds = form.checkpoints.map((cp, i) => cp.name || `cp-${i}`);
+
   const addCheckpoint = () => {
     if (!newCheckpointName.trim()) return;
     setForm(prev => ({
@@ -473,22 +596,47 @@ function RouteDialog({
   };
 
   const removeCheckpoint = (index: number) => {
-    setForm(prev => ({
-      ...prev,
-      checkpoints: prev.checkpoints
+    setForm(prev => {
+      const updated = prev.checkpoints
         .filter((_, i) => i !== index)
-        .map((cp, i) => ({ ...cp, sortOrder: i })),
-    }));
+        .map((cp, i) => ({ ...cp, sortOrder: i }));
+      // If stopName referenced the removed checkpoint, clear it
+      const removedName = prev.checkpoints[index]?.name;
+      return {
+        ...prev,
+        checkpoints: updated,
+        stopName: prev.stopName === removedName ? '' : prev.stopName,
+      };
+    });
   };
 
-  const moveCheckpoint = (index: number, direction: -1 | 1) => {
-    const newIndex = index + direction;
-    if (newIndex < 0 || newIndex >= form.checkpoints.length) return;
+  const handleCheckpointNameChange = (index: number, name: string) => {
     setForm(prev => {
-      const cps = [...prev.checkpoints];
-      [cps[index], cps[newIndex]] = [cps[newIndex]!, cps[index]!];
-      return { ...prev, checkpoints: cps.map((cp, i) => ({ ...cp, sortOrder: i })) };
+      const oldName = prev.checkpoints[index]?.name;
+      const updated = prev.checkpoints.map((cp, i) =>
+        i === index ? { ...cp, name } : cp
+      );
+      return {
+        ...prev,
+        checkpoints: updated,
+        // Keep stopName in sync if it referenced the renamed checkpoint
+        stopName: prev.stopName === oldName ? name : prev.stopName,
+      };
     });
+  };
+
+  const handleCheckpointDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = checkpointIds.indexOf(String(active.id));
+    const newIndex = checkpointIds.indexOf(String(over.id));
+    if (oldIndex === -1 || newIndex === -1) return;
+
+    setForm(prev => ({
+      ...prev,
+      checkpoints: arrayMove(prev.checkpoints, oldIndex, newIndex).map((cp, i) => ({ ...cp, sortOrder: i })),
+    }));
   };
 
   const handleSave = async () => {
@@ -526,6 +674,8 @@ function RouteDialog({
       setSaving(false);
     }
   };
+
+  const checkpointNames = form.checkpoints.map(cp => cp.name).filter(Boolean);
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
@@ -597,12 +747,32 @@ function RouteDialog({
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label>Stop Name</Label>
-              <Input
-                value={form.stopName}
-                onChange={e => setForm(p => ({ ...p, stopName: e.target.value }))}
-                placeholder="Bus stop name"
-              />
+              <Label>Your Stop</Label>
+              {checkpointNames.length > 0 ? (
+                <Select
+                  value={form.stopName}
+                  onValueChange={v => setForm(p => ({ ...p, stopName: v }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select checkpoint" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {checkpointNames.map(name => (
+                      <SelectItem key={name} value={name}>{name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <Input
+                  value={form.stopName}
+                  onChange={e => setForm(p => ({ ...p, stopName: e.target.value }))}
+                  placeholder="Add checkpoints first"
+                  disabled={checkpointNames.length === 0}
+                />
+              )}
+              <p className="text-[11px] text-muted-foreground mt-0.5">
+                ETA target — select the checkpoint where your child gets off.
+              </p>
             </div>
             <div>
               <Label>School Name</Label>
@@ -618,59 +788,31 @@ function RouteDialog({
           <div>
             <Label>Geofence Checkpoints (in order)</Label>
             <p className="text-xs text-muted-foreground mb-2">
-              Add the ordered geofence labels from FirstView. These are the distance-based notification zones.
+              Add the ordered geofence labels from FirstView. Drag to reorder.
             </p>
 
             {form.checkpoints.length > 0 && (
-              <div className="space-y-1 mb-2">
-                {form.checkpoints.map((cp, i) => (
-                  <div key={i} className="flex items-center gap-2 p-1.5 rounded border text-sm">
-                    <GripVertical className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                    <span className="text-xs text-muted-foreground w-5">{i + 1}.</span>
-                    <Input
-                      value={cp.name}
-                      onChange={e => {
-                        const newName = e.target.value;
-                        setForm(prev => ({
-                          ...prev,
-                          checkpoints: prev.checkpoints.map((c, j) =>
-                            j === i ? { ...c, name: newName } : c
-                          ),
-                        }));
-                      }}
-                      className="flex-1 h-7 text-sm"
-                    />
-                    <div className="flex gap-0.5 flex-shrink-0">
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="h-6 w-6"
-                        disabled={i === 0}
-                        onClick={() => moveCheckpoint(i, -1)}
-                      >
-                        <span className="text-xs">&uarr;</span>
-                      </Button>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="h-6 w-6"
-                        disabled={i === form.checkpoints.length - 1}
-                        onClick={() => moveCheckpoint(i, 1)}
-                      >
-                        <span className="text-xs">&darr;</span>
-                      </Button>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="h-6 w-6 text-destructive"
-                        onClick={() => removeCheckpoint(i)}
-                      >
-                        <X className="h-3 w-3" />
-                      </Button>
-                    </div>
+              <DndContext
+                sensors={checkpointSensors}
+                collisionDetection={closestCenter}
+                modifiers={[restrictToVerticalAxis]}
+                onDragEnd={handleCheckpointDragEnd}
+              >
+                <SortableContext items={checkpointIds} strategy={verticalListSortingStrategy}>
+                  <div className="space-y-1 mb-2">
+                    {form.checkpoints.map((cp, i) => (
+                      <SortableCheckpointItem
+                        key={cp.name || `cp-${i}`}
+                        cp={cp}
+                        index={i}
+                        onNameChange={handleCheckpointNameChange}
+                        onRemove={removeCheckpoint}
+                        isStop={cp.name === form.stopName}
+                      />
+                    ))}
                   </div>
-                ))}
-              </div>
+                </SortableContext>
+              </DndContext>
             )}
 
             <div className="flex gap-2">
