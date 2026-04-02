@@ -88,7 +88,11 @@ export async function predictArrival(routeId: string): Promise<ArrivalPrediction
   const lastCheckpointTime = latest.eventTime;
   const minutesSince = (Date.now() - lastCheckpointTime.getTime()) / 60000;
 
-  // If bus has reached stop or school, we're done
+  const direction = route.direction as 'AM' | 'PM';
+
+  // Terminal states depend on direction:
+  // AM: school is the final destination
+  // PM: stop is the final destination (school is the origin)
   if (latest.eventType === 'arrived_at_stop') {
     return {
       status: 'at_stop',
@@ -104,17 +108,21 @@ export async function predictArrival(routeId: string): Promise<ArrivalPrediction
   }
 
   if (latest.eventType === 'arrived_at_school') {
-    return {
-      status: 'at_school',
-      etaMinutes: 0,
-      etaRangeLow: 0,
-      etaRangeHigh: 0,
-      lastCheckpointName,
-      lastCheckpointTime,
-      lastCheckpointIndex,
-      totalCheckpoints,
-      minutesSinceLastCheckpoint: Math.round(minutesSince),
-    };
+    if (direction === 'AM') {
+      // AM: school is the destination — trip complete
+      return {
+        status: 'at_school',
+        etaMinutes: 0,
+        etaRangeLow: 0,
+        etaRangeHigh: 0,
+        lastCheckpointName,
+        lastCheckpointTime,
+        lastCheckpointIndex,
+        totalCheckpoints,
+        minutesSinceLastCheckpoint: Math.round(minutesSince),
+      };
+    }
+    // PM: school is the origin — bus is starting its route, treat as in-transit
   }
 
   // Bus is in transit — try to predict remaining time
