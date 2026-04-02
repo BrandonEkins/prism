@@ -21,7 +21,7 @@ export interface BusTrackingWidgetProps {
 }
 
 export function BusTrackingWidget({ className, gridW }: BusTrackingWidgetProps) {
-  const { routes, loading, error } = useBusTracking();
+  const { routes, allRoutes, loading, error } = useBusTracking();
   const isCompact = !gridW || gridW < 12;
 
   // In compact mode, show only the most relevant route (closest to scheduled time)
@@ -36,10 +36,15 @@ export function BusTrackingWidget({ className, gridW }: BusTrackingWidgetProps) 
       error={error}
       className={className}
     >
-      {displayRoutes.length === 0 ? (
+      {allRoutes.length === 0 ? (
         <WidgetEmpty
           icon={<Bus className="h-8 w-8" />}
           message="No bus routes configured"
+        />
+      ) : displayRoutes.length === 0 ? (
+        <WidgetEmpty
+          icon={<Bus className="h-8 w-8" />}
+          message="No routes active right now"
         />
       ) : (
         <div className="overflow-auto h-full -mr-2 pr-2 space-y-3">
