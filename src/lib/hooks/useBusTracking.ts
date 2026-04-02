@@ -135,5 +135,5 @@ export function useBusTracking() {
     fetchStatus();
   }, [fetchStatus]);
 
-  return { routes: visibleRoutes, connected, loading, error, refresh };
+  return { routes: visibleRoutes, allRoutes: routes, connected, loading, error, refresh };
 }
