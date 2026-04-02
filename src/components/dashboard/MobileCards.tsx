@@ -21,7 +21,7 @@ import {
   Heart,
   Bus,
   Clock,
-  Image,
+  Image as ImageIcon,
 } from 'lucide-react';
 import type { useDashboardData } from './useDashboardData';
 import type { CalendarEvent } from '@/types/calendar';
@@ -262,7 +262,7 @@ export function WishesCard() {
 
 export function PhotosCard() {
   return (
-    <CardShell href="/photos" icon={<Image className="h-4 w-4 text-teal-500" />} title="Photos">
+    <CardShell href="/photos" icon={<ImageIcon className="h-4 w-4 text-teal-500" />} title="Photos">
       <p className="text-xs text-muted-foreground">Browse photo gallery</p>
     </CardShell>
   );
