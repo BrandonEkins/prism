@@ -11,6 +11,8 @@ import * as React from 'react';
 import { ThemeProvider } from './ThemeProvider';
 import { AuthProvider } from './AuthProvider';
 import { FamilyProvider } from './FamilyProvider';
+import { GlobalInputProvider } from '@/lib/hooks/useGlobalInput';
+import { VirtualKeyboard, KeyboardToggleButton } from '@/components/input';
 
 interface ProvidersProps {
   children: React.ReactNode;
@@ -26,7 +28,11 @@ export function Providers({ children }: ProvidersProps) {
     <ThemeProvider defaultTheme="system">
       <FamilyProvider>
         <AuthProvider>
-          {children}
+          <GlobalInputProvider>
+            {children}
+            <VirtualKeyboard />
+            <KeyboardToggleButton />
+          </GlobalInputProvider>
         </AuthProvider>
       </FamilyProvider>
     </ThemeProvider>

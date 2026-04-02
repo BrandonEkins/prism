@@ -474,3 +474,73 @@
 .pb-portrait-nav {
   padding-bottom: calc(5rem + env(safe-area-inset-bottom, 0px));
 }
+
+/* =========================================================
+   Global Input System
+   ========================================================= */
+
+/* Keyboard slide animations */
+@keyframes keyboard-in {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+@keyframes keyboard-out {
+  from { transform: translateY(0); }
+  to   { transform: translateY(100%); }
+}
+.animate-keyboard-in  { animation: keyboard-in  200ms ease-out forwards; }
+.animate-keyboard-out { animation: keyboard-out 200ms ease-in  forwards; }
+
+/* Scan highlight flash on shopping items */
+@keyframes scan-highlight {
+  0%   { background-color: hsl(var(--primary) / 0.25); }
+  100% { background-color: transparent; }
+}
+.scan-highlight { animation: scan-highlight 1.5s ease-out forwards; }
+
+/* Mic pulse when listening */
+@keyframes mic-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.4; }
+}
+[data-virtual-keyboard].is-listening .key-mic {
+  animation: mic-pulse 1s infinite;
+}
+
+/* simple-keyboard theme — scoped to [data-virtual-keyboard] */
+[data-virtual-keyboard] .hg-theme-default {
+  height: 100%;
+  background: hsl(var(--background));
+  border-radius: 0;
+  padding: 8px;
+  font-family: inherit;
+}
+[data-virtual-keyboard] .hg-row {
+  margin-bottom: 4px;
+}
+[data-virtual-keyboard] .hg-button {
+  height: 52px;
+  font-size: 18px;
+  background: hsl(var(--secondary));
+  color: hsl(var(--secondary-foreground));
+  border-bottom: 2px solid hsl(var(--border));
+  border-radius: 6px;
+  box-shadow: none;
+}
+[data-virtual-keyboard] .hg-button:hover,
+[data-virtual-keyboard] .hg-button:active {
+  background: hsl(var(--accent));
+  color: hsl(var(--accent-foreground));
+}
+[data-virtual-keyboard] .hg-button.key-action {
+  background: hsl(var(--muted));
+  font-size: 20px;
+}
+[data-virtual-keyboard] .hg-button.key-space {
+  flex-grow: 4;
+}
+[data-virtual-keyboard] .hg-button.key-mic,
+[data-virtual-keyboard] .hg-button.key-dismiss {
+  flex-grow: 1;
+  font-size: 20px;
+}
