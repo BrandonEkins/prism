@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { toast } from '@/components/ui/use-toast';
 import {
   ShoppingCart,
@@ -54,6 +54,25 @@ export function ShoppingView() {
     toggleItem, deleteItem,
     totalItems, checkedItems, progress,
   } = useShoppingViewData();
+
+  // Listen for barcode scan results — scroll to and highlight the added/updated item
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const data = (e as CustomEvent<{ itemId?: string }>).detail;
+      if (!data?.itemId) return;
+      refreshLists();
+      setTimeout(() => {
+        const el = document.getElementById(`shopping-item-${data.itemId}`);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          el.classList.add('scan-highlight');
+          setTimeout(() => el.classList.remove('scan-highlight'), 1500);
+        }
+      }, 400); // wait for re-render after refreshLists
+    };
+    window.addEventListener('prism:scan-result', handler);
+    return () => window.removeEventListener('prism:scan-result', handler);
+  }, [refreshLists]);
 
   const {
     categories: dynamicCategories,

@@ -74,6 +74,7 @@ export interface ShoppingItem {
     name: string;
     color: string;
   };
+  source?: string;
   createdAt: Date | string;
 }
 

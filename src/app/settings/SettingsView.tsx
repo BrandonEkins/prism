@@ -23,6 +23,7 @@ import {
   ToggleLeft,
   ClipboardList,
   Bus,
+  KeyboardIcon,
 } from 'lucide-react';
 import { PrismIcon } from '@/components/ui/PrismIcon';
 import { cn } from '@/lib/utils';
@@ -41,6 +42,7 @@ import { WishListIntegrationsSection } from './sections/WishListIntegrationsSect
 import { BabysitterInfoSection } from './sections/BabysitterInfoSection';
 import { BackupSection } from './sections/BackupSection';
 import { BusTrackingSection } from './sections/BusTrackingSection';
+import { InputSection } from './sections/InputSection';
 import { FeaturesSection } from './sections/FeaturesSection';
 import { ActivityLogSection } from './sections/ActivityLogSection';
 
@@ -138,6 +140,7 @@ export function SettingsView() {
     { id: 'bus', label: 'Bus Tracking', icon: Bus },
     { id: 'babysitter', label: 'Babysitter Info', icon: Baby },
     { id: 'display', label: 'Display', icon: Palette },
+    { id: 'input', label: 'Input', icon: KeyboardIcon },
     { id: 'features', label: 'Features', icon: ToggleLeft },
     { id: 'security', label: 'Security', icon: Shield },
     { id: 'backups', label: 'Backups', icon: Database },
@@ -198,6 +201,7 @@ export function SettingsView() {
               {activeSection === 'bus' && <BusTrackingSection />}
               {activeSection === 'babysitter' && <BabysitterInfoSection />}
               {activeSection === 'display' && <DisplaySection />}
+              {activeSection === 'input' && <InputSection />}
               {activeSection === 'features' && <FeaturesSection />}
               {activeSection === 'security' && <SecuritySection />}
               {activeSection === 'backups' && <BackupSection />}

@@ -11,6 +11,7 @@ import React, {
 } from 'react';
 import { useIsMobile } from './useIsMobile';
 import { useSpeechRecognition } from './useSpeechRecognition';
+import { toast } from '@/components/ui/use-toast';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -104,6 +105,69 @@ export function GlobalInputProvider({ children }: { children: React.ReactNode })
     input.dispatchEvent(new Event('input', { bubbles: true }));
     input.dispatchEvent(new Event('change', { bubbles: true }));
   }, []);
+
+  // ---- audio feedback ----
+  const playBeep = useCallback(async () => {
+    try {
+      const settingsRes = await fetch('/api/settings?key=scanner.soundEnabled');
+      const s = settingsRes.ok ? await settingsRes.json() : null;
+      if (s?.value === false) return;
+      const styleRes = await fetch('/api/settings?key=scanner.soundStyle');
+      const styleData = styleRes.ok ? await styleRes.json() : null;
+      const style: string = styleData?.value ?? 'beep';
+
+      const ctx = new AudioContext();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.frequency.value = style === 'scan' ? 1800 : 1200;
+      gain.gain.setValueAtTime(0.25, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + (style === 'scan' ? 0.08 : 0.15));
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.2);
+    } catch { /* ignore autoplay policy errors */ }
+  }, []);
+
+  // ---- barcode scan dispatch ----
+  const dispatchScan = useCallback(async (barcode: string) => {
+    suppressedForScan.current = true;
+    setTimeout(() => { suppressedForScan.current = false; }, 500);
+    playBeep();
+
+    try {
+      const res = await fetch('/api/shopping/scan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ barcode }),
+      });
+      const data = await res.json() as {
+        found: boolean;
+        item?: { name: string };
+        action?: string;
+        itemId?: string;
+        listId?: string;
+      };
+
+      if (!data.found) {
+        toast({ title: `Unknown barcode`, description: `No product found for ${barcode}` });
+        return;
+      }
+
+      // Notify shopping page if open
+      window.dispatchEvent(new CustomEvent('prism:scan-result', { detail: data }));
+
+      const isOnShopping = window.location.pathname.startsWith('/shopping');
+      toast({
+        title: data.action === 'updated_existing'
+          ? `${data.item!.name} already on list`
+          : `${data.item!.name} added`,
+        description: isOnShopping ? undefined : 'View shopping list',
+      });
+    } catch {
+      toast({ title: 'Scan failed', variant: 'destructive' });
+    }
+  }, [playBeep]);
 
   // ---- speech recognition ----
   const handleSpeechResult = useCallback((transcript: string) => {
@@ -205,10 +269,7 @@ export function GlobalInputProvider({ children }: { children: React.ReactNode })
             const barcode = buf.map(b => b.char).join('');
             barcodeBuffer.current = [];
             e.preventDefault();
-            // dispatchScan will be wired in a future session when scanner hardware arrives
-            window.dispatchEvent(
-              new CustomEvent('prism:barcode', { detail: { barcode } })
-            );
+            dispatchScan(barcode);
             return;
           }
         }

@@ -1,6 +1,6 @@
 'use client';
 
-import { Edit2, Trash2 } from 'lucide-react';
+import { Edit2, Trash2, ScanBarcode } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -23,6 +23,7 @@ export function ShoppingItemRow({
 
   return (
     <div
+      id={`shopping-item-${item.id}`}
       className={cn(
         'flex items-center gap-2 py-1 px-2 rounded cursor-pointer',
         'hover:bg-muted/50 transition-all group',
@@ -42,6 +43,9 @@ export function ShoppingItemRow({
             {item.name}
           </span>
 
+          {item.source === 'scan' && (
+            <ScanBarcode className="h-3 w-3 text-muted-foreground/60 flex-shrink-0" aria-label="Added by scanner" />
+          )}
           {quantityDisplay && (
             <Badge variant="secondary" className="text-xs">
               {quantityDisplay}
