@@ -40,6 +40,9 @@ All notable changes to Prism are documented in this file.
 - **README**: Replaced GIF demos with static screenshots for faster loading
 
 ### Fixed
+- **Virtual Keyboard**: Toggle button now appears correctly on touchscreen laptops where Windows converts touch events to mouse events (uses `navigator.maxTouchPoints` instead of pointer type tracking)
+- **Virtual Keyboard**: Reduced height from 38vh to 32vh — less intrusive on 1080p displays
+- **Virtual Keyboard**: Scroll position no longer jumps after voice input adds a new list item — scroll restore is skipped when text was injected while the keyboard was open
 - **Calendar**: Day view with hidden hours now fills full available height
 - **Calendar**: Week view with hidden hours now fills full available height
 - **Calendar**: Day name headers rotate correctly when week starts on Monday
