@@ -8,17 +8,21 @@ import { cn } from '@/lib/utils';
 import { useGlobalInput } from '@/lib/hooks/useGlobalInput';
 
 export function KeyboardToggleButton() {
-  const { keyboardVisible, setKeyboardVisible, activeInputRef, isMobile, lastPointerType } =
+  const { keyboardVisible, setKeyboardVisible, isInputFocused, isMobile } =
     useGlobalInput();
   const [mounted, setMounted] = useState(false);
-  useEffect(() => { setMounted(true); }, []);
+  const [hasTouchScreen, setHasTouchScreen] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+    setHasTouchScreen(navigator.maxTouchPoints > 0);
+  }, []);
 
   const show =
     mounted &&
+    hasTouchScreen &&
     !isMobile &&
     !keyboardVisible &&
-    activeInputRef.current !== null &&
-    lastPointerType === 'touch';
+    isInputFocused;
 
   if (!show) return null;
 

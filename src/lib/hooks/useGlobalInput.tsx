@@ -20,6 +20,7 @@ import { toast } from '@/components/ui/use-toast';
 interface GlobalInputContextValue {
   keyboardVisible: boolean;
   isListening: boolean;
+  isInputFocused: boolean;
   lastPointerType: 'touch' | 'mouse' | 'keyboard';
   isMobile: boolean;
   activeInputRef: React.MutableRefObject<HTMLInputElement | HTMLTextAreaElement | null>;
@@ -69,17 +70,20 @@ function isRealKeyboardEvent(e: KeyboardEvent): boolean {
 // Provider
 // ---------------------------------------------------------------------------
 
-const KEYBOARD_HEIGHT_VH = 38;
+const KEYBOARD_HEIGHT_VH = 32;
 const SCROLL_MARGIN_PX = 16;
 
 export function GlobalInputProvider({ children }: { children: React.ReactNode }) {
   const isMobile = useIsMobile();
   const [keyboardVisible, setKeyboardVisibleState] = useState(false);
+  const [isInputFocused, setIsInputFocused] = useState(false);
   const [lastPointerType, setLastPointerType] = useState<'touch' | 'mouse' | 'keyboard'>('mouse');
 
   const activeInputRef = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null);
   const originalScrollY = useRef<number | null>(null);
   const suppressedForScan = useRef(false);
+  const lastPointerTypeRef = useRef<'touch' | 'mouse' | 'keyboard'>('mouse');
+  const textInjectedWhileOpen = useRef(false);
 
   // Read virtual keyboard setting (default enabled)
   const [virtualKeyboardEnabled, setVirtualKeyboardEnabled] = useState(true);
@@ -104,6 +108,7 @@ export function GlobalInputProvider({ children }: { children: React.ReactNode })
     setter.call(input, text);
     input.dispatchEvent(new Event('input', { bubbles: true }));
     input.dispatchEvent(new Event('change', { bubbles: true }));
+    textInjectedWhileOpen.current = true;
   }, []);
 
   // ---- audio feedback ----
@@ -206,7 +211,12 @@ export function GlobalInputProvider({ children }: { children: React.ReactNode })
   // ---- setKeyboardVisible (public) ----
   const setKeyboardVisible = useCallback((visible: boolean) => {
     setKeyboardVisibleState(visible);
-    if (!visible) restoreScroll();
+    if (visible) {
+      textInjectedWhileOpen.current = false;
+    } else {
+      if (!textInjectedWhileOpen.current) restoreScroll();
+      textInjectedWhileOpen.current = false;
+    }
   }, [restoreScroll]);
 
   // ---- keyboard height CSS var ----
@@ -223,20 +233,27 @@ export function GlobalInputProvider({ children }: { children: React.ReactNode })
   // ---- document event listeners ----
   useEffect(() => {
     const onPointerDown = (e: PointerEvent) => {
-      if (e.pointerType === 'touch') setLastPointerType('touch');
-      else if (e.pointerType === 'mouse') setLastPointerType('mouse');
+      if (e.pointerType === 'touch') {
+        setLastPointerType('touch');
+        lastPointerTypeRef.current = 'touch';
+      } else if (e.pointerType === 'mouse') {
+        setLastPointerType('mouse');
+        lastPointerTypeRef.current = 'mouse';
+      }
     };
 
     const onFocusIn = (e: FocusEvent) => {
       const target = e.target as Element;
       if (!shouldShowKeyboard(target)) {
         activeInputRef.current = null;
+        setIsInputFocused(false);
         setKeyboardVisibleState(false);
         return;
       }
       activeInputRef.current = target as HTMLInputElement | HTMLTextAreaElement;
+      setIsInputFocused(true);
       if (
-        lastPointerType === 'touch' &&
+        lastPointerTypeRef.current === 'touch' &&
         !isMobile &&
         !suppressedForScan.current &&
         virtualKeyboardEnabled
@@ -250,8 +267,10 @@ export function GlobalInputProvider({ children }: { children: React.ReactNode })
       const next = e.relatedTarget as Element | null;
       if (next && isInsideKeyboard(next)) return;
       activeInputRef.current = null;
+      setIsInputFocused(false);
       setKeyboardVisibleState(false);
-      restoreScroll();
+      if (!textInjectedWhileOpen.current) restoreScroll();
+      textInjectedWhileOpen.current = false;
     };
 
     const onKeyDown = (e: KeyboardEvent) => {
@@ -303,6 +322,7 @@ export function GlobalInputProvider({ children }: { children: React.ReactNode })
   const value = useMemo<GlobalInputContextValue>(() => ({
     keyboardVisible,
     isListening: speech.isListening,
+    isInputFocused,
     lastPointerType,
     isMobile,
     activeInputRef,
@@ -314,7 +334,7 @@ export function GlobalInputProvider({ children }: { children: React.ReactNode })
     virtualKeyboardEnabled,
   }), [
     keyboardVisible, speech.isListening, speech.start, speech.stop,
-    lastPointerType, isMobile, setKeyboardVisible, injectText, virtualKeyboardEnabled,
+    isInputFocused, lastPointerType, isMobile, setKeyboardVisible, injectText, virtualKeyboardEnabled,
   ]);
 
   return (
