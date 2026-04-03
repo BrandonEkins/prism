@@ -13,26 +13,76 @@ function buildSecurityHeaders() {
   /** @type {{ key: string; value: string }[]} */
   const headers = [];
 
+  // ---------------------------------------------------------------------------
+  // Content-Security-Policy
+  // Note: Next.js 15 App Router requires 'unsafe-inline' for script/style
+  // (hydration and Tailwind). The meaningful protections here are object-src,
+  // base-uri, and frame-src.
+  // ---------------------------------------------------------------------------
+
   const allowedAncestors = process.env.ALLOWED_FRAME_ANCESTORS?.trim();
+  let frameAncestors;
 
   if (allowedAncestors === '*') {
-    headers.push({ key: 'Content-Security-Policy', value: 'frame-ancestors *' });
+    frameAncestors = 'frame-ancestors *';
   } else if (allowedAncestors) {
     const origins = allowedAncestors
       .split(',')
       .map(o => o.trim())
       .filter(Boolean);
-    headers.push({
-      key: 'Content-Security-Policy',
-      value: `frame-ancestors 'self' ${origins.join(' ')}`,
-    });
+    frameAncestors = `frame-ancestors 'self' ${origins.join(' ')}`;
   } else {
     headers.push({ key: 'X-Frame-Options', value: 'SAMEORIGIN' });
-    headers.push({ key: 'Content-Security-Policy', value: "frame-ancestors 'self'" });
+    frameAncestors = "frame-ancestors 'self'";
   }
+
+  const csp = [
+    "default-src 'self'",
+    // Next.js requires unsafe-inline for hydration; unsafe-eval for dev HMR
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+    // Tailwind requires unsafe-inline for style attributes
+    "style-src 'self' 'unsafe-inline'",
+    // Images from configured remote patterns + data URIs + blob URLs
+    "img-src 'self' data: blob: https:",
+    // Fonts served locally
+    "font-src 'self'",
+    // API calls: self + external integrations (weather, MS Graph, Google, Open Food Facts)
+    "connect-src 'self' https: wss:",
+    // Audio for voice input beep feedback
+    "media-src 'self' blob:",
+    // PWA service worker
+    "worker-src 'self' blob:",
+    // Prism never loads external frames
+    "frame-src 'none'",
+    // Block all plugin content (Flash, etc.)
+    "object-src 'none'",
+    // Prevent base tag injection attacks
+    "base-uri 'self'",
+    frameAncestors,
+  ].join('; ');
+
+  headers.push({ key: 'Content-Security-Policy', value: csp });
+
+  // ---------------------------------------------------------------------------
+  // Other security headers
+  // ---------------------------------------------------------------------------
 
   headers.push({ key: 'X-Content-Type-Options', value: 'nosniff' });
   headers.push({ key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' });
+
+  // HSTS: enforce HTTPS for 1 year (applies when served over TLS via Cloudflare tunnel)
+  headers.push({
+    key: 'Strict-Transport-Security',
+    value: 'max-age=31536000; includeSubDomains',
+  });
+
+  // Restrict unused browser features. Microphone kept for voice input.
+  headers.push({
+    key: 'Permissions-Policy',
+    value: 'camera=(), geolocation=(), payment=(), usb=(), bluetooth=()',
+  });
+
+  headers.push({ key: 'X-DNS-Prefetch-Control', value: 'off' });
 
   return headers;
 }
