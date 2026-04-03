@@ -15,7 +15,7 @@ export interface PointsWidgetProps {
   titleHref?: string;
 }
 
-export function PointsWidget({
+export const PointsWidget = React.memo(function PointsWidget({
   goals,
   progress,
   goalChildren,
@@ -96,4 +96,4 @@ export function PointsWidget({
       )}
     </WidgetContainer>
   );
-}
+});

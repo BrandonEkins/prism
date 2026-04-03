@@ -1,3 +1,6 @@
+import type { DayOfWeek } from '@/lib/constants/days';
+export type { DayOfWeek };
+
 export interface FamilyMember {
   id: string;
   name: string;
@@ -138,7 +141,7 @@ export interface Meal {
   servings?: number | null;
   ingredients?: string | null;
   weekOf: string;
-  dayOfWeek: 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';
+  dayOfWeek: DayOfWeek;
   mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack';
   cookedAt?: Date | string | null;
   cookedBy?: { id: string; name: string; color: string } | null;

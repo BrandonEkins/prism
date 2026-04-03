@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { DAYS_OF_WEEK_MON_FIRST, DAYS_OF_WEEK, type DayOfWeek } from '@/lib/constants/days';
 import { useState } from 'react';
 import { format, startOfWeek, addDays, parseISO } from 'date-fns';
 import { UtensilsCrossed, Plus, ChevronLeft, ChevronRight, Clock, CheckCircle2, Undo2, X } from 'lucide-react';
@@ -28,7 +29,7 @@ export interface MealsWidgetProps {
   className?: string;
 }
 
-export function MealsWidget({
+export const MealsWidget = React.memo(function MealsWidget({
   meals: externalMeals,
   weekOf,
   loading = false,
@@ -123,7 +124,7 @@ export function MealsWidget({
         ) : (
           <div className="overflow-auto h-full -mr-2 pr-2">
             <div className="space-y-3">
-              {(['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const).map((day, index) => {
+              {DAYS_OF_WEEK_MON_FIRST.map((day, index) => {
                 const dayMeals = mealsByDay[day] || [];
                 const dayDate = addDays(currentWeek, index);
                 const isToday = format(dayDate, 'yyyy-MM-dd') === format(today, 'yyyy-MM-dd');
@@ -156,7 +157,7 @@ export function MealsWidget({
       )}
     </>
   );
-}
+});
 
 function DaySection({
   day, date, meals, isToday, onMarkCooked, onUnmarkCooked,
@@ -258,7 +259,7 @@ function WidgetAddMealModal({
           <div>
             <label className="text-xs font-medium text-muted-foreground">Day</label>
             <div className="grid grid-cols-4 gap-1.5 mt-1">
-              {(['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const).map((day) => (
+              {DAYS_OF_WEEK_MON_FIRST.map((day) => (
                 <Button key={day} type="button" variant={dayOfWeek === day ? 'default' : 'outline'}
                   size="sm" onClick={() => setDayOfWeek(day)} className="capitalize text-xs px-1">
                   {day.slice(0, 3)}
@@ -289,7 +290,7 @@ function WidgetAddMealModal({
 
 function groupMealsByDay(meals: Meal[]): Record<Meal['dayOfWeek'], Meal[]> {
   const grouped: Record<Meal['dayOfWeek'], Meal[]> = {
-    monday: [], tuesday: [], wednesday: [], thursday: [], friday: [], saturday: [], sunday: [],
+    ...DAYS_OF_WEEK.reduce((acc, d) => { acc[d] = []; return acc; }, {} as Record<DayOfWeek, Meal[]>),
   };
   meals.forEach((meal) => { grouped[meal.dayOfWeek].push(meal); });
   const mealTypeOrder = { breakfast: 0, lunch: 1, dinner: 2, snack: 3 };

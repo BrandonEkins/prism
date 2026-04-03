@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useMemo } from 'react';
+import { DAYS_OF_WEEK } from '@/lib/constants/days';
 import { format, isToday, isTomorrow } from 'date-fns';
 import Link from 'next/link';
 import {
@@ -181,8 +182,7 @@ export function ShoppingCard({ data }: { data: DashData['shopping'] }) {
 export function MealsCard({ data }: { data: DashData['meals'] }) {
   const todayMeal = useMemo(() => {
     if (!data.meals) return null;
-    const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-    const todayDay = days[new Date().getDay()];
+    const todayDay = DAYS_OF_WEEK[new Date().getDay()];
     return data.meals.find((m) => m.dayOfWeek === todayDay && m.mealType === 'dinner')
       || data.meals.find((m) => m.dayOfWeek === todayDay)
       || null;

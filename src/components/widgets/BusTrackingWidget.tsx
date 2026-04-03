@@ -20,7 +20,7 @@ export interface BusTrackingWidgetProps {
   gridH?: number;
 }
 
-export function BusTrackingWidget({ className, gridW }: BusTrackingWidgetProps) {
+export const BusTrackingWidget = React.memo(function BusTrackingWidget({ className, gridW }: BusTrackingWidgetProps) {
   const { routes, allRoutes, loading, error } = useBusTracking();
   const isCompact = !gridW || gridW < 12;
 
@@ -55,7 +55,7 @@ export function BusTrackingWidget({ className, gridW }: BusTrackingWidgetProps) 
       )}
     </WidgetContainer>
   );
-}
+});
 
 // Build a flat ordered node list from a route for the train map
 interface TrainNode {

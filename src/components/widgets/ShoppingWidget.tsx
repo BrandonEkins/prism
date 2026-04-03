@@ -82,7 +82,7 @@ export interface ShoppingWidgetProps {
  *   onAddClick={() => openAddItemDialog()}
  * />
  */
-export function ShoppingWidget({
+export const ShoppingWidget = React.memo(function ShoppingWidget({
   lists: externalLists,
   listId,
   loading = false,
@@ -226,7 +226,7 @@ export function ShoppingWidget({
       )}
     </WidgetContainer>
   );
-}
+});
 
 /**
  * SHOPPING ITEM ROW

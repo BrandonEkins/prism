@@ -4,6 +4,7 @@
  */
 
 import { z } from 'zod';
+import { DAYS_OF_WEEK } from '@/lib/constants/days';
 
 // COMMON SCHEMAS
 
@@ -125,7 +126,7 @@ export const createMealSchema = z.object({
   servings: z.number().int().min(1).optional(),
   ingredients: z.string().max(5000).optional(),
   weekOf: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format (YYYY-MM-DD)'),
-  dayOfWeek: z.enum(['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']),
+  dayOfWeek: z.enum(DAYS_OF_WEEK),
   mealType: z.enum(['breakfast', 'lunch', 'dinner', 'snack']),
   source: z.enum(['internal', 'external']).optional().default('internal'),
   sourceId: z.string().max(255).optional(),

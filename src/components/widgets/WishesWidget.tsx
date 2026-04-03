@@ -1,5 +1,6 @@
 'use client';
 
+import * as React from 'react';
 import { Gift, ExternalLink } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { WidgetContainer, WidgetEmpty } from './WidgetContainer';
@@ -14,7 +15,7 @@ export interface WishesWidgetProps {
   className?: string;
 }
 
-export function WishesWidget({
+export const WishesWidget = React.memo(function WishesWidget({
   items: externalItems,
   loading = false,
   error = null,
@@ -72,4 +73,4 @@ export function WishesWidget({
       )}
     </WidgetContainer>
   );
-}
+});

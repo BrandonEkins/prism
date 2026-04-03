@@ -85,7 +85,7 @@ export interface MessagesWidgetProps {
  * @example With add callback
  * <MessagesWidget onAddClick={() => openMessageDialog()} />
  */
-export function MessagesWidget({
+export const MessagesWidget = React.memo(function MessagesWidget({
   messages: externalMessages,
   maxMessages = 6,
   loading = false,
@@ -168,7 +168,7 @@ export function MessagesWidget({
       )}
     </WidgetContainer>
   );
-}
+});
 
 
 /**
@@ -244,5 +244,3 @@ function MessageItem({
     </div>
   );
 }
-
-

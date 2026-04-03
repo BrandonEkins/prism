@@ -86,7 +86,7 @@ export interface TasksWidgetProps {
  *   onAddClick={() => openAddTaskDialog()}
  * />
  */
-export function TasksWidget({
+export const TasksWidget = React.memo(function TasksWidget({
   tasks: externalTasks,
   userId,
   showCompleted = false,
@@ -203,7 +203,7 @@ export function TasksWidget({
       )}
     </WidgetContainer>
   );
-}
+});
 
 
 /**

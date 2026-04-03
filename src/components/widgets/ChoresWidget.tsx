@@ -82,7 +82,7 @@ export interface ChoresWidgetProps {
  *   onAddClick={() => openAddChoreDialog()}
  * />
  */
-export function ChoresWidget({
+export const ChoresWidget = React.memo(function ChoresWidget({
   chores: externalChores,
   userId,
   showDisabled = false,
@@ -204,7 +204,7 @@ export function ChoresWidget({
       )}
     </WidgetContainer>
   );
-}
+});
 
 /**
  * CHORE ITEM

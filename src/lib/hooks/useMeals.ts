@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback } from 'react';
+import type { DayOfWeek } from '@/lib/constants/days';
 import { useFetch } from './useFetch';
 
 export type { Meal } from '@/types';
@@ -25,7 +26,7 @@ function transformMeals(json: unknown): Meal[] {
       servings: number | null;
       ingredients: string | null;
       weekOf: string;
-      dayOfWeek: 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';
+      dayOfWeek: DayOfWeek;
       mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack';
       cookedAt: string | null;
       cookedBy: { id: string; name: string; color: string } | null;

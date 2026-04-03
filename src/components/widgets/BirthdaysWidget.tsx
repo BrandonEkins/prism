@@ -46,7 +46,7 @@ function daysUntilLabel(days: number): string {
   return `${days} days`;
 }
 
-export function BirthdaysWidget({
+export const BirthdaysWidget = React.memo(function BirthdaysWidget({
   birthdays,
   loading = false,
   error = null,
@@ -117,4 +117,4 @@ export function BirthdaysWidget({
       )}
     </WidgetContainer>
   );
-}
+});

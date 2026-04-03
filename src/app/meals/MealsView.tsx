@@ -43,7 +43,7 @@ function getMealTypeEmoji(mealType: string): string {
   }
 }
 
-const ALL_DAYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'] as const;
+import { DAYS_OF_WEEK as ALL_DAYS } from '@/lib/constants/days';
 
 export function MealsView() {
   const { requireAuth } = useAuth();

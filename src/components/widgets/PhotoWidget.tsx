@@ -11,7 +11,7 @@ export interface PhotoWidgetProps {
   className?: string;
 }
 
-export function PhotoWidget({ className }: PhotoWidgetProps) {
+export const PhotoWidget = React.memo(function PhotoWidget({ className }: PhotoWidgetProps) {
   const { photos, loading, error } = usePhotos({
     sort: 'random',
     limit: 50,
@@ -39,4 +39,4 @@ export function PhotoWidget({ className }: PhotoWidgetProps) {
       )}
     </WidgetContainer>
   );
-}
+});
