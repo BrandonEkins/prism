@@ -41,6 +41,8 @@ All notable changes to Prism are documented in this file.
 - **README**: Replaced GIF demos with static screenshots for faster loading
 
 ### Security
+- **Rate limiting**: In-memory fallback limiter — rate limits now enforced even when Redis is unavailable (previously all requests passed through)
+- **Backups**: `POST /api/admin/backups` rate-limited to 5 per hour per user
 - **API**: `GET /api/settings` now requires display auth — previously exposed all app configuration unauthenticated
 - **API**: `GET /api/settings/wifi` now requires auth — previously exposed Wi-Fi credentials unauthenticated
 - **API**: `POST /api/shopping/scan` now requires display auth — previously allowed unauthenticated writes to shopping list
