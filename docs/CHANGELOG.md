@@ -29,6 +29,7 @@ All notable changes to Prism are documented in this file.
 
 ### Added
 - **Docker**: Multi-arch builds (amd64 + arm64) — Raspberry Pi support via pre-built GHCR image
+- **Health check**: `GET /api/health` now probes PostgreSQL and Redis — returns 503 with `status: "degraded"` if either is down (previously always returned 200)
 - **Calendar**: Profile columns now follow family member sort order from Settings
 - **Calendar**: Family calendar group always sorts first before person columns
 
@@ -38,6 +39,11 @@ All notable changes to Prism are documented in this file.
 - **Bus Tracker**: Route dialog "Scheduled" field renamed to "Home ETA" with helper text clarifying it is the expected arrival time at your stop
 - **Bus Tracker**: Large minute values now display as hours and minutes (e.g., "15h 25m" instead of "925m")
 - **README**: Replaced GIF demos with static screenshots for faster loading
+
+### Security
+- **API**: `GET /api/settings` now requires display auth — previously exposed all app configuration unauthenticated
+- **API**: `GET /api/settings/wifi` now requires auth — previously exposed Wi-Fi credentials unauthenticated
+- **API**: `POST /api/shopping/scan` now requires display auth — previously allowed unauthenticated writes to shopping list
 
 ### Fixed
 - **Virtual Keyboard**: Toggle button now appears correctly on touchscreen laptops where Windows converts touch events to mouse events (uses `navigator.maxTouchPoints` instead of pointer type tracking)
