@@ -97,27 +97,21 @@
     font-size: 16px;
   }
 
-  @media (pointer: fine) {
+  @media (min-width: 768px) and (pointer: coarse) {
     html {
       font-size: 18px;
     }
   }
 
-  @media (min-width: 768px) and (pointer: coarse) {
+  @media (min-width: 1024px) and (pointer: coarse) {
     html {
       font-size: 20px;
     }
   }
 
-  @media (min-width: 1024px) and (pointer: coarse) {
-    html {
-      font-size: 22px;
-    }
-  }
-
   @media (min-width: 1400px) and (pointer: coarse) {
     html {
-      font-size: 24px;
+      font-size: 22px;
     }
   }
 
