@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { BrowserMultiFormatReader } from '@zxing/browser';
+import type { BrowserMultiFormatReader as BrowserMultiFormatReaderType } from '@zxing/browser';
 
 export type CameraScannerState = 'idle' | 'starting' | 'scanning' | 'error';
 
@@ -14,7 +14,7 @@ export function useCameraScanner({ onScan, onError }: UseCameraScannerOptions) {
   const [state, setState] = useState<CameraScannerState>('idle');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  const readerRef = useRef<BrowserMultiFormatReader | null>(null);
+  const readerRef = useRef<BrowserMultiFormatReaderType | null>(null);
   const activeRef = useRef(false);
 
   const stop = useCallback(() => {
@@ -35,6 +35,9 @@ export function useCameraScanner({ onScan, onError }: UseCameraScannerOptions) {
     activeRef.current = true;
 
     try {
+      const { BrowserMultiFormatReader } = await import('@zxing/browser');
+      if (!activeRef.current) return;
+
       const reader = new BrowserMultiFormatReader();
       readerRef.current = reader;
 

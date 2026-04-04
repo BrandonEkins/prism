@@ -31,7 +31,11 @@ import { useOrientation } from '@/lib/hooks/useOrientation';
 import { useIsMobile } from '@/lib/hooks/useIsMobile';
 import { cn } from '@/lib/utils';
 import type { ShoppingItem } from '@/types';
-import { CameraScannerOverlay } from '@/components/input/CameraScannerOverlay';
+import dynamic from 'next/dynamic';
+const CameraScannerOverlay = dynamic(
+  () => import('@/components/input/CameraScannerOverlay').then(m => m.CameraScannerOverlay),
+  { ssr: false }
+);
 
 export function getCategoryEmoji(category: string): string {
   // Fallback function — components should prefer the hook's getCategoryEmoji
