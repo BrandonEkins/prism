@@ -155,7 +155,7 @@ export function InputSection() {
               </SelectContent>
             </Select>
             <p className="text-[11px] text-muted-foreground">
-              Scanned items go here. Falls back to the first list named "Groceries" if not set.
+              Scanned items go here. Falls back to the first list named &quot;Groceries&quot; if not set.
             </p>
           </div>
 

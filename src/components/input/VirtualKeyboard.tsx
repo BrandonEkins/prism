@@ -87,7 +87,7 @@ export function VirtualKeyboard() {
           activeInputRef.current?.blur();
         }
         if (button === '{mic}') {
-          isListening ? stopListening() : startListening();
+          if (isListening) { stopListening(); } else { startListening(); }
         }
       },
       layout,
