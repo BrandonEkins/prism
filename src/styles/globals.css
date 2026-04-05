@@ -171,16 +171,31 @@
 }
 
 @layer utilities {
+  /* Touch targets: Apple HIG 44px minimum — only enforced on touch devices */
   .touch-target {
-    @apply min-h-[44px] min-w-[44px];
+    @apply min-h-[32px] min-w-[32px];
   }
 
   .touch-target-lg {
-    @apply min-h-[48px] min-w-[48px];
+    @apply min-h-[36px] min-w-[36px];
   }
 
   .touch-target-xl {
-    @apply min-h-[60px] min-w-[60px];
+    @apply min-h-[44px] min-w-[44px];
+  }
+
+  @media (pointer: coarse) {
+    .touch-target {
+      @apply min-h-[44px] min-w-[44px];
+    }
+
+    .touch-target-lg {
+      @apply min-h-[48px] min-w-[48px];
+    }
+
+    .touch-target-xl {
+      @apply min-h-[60px] min-w-[60px];
+    }
   }
 
   .text-truncate {

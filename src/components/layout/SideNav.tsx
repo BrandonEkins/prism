@@ -131,7 +131,7 @@ export function SideNav({ user, onLogout, onLogin, uiHidden, className }: SideNa
         )}
       >
         {/* HEADER WITH LOGO */}
-        <div className={cn('flex items-center h-16 px-2', expanded ? 'justify-start' : 'justify-center')}>
+        <div className={cn('flex items-center h-12 [@media(pointer:coarse)]:h-16 px-2', expanded ? 'justify-start' : 'justify-center')}>
           <Link href="/" className="flex items-center gap-2" aria-label="Prism home">
             <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 overflow-hidden">
               <PrismIcon size={24} />
@@ -153,7 +153,7 @@ export function SideNav({ user, onLogout, onLogin, uiHidden, className }: SideNa
                     href={item.href}
                     aria-label={item.label}
                     className={cn(
-                      'flex items-center gap-3 px-3 py-2.5 rounded-lg',
+                      'flex items-center gap-3 px-3 py-1.5 [@media(pointer:coarse)]:py-2.5 rounded-lg',
                       'text-sm font-medium',
                       'transition-colors duration-200',
                       'touch-target',
@@ -194,7 +194,7 @@ export function SideNav({ user, onLogout, onLogin, uiHidden, className }: SideNa
           <button
             onClick={user ? onLogout : onLogin}
             className={cn(
-              'flex items-center gap-3 px-3 py-2.5 rounded-lg w-full',
+              'flex items-center gap-3 px-3 py-1.5 [@media(pointer:coarse)]:py-2.5 rounded-lg w-full',
               'text-sm font-medium',
               'transition-colors duration-200',
               'touch-target',

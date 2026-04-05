@@ -37,7 +37,7 @@ export function SubpageHeader({ icon, title, badge, actions, overflow }: Subpage
 
   return (
     <header className="flex-shrink-0 border-b border-border bg-card/85 backdrop-blur-sm px-4 safe-area-top">
-      <div className={cn('flex items-center justify-between', isMobile ? 'h-11' : 'h-16')}>
+      <div className={cn('flex items-center justify-between', isMobile ? 'h-11' : 'h-12 [@media(pointer:coarse)]:h-16')}>
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" asChild className="hidden md:inline-flex">
             <Link href="/" aria-label="Back to dashboard">
