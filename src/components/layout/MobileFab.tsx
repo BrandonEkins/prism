@@ -14,6 +14,7 @@ import {
   ArrowUpDown,
   Eye,
   EyeOff,
+  ScanLine,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/components/providers/ThemeProvider';
@@ -86,6 +87,7 @@ export function MobileFab({ user, onLogin, onLogout, uiHidden }: MobileFabProps)
   const themeLabel = theme === 'light' ? 'Light' : theme === 'dark' ? 'Dark' : 'Auto';
 
   const isDashboard = pathname === '/' || pathname?.startsWith('/d/');
+  const isShopping = pathname === '/shopping';
 
   const actions = [
     {
@@ -95,6 +97,17 @@ export function MobileFab({ user, onLogin, onLogout, uiHidden }: MobileFabProps)
       onClick: () => setIsOpen(false),
       href: '/',
     },
+    ...(isShopping ? [
+      {
+        key: 'scan',
+        icon: <ScanLine className="h-5 w-5" />,
+        label: 'Scan Barcode',
+        onClick: () => {
+          setIsOpen(false);
+          window.dispatchEvent(new CustomEvent('prism:open-barcode-scanner'));
+        },
+      },
+    ] : []),
     ...(isDashboard ? [
       {
         key: 'reorder',

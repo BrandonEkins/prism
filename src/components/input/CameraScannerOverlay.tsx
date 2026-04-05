@@ -18,10 +18,19 @@ function hasBarcodeDetector() {
   return typeof window !== 'undefined' && 'BarcodeDetector' in window;
 }
 
-// AudioContext beep — works on iOS where navigator.vibrate does not
-function playBeep(type: 'success' | 'error' = 'success') {
+// Pre-unlocked AudioContext — must be created during a synchronous user gesture.
+// iOS breaks the gesture chain at any await, so we unlock here then play later.
+function makeAudioContext(): AudioContext | null {
   try {
     const ctx = new AudioContext();
+    ctx.resume().catch(() => {});
+    return ctx;
+  } catch { return null; }
+}
+
+function playBeep(ctx: AudioContext | null, type: 'success' | 'error' = 'success') {
+  if (!ctx || ctx.state === 'closed') return;
+  try {
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.connect(gain);
@@ -42,7 +51,7 @@ function playBeep(type: 'success' | 'error' = 'success') {
       osc.stop(ctx.currentTime + 0.22);
     }
     setTimeout(() => ctx.close().catch(() => {}), 400);
-  } catch { /* AudioContext unavailable */ }
+  } catch { /* ignore */ }
 }
 
 async function decodeImageFile(file: File): Promise<string | null> {
@@ -59,7 +68,6 @@ async function decodeImageFile(file: File): Promise<string | null> {
     } finally {
       URL.revokeObjectURL(url);
     }
-
     const MAX_W = 1280;
     const scale = img.naturalWidth > MAX_W ? MAX_W / img.naturalWidth : 1;
     const w = Math.round(img.naturalWidth * scale);
@@ -68,41 +76,31 @@ async function decodeImageFile(file: File): Promise<string | null> {
     canvas.width = w;
     canvas.height = h;
     canvas.getContext('2d')!.drawImage(img, 0, 0, w, h);
-
     const { BrowserMultiFormatReader } = await import('@zxing/browser');
     const result = await new BrowserMultiFormatReader().decodeFromCanvas(canvas);
     return result.getText();
-  } catch {
-    return null;
-  }
+  } catch { return null; }
 }
 
 export function CameraScannerOverlay({ onClose, onScan }: CameraScannerOverlayProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const audioCtxRef = useRef<AudioContext | null>(null);
   const [mounted, setMounted] = React.useState(false);
   const [usePhotoMode, setUsePhotoMode] = React.useState(false);
   const [photoDecoding, setPhotoDecoding] = React.useState(false);
 
-  // Use refs for callbacks passed in so we never have stale closures
+  // Use refs so callbacks never go stale across async boundaries
   const onScanRef = useRef(onScan);
   const onCloseRef = useRef(onClose);
   useEffect(() => { onScanRef.current = onScan; }, [onScan]);
   useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
 
+  // Continuous scanner (Android/Chrome): just fire onScan — parent closes
   const handleSuccess = useCallback((barcode: string) => {
-    playBeep('success');
+    playBeep(audioCtxRef.current, 'success');
     onScanRef.current(barcode);
-    onCloseRef.current();
-  }, []);
-
-  const handleNoBarcode = useCallback(() => {
-    playBeep('error');
-    toast({
-      title: 'No barcode found',
-      description: 'Hold steady and make sure the barcode fills the frame.',
-      variant: 'destructive',
-    });
+    // Parent's onScan handler closes the overlay immediately
   }, []);
 
   const { state, errorMessage, start, stop } = useCameraScanner({
@@ -128,6 +126,13 @@ export function CameraScannerOverlay({ onClose, onScan }: CameraScannerOverlayPr
     onCloseRef.current();
   }, [stop]);
 
+  const handleOpenCamera = useCallback(() => {
+    // Create and unlock AudioContext NOW (synchronous user gesture).
+    // iOS breaks the gesture chain at any await, so this must happen before the file input click.
+    audioCtxRef.current = makeAudioContext();
+    fileInputRef.current?.click();
+  }, []);
+
   const handlePhotoCapture = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -137,11 +142,18 @@ export function CameraScannerOverlay({ onClose, onScan }: CameraScannerOverlayPr
     if (fileInputRef.current) fileInputRef.current.value = '';
 
     if (barcode) {
-      handleSuccess(barcode);
+      playBeep(audioCtxRef.current, 'success');
+      onScanRef.current(barcode);
+      // Parent closes the overlay — don't call onClose here to avoid race
     } else {
-      handleNoBarcode();
+      playBeep(audioCtxRef.current, 'error');
+      toast({
+        title: 'No barcode found',
+        description: 'Hold steady so the barcode fills the frame, then try again.',
+        variant: 'destructive',
+      });
     }
-  }, [handleSuccess, handleNoBarcode]);
+  }, []);
 
   if (!mounted) return null;
 
@@ -171,7 +183,7 @@ export function CameraScannerOverlay({ onClose, onScan }: CameraScannerOverlayPr
             <input ref={fileInputRef} type="file" accept="image/*" capture="environment"
               className="hidden" onChange={handlePhotoCapture} />
             <Button size="lg" className="gap-2 text-base px-8" disabled={photoDecoding}
-              onClick={() => fileInputRef.current?.click()}>
+              onClick={handleOpenCamera}>
               {photoDecoding
                 ? <><Loader2 className="h-5 w-5 animate-spin" /> Scanning...</>
                 : <><Camera className="h-5 w-5" /> Open Camera</>}
@@ -196,8 +208,7 @@ export function CameraScannerOverlay({ onClose, onScan }: CameraScannerOverlayPr
             )}
             {state === 'starting' && (
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-white">
-                <Loader2 className="h-8 w-8 animate-spin" />
-                <p className="text-sm">Starting camera...</p>
+                <Loader2 className="h-8 w-8 animate-spin" /><p className="text-sm">Starting camera...</p>
               </div>
             )}
             {state === 'error' && (

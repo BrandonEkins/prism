@@ -9,7 +9,6 @@ import {
   Maximize2,
   Minimize2,
   Tags,
-  Camera,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -65,8 +64,9 @@ export function ShoppingView() {
 
   const clearScan = useCallback(() => setScan(null), []);
 
-  // Called by overlay immediately after decode + close — does dryRun lookup then drives step flow
+  // Called by overlay after decode — close the scanner immediately, then look up product
   const handleCameraScan = useCallback(async (barcode: string) => {
+    setShowCameraScanner(false); // close overlay right away; don't wait for async
     setScan({ barcode, product: null, existingInLists: [], step: 'loading', targetListId: null, targetListName: null });
     try {
       const r = await fetch('/api/shopping/scan', {
@@ -163,6 +163,13 @@ export function ShoppingView() {
     if (scan?.step !== 'list' || lists.length !== 1) return;
     handleListChosen(lists[0]!.id, lists[0]!.name);
   }, [scan?.step, lists, handleListChosen]);
+
+  // Listen for PWA FAB "Scan" button — opens scanner from mobile + button
+  useEffect(() => {
+    const handler = () => setShowCameraScanner(true);
+    window.addEventListener('prism:open-barcode-scanner', handler);
+    return () => window.removeEventListener('prism:open-barcode-scanner', handler);
+  }, []);
 
   // Listen for barcode scan results — scroll to and highlight the added/updated item
   useEffect(() => {
@@ -345,9 +352,6 @@ export function ShoppingView() {
               badge={activeList ? <Badge variant="secondary">{checkedItems}/{totalItems}</Badge> : undefined}
               actions={<>
                 <UndoButton />
-                <Button variant="ghost" size="icon" onClick={() => setShowCameraScanner(true)} title="Scan barcode with camera">
-                  <Camera className="h-4 w-4" />
-                </Button>
                 <Button variant="ghost" size="icon" onClick={() => setShoppingMode(true)} title="Enter shopping mode">
                   <Maximize2 className="h-4 w-4" />
                 </Button>
