@@ -46,31 +46,92 @@ export function getCategoryEmoji(category: string): string {
   return defaults[category] || '🛒';
 }
 
-function vibrate(pattern: number | number[]) {
-  try { navigator.vibrate?.(pattern); } catch { /* unsupported */ }
+// Scan flow types
+type ScanStep = 'loading' | 'duplicate' | 'list' | 'category' | null;
+interface ScanProduct { name: string; brand?: string; suggestedCategory?: string | null }
+interface ScanExisting { listId: string; listName: string; itemId: string }
+interface ScanState {
+  barcode: string;
+  product: ScanProduct | null;
+  existingInLists: ScanExisting[];
+  step: ScanStep;
+  targetListId: string | null;
+  targetListName: string | null;
 }
 
 export function ShoppingView() {
   const [showCameraScanner, setShowCameraScanner] = useState(false);
-  // List picker state: pending barcode waiting for user to choose a list
-  const [pendingScan, setPendingScan] = useState<string | null>(null);
+  const [scan, setScan] = useState<ScanState | null>(null);
 
-  const doScan = useCallback(async (barcode: string, listId?: string) => {
+  const clearScan = useCallback(() => setScan(null), []);
+
+  // Called by overlay immediately after decode + close — does dryRun lookup then drives step flow
+  const handleCameraScan = useCallback(async (barcode: string) => {
+    setScan({ barcode, product: null, existingInLists: [], step: 'loading', targetListId: null, targetListName: null });
     try {
       const r = await fetch('/api/shopping/scan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ barcode, ...(listId ? { listId } : {}) }),
+        body: JSON.stringify({ barcode, dryRun: true }),
       });
-      const data = await r.json() as { found: boolean; item?: { name: string }; action?: string; itemId?: string };
+      const data = await r.json() as {
+        found: boolean;
+        product?: ScanProduct;
+        existingInLists?: ScanExisting[];
+      };
 
-      if (!data.found) {
-        vibrate([100, 80, 100]); // no-match pattern
+      if (!data.found || !data.product) {
         toast({ title: 'Product not found', description: 'Barcode not in database. Add it manually.', variant: 'destructive' });
+        setScan(null);
         return;
       }
 
-      vibrate(200); // success
+      setScan(prev => prev ? ({
+        ...prev,
+        product: data.product!,
+        existingInLists: data.existingInLists ?? [],
+        step: 'list', // always start at list picker; duplicate warning shown after list selection
+      }) : null);
+    } catch {
+      toast({ title: 'Lookup failed', variant: 'destructive' });
+      setScan(null);
+    }
+  }, []);
+
+  // After list is chosen — check for cross-list duplicates, then go to category picker
+  const handleListChosen = useCallback((listId: string, listName: string) => {
+    setScan(prev => {
+      if (!prev) return null;
+      const inOtherLists = prev.existingInLists.filter(e => e.listId !== listId);
+      return {
+        ...prev,
+        targetListId: listId,
+        targetListName: listName,
+        step: inOtherLists.length > 0 ? 'duplicate' : 'category',
+      };
+    });
+  }, []);
+
+  // Execute the actual add
+  const doAdd = useCallback(async (category: string | null) => {
+    if (!scan?.product || !scan.targetListId) return;
+    setScan(prev => prev ? { ...prev, step: null } : null);
+    try {
+      const r = await fetch('/api/shopping/scan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          barcode: scan.barcode,
+          listId: scan.targetListId,
+          ...(category ? { category } : {}),
+        }),
+      });
+      const data = await r.json() as { found: boolean; item?: { name: string }; action?: string; itemId?: string };
+      setScan(null);
+      if (!data.found) {
+        toast({ title: 'Product not found', variant: 'destructive' });
+        return;
+      }
       window.dispatchEvent(new CustomEvent('prism:scan-result', { detail: data }));
       toast({
         title: data.action === 'updated_existing'
@@ -78,15 +139,10 @@ export function ShoppingView() {
           : `Added — ${data.item!.name}`,
       });
     } catch {
-      vibrate([100, 80, 100]);
-      toast({ title: 'Scan failed', variant: 'destructive' });
+      setScan(null);
+      toast({ title: 'Add failed', variant: 'destructive' });
     }
-  }, []);
-
-  const handleCameraScan = useCallback((barcode: string) => {
-    // Will be called after lists are available below — see where lists is defined
-    setPendingScan(barcode);
-  }, []);
+  }, [scan]);
 
   const {
     lists, loading, error, refreshLists, familyMembers,
@@ -102,15 +158,11 @@ export function ShoppingView() {
     totalItems, checkedItems, progress,
   } = useShoppingViewData();
 
-  // When a scan comes in: if only one list, submit immediately; otherwise show picker
+  // Auto-advance: if only 1 list, skip list picker and go straight to category
   useEffect(() => {
-    if (!pendingScan || lists.length === 0) return;
-    if (lists.length === 1) {
-      doScan(pendingScan, lists[0]!.id);
-      setPendingScan(null);
-    }
-    // If multiple lists, leave pendingScan set — the picker UI below will show
-  }, [pendingScan, lists, doScan]);
+    if (scan?.step !== 'list' || lists.length !== 1) return;
+    handleListChosen(lists[0]!.id, lists[0]!.name);
+  }, [scan?.step, lists, handleListChosen]);
 
   // Listen for barcode scan results — scroll to and highlight the added/updated item
   useEffect(() => {
@@ -484,30 +536,96 @@ export function ShoppingView() {
           />
         )}
 
-        {/* List picker — shown after scan when multiple lists exist */}
-        {pendingScan && lists.length > 1 && (
-          <div className="fixed inset-0 z-[9100] flex items-end justify-center bg-black/60" onClick={() => setPendingScan(null)}>
-            <div className="w-full max-w-lg bg-card rounded-t-2xl p-4 pb-8 shadow-xl" onClick={e => e.stopPropagation()}>
-              <div className="w-10 h-1 bg-muted-foreground/30 rounded-full mx-auto mb-4" />
-              <p className="text-sm text-muted-foreground text-center mb-3">Add scanned item to which list?</p>
-              <div className="flex flex-col gap-2">
-                {lists.map(list => (
-                  <Button
-                    key={list.id}
-                    variant={list.id === activeListId ? 'default' : 'outline'}
-                    className="w-full justify-start text-base py-3"
-                    onClick={() => {
-                      doScan(pendingScan, list.id);
-                      setPendingScan(null);
-                    }}
-                  >
-                    {list.name}
-                  </Button>
-                ))}
+        {/* Scan flow bottom sheets */}
+        {scan && scan.step && scan.step !== 'loading' && (() => {
+          const product = scan.product;
+          if (!product) return null;
+          return (
+            <div className="fixed inset-0 z-[9100] flex items-end justify-center bg-black/60"
+              onClick={clearScan}>
+              <div className="w-full max-w-lg bg-card rounded-t-2xl p-4 pb-8 shadow-xl"
+                onClick={e => e.stopPropagation()}>
+                <div className="w-10 h-1 bg-muted-foreground/30 rounded-full mx-auto mb-3" />
+                <p className="font-semibold text-center mb-1">{product.name}</p>
+                {product.brand && <p className="text-sm text-muted-foreground text-center mb-3">{product.brand}</p>}
+
+                {/* Step: list picker */}
+                {scan.step === 'list' && (
+                  <>
+                    <p className="text-sm text-muted-foreground text-center mb-3">Which list?</p>
+                    <div className="flex flex-col gap-2">
+                      {lists.map(list => (
+                        <Button key={list.id}
+                          variant={list.id === activeListId ? 'default' : 'outline'}
+                          className="w-full justify-start text-base py-3"
+                          onClick={() => handleListChosen(list.id, list.name)}>
+                          {list.name}
+                        </Button>
+                      ))}
+                    </div>
+                  </>
+                )}
+
+                {/* Step: duplicate warning */}
+                {scan.step === 'duplicate' && (() => {
+                  const others = scan.existingInLists.filter(e => e.listId !== scan.targetListId);
+                  return (
+                    <>
+                      <p className="text-sm text-muted-foreground text-center mb-3">
+                        Already on <strong>{others.map(e => e.listName).join(', ')}</strong>.
+                        Add to <strong>{scan.targetListName}</strong> anyway?
+                      </p>
+                      <div className="flex flex-col gap-2">
+                        <Button className="w-full py-3" onClick={() => setScan(prev => prev ? { ...prev, step: 'category' } : null)}>
+                          Yes, add to {scan.targetListName}
+                        </Button>
+                        <Button variant="outline" className="w-full py-3" onClick={clearScan}>
+                          Cancel
+                        </Button>
+                      </div>
+                    </>
+                  );
+                })()}
+
+                {/* Step: category picker */}
+                {scan.step === 'category' && (
+                  <>
+                    <p className="text-sm text-muted-foreground text-center mb-3">Which category?</p>
+                    <div className="flex flex-col gap-2 max-h-64 overflow-y-auto">
+                      {dynamicCategories.map(cat => (
+                        <Button key={cat.id}
+                          variant={cat.id === product.suggestedCategory ? 'default' : 'outline'}
+                          className="w-full justify-start text-base py-3 gap-2"
+                          onClick={() => doAdd(cat.id)}>
+                          <span>{getDynCategoryEmoji(cat.id)}</span>
+                          <span>{cat.name}</span>
+                          {cat.id === product.suggestedCategory && (
+                            <span className="ml-auto text-xs opacity-60">suggested</span>
+                          )}
+                        </Button>
+                      ))}
+                      <Button variant="ghost" className="w-full py-3 text-muted-foreground"
+                        onClick={() => doAdd(null)}>
+                        No category
+                      </Button>
+                    </div>
+                  </>
+                )}
+
+                <Button variant="ghost" className="w-full mt-2 text-muted-foreground" onClick={clearScan}>
+                  Cancel
+                </Button>
               </div>
-              <Button variant="ghost" className="w-full mt-2 text-muted-foreground" onClick={() => setPendingScan(null)}>
-                Cancel
-              </Button>
+            </div>
+          );
+        })()}
+
+        {/* Loading indicator while doing dryRun lookup */}
+        {scan?.step === 'loading' && (
+          <div className="fixed inset-0 z-[9100] flex items-center justify-center bg-black/40">
+            <div className="bg-card rounded-2xl p-6 flex flex-col items-center gap-3 shadow-xl">
+              <div className="h-6 w-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+              <p className="text-sm text-muted-foreground">Looking up product…</p>
             </div>
           </div>
         )}
