@@ -97,6 +97,13 @@
     font-size: 16px;
   }
 
+  /* Desktop/laptop (mouse/trackpad): tighter base matches dashboard UIs */
+  @media (pointer: fine) {
+    html {
+      font-size: 14px;
+    }
+  }
+
   @media (min-width: 768px) and (pointer: coarse) {
     html {
       font-size: 18px;

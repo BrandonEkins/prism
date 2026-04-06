@@ -89,6 +89,8 @@ export function CameraScannerOverlay({ onClose, onScan }: CameraScannerOverlayPr
   const [mounted, setMounted] = React.useState(false);
   const [usePhotoMode, setUsePhotoMode] = React.useState(false);
   const [photoDecoding, setPhotoDecoding] = React.useState(false);
+  // Self-dismiss: hide immediately on success without waiting for parent re-render
+  const [dismissed, setDismissed] = React.useState(false);
 
   // Use refs so callbacks never go stale across async boundaries
   const onScanRef = useRef(onScan);
@@ -96,11 +98,12 @@ export function CameraScannerOverlay({ onClose, onScan }: CameraScannerOverlayPr
   useEffect(() => { onScanRef.current = onScan; }, [onScan]);
   useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
 
-  // Continuous scanner (Android/Chrome): just fire onScan — parent closes
+  // Continuous scanner (Android/Chrome): self-dismiss immediately then notify parent
   const handleSuccess = useCallback((barcode: string) => {
+    if (typeof navigator !== 'undefined') navigator.vibrate?.(80);
     playBeep(audioCtxRef.current, 'success');
+    setDismissed(true);
     onScanRef.current(barcode);
-    // Parent's onScan handler closes the overlay immediately
   }, []);
 
   const { state, errorMessage, start, stop } = useCameraScanner({
@@ -142,9 +145,10 @@ export function CameraScannerOverlay({ onClose, onScan }: CameraScannerOverlayPr
     if (fileInputRef.current) fileInputRef.current.value = '';
 
     if (barcode) {
+      if (typeof navigator !== 'undefined') navigator.vibrate?.(80);
       playBeep(audioCtxRef.current, 'success');
+      setDismissed(true); // self-dismiss immediately, don't wait for parent re-render
       onScanRef.current(barcode);
-      // Parent closes the overlay — don't call onClose here to avoid race
     } else {
       playBeep(audioCtxRef.current, 'error');
       toast({
@@ -155,7 +159,7 @@ export function CameraScannerOverlay({ onClose, onScan }: CameraScannerOverlayPr
     }
   }, []);
 
-  if (!mounted) return null;
+  if (!mounted || dismissed) return null;
 
   return createPortal(
     <div className="fixed inset-0 z-[9000] flex flex-col bg-black/95">

@@ -49,6 +49,10 @@ All notable changes to Prism are documented in this file.
 - **API**: `POST /api/shopping/scan` now requires display auth — previously allowed unauthenticated writes to shopping list
 
 ### Fixed
+- **Camera Scanner**: Overlay now self-dismisses immediately after a successful scan — no longer stays open waiting for parent state propagation
+- **Camera Scanner**: Haptic feedback (`navigator.vibrate`) on successful scan (Android; iOS does not support web vibration)
+- **Camera Scanner**: iOS photo mode — AudioContext unlocked synchronously on "Open Camera" tap to maximise audio feedback compatibility
+- **UI**: Desktop/laptop font size reduced to 14px base (via `pointer: fine` media query) — previously used the same 16px as touch displays, making the UI feel oversized on mouse-driven monitors
 - **Docker**: `VirtualKeyboard` (simple-keyboard) and `CameraScannerOverlay` (@zxing/browser) now loaded via `next/dynamic` with `ssr: false` — prevents `HTMLInputElement is not defined` crash during Next.js prerender on fresh builds
 - **Virtual Keyboard**: Toggle button now appears correctly on touchscreen laptops where Windows converts touch events to mouse events (uses `navigator.maxTouchPoints` instead of pointer type tracking)
 - **Virtual Keyboard**: Reduced height from 38vh to 32vh — less intrusive on 1080p displays
