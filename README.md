@@ -69,7 +69,7 @@ Open **http://localhost:3000** and log in with PIN `1234` (parent) or `0000` (ch
 
 Build your home view with drag-and-drop widgets:
 
-- **Calendar** - Day/week/month views syncing with Google Calendar & iCal
+- **Calendar** - Day/week/month views with bidirectional Google Calendar sync and iCal support
 - **Weather** - Current conditions and forecasts via OpenWeatherMap
 - **Photos** - Rotating family photo slideshow from OneDrive
 - **Tasks** - To-do lists with due dates, syncs with Microsoft To Do
@@ -109,7 +109,7 @@ Beyond the dashboard, Prism includes dedicated pages for:
 
 ### Integrations
 
-- **Google Calendar** - Events (read-only via iCal or OAuth)
+- **Google Calendar** - Bidirectional sync via OAuth — create, edit, and delete events in Prism and changes push back to Google Calendar; iCal supported for read-only calendar sources
 - **Microsoft To Do** - Tasks, shopping lists, and wish lists (bidirectional sync)
 - **OneDrive** - Photos for slideshow and wallpaper
 - **OpenWeatherMap** - Weather data
