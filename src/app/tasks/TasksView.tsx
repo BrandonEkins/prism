@@ -139,6 +139,26 @@ interface GroupDef {
   celebrationTarget?: { id: string; name: string };
 }
 
+interface SubGroupDef {
+  key: string;
+  label: string;
+  color: string;
+  tasks: Task[];
+}
+
+interface NestedGroupDef {
+  key: string;
+  label: string;
+  color: string;
+  avatar: React.ReactNode;
+  tasks: Task[];
+  subGroups: SubGroupDef[];
+  inlineValue: string;
+  onInlineChange: (v: string) => void;
+  onInlineSubmit: () => void;
+  celebrationTarget?: { id: string; name: string };
+}
+
 function GroupedTaskGrid({
   groups,
   toggleTask,
@@ -267,6 +287,137 @@ function GroupedTaskGrid({
   );
 }
 
+// ---------- Nested grouped task grid (person→list or list→person) ----------
+
+function NestedGroupedTaskGrid({
+  primaryGroups,
+  toggleTask,
+  editTask,
+  setCelebratingUser,
+  isMobile = false,
+}: {
+  primaryGroups: NestedGroupDef[];
+  toggleTask: (id: string) => Promise<boolean>;
+  editTask: (task: Task) => void;
+  setCelebratingUser: (user: { id: string; name: string } | null) => void;
+  isMobile?: boolean;
+}) {
+  const groupKeys = useMemo(() => primaryGroups.map(g => g.key), [primaryGroups]);
+  const [groupOrder, setGroupOrder] = useState<string[]>([]);
+
+  const effectiveOrder = useMemo(() => {
+    const known = groupOrder.filter(k => groupKeys.includes(k));
+    const newKeys = groupKeys.filter(k => !known.includes(k));
+    return [...known, ...newKeys];
+  }, [groupOrder, groupKeys]);
+
+  const saveOrder = useCallback((order: string[]) => {
+    setGroupOrder(order);
+    try { localStorage.setItem('prism:task-nested-group-order', JSON.stringify(order)); } catch {}
+  }, []);
+
+  useState(() => {
+    try {
+      const saved = localStorage.getItem('prism:task-nested-group-order');
+      if (saved) setGroupOrder(JSON.parse(saved));
+    } catch {}
+  });
+
+  const { draggedId, getDragProps } = useDragReorder({ order: effectiveOrder, onReorder: saveOrder });
+
+  const sortedGroups = useMemo(() => {
+    const map = new Map(primaryGroups.map(g => [g.key, g]));
+    return effectiveOrder.map(k => map.get(k)).filter(Boolean) as NestedGroupDef[];
+  }, [primaryGroups, effectiveOrder]);
+
+  return (
+    <div className={cn(
+      'grid gap-2 h-full',
+      isMobile ? 'grid-cols-1' :
+      sortedGroups.length <= 2 ? 'grid-cols-1 md:grid-cols-2' :
+      sortedGroups.length <= 4 ? 'grid-cols-2' :
+      'grid-cols-2 md:grid-cols-3'
+    )}>
+      {sortedGroups.map((group) => {
+        const completedCount = group.tasks.filter(t => t.completed).length;
+        const isDragging = draggedId === group.key;
+        return (
+          <div
+            key={group.key}
+            {...(isMobile ? {} : getDragProps(group.key))}
+            className={cn(
+              'flex flex-col border-2 rounded-lg overflow-hidden bg-card/90 backdrop-blur-sm transition-all',
+              !isMobile && 'cursor-grab active:cursor-grabbing touch-none',
+              isDragging && 'opacity-50 scale-95 ring-4 ring-primary/50'
+            )}
+            style={{ borderColor: group.color }}
+          >
+            {/* Primary group header */}
+            <div className="flex items-center gap-2 px-3 py-2 shrink-0" style={{ backgroundColor: group.color + '20' }}>
+              <GripVertical className="h-4 w-4 text-muted-foreground/50 shrink-0 hidden md:block" />
+              {group.avatar}
+              <h3 className="font-bold text-lg" style={{ color: group.color }}>{group.label}</h3>
+              <Badge variant="outline" className="ml-auto">{completedCount}/{group.tasks.length}</Badge>
+            </div>
+
+            {/* Inline add at primary level */}
+            <div className="px-2 pt-2 pb-1 shrink-0">
+              <Input
+                placeholder="Add a task..."
+                value={group.inlineValue}
+                onChange={(e) => group.onInlineChange(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') { e.preventDefault(); group.onInlineSubmit(); }
+                }}
+                onClick={(e) => e.stopPropagation()}
+                onMouseDown={(e) => e.stopPropagation()}
+                className="h-8 text-sm"
+                draggable={false}
+              />
+            </div>
+
+            {/* Sub-groups */}
+            <div className="flex-1 overflow-y-auto px-2 pb-2 space-y-2">
+              {group.subGroups.length === 0 && (
+                <p className="text-center text-muted-foreground text-sm py-4">No tasks</p>
+              )}
+              {group.subGroups.map((sub) => (
+                <div key={sub.key}>
+                  <div className="flex items-center gap-1.5 py-1">
+                    <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: sub.color }} />
+                    <span className="text-xs font-medium text-muted-foreground">{sub.label}</span>
+                    <Badge variant="outline" className="ml-auto text-[10px] h-4 px-1">
+                      {sub.tasks.filter(t => t.completed).length}/{sub.tasks.length}
+                    </Badge>
+                  </div>
+                  <div className="space-y-1 pl-2 border-l-2" style={{ borderColor: sub.color + '60' }}>
+                    {sub.tasks.map((task) => (
+                      <TaskRow
+                        key={task.id}
+                        task={task}
+                        onToggle={async () => {
+                          const success = await toggleTask(task.id);
+                          if (success && group.celebrationTarget && !task.completed) {
+                            const allOthers = group.tasks.filter(t => t.id !== task.id);
+                            if (allOthers.every(t => t.completed)) {
+                              setCelebratingUser(group.celebrationTarget);
+                            }
+                          }
+                        }}
+                        onEdit={() => editTask(task)}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 // ---------- Main TasksView ----------
 
 export function TasksView() {
@@ -290,8 +441,8 @@ export function TasksView() {
 
   const isMobile = useIsMobile();
 
-  // Group mode: 'none' | 'person' | 'list'
-  const [groupMode, setGroupMode] = useState<'none' | 'person' | 'list'>('person');
+  // Group mode
+  const [groupMode, setGroupMode] = useState<'none' | 'person' | 'list' | 'person_then_list' | 'list_then_person'>('person');
 
   // Inline task add state
   const [inlineTask, setInlineTask] = useState('');
@@ -351,6 +502,70 @@ export function TasksView() {
 
     return groups;
   }, [groupMode, filteredTasks, taskLists]);
+
+  // Group tasks by person → list (nested)
+  const tasksByPersonThenList = useMemo(() => {
+    if (groupMode !== 'person_then_list') return null;
+
+    const buildSubGroups = (memberTasks: typeof filteredTasks): SubGroupDef[] => {
+      const subs: SubGroupDef[] = [];
+      taskLists.forEach((list) => {
+        const t = memberTasks.filter(task => (task as typeof task & { listId?: string }).listId === list.id);
+        if (t.length > 0) subs.push({ key: list.id, label: list.name, color: list.color || '#6B7280', tasks: t });
+      });
+      const noList = memberTasks.filter(task => !(task as typeof task & { listId?: string }).listId);
+      if (noList.length > 0) subs.push({ key: 'no-list', label: 'No List', color: '#6B7280', tasks: noList });
+      return subs;
+    };
+
+    const result: { member: typeof familyMembers[0] | null; tasks: typeof filteredTasks; subGroups: SubGroupDef[] }[] = [];
+
+    familyMembers.forEach((member) => {
+      const memberTasks = filteredTasks.filter(t => t.assignedTo?.id === member.id);
+      if (memberTasks.length > 0) {
+        result.push({ member, tasks: memberTasks, subGroups: buildSubGroups(memberTasks) });
+      }
+    });
+
+    const unassigned = filteredTasks.filter(t => !t.assignedTo);
+    if (unassigned.length > 0) {
+      result.push({ member: null, tasks: unassigned, subGroups: buildSubGroups(unassigned) });
+    }
+
+    return result;
+  }, [groupMode, filteredTasks, familyMembers, taskLists]);
+
+  // Group tasks by list → person (nested)
+  const tasksByListThenPerson = useMemo(() => {
+    if (groupMode !== 'list_then_person') return null;
+
+    const buildSubGroups = (listTasks: typeof filteredTasks): SubGroupDef[] => {
+      const subs: SubGroupDef[] = [];
+      familyMembers.forEach((member) => {
+        const t = listTasks.filter(task => task.assignedTo?.id === member.id);
+        if (t.length > 0) subs.push({ key: member.id, label: member.name, color: member.color, tasks: t });
+      });
+      const unassigned = listTasks.filter(task => !task.assignedTo);
+      if (unassigned.length > 0) subs.push({ key: 'unassigned', label: 'Unassigned', color: '#6B7280', tasks: unassigned });
+      return subs;
+    };
+
+    const result: { list: { id: string; name: string; color: string } | null; tasks: typeof filteredTasks; subGroups: SubGroupDef[] }[] = [];
+
+    taskLists.forEach((list) => {
+      const listTasks = filteredTasks.filter(t => (t as typeof t & { listId?: string }).listId === list.id);
+      if (listTasks.length > 0) {
+        result.push({ list: { id: list.id, name: list.name, color: list.color || '#6B7280' }, tasks: listTasks, subGroups: buildSubGroups(listTasks) });
+      }
+    });
+
+    const noList = filteredTasks.filter(t => !(t as typeof t & { listId?: string }).listId);
+    if (noList.length > 0) {
+      result.push({ list: null, tasks: noList, subGroups: buildSubGroups(noList) });
+    }
+
+    return result;
+  }, [groupMode, filteredTasks, familyMembers, taskLists]);
 
   const handleInlineAdd = async (assignedTo?: string, listId?: string) => {
     let value: string | undefined;
@@ -422,6 +637,8 @@ export function TasksView() {
     ];
     if (taskLists.length > 0) {
       opts.push({ value: 'list', label: 'List' });
+      opts.push({ value: 'person_then_list', label: 'Person → List' });
+      opts.push({ value: 'list_then_person', label: 'List → Person' });
     }
     return opts;
   }, [taskLists]);
@@ -487,7 +704,7 @@ export function TasksView() {
             selected={new Set([groupMode])}
             onSelectionChange={(s) => {
               const val = s.size > 0 ? [...s][0] : 'none';
-              setGroupMode(val as 'none' | 'person' | 'list');
+              setGroupMode(val as 'none' | 'person' | 'list' | 'person_then_list' | 'list_then_person');
             }}
             mode="single"
             icon={<Users className="h-3.5 w-3.5" />}
@@ -561,6 +778,45 @@ export function TasksView() {
               editTask={editTask}
               setCelebratingUser={setCelebratingUser}
               taskLists={taskLists}
+              isMobile={isMobile}
+            />
+          ) : groupMode === 'person_then_list' && tasksByPersonThenList ? (
+            <NestedGroupedTaskGrid
+              primaryGroups={tasksByPersonThenList.map(({ member, tasks, subGroups }) => ({
+                key: member?.id || 'unassigned',
+                label: member?.name || 'Unassigned',
+                color: member?.color || '#6B7280',
+                avatar: member
+                  ? <UserAvatar name={member.name} color={member.color} size="sm" className="h-7 w-7" />
+                  : <CheckSquare className="h-5 w-5 text-muted-foreground" />,
+                tasks,
+                subGroups,
+                inlineValue: member ? (inlineTaskByUser[member.id] || '') : inlineTask,
+                onInlineChange: (v) => member ? setInlineTaskByUser(prev => ({ ...prev, [member.id]: v })) : setInlineTask(v),
+                onInlineSubmit: () => handleInlineAdd(member?.id),
+                celebrationTarget: member ? { id: member.id, name: member.name } : undefined,
+              }))}
+              toggleTask={toggleTask}
+              editTask={editTask}
+              setCelebratingUser={setCelebratingUser}
+              isMobile={isMobile}
+            />
+          ) : groupMode === 'list_then_person' && tasksByListThenPerson ? (
+            <NestedGroupedTaskGrid
+              primaryGroups={tasksByListThenPerson.map(({ list, tasks, subGroups }) => ({
+                key: list?.id || 'no-list',
+                label: list?.name || 'No List',
+                color: list?.color || '#6B7280',
+                avatar: <List className="h-5 w-5" style={{ color: list?.color || '#6B7280' }} />,
+                tasks,
+                subGroups,
+                inlineValue: list ? (inlineTaskByList[list.id] || '') : inlineTask,
+                onInlineChange: (v) => list ? setInlineTaskByList(prev => ({ ...prev, [list.id]: v })) : setInlineTask(v),
+                onInlineSubmit: () => handleInlineAdd(undefined, list?.id),
+              }))}
+              toggleTask={toggleTask}
+              editTask={editTask}
+              setCelebratingUser={setCelebratingUser}
               isMobile={isMobile}
             />
           ) : (
