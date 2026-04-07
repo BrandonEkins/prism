@@ -10,6 +10,7 @@ import {
   DropdownMenuContent,
   DropdownMenuCheckboxItem,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
@@ -18,6 +19,8 @@ export interface FilterOption {
   value: string;
   label: string;
   icon?: React.ReactNode;
+  /** Renders a separator + section label before this option */
+  dividerBefore?: string;
 }
 
 export interface FilterDropdownProps {
@@ -95,17 +98,26 @@ export function FilterDropdown({
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="min-w-[160px]">
         {options.map((option) => (
-          <DropdownMenuCheckboxItem
-            key={option.value}
-            checked={selected.has(option.value)}
-            onCheckedChange={() => handleToggle(option.value)}
-            onSelect={mode === 'multi' ? (e) => e.preventDefault() : undefined}
-          >
-            <span className="flex items-center gap-2">
-              {option.icon}
-              {option.label}
-            </span>
-          </DropdownMenuCheckboxItem>
+          <React.Fragment key={option.value}>
+            {option.dividerBefore && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel className="text-xs text-muted-foreground font-normal px-2 py-1">
+                  {option.dividerBefore}
+                </DropdownMenuLabel>
+              </>
+            )}
+            <DropdownMenuCheckboxItem
+              checked={selected.has(option.value)}
+              onCheckedChange={() => handleToggle(option.value)}
+              onSelect={mode === 'multi' ? (e) => e.preventDefault() : undefined}
+            >
+              <span className="flex items-center gap-2">
+                {option.icon}
+                {option.label}
+              </span>
+            </DropdownMenuCheckboxItem>
+          </React.Fragment>
         ))}
         {isActive && (
           <>

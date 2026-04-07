@@ -24,7 +24,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { PageWrapper, SubpageHeader, FilterBar, SortSelect, FilterDropdown, PersonFilter, UndoButton } from '@/components/layout';
-import type { OverflowItem } from '@/components/layout';
+import type { OverflowItem, FilterOption } from '@/components/layout';
 import { TaskModal } from '@/app/tasks/TaskModal';
 import { useTasksViewData } from './useTasksViewData';
 import { useAuth } from '@/components/providers';
@@ -631,13 +631,13 @@ export function TasksView() {
 
   // Build group mode options for dropdown
   const groupOptions = useMemo(() => {
-    const opts = [
+    const opts: FilterOption[] = [
       { value: 'none', label: 'None' },
       { value: 'person', label: 'Person' },
     ];
     if (taskLists.length > 0) {
       opts.push({ value: 'list', label: 'List' });
-      opts.push({ value: 'person_then_list', label: 'Person → List' });
+      opts.push({ value: 'person_then_list', label: 'Person → List', dividerBefore: 'Nested' });
       opts.push({ value: 'list_then_person', label: 'List → Person' });
     }
     return opts;
