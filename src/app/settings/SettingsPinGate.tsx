@@ -68,10 +68,13 @@ function SettingsPinPrompt({
   onDismiss: () => void;
 }) {
   const { members, loading } = useFamily();
+  // When unauthenticated, /api/family omits role — show all members and let
+  // the backend enforce parent-only access on verify-pin.
   const parents = members
-    .filter((m) => m.role === 'parent')
+    .filter((m) => !m.role || m.role === 'parent')
     .map((m) => ({
       id: m.id,
+      loginIndex: m.loginIndex,
       name: m.name,
       color: m.color,
       avatarUrl: m.avatarUrl ?? undefined,
@@ -147,7 +150,7 @@ function SettingsPinPrompt({
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            userId: selectedParent.id,
+            ...(selectedParent.id ? { userId: selectedParent.id } : { memberIndex: selectedParent.loginIndex }),
             pin: enteredPin,
           }),
         });

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { db } from '@/lib/db/client';
 import { users } from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
+import { asc, eq } from 'drizzle-orm';
 import bcrypt from 'bcryptjs';
 import { createSession, isLoginLockedOut, recordFailedLogin, clearLoginAttempts } from '@/lib/auth/session';
 import { setSettingsVerified } from '@/lib/auth/settingsAuth';
@@ -15,33 +15,47 @@ const isSecure = appUrl ? appUrl.startsWith('https://') : process.env.NODE_ENV =
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { userId, pin } = body;
+    const { userId, memberIndex, pin } = body;
 
-    if (!userId || !pin) {
+    if ((!userId && typeof memberIndex !== 'number') || !pin) {
       return NextResponse.json(
-        { error: 'userId and pin are required' },
+        { error: 'userId or memberIndex, and pin are required' },
         { status: 400 }
       );
     }
 
-    // Rate limiting
-    const lockoutStatus = await isLoginLockedOut(userId);
-    if (lockoutStatus.lockedOut) {
-      return NextResponse.json(
-        {
-          error: 'Too many failed attempts. Please try again later.',
-          lockedOut: true,
-          retryAfter: lockoutStatus.retryAfter,
-        },
-        { status: 403 }
-      );
-    }
+    // Resolve user — either by UUID (authenticated) or ordinal index (unauthenticated kiosk)
+    let user: { id: string; name: string; role: string; color: string; avatarUrl: string | null; pin: string | null } | undefined;
 
-    // Verify user exists and is a parent
-    const [user] = await db
-      .select({ id: users.id, name: users.name, role: users.role, color: users.color, avatarUrl: users.avatarUrl, pin: users.pin })
-      .from(users)
-      .where(eq(users.id, userId));
+    if (userId) {
+      const lockoutStatus = await isLoginLockedOut(userId);
+      if (lockoutStatus.lockedOut) {
+        return NextResponse.json(
+          { error: 'Too many failed attempts. Please try again later.', lockedOut: true, retryAfter: lockoutStatus.retryAfter },
+          { status: 403 }
+        );
+      }
+      [user] = await db
+        .select({ id: users.id, name: users.name, role: users.role, color: users.color, avatarUrl: users.avatarUrl, pin: users.pin })
+        .from(users)
+        .where(eq(users.id, userId));
+    } else {
+      const index = Math.floor(memberIndex as number);
+      const allUsers = await db
+        .select({ id: users.id, name: users.name, role: users.role, color: users.color, avatarUrl: users.avatarUrl, pin: users.pin })
+        .from(users)
+        .orderBy(asc(users.sortOrder), asc(users.createdAt));
+      user = allUsers[index];
+      if (user) {
+        const lockoutStatus = await isLoginLockedOut(user.id);
+        if (lockoutStatus.lockedOut) {
+          return NextResponse.json(
+            { error: 'Too many failed attempts. Please try again later.', lockedOut: true, retryAfter: lockoutStatus.retryAfter },
+            { status: 403 }
+          );
+        }
+      }
+    }
 
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
