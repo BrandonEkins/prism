@@ -25,7 +25,7 @@
 'use client';
 
 import * as React from 'react';
-import { useState } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { format, isToday, isTomorrow, isPast, parseISO } from 'date-fns';
 import { ClipboardList, Plus, AlertCircle, CheckCircle, Clock, Hourglass } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -97,36 +97,23 @@ export const ChoresWidget = React.memo(function ChoresWidget({
   // Use provided chores (no demo data fallback in production)
   const allChores = externalChores || [];
 
-  // Filter chores
-  let filteredChores = allChores;
-
-  // Filter by user if specified
-  if (userId) {
-    filteredChores = filteredChores.filter(
-      (chore) => chore.assignedTo?.id === userId
-    );
-  }
-
-  // Filter out disabled chores if not showing them
-  if (!showDisabled) {
-    filteredChores = filteredChores.filter((chore) => chore.enabled);
-  }
-
-  // Sort by next due date (overdue first, then soonest)
-  filteredChores = filteredChores.sort((a, b) => {
-    if (!a.nextDue && !b.nextDue) return 0;
-    if (!a.nextDue) return 1;
-    if (!b.nextDue) return -1;
-    return a.nextDue.localeCompare(b.nextDue);
-  });
-
-  // Limit number of chores
-  const displayChores = filteredChores.slice(0, maxChores);
+  const { filteredChores, displayChores } = useMemo(() => {
+    let filtered = allChores;
+    if (userId) filtered = filtered.filter((c) => c.assignedTo?.id === userId);
+    if (!showDisabled) filtered = filtered.filter((c) => c.enabled);
+    filtered = [...filtered].sort((a, b) => {
+      if (!a.nextDue && !b.nextDue) return 0;
+      if (!a.nextDue) return 1;
+      if (!b.nextDue) return -1;
+      return a.nextDue.localeCompare(b.nextDue);
+    });
+    return { filteredChores: filtered, displayChores: filtered.slice(0, maxChores) };
+  }, [allChores, userId, showDisabled, maxChores]);
 
   // Local state for optimistic updates
   const [completingChores, setCompletingChores] = useState<Set<string>>(new Set());
 
-  const handleComplete = async (choreId: string) => {
+  const handleComplete = useCallback(async (choreId: string) => {
     // Mark as completing
     setCompletingChores((prev) => new Set(prev).add(choreId));
 
@@ -141,7 +128,7 @@ export const ChoresWidget = React.memo(function ChoresWidget({
         return next;
       });
     }
-  };
+  }, [onChoreComplete]);
 
   return (
     <WidgetContainer
