@@ -41,8 +41,9 @@ interface HouseRule {
 
 export function BabysitterModeOverlay() {
   const { isActive, toggle } = useBabysitterMode();
-  const { items } = useBabysitterInfo({ includeSensitive: true });
-  const { config: wifiConfig, qrString, hasConfig: hasWifiConfig } = useWifiConfig();
+  // Only fetch sensitive data when the overlay is actually active — avoids 401s for unauthenticated users
+  const { items } = useBabysitterInfo({ includeSensitive: isActive });
+  const { config: wifiConfig, qrString, hasConfig: hasWifiConfig } = useWifiConfig({ enabled: isActive });
   const [visible, setVisible] = useState(false);
   const [showExitModal, setShowExitModal] = useState(false);
 

@@ -132,12 +132,12 @@ export function AppShell({
       <main
         className={cn(
           'min-h-screen',
-          // Transition only on desktop (mobile gets instant to avoid flash)
-          !isMobile && 'transition-[margin,padding] duration-500 ease-in-out',
-          // Left margin only when SideNav is visible and not hidden
-          !hideNav && showSideNav && !uiHidden && !measureHideNav && 'ml-16',
+          // SideNav is position:fixed — preserve its space in layout at all times when visible.
+          // Do NOT remove ml-16/pb-24 when uiHidden; that shifts the entire page (CLS).
+          // The sidebar slides out via CSS transform (no layout impact).
+          !hideNav && showSideNav && !measureHideNav && 'ml-16',
           // Bottom padding when bottom nav is visible (portrait or mobile)
-          !hideNav && showPortraitNav && !uiHidden && !measureHideNav && 'pb-24',
+          !hideNav && showPortraitNav && !measureHideNav && 'pb-24',
           // No mobile bottom padding needed — FAB floats over content
           className
         )}

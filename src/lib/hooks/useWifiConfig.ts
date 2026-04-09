@@ -16,7 +16,8 @@ const DEFAULT_CONFIG: WifiConfig = {
   hidden: false,
 };
 
-export function useWifiConfig() {
+export function useWifiConfig(options: { enabled?: boolean } = {}) {
+  const { enabled = true } = options;
   const [config, setConfig] = useState<WifiConfig>(DEFAULT_CONFIG);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -40,8 +41,12 @@ export function useWifiConfig() {
   }, []);
 
   useEffect(() => {
-    fetchConfig();
-  }, [fetchConfig]);
+    if (enabled) {
+      fetchConfig();
+    } else {
+      setLoading(false);
+    }
+  }, [fetchConfig, enabled]);
 
   const saveConfig = useCallback(async (newConfig: WifiConfig): Promise<{ success: boolean; error?: string }> => {
     try {
