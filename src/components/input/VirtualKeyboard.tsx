@@ -89,6 +89,15 @@ export function VirtualKeyboard() {
           shiftRef.current = next;
           kb.setOptions({ layoutName: next });
         }
+        if (button === '{enter}' && !isContentEditable && activeInputRef.current) {
+          const el = activeInputRef.current;
+          el.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', bubbles: true, cancelable: true }));
+          el.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', code: 'Enter', bubbles: true }));
+          // Close keyboard after submitting a single-line input; textarea keeps it open
+          if (el instanceof HTMLInputElement) {
+            setKeyboardVisible(false);
+          }
+        }
         if (button === '{dismiss}') {
           setKeyboardVisible(false);
           activeContentEditableRef.current?.blur();
