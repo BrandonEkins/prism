@@ -2,6 +2,13 @@
 
 All notable changes to Prism are documented in this file.
 
+## [Unreleased] - feature/nested-grouping
+
+### Added
+- **Tasks**: Person→List and List→Person nested group modes — primary group cards with sub-group sections inside (colored left-border dividers, per-sub-group badge counts). Available in the Group dropdown when task lists exist.
+
+---
+
 ## [1.2.0] - 2026-03-29
 
 ### Added
