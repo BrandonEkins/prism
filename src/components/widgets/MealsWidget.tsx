@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { DAYS_OF_WEEK_MON_FIRST, DAYS_OF_WEEK, type DayOfWeek } from '@/lib/constants/days';
-import { useState } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { format, startOfWeek, addDays, parseISO } from 'date-fns';
 import { UtensilsCrossed, Plus, ChevronLeft, ChevronRight, Clock, CheckCircle2, Undo2, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -52,32 +52,37 @@ export const MealsWidget = React.memo(function MealsWidget({
 
   const allMeals = externalMeals || [];
   const weekOfString = format(currentWeek, 'yyyy-MM-dd');
-  const weekMeals = allMeals.filter((meal) => meal.weekOf === weekOfString);
-  const mealsByDay = groupMealsByDay(weekMeals);
+  const isCurrentWeek = weekOfString === format(defaultWeekStart, 'yyyy-MM-dd');
 
-  const goToPreviousWeek = () => {
+  const { weekMeals, mealsByDay } = useMemo(() => {
+    const weekMeals = allMeals.filter((meal) => meal.weekOf === weekOfString);
+    return { weekMeals, mealsByDay: groupMealsByDay(weekMeals) };
+  }, [allMeals, weekOfString]);
+
+  const goToPreviousWeek = useCallback(() => {
     const newWeek = addDays(currentWeek, -7);
     setCurrentWeek(newWeek);
     onWeekChange?.(format(newWeek, 'yyyy-MM-dd'));
-  };
-  const goToNextWeek = () => {
+  }, [currentWeek, onWeekChange]);
+
+  const goToNextWeek = useCallback(() => {
     const newWeek = addDays(currentWeek, 7);
     setCurrentWeek(newWeek);
     onWeekChange?.(format(newWeek, 'yyyy-MM-dd'));
-  };
-  const goToThisWeek = () => {
+  }, [currentWeek, onWeekChange]);
+
+  const goToThisWeek = useCallback(() => {
     setCurrentWeek(defaultWeekStart);
     onWeekChange?.(format(defaultWeekStart, 'yyyy-MM-dd'));
-  };
-  const isCurrentWeek = format(currentWeek, 'yyyy-MM-dd') === format(defaultWeekStart, 'yyyy-MM-dd');
+  }, [defaultWeekStart, onWeekChange]);
 
-  const handleAddClick = () => {
+  const handleAddClick = useCallback(() => {
     if (onAddMeal) {
       setShowAddModal(true);
     } else if (onAddClick) {
       onAddClick();
     }
-  };
+  }, [onAddMeal, onAddClick]);
 
   return (
     <>

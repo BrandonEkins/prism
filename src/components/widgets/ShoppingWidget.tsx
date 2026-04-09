@@ -23,7 +23,7 @@
 'use client';
 
 import * as React from 'react';
-import { useState } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { ShoppingCart, Plus, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { WidgetContainer, WidgetEmpty } from './WidgetContainer';
@@ -104,28 +104,25 @@ export const ShoppingWidget = React.memo(function ShoppingWidget({
   // Local state for optimistic updates
   const [localChecked, setLocalChecked] = useState<Record<string, boolean>>({});
 
-  const handleToggle = (itemId: string, currentChecked: boolean) => {
+  const handleToggle = useCallback((itemId: string, currentChecked: boolean) => {
     const newChecked = !currentChecked;
-
-    // Optimistic update
     setLocalChecked((prev) => ({ ...prev, [itemId]: newChecked }));
-
-    // Call external handler
     onItemToggle?.(itemId, newChecked);
-  };
+  }, [onItemToggle]);
 
-  const handleListChange = (newListId: string) => {
+  const handleListChange = useCallback((newListId: string) => {
     setSelectedListId(newListId);
     onListChange?.(newListId);
-  };
+  }, [onListChange]);
 
-  // Calculate progress
-  const items = activeList?.items || [];
-  const checkedCount = items.filter(
-    (item) => localChecked[item.id] !== undefined ? localChecked[item.id] : item.checked
-  ).length;
-  const totalCount = items.length;
-  const progress = totalCount > 0 ? (checkedCount / totalCount) * 100 : 0;
+  const { items, checkedCount, totalCount, progress } = useMemo(() => {
+    const items = activeList?.items || [];
+    const checkedCount = items.filter(
+      (item) => localChecked[item.id] !== undefined ? localChecked[item.id] : item.checked
+    ).length;
+    const totalCount = items.length;
+    return { items, checkedCount, totalCount, progress: totalCount > 0 ? (checkedCount / totalCount) * 100 : 0 };
+  }, [activeList, localChecked]);
 
   return (
     <WidgetContainer

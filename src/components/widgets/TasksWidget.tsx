@@ -26,7 +26,7 @@
 'use client';
 
 import * as React from 'react';
-import { useState } from 'react';
+import { useMemo, useCallback } from 'react';
 import { format, isToday, isTomorrow, isPast } from 'date-fns';
 import { CheckSquare, Plus, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -98,49 +98,29 @@ export const TasksWidget = React.memo(function TasksWidget({
   titleHref,
   className,
 }: TasksWidgetProps) {
-  // Use provided tasks or demo data
-  // Use provided tasks (no demo data fallback in production)
   const allTasks = externalTasks || [];
 
-  // Filter tasks
-  let filteredTasks = allTasks;
-
-  // Filter by user if specified
-  if (userId) {
-    filteredTasks = filteredTasks.filter(
-      (task) => task.assignedTo?.id === userId
-    );
-  }
-
-  // Filter out completed tasks if not showing them
-  if (!showCompleted) {
-    filteredTasks = filteredTasks.filter((task) => !task.completed);
-  }
-
-  // Sort by priority and due date
-  filteredTasks = filteredTasks.sort((a, b) => {
-    // Priority order: high > medium > low
+  const { filteredTasks, displayTasks } = useMemo(() => {
     const priorityOrder = { high: 0, medium: 1, low: 2 };
-    const priorityDiff = priorityOrder[a.priority] - priorityOrder[b.priority];
-    if (priorityDiff !== 0) return priorityDiff;
-
-    // Then by due date (earlier first)
-    if (a.dueDate && b.dueDate) {
-      return a.dueDate.getTime() - b.dueDate.getTime();
-    }
-    return 0;
-  });
-
-  // Limit number of tasks
-  const displayTasks = filteredTasks.slice(0, maxTasks);
+    let filtered = allTasks;
+    if (userId) filtered = filtered.filter((t) => t.assignedTo?.id === userId);
+    if (!showCompleted) filtered = filtered.filter((t) => !t.completed);
+    filtered = [...filtered].sort((a, b) => {
+      const diff = priorityOrder[a.priority] - priorityOrder[b.priority];
+      if (diff !== 0) return diff;
+      if (a.dueDate && b.dueDate) return a.dueDate.getTime() - b.dueDate.getTime();
+      return 0;
+    });
+    return { filteredTasks: filtered, displayTasks: filtered.slice(0, maxTasks) };
+  }, [allTasks, userId, showCompleted, maxTasks]);
 
   // Handle toggle - calls external handler which manages auth
   // No optimistic update since auth might be cancelled
-  const handleToggle = (taskId: string, currentCompleted: boolean) => {
+  const handleToggle = useCallback((taskId: string, currentCompleted: boolean) => {
     const newCompleted = !currentCompleted;
     // Call external handler - it will handle auth and refresh
     onTaskToggle?.(taskId, newCompleted);
-  };
+  }, [onTaskToggle]);
 
   return (
     <WidgetContainer
