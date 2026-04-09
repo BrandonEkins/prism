@@ -1,6 +1,45 @@
 'use client';
 
 import { useState } from 'react';
+import { PopoverButton } from './LayoutEditorPopover';
+import { CheckIcon } from './LayoutEditorIcons';
+import type { DashboardInfo } from './LayoutEditorTypes';
+
+const moreItemClass = 'w-full text-left px-3 py-1.5 text-sm hover:bg-accent transition-colors';
+
+export function DashboardDropdown({ layoutName, isActive, onToggle, allDashboards, currentDashboardId, onSwitchDashboard, onClose, onCreateOpen }: {
+  layoutName?: string; isActive: boolean; onToggle: () => void;
+  allDashboards: DashboardInfo[]; currentDashboardId?: string;
+  onSwitchDashboard?: (slug: string) => void; onClose: () => void; onCreateOpen: () => void;
+}) {
+  return (
+    <PopoverButton
+      label={<span className="font-medium">{layoutName || 'Untitled'}</span>}
+      isActive={isActive}
+      onToggle={onToggle}
+      width={220}
+    >
+      <div className="py-1 max-h-[40vh] overflow-auto">
+        {allDashboards.map(d => (
+          <button key={d.id} onClick={() => {
+            if (d.id !== currentDashboardId && d.slug) {
+              sessionStorage.setItem('prism:editing', 'true'); onSwitchDashboard?.(d.slug);
+            } else if (d.id !== currentDashboardId && d.isDefault) {
+              sessionStorage.setItem('prism:editing', 'true'); window.location.href = '/';
+            }
+            onClose();
+          }} className={`w-full text-left px-3 py-1.5 text-sm hover:bg-accent transition-colors flex items-center gap-2 ${d.id === currentDashboardId ? 'bg-accent/50' : ''}`}>
+            <span className="flex-1 truncate">{d.name}</span>
+            {d.id === currentDashboardId && <CheckIcon />}
+            {d.isDefault && d.id !== currentDashboardId && <span className="text-[10px] text-muted-foreground">default</span>}
+          </button>
+        ))}
+        <div className="border-t border-border my-1" />
+        <button onClick={onCreateOpen} className={`${moreItemClass} text-primary`}>+ New Dashboard...</button>
+      </div>
+    </PopoverButton>
+  );
+}
 
 export function CreateDashboardDialog({
   open,
