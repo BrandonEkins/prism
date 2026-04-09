@@ -57,7 +57,7 @@ describe('requireAuth', () => {
     jest.clearAllMocks();
     mockCookies = {};
     mockHeaders = {};
-    mockValidateSession.mockResolvedValue(null);
+    mockValidateSession.mockResolvedValue({ ok: false, reason: 'invalid' });
     mockValidateApiToken.mockResolvedValue(null);
   });
 
@@ -73,7 +73,8 @@ describe('requireAuth', () => {
   it('falls back to cookie session when no Bearer token', async () => {
     mockCookies['prism_session'] = 'session-token-abc';
     mockValidateSession.mockResolvedValue({
-      userId: 'user-1', role: 'child', createdAt: Date.now(), expiresAt: Date.now() + 60000,
+      ok: true,
+      session: { userId: 'user-1', role: 'child', createdAt: Date.now(), expiresAt: Date.now() + 60000 },
     });
 
     const result = await requireAuth();
@@ -89,13 +90,25 @@ describe('requireAuth', () => {
 
   it('returns 401 when session cookie exists but session is invalid', async () => {
     mockCookies['prism_session'] = 'expired-token';
-    mockValidateSession.mockResolvedValue(null);
+    mockValidateSession.mockResolvedValue({ ok: false, reason: 'invalid' });
 
     const result = await requireAuth();
     expect(result).toBeInstanceOf(NextResponse);
 
     const body = await (result as NextResponse).json();
     expect(body.error).toContain('Invalid or expired');
+  });
+
+  it('returns 503 when Redis is unavailable', async () => {
+    mockCookies['prism_session'] = 'some-token';
+    mockValidateSession.mockResolvedValue({ ok: false, reason: 'unavailable' });
+
+    const result = await requireAuth();
+    expect(result).toBeInstanceOf(NextResponse);
+    expect((result as NextResponse).status).toBe(503);
+
+    const body = await (result as NextResponse).json();
+    expect(body.error).toContain('unavailable');
   });
 
   it('prefers Bearer token over session cookie', async () => {
@@ -133,7 +146,7 @@ describe('optionalAuth', () => {
     jest.clearAllMocks();
     mockCookies = {};
     mockHeaders = {};
-    mockValidateSession.mockResolvedValue(null);
+    mockValidateSession.mockResolvedValue({ ok: false, reason: 'invalid' });
     mockValidateApiToken.mockResolvedValue(null);
   });
 
@@ -148,7 +161,8 @@ describe('optionalAuth', () => {
   it('returns auth result when session cookie is valid', async () => {
     mockCookies['prism_session'] = 'valid-session';
     mockValidateSession.mockResolvedValue({
-      userId: 'u2', role: 'child', createdAt: Date.now(), expiresAt: Date.now() + 60000,
+      ok: true,
+      session: { userId: 'u2', role: 'child', createdAt: Date.now(), expiresAt: Date.now() + 60000 },
     });
 
     const result = await optionalAuth();
@@ -162,7 +176,15 @@ describe('optionalAuth', () => {
 
   it('returns null when session cookie is invalid', async () => {
     mockCookies['prism_session'] = 'bad-session';
-    mockValidateSession.mockResolvedValue(null);
+    mockValidateSession.mockResolvedValue({ ok: false, reason: 'invalid' });
+
+    const result = await optionalAuth();
+    expect(result).toBeNull();
+  });
+
+  it('returns null when Redis is unavailable (degraded gracefully)', async () => {
+    mockCookies['prism_session'] = 'some-token';
+    mockValidateSession.mockResolvedValue({ ok: false, reason: 'unavailable' });
 
     const result = await optionalAuth();
     expect(result).toBeNull();
@@ -174,7 +196,7 @@ describe('getDisplayAuth', () => {
     jest.clearAllMocks();
     mockCookies = {};
     mockHeaders = {};
-    mockValidateSession.mockResolvedValue(null);
+    mockValidateSession.mockResolvedValue({ ok: false, reason: 'invalid' });
     mockValidateApiToken.mockResolvedValue(null);
     mockDbResult = [];
   });
@@ -182,7 +204,8 @@ describe('getDisplayAuth', () => {
   it('returns auth from optionalAuth when session exists', async () => {
     mockCookies['prism_session'] = 'valid';
     mockValidateSession.mockResolvedValue({
-      userId: 'u1', role: 'parent', createdAt: Date.now(), expiresAt: Date.now() + 60000,
+      ok: true,
+      session: { userId: 'u1', role: 'parent', createdAt: Date.now(), expiresAt: Date.now() + 60000 },
     });
 
     const result = await getDisplayAuth();

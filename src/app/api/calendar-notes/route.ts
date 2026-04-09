@@ -11,7 +11,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAuth, getDisplayAuth } from '@/lib/auth';
+import { getDisplayAuth } from '@/lib/auth';
+import { withAuth } from '@/lib/api/withAuth';
 import { db } from '@/lib/db/client';
 import { calendarNotes } from '@/lib/db/schema';
 import { gte, lte, and, eq, asc } from 'drizzle-orm';
@@ -77,13 +78,7 @@ export async function GET(request: NextRequest) {
  * Upsert a note for a date. Empty content deletes the note.
  */
 export async function PUT(request: NextRequest) {
-  const auth = await requireAuth();
-  if (auth instanceof NextResponse) return auth;
-
-  const { rateLimitGuard } = await import('@/lib/cache/rateLimit');
-  const limited = await rateLimitGuard(auth.userId, 'calendar-notes', 60, 60);
-  if (limited) return limited;
-
+  return withAuth(async (auth) => {
   try {
     const body = await request.json();
     const parsed = upsertCalendarNoteSchema.safeParse(body);
@@ -128,4 +123,5 @@ export async function PUT(request: NextRequest) {
     logError('Failed to upsert calendar note:', error);
     return NextResponse.json({ error: 'Failed to save note' }, { status: 500 });
   }
+  }, { rateLimit: { feature: 'calendar-notes', limit: 60, windowSeconds: 60 } });
 }

@@ -55,7 +55,8 @@ const mockChore: Chore = {
   id: 'c1', title: 'Vacuum', category: 'cleaning', frequency: 'weekly',
   pointValue: 5, requiresApproval: false, enabled: true,
   nextDue: '2026-04-10', assignedTo: { id: 'u1', name: 'Alice', color: '#f00' },
-  pendingApproval: null, customIntervalDays: undefined, lastCompleted: null,
+  pendingApproval: undefined, customIntervalDays: undefined, lastCompleted: undefined,
+  createdAt: '2026-01-01',
 };
 
 const mockTask: Task = {
@@ -65,9 +66,9 @@ const mockTask: Task = {
 };
 
 const mockList: ShoppingList = {
-  id: 'l1', name: 'Grocery', items: [
-    { id: 'i1', name: 'Apples', checked: false, category: 'produce', quantity: 3, unit: 'kg', notes: '' },
-    { id: 'i2', name: 'Milk', checked: true, category: 'dairy', quantity: 1, unit: 'L', notes: '' },
+  id: 'l1', name: 'Grocery', sortOrder: 0, createdAt: '2026-01-01', items: [
+    { id: 'i1', listId: 'l1', name: 'Apples', checked: false, category: 'produce', quantity: 3, unit: 'kg', notes: '', createdAt: '2026-01-01' },
+    { id: 'i2', listId: 'l1', name: 'Milk', checked: true, category: 'dairy', quantity: 1, unit: 'L', notes: '', createdAt: '2026-01-01' },
   ],
 };
 

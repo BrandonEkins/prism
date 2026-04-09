@@ -27,6 +27,7 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
   const [members, setMembers] = useState<FamilyMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const membersRef = React.useRef<FamilyMember[]>([]);
 
   const fetchMembers = useCallback(async () => {
     try {
@@ -34,23 +35,26 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
       const response = await fetch('/api/family');
       if (response.ok) {
         const data = await response.json();
-        setMembers(
-          data.members.map((m: {
-            id: string;
-            name: string;
-            role: string;
-            color: string;
-            avatarUrl?: string | null;
-            hasPin: boolean;
-          }) => ({
-            id: m.id,
-            name: m.name,
-            role: m.role as 'parent' | 'child' | 'guest',
-            color: m.color,
-            avatarUrl: m.avatarUrl,
-            hasPin: m.hasPin,
-          }))
-        );
+        const next: FamilyMember[] = data.members.map((m: {
+          id: string;
+          name: string;
+          role: string;
+          color: string;
+          avatarUrl?: string | null;
+          hasPin: boolean;
+        }) => ({
+          id: m.id,
+          name: m.name,
+          role: m.role as 'parent' | 'child' | 'guest',
+          color: m.color,
+          avatarUrl: m.avatarUrl,
+          hasPin: m.hasPin,
+        }));
+        // Only update state if data actually changed — avoids re-renders on every 10-min poll
+        if (JSON.stringify(next) !== JSON.stringify(membersRef.current)) {
+          membersRef.current = next;
+          setMembers(next);
+        }
       } else {
         setError('Failed to fetch family members');
       }

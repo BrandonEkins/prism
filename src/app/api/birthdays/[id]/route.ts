@@ -8,7 +8,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAuth } from '@/lib/auth';
+import { withAuth } from '@/lib/api/withAuth';
 import { db } from '@/lib/db/client';
 import { birthdays, users } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
@@ -30,9 +30,7 @@ export async function GET(
   request: NextRequest,
   { params }: RouteParams
 ) {
-  const auth = await requireAuth();
-  if (auth instanceof NextResponse) return auth;
-
+  return withAuth(async () => {
   try {
     const { id } = await params;
 
@@ -94,6 +92,7 @@ export async function GET(
       { status: 500 }
     );
   }
+  });
 }
 
 /**
@@ -113,9 +112,7 @@ export async function PATCH(
   request: NextRequest,
   { params }: RouteParams
 ) {
-  const auth = await requireAuth();
-  if (auth instanceof NextResponse) return auth;
-
+  return withAuth(async () => {
   try {
     const { id } = await params;
     const body = await request.json();
@@ -215,6 +212,7 @@ export async function PATCH(
       { status: 500 }
     );
   }
+  });
 }
 
 /**
@@ -225,42 +223,41 @@ export async function DELETE(
   request: NextRequest,
   { params }: RouteParams
 ) {
-  const auth = await requireAuth();
-  if (auth instanceof NextResponse) return auth;
+  return withAuth(async () => {
+    try {
+      const { id } = await params;
 
-  try {
-    const { id } = await params;
+      // Check if birthday exists
+      const [existingBirthday] = await db
+        .select({ id: birthdays.id, name: birthdays.name })
+        .from(birthdays)
+        .where(eq(birthdays.id, id));
 
-    // Check if birthday exists
-    const [existingBirthday] = await db
-      .select({ id: birthdays.id, name: birthdays.name })
-      .from(birthdays)
-      .where(eq(birthdays.id, id));
+      if (!existingBirthday) {
+        return NextResponse.json(
+          { error: 'Birthday not found' },
+          { status: 404 }
+        );
+      }
 
-    if (!existingBirthday) {
+      // Delete the birthday
+      await db
+        .delete(birthdays)
+        .where(eq(birthdays.id, id));
+
+      return NextResponse.json({
+        message: 'Birthday deleted successfully',
+        deletedBirthday: {
+          id: existingBirthday.id,
+          name: existingBirthday.name,
+        },
+      });
+    } catch (error) {
+      logError('Error deleting birthday:', error);
       return NextResponse.json(
-        { error: 'Birthday not found' },
-        { status: 404 }
+        { error: 'Failed to delete birthday' },
+        { status: 500 }
       );
     }
-
-    // Delete the birthday
-    await db
-      .delete(birthdays)
-      .where(eq(birthdays.id, id));
-
-    return NextResponse.json({
-      message: 'Birthday deleted successfully',
-      deletedBirthday: {
-        id: existingBirthday.id,
-        name: existingBirthday.name,
-      },
-    });
-  } catch (error) {
-    logError('Error deleting birthday:', error);
-    return NextResponse.json(
-      { error: 'Failed to delete birthday' },
-      { status: 500 }
-    );
-  }
+  });
 }

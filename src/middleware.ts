@@ -10,39 +10,56 @@ const CSRF_EXEMPT_PREFIXES = [
   '/api/away-mode',      // has its own same-origin check
 ];
 
+function generateRequestId(): string {
+  const array = new Uint8Array(12);
+  crypto.getRandomValues(array);
+  return Array.from(array, (b) => b.toString(16).padStart(2, '0')).join('');
+}
+
 /**
- * CSRF protection: for browser-originated mutation requests, verify that the
- * Origin header matches the server's Host header. This blocks cross-site
- * fetch() attacks that bypass sameSite:lax (which only covers navigations/forms).
+ * CSRF protection + request ID injection.
  *
- * Non-browser clients (curl, server-to-server) send no Origin header and are
- * allowed through — they rely on other auth layers (requireAuth, API tokens).
+ * Adds x-request-id to all API responses for log correlation.
+ * For browser-originated mutation requests, verifies Origin matches Host.
+ * Non-browser clients (no Origin header) bypass CSRF — they rely on other
+ * auth layers (requireAuth, API tokens).
  */
 export function middleware(request: NextRequest) {
-  if (!MUTATION_METHODS.has(request.method)) return NextResponse.next();
+  // Attach (or propagate) request ID for log correlation
+  const requestId = request.headers.get('x-request-id') ?? generateRequestId();
+  const response = NextResponse.next({
+    request: { headers: new Headers({ ...Object.fromEntries(request.headers), 'x-request-id': requestId }) },
+  });
+  response.headers.set('x-request-id', requestId);
+
+  if (!MUTATION_METHODS.has(request.method)) return response;
 
   const { pathname } = request.nextUrl;
-  if (CSRF_EXEMPT_PREFIXES.some((p) => pathname.startsWith(p))) return NextResponse.next();
+  if (CSRF_EXEMPT_PREFIXES.some((p) => pathname.startsWith(p))) return response;
 
   const origin = request.headers.get('origin');
   if (!origin) {
     // No Origin header — non-browser client, allow through
-    return NextResponse.next();
+    return response;
   }
 
   const host = request.headers.get('host');
-  if (!host) return NextResponse.next();
+  if (!host) return response;
 
   try {
     const originHost = new URL(origin).host;
     if (originHost !== host) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      const forbidden = NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      forbidden.headers.set('x-request-id', requestId);
+      return forbidden;
     }
   } catch {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    const forbidden = NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    forbidden.headers.set('x-request-id', requestId);
+    return forbidden;
   }
 
-  return NextResponse.next();
+  return response;
 }
 
 export const config = {

@@ -13,7 +13,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAuth, getDisplayAuth } from '@/lib/auth';
+import { getDisplayAuth } from '@/lib/auth';
+import { withAuth } from '@/lib/api/withAuth';
 import { db } from '@/lib/db/client';
 import { birthdays, users } from '@/lib/db/schema';
 import { eq, asc } from 'drizzle-orm';
@@ -139,61 +140,60 @@ export async function GET(request: NextRequest) {
  * }
  */
 export async function POST(request: NextRequest) {
-  const auth = await requireAuth();
-  if (auth instanceof NextResponse) return auth;
+  return withAuth(async () => {
+    try {
+      const body = await request.json();
 
-  try {
-    const body = await request.json();
+      // Validate request body
+      const validation = validateRequest(createBirthdaySchema, body);
+      if (!validation.success) {
+        return NextResponse.json(
+          { error: 'Validation failed', details: validation.error.issues },
+          { status: 400 }
+        );
+      }
 
-    // Validate request body
-    const validation = validateRequest(createBirthdaySchema, body);
-    if (!validation.success) {
-      return NextResponse.json(
-        { error: 'Validation failed', details: validation.error.issues },
-        { status: 400 }
-      );
-    }
-
-    const {
-      name,
-      birthDate,
-      userId,
-      giftIdeas,
-      sendCardDaysBefore,
-    } = validation.data;
-
-    // Insert the birthday
-    const [newBirthday] = await db
-      .insert(birthdays)
-      .values({
+      const {
         name,
         birthDate,
-        userId: userId || null,
-        giftIdeas: giftIdeas || null,
-        sendCardDaysBefore: sendCardDaysBefore || 7,
-      })
-      .returning();
+        userId,
+        giftIdeas,
+        sendCardDaysBefore,
+      } = validation.data;
 
-    if (!newBirthday) {
+      // Insert the birthday
+      const [newBirthday] = await db
+        .insert(birthdays)
+        .values({
+          name,
+          birthDate,
+          userId: userId || null,
+          giftIdeas: giftIdeas || null,
+          sendCardDaysBefore: sendCardDaysBefore || 7,
+        })
+        .returning();
+
+      if (!newBirthday) {
+        return NextResponse.json(
+          { error: 'Failed to create birthday' },
+          { status: 500 }
+        );
+      }
+
+      return NextResponse.json({
+        id: newBirthday.id,
+        name: newBirthday.name,
+        birthDate: newBirthday.birthDate,
+        giftIdeas: newBirthday.giftIdeas,
+        sendCardDaysBefore: newBirthday.sendCardDaysBefore,
+        createdAt: newBirthday.createdAt.toISOString(),
+      }, { status: 201 });
+    } catch (error) {
+      logError('Error creating birthday:', error);
       return NextResponse.json(
         { error: 'Failed to create birthday' },
         { status: 500 }
       );
     }
-
-    return NextResponse.json({
-      id: newBirthday.id,
-      name: newBirthday.name,
-      birthDate: newBirthday.birthDate,
-      giftIdeas: newBirthday.giftIdeas,
-      sendCardDaysBefore: newBirthday.sendCardDaysBefore,
-      createdAt: newBirthday.createdAt.toISOString(),
-    }, { status: 201 });
-  } catch (error) {
-    logError('Error creating birthday:', error);
-    return NextResponse.json(
-      { error: 'Failed to create birthday' },
-      { status: 500 }
-    );
-  }
+  });
 }
