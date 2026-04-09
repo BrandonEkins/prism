@@ -1,7 +1,7 @@
 import { cookies, headers } from 'next/headers';
 import { NextResponse } from 'next/server';
 import { validateSession } from './session';
-import { validateApiToken } from './apiTokens';
+import { validateApiToken, type ApiTokenAuthResult } from './apiTokens';
 import { PERMISSIONS, type RolePermissions } from '@/types/user';
 import { db } from '@/lib/db/client';
 import { settings } from '@/lib/db/schema';
@@ -10,6 +10,8 @@ import { eq } from 'drizzle-orm';
 export interface AuthResult {
   userId: string;
   role: 'parent' | 'child' | 'guest';
+  /** Present only for API token auth. Undefined for session auth. */
+  scopes?: string[];
 }
 
 /**
@@ -24,7 +26,10 @@ async function checkBearerToken(): Promise<AuthResult | null> {
   const rawToken = authHeader.slice(7);
   if (!rawToken) return null;
 
-  return validateApiToken(rawToken);
+  const result: ApiTokenAuthResult | null = await validateApiToken(rawToken);
+  if (!result) return null;
+  // Propagate scopes so withAuth can enforce them
+  return { userId: result.userId, role: result.role, scopes: result.scopes };
 }
 
 /**

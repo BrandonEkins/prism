@@ -5,10 +5,12 @@ import type { RolePermissions } from '@/types/user';
 export interface AuthResult {
   userId: string;
   role: 'parent' | 'child' | 'guest';
+  /** API token scopes, if authenticated via bearer token. Undefined for session auth. */
+  scopes?: string[];
 }
 
 interface WithAuthOptions {
-  /** Required permission (checked via requireRole) */
+  /** Required permission (checked via requireRole for session auth; checked against token scopes for API tokens) */
   permission?: keyof RolePermissions;
   /** Rate limit configuration */
   rateLimit?: {
@@ -19,6 +21,14 @@ interface WithAuthOptions {
     /** Window size in seconds */
     windowSeconds: number;
   };
+}
+
+/**
+ * Check whether a token's scopes allow a given permission.
+ * ['*'] grants everything; otherwise the permission must be listed explicitly.
+ */
+function tokenHasScope(scopes: string[], permission: string): boolean {
+  return scopes.includes('*') || scopes.includes(permission);
 }
 
 /**
@@ -46,8 +56,18 @@ export async function withAuth<T>(
 
   // Check permission if specified
   if (options?.permission) {
-    const forbidden = requireRole(auth, options.permission);
-    if (forbidden) return forbidden;
+    // For API tokens: check scope instead of RBAC (tokens have explicit scope list)
+    if (auth.scopes !== undefined) {
+      if (!tokenHasScope(auth.scopes, options.permission)) {
+        return NextResponse.json(
+          { error: { code: 'FORBIDDEN', message: 'Token scope does not permit this action' } },
+          { status: 403 }
+        );
+      }
+    } else {
+      const forbidden = requireRole(auth, options.permission);
+      if (forbidden) return forbidden;
+    }
   }
 
   // Check rate limit if specified

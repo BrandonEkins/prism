@@ -4,6 +4,10 @@ import { apiTokens } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import type { AuthResult } from './requireAuth';
 
+export interface ApiTokenAuthResult extends AuthResult {
+  scopes: string[];
+}
+
 /**
  * Generate a cryptographically random 64-char hex token.
  */
@@ -23,7 +27,7 @@ export function hashToken(rawToken: string): string {
  * Returns an AuthResult (parent role) on success, null on failure.
  * Updates lastUsedAt on successful validation.
  */
-export async function validateApiToken(rawToken: string): Promise<AuthResult | null> {
+export async function validateApiToken(rawToken: string): Promise<ApiTokenAuthResult | null> {
   const hash = hashToken(rawToken);
 
   const [token] = await db
@@ -44,6 +48,7 @@ export async function validateApiToken(rawToken: string): Promise<AuthResult | n
   return {
     userId: token.createdBy,
     role: 'parent',
+    scopes: token.scopes ?? ['*'],
   };
 }
 
@@ -86,6 +91,7 @@ export async function listApiTokens() {
     .select({
       id: apiTokens.id,
       name: apiTokens.name,
+      scopes: apiTokens.scopes,
       createdBy: apiTokens.createdBy,
       lastUsedAt: apiTokens.lastUsedAt,
       createdAt: apiTokens.createdAt,

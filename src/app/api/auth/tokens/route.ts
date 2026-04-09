@@ -50,6 +50,7 @@ export async function POST(request: NextRequest) {
         token: rawToken,
         id: token.id,
         name: token.name,
+        scopes: token.scopes ?? ['*'],
         createdAt: token.createdAt.toISOString(),
       }, { status: 201 });
     } catch (error) {

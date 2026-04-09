@@ -11,6 +11,7 @@ All notable changes to Prism are documented in this file.
 - **`/api/health/deep`** (parent-auth): Deep health check verifying DB, Redis, last backup recency, and OAuth token expiry; triggers optional `ALERT_WEBHOOK_URL` notification on degradation
 - **`apiError()` helper**: Standardized error responses via `src/lib/api/apiResponse.ts` — `{ error: { code, message } }` shape with typed codes: `UNAUTHORIZED`, `FORBIDDEN`, `NOT_FOUND`, `VALIDATION_ERROR`, `INTERNAL_ERROR`, `SERVICE_UNAVAILABLE`
 - **withAuth migration**: birthdays, calendar-notes routes migrated from raw `requireAuth` boilerplate to `withAuth` wrapper
+- **API token scopes**: `scopes` JSONB column added to `api_tokens` table (default `["*"]` = full access); `withAuth` now enforces scope on API token requests; existing tokens unaffected
 
 ### Performance
 - **FamilyProvider**: Equality check on polling results before calling `setMembers` — prevents unnecessary re-renders across all consumers on every 10-minute poll when data is unchanged

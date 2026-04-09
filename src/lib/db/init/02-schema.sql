@@ -27,6 +27,7 @@ CREATE TABLE IF NOT EXISTS public.api_tokens (
     name character varying(100) NOT NULL,
     token_hash character varying(64) NOT NULL,
     created_by uuid NOT NULL,
+    scopes jsonb DEFAULT '["*"]'::jsonb NOT NULL,
     last_used_at timestamp without time zone,
     created_at timestamp without time zone DEFAULT now() NOT NULL
 );

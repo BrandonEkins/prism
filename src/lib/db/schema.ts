@@ -697,6 +697,9 @@ export const apiTokens = pgTable('api_tokens', {
     .references(() => users.id, { onDelete: 'cascade' })
     .notNull(),
 
+  // Scopes limit what resources a token can access. ['*'] = full parent access.
+  scopes: jsonb('scopes').$type<string[]>().default(['*']).notNull(),
+
   lastUsedAt: timestamp('last_used_at'),
 
   createdAt: timestamp('created_at').defaultNow().notNull(),
