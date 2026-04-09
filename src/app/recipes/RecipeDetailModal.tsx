@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { useState } from 'react';
 import { toast } from '@/components/ui/use-toast';
 import {
@@ -152,11 +153,13 @@ export function RecipeDetailModal({
         </DialogHeader>
 
         {recipe.imageUrl && (
-          <div className="h-48 -mx-6 -mt-2 bg-muted overflow-hidden">
-            <img
+          <div className="relative h-48 -mx-6 -mt-2 bg-muted overflow-hidden">
+            <Image
               src={recipe.imageUrl}
               alt={recipe.name}
-              className="w-full h-full object-cover"
+              fill
+              unoptimized
+              className="object-cover"
             />
           </div>
         )}
