@@ -2,6 +2,15 @@
 
 All notable changes to Prism are documented in this file.
 
+## [Unreleased]
+
+### Improved
+- **Tasks**: Group control split into a "Group" primary select and a "Then by" secondary select — the nested `Person → List` / `List → Person` arrow-notation options are replaced by two independent dropdowns; "Then by" only appears when a groupable primary is chosen and task lists exist
+- **Chores**: "Group by Person" toggle replaced with a consistent "Group" dropdown (None / Person) matching Tasks' style
+
+### Refactor
+- **Days**: Consolidated 8 inline day-of-week arrays across calendar views, chore modals, WeatherWidget, and the OpenWeather integration into shared `DAYS_SHORT_ARRAY`, `DAYS_LONG_ARRAY`, and `DAYS_SINGLE_ARRAY` constants in `src/lib/constants/days.ts`
+
 ## [1.3.0] - 2026-04-08
 
 ### Added
