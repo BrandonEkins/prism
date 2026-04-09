@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useVisibilityPolling } from '@/lib/hooks/useVisibilityPolling';
 
 export type PhotoOrientation = 'landscape' | 'portrait' | 'square';
 export type PhotoUsageTag = 'wallpaper' | 'gallery' | 'screensaver';
@@ -169,11 +170,11 @@ export function usePhotos(options: UsePhotosOptions = {}): UsePhotosResult {
     fetchPhotos(0, false);
   }, [fetchPhotos]);
 
-  useEffect(() => {
-    if (refreshInterval <= 0) return;
-    const interval = setInterval(() => fetchPhotos(0, false), refreshInterval);
-    return () => clearInterval(interval);
-  }, [refreshInterval, fetchPhotos]);
+  // Stable wrapper so useVisibilityPolling gets a memoized callback
+  const pollPhotos = useCallback(() => { fetchPhotos(0, false); }, [fetchPhotos]);
+
+  // Periodic refresh — pauses when tab is hidden
+  useVisibilityPolling(pollPhotos, refreshInterval);
 
   return { photos, loading, error, total, refresh, loadMore, toggleFavorite, updateUsage };
 }

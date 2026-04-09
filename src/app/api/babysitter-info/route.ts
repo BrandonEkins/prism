@@ -11,6 +11,13 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const includeSensitive = searchParams.get('includeSensitive') === 'true';
 
+  // Non-sensitive content is intentionally public (babysitter page is share-able).
+  // Sensitive content requires an authenticated session.
+  if (includeSensitive) {
+    const auth = await requireAuth();
+    if (auth instanceof NextResponse) return auth;
+  }
+
   try {
     const items = await getCached(
       `babysitter-info:${includeSensitive ? 'all' : 'public'}`,

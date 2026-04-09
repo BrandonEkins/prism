@@ -137,12 +137,15 @@ export async function createBackup(): Promise<{ success: boolean; filename?: str
   }
 
   try {
-    // Run pg_dump and compress with gzip
-    const command = `PGPASSWORD="${dbPassword}" pg_dump -h ${DB_HOST} -U ${DB_USER} -d ${DB_NAME} --no-owner --no-acl | gzip > "${filePath}"`;
+    // Run pg_dump and compress with gzip.
+    // PGPASSWORD is passed via env (not inline) to avoid shell injection if the password
+    // contains metacharacters.
+    const command = `pg_dump -h ${DB_HOST} -U ${DB_USER} -d ${DB_NAME} --no-owner --no-acl | gzip > "${filePath}"`;
 
     await execAsync(command, {
       shell: '/bin/sh',
       timeout: 300000, // 5 minute timeout
+      env: { ...process.env, PGPASSWORD: dbPassword },
     });
 
     // Verify the file was created and has content
@@ -185,17 +188,20 @@ export async function restoreBackup(filename: string): Promise<{ success: boolea
     // Determine if compressed
     const isCompressed = filename.endsWith('.gz');
 
-    // Build restore command
+    // Build restore command.
+    // PGPASSWORD is passed via env to avoid shell injection.
+    const pgEnv = { ...process.env, PGPASSWORD: dbPassword };
     let command: string;
     if (isCompressed) {
-      command = `gunzip -c "${filePath}" | PGPASSWORD="${dbPassword}" psql -h ${DB_HOST} -U ${DB_USER} -d ${DB_NAME} --quiet`;
+      command = `gunzip -c "${filePath}" | psql -h ${DB_HOST} -U ${DB_USER} -d ${DB_NAME} --quiet`;
     } else {
-      command = `PGPASSWORD="${dbPassword}" psql -h ${DB_HOST} -U ${DB_USER} -d ${DB_NAME} --quiet < "${filePath}"`;
+      command = `psql -h ${DB_HOST} -U ${DB_USER} -d ${DB_NAME} --quiet < "${filePath}"`;
     }
 
     await execAsync(command, {
       shell: '/bin/sh',
       timeout: 600000, // 10 minute timeout
+      env: pgEnv,
     });
 
     return { success: true };
@@ -260,13 +266,15 @@ export async function truncateAllData(): Promise<{ success: boolean; error?: str
   }
 
   try {
-    // Use TRUNCATE with CASCADE to handle foreign keys
+    // Use TRUNCATE with CASCADE to handle foreign keys.
+    // PGPASSWORD is passed via env to avoid shell injection.
     const truncateSQL = ALL_TABLES.map(table => `TRUNCATE TABLE "${table}" CASCADE;`).join(' ');
-    const command = `PGPASSWORD="${dbPassword}" psql -h ${DB_HOST} -U ${DB_USER} -d ${DB_NAME} -c "${truncateSQL}"`;
+    const command = `psql -h ${DB_HOST} -U ${DB_USER} -d ${DB_NAME} -c "${truncateSQL}"`;
 
     await execAsync(command, {
       shell: '/bin/sh',
       timeout: 60000,
+      env: { ...process.env, PGPASSWORD: dbPassword },
     });
 
     return { success: true };

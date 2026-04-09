@@ -9,6 +9,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { addDays, subDays, startOfDay, endOfDay } from 'date-fns';
 import type { CalendarEvent } from '@/types/calendar';
+import { useVisibilityPolling } from '@/lib/hooks/useVisibilityPolling';
 
 interface UseCalendarEventsOptions {
   /** Number of days to fetch events for */
@@ -145,53 +146,41 @@ export function useCalendarEvents(
     if (enabled) fetchEvents();
   }, [fetchEvents, enabled]);
 
-  // Set up refresh interval (disabled when not enabled)
-  useEffect(() => {
-    if (!enabled || refreshInterval <= 0) return;
+  // Periodic data refresh — pauses when tab is hidden
+  useVisibilityPolling(fetchEvents, enabled ? refreshInterval : 0);
 
-    const interval = setInterval(fetchEvents, refreshInterval);
-    return () => clearInterval(interval);
-  }, [refreshInterval, fetchEvents, enabled]);
-
-  // Auto-sync: Check if calendars need syncing and trigger if stale
-  useEffect(() => {
+  // Auto-sync: check if any Google calendar is stale and trigger sync if needed
+  const checkAndSync = useCallback(async () => {
     if (!enabled || autoSyncMinutes <= 0) return;
+    try {
+      const response = await fetch('/api/calendars');
+      if (!response.ok) return;
 
-    const checkAndSync = async () => {
-      try {
-        // Fetch calendar sources to check last sync times
-        const response = await fetch('/api/calendars');
-        if (!response.ok) return;
+      const data = await response.json();
+      const calendars = data.calendars || [];
 
-        const data = await response.json();
-        const calendars = data.calendars || [];
+      const syncThreshold = new Date(Date.now() - autoSyncMinutes * 60 * 1000);
+      const needsSync = calendars.some(
+        (cal: { provider: string; enabled: boolean; lastSynced: string | null }) =>
+          cal.provider === 'google' &&
+          cal.enabled &&
+          (!cal.lastSynced || new Date(cal.lastSynced) < syncThreshold)
+      );
 
-        // Check if any enabled Google calendar needs syncing
-        const syncThreshold = new Date(Date.now() - autoSyncMinutes * 60 * 1000);
-        const needsSync = calendars.some(
-          (cal: { provider: string; enabled: boolean; lastSynced: string | null }) =>
-            cal.provider === 'google' &&
-            cal.enabled &&
-            (!cal.lastSynced || new Date(cal.lastSynced) < syncThreshold)
-        );
+      if (needsSync) await syncCalendars();
+      setLastSyncCheck(new Date());
+    } catch (err) {
+      console.error('[AutoSync] Error checking sync status:', err);
+    }
+  }, [enabled, autoSyncMinutes, syncCalendars]);
 
-        if (needsSync) {
-          await syncCalendars();
-        }
+  // Initial sync check on mount / when enabled changes
+  useEffect(() => {
+    if (enabled && autoSyncMinutes > 0) checkAndSync();
+  }, [checkAndSync, enabled, autoSyncMinutes]);
 
-        setLastSyncCheck(new Date());
-      } catch (err) {
-        console.error('[AutoSync] Error checking sync status:', err);
-      }
-    };
-
-    // Check on mount
-    checkAndSync();
-
-    // Check periodically (every autoSyncMinutes)
-    const interval = setInterval(checkAndSync, autoSyncMinutes * 60 * 1000);
-    return () => clearInterval(interval);
-  }, [autoSyncMinutes, syncCalendars]);
+  // Periodic sync check — pauses when tab is hidden
+  useVisibilityPolling(checkAndSync, enabled && autoSyncMinutes > 0 ? autoSyncMinutes * 60 * 1000 : 0);
 
   return {
     events,

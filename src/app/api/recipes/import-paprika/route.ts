@@ -23,6 +23,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const MAX_HTML_BYTES = 5 * 1024 * 1024; // 5 MB
+    if (Buffer.byteLength(body.html, 'utf8') > MAX_HTML_BYTES) {
+      return NextResponse.json(
+        { error: 'HTML content exceeds 5 MB limit' },
+        { status: 413 }
+      );
+    }
+
     // Parse recipes from HTML
     const parsedRecipes = parsePaprikaHtml(body.html);
 

@@ -21,6 +21,7 @@ import { db } from '@/lib/db/client';
 import { familyMessages, users } from '@/lib/db/schema';
 import { eq, desc, asc, and, gt, isNull, or, sql } from 'drizzle-orm';
 import { formatMessageRow } from '@/lib/utils/formatters';
+import { getCached, invalidateCache } from '@/lib/cache/redis';
 import { logActivity } from '@/lib/services/auditLog';
 import { logError } from '@/lib/utils/logError';
 
@@ -65,69 +66,73 @@ export async function GET(request: NextRequest) {
     const limit = Math.min(parseInt(searchParams.get('limit') || '20'), 100);
     const offset = parseInt(searchParams.get('offset') || '0');
 
-    // Build filter conditions
-    const conditions = [];
+    const cacheKey = `messages:${authorId ?? 'all'}:${pinned ?? 'any'}:${important ?? 'any'}:${includeExpired}:${limit}:${offset}`;
 
-    if (authorId) {
-      conditions.push(eq(familyMessages.authorId, authorId));
-    }
+    const result = await getCached(cacheKey, async () => {
+      // Build filter conditions
+      const conditions = [];
 
-    if (pinned !== null) {
-      conditions.push(eq(familyMessages.pinned, pinned === 'true'));
-    }
+      if (authorId) {
+        conditions.push(eq(familyMessages.authorId, authorId));
+      }
 
-    if (important !== null) {
-      conditions.push(eq(familyMessages.important, important === 'true'));
-    }
+      if (pinned !== null) {
+        conditions.push(eq(familyMessages.pinned, pinned === 'true'));
+      }
 
-    // By default, exclude expired messages
-    // A message is not expired if: expiresAt is null OR expiresAt > now
-    if (!includeExpired) {
-      conditions.push(
-        or(
-          isNull(familyMessages.expiresAt),
-          gt(familyMessages.expiresAt, new Date())
-        )
-      );
-    }
+      if (important !== null) {
+        conditions.push(eq(familyMessages.important, important === 'true'));
+      }
 
-    // Execute query with joins
-    // Sort by pinned (desc so true comes first), then by createdAt (desc)
-    const results = await db
-      .select({
-        id: familyMessages.id,
-        message: familyMessages.message,
-        pinned: familyMessages.pinned,
-        important: familyMessages.important,
-        expiresAt: familyMessages.expiresAt,
-        createdAt: familyMessages.createdAt,
-        authorId: users.id,
-        authorName: users.name,
-        authorColor: users.color,
-        authorAvatar: users.avatarUrl,
-      })
-      .from(familyMessages)
-      .innerJoin(users, eq(familyMessages.authorId, users.id))
-      .where(conditions.length > 0 ? and(...conditions) : undefined)
-      .orderBy(desc(familyMessages.pinned), desc(familyMessages.createdAt))
-      .limit(limit)
-      .offset(offset);
+      // By default, exclude expired messages
+      // A message is not expired if: expiresAt is null OR expiresAt > now
+      if (!includeExpired) {
+        conditions.push(
+          or(
+            isNull(familyMessages.expiresAt),
+            gt(familyMessages.expiresAt, new Date())
+          )
+        );
+      }
 
-    // Format response
-    const formattedMessages = results.map((row) => formatMessageRow(row));
+      // Execute query with joins
+      // Sort by pinned (desc so true comes first), then by createdAt (desc)
+      const results = await db
+        .select({
+          id: familyMessages.id,
+          message: familyMessages.message,
+          pinned: familyMessages.pinned,
+          important: familyMessages.important,
+          expiresAt: familyMessages.expiresAt,
+          createdAt: familyMessages.createdAt,
+          authorId: users.id,
+          authorName: users.name,
+          authorColor: users.color,
+          authorAvatar: users.avatarUrl,
+        })
+        .from(familyMessages)
+        .innerJoin(users, eq(familyMessages.authorId, users.id))
+        .where(conditions.length > 0 ? and(...conditions) : undefined)
+        .orderBy(desc(familyMessages.pinned), desc(familyMessages.createdAt))
+        .limit(limit)
+        .offset(offset);
 
-    // Get total count
-    const countResult = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(familyMessages)
-      .where(conditions.length > 0 ? and(...conditions) : undefined);
+      const formattedMessages = results.map((row) => formatMessageRow(row));
 
-    return NextResponse.json({
-      messages: formattedMessages,
-      total: Number(countResult[0]?.count ?? 0),
-      limit,
-      offset,
-    });
+      const countResult = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(familyMessages)
+        .where(conditions.length > 0 ? and(...conditions) : undefined);
+
+      return {
+        messages: formattedMessages,
+        total: Number(countResult[0]?.count ?? 0),
+        limit,
+        offset,
+      };
+    }, 60);
+
+    return NextResponse.json(result);
   } catch (error) {
     logError('Error fetching messages:', error);
     return NextResponse.json(
@@ -259,6 +264,8 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
+
+    await invalidateCache('messages:*');
 
     logActivity({
       userId: body.authorId,
