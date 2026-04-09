@@ -5,6 +5,7 @@ import { settings } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { logActivity } from '@/lib/services/auditLog';
 import { logError } from '@/lib/utils/logError';
+import { encrypt, decrypt, isEncrypted } from '@/lib/utils/crypto';
 
 const WIFI_SETTINGS_KEY = 'wifiConfig';
 
@@ -22,7 +23,15 @@ export async function GET() {
       .where(eq(settings.key, WIFI_SETTINGS_KEY))
       .limit(1);
 
-    const config = result[0]?.value || null;
+    const raw = result[0]?.value as { ssid: string; password: string; securityType: string; hidden: boolean } | null;
+
+    // Decrypt password if it was stored encrypted (handles migration from plaintext)
+    const config = raw
+      ? {
+          ...raw,
+          password: raw.password && isEncrypted(raw.password) ? decrypt(raw.password) : raw.password,
+        }
+      : null;
 
     return NextResponse.json({ config });
   } catch (error) {
@@ -57,7 +66,7 @@ export async function POST(request: NextRequest) {
 
     const config = {
       ssid: ssid || '',
-      password: password || '',
+      password: password ? encrypt(password) : '',
       securityType: securityType || 'WPA',
       hidden: hidden || false,
     };
@@ -81,7 +90,7 @@ export async function POST(request: NextRequest) {
       summary: `Updated setting: WiFi config (${config.ssid})`,
     });
 
-    return NextResponse.json({ success: true, config });
+    return NextResponse.json({ success: true, config: { ...config, password: password || '' } });
   } catch (error) {
     logError('Error saving WiFi config:', error);
     return NextResponse.json(

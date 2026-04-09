@@ -6,7 +6,7 @@ import { tasks, users } from '@/lib/db/schema';
 import { eq, desc, asc, and, lte, gte, sql } from 'drizzle-orm';
 import { formatTaskRow } from '@/lib/utils/formatters';
 import { createTaskSchema } from '@/lib/validations';
-import { invalidateCache } from '@/lib/cache/redis';
+import { getCached, invalidateCache } from '@/lib/cache/redis';
 import { logActivity } from '@/lib/services/auditLog';
 import { logError } from '@/lib/utils/logError';
 
@@ -29,79 +29,85 @@ export async function GET(request: NextRequest) {
     const sort = searchParams.get('sort') || 'dueDate';
     const order = searchParams.get('order') || 'asc';
 
-    const conditions = [];
+    const cacheKey = `tasks:${userId ?? 'all'}:${completed ?? 'any'}:${priority ?? 'any'}:${dueBefore ?? ''}:${dueAfter ?? ''}:${sort}:${order}:${limit}:${offset}`;
 
-    if (userId) {
-      conditions.push(eq(tasks.assignedTo, userId));
-    }
+    const result = await getCached(cacheKey, async () => {
+      const conditions = [];
 
-    if (completed !== null) {
-      conditions.push(eq(tasks.completed, completed === 'true'));
-    }
-
-    if (priority) {
-      conditions.push(eq(tasks.priority, priority as 'high' | 'medium' | 'low'));
-    }
-
-    if (dueBefore) {
-      conditions.push(lte(tasks.dueDate, new Date(dueBefore)));
-    }
-
-    if (dueAfter) {
-      conditions.push(gte(tasks.dueDate, new Date(dueAfter)));
-    }
-
-    const getSortColumn = () => {
-      switch (sort) {
-        case 'dueDate': return tasks.dueDate;
-        case 'priority': return tasks.priority;
-        case 'createdAt': return tasks.createdAt;
-        case 'title': return tasks.title;
-        default: return tasks.dueDate;
+      if (userId) {
+        conditions.push(eq(tasks.assignedTo, userId));
       }
-    };
 
-    const sortFn = order === 'desc' ? desc : asc;
+      if (completed !== null) {
+        conditions.push(eq(tasks.completed, completed === 'true'));
+      }
 
-    const results = await db
-      .select({
-        id: tasks.id,
-        title: tasks.title,
-        description: tasks.description,
-        dueDate: tasks.dueDate,
-        priority: tasks.priority,
-        category: tasks.category,
-        completed: tasks.completed,
-        completedAt: tasks.completedAt,
-        listId: tasks.listId,
-        taskSourceId: tasks.taskSourceId,
-        createdAt: tasks.createdAt,
-        updatedAt: tasks.updatedAt,
-        assignedUserId: users.id,
-        assignedUserName: users.name,
-        assignedUserColor: users.color,
-        assignedUserAvatar: users.avatarUrl,
-      })
-      .from(tasks)
-      .leftJoin(users, eq(tasks.assignedTo, users.id))
-      .where(conditions.length > 0 ? and(...conditions) : undefined)
-      .orderBy(sortFn(getSortColumn()))
-      .limit(limit)
-      .offset(offset);
+      if (priority) {
+        conditions.push(eq(tasks.priority, priority as 'high' | 'medium' | 'low'));
+      }
 
-    const formattedTasks = results.map((row) => formatTaskRow(row));
+      if (dueBefore) {
+        conditions.push(lte(tasks.dueDate, new Date(dueBefore)));
+      }
 
-    const countResult = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(tasks)
-      .where(conditions.length > 0 ? and(...conditions) : undefined);
+      if (dueAfter) {
+        conditions.push(gte(tasks.dueDate, new Date(dueAfter)));
+      }
 
-    return NextResponse.json({
-      tasks: formattedTasks,
-      total: Number(countResult[0]?.count ?? 0),
-      limit,
-      offset,
-    });
+      const getSortColumn = () => {
+        switch (sort) {
+          case 'dueDate': return tasks.dueDate;
+          case 'priority': return tasks.priority;
+          case 'createdAt': return tasks.createdAt;
+          case 'title': return tasks.title;
+          default: return tasks.dueDate;
+        }
+      };
+
+      const sortFn = order === 'desc' ? desc : asc;
+
+      const results = await db
+        .select({
+          id: tasks.id,
+          title: tasks.title,
+          description: tasks.description,
+          dueDate: tasks.dueDate,
+          priority: tasks.priority,
+          category: tasks.category,
+          completed: tasks.completed,
+          completedAt: tasks.completedAt,
+          listId: tasks.listId,
+          taskSourceId: tasks.taskSourceId,
+          createdAt: tasks.createdAt,
+          updatedAt: tasks.updatedAt,
+          assignedUserId: users.id,
+          assignedUserName: users.name,
+          assignedUserColor: users.color,
+          assignedUserAvatar: users.avatarUrl,
+        })
+        .from(tasks)
+        .leftJoin(users, eq(tasks.assignedTo, users.id))
+        .where(conditions.length > 0 ? and(...conditions) : undefined)
+        .orderBy(sortFn(getSortColumn()))
+        .limit(limit)
+        .offset(offset);
+
+      const formattedTasks = results.map((row) => formatTaskRow(row));
+
+      const countResult = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(tasks)
+        .where(conditions.length > 0 ? and(...conditions) : undefined);
+
+      return {
+        tasks: formattedTasks,
+        total: Number(countResult[0]?.count ?? 0),
+        limit,
+        offset,
+      };
+    }, 60);
+
+    return NextResponse.json(result);
   } catch (error) {
     logError('Error fetching tasks:', error);
     return NextResponse.json(

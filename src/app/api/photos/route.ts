@@ -6,6 +6,7 @@ import { eq, desc, sql, and, like } from 'drizzle-orm';
 import { savePhoto } from '@/lib/services/photo-storage';
 import { PHOTO_MAX_SIZE_MB, PHOTO_ALLOWED_TYPES } from '@/lib/constants';
 import { validateMagicBytes } from '@/lib/utils/validateFileType';
+import { getCached, invalidateCache } from '@/lib/cache/redis';
 import { rateLimitGuard } from '@/lib/cache/rateLimit';
 import { logError } from '@/lib/utils/logError';
 
@@ -25,43 +26,39 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '50', 10);
     const offset = parseInt(searchParams.get('offset') || '0', 10);
 
-    const conditions = [];
-    if (sourceId) conditions.push(eq(photos.sourceId, sourceId));
-    if (favorite === 'true') conditions.push(eq(photos.favorite, true));
-    if (orientation) conditions.push(eq(photos.orientation, orientation as 'landscape' | 'portrait' | 'square'));
-    // Usage filter: match photos whose comma-separated usage field contains the tag
-    if (usage) {
-      // Support legacy _or_all / _or_both queries
-      const tag = usage.replace(/_or_all$/, '').replace(/_or_both$/, '');
-      conditions.push(like(photos.usage, `%${tag}%`));
-    }
+    const runQuery = async () => {
+      const conditions = [];
+      if (sourceId) conditions.push(eq(photos.sourceId, sourceId));
+      if (favorite === 'true') conditions.push(eq(photos.favorite, true));
+      if (orientation) conditions.push(eq(photos.orientation, orientation as 'landscape' | 'portrait' | 'square'));
+      if (usage) {
+        const tag = usage.replace(/_or_all$/, '').replace(/_or_both$/, '');
+        conditions.push(like(photos.usage, `%${tag}%`));
+      }
 
-    const orderBy = sort === 'random'
-      ? sql`RANDOM()`
-      : desc(photos.takenAt);
+      const orderBy = sort === 'random' ? sql`RANDOM()` : desc(photos.takenAt);
 
-    const query = db
-      .select()
-      .from(photos)
-      .orderBy(orderBy)
-      .limit(limit)
-      .offset(offset);
+      const query = db.select().from(photos).orderBy(orderBy).limit(limit).offset(offset);
+      const results = conditions.length > 0 ? await query.where(and(...conditions)) : await query;
 
-    const results = conditions.length > 0
-      ? await query.where(and(...conditions))
-      : await query;
+      const totalQuery = db.select({ count: sql<number>`count(*)` }).from(photos);
+      const totalResult = conditions.length > 0
+        ? await totalQuery.where(and(...conditions))
+        : await totalQuery;
 
-    const totalQuery = db
-      .select({ count: sql<number>`count(*)` })
-      .from(photos);
+      return { photos: results, total: Number(totalResult[0]?.count ?? 0) };
+    };
 
-    const totalResult = conditions.length > 0
-      ? await totalQuery.where(and(...conditions))
-      : await totalQuery;
+    // Skip caching for random sort — the point is to get a different selection each time
+    const result = sort === 'random'
+      ? await runQuery()
+      : await getCached(
+          `photos:${sourceId ?? 'all'}:${favorite ?? 'any'}:${usage ?? 'all'}:${orientation ?? 'any'}:${sort}:${limit}:${offset}`,
+          runQuery,
+          300
+        );
 
-    const total = Number(totalResult[0]?.count ?? 0);
-
-    return NextResponse.json({ photos: results, total });
+    return NextResponse.json(result);
   } catch (error) {
     logError('Error fetching photos:', error);
     return NextResponse.json({ error: 'Failed to fetch photos' }, { status: 500 });
@@ -146,6 +143,8 @@ export async function POST(request: NextRequest) {
         orientation,
       })
       .returning();
+
+    await invalidateCache('photos:*');
 
     return NextResponse.json(photo, { status: 201 });
   } catch (error) {
