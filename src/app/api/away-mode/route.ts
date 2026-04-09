@@ -47,10 +47,12 @@ export async function POST(request: NextRequest) {
     const enabled = Boolean(body.enabled);
     const autoActivated = Boolean(body.autoActivated);
 
-    // Auto-activation can only enable, not disable
-    // Manual control requires authentication
+    // Auto-activation can only enable, not disable.
+    // Manual control requires authentication.
+    // Auto-activation validates same-origin to prevent external triggering via the public tunnel.
     let authUserId: string | null = null;
     if (!autoActivated || !enabled) {
+      // Manual toggle — always requires auth
       const auth = await requireAuth();
       if (auth instanceof NextResponse) return auth;
 
@@ -62,6 +64,28 @@ export async function POST(request: NextRequest) {
       if (limited) return limited;
 
       authUserId = auth.userId;
+    } else {
+      // Auto-activation: only allow requests from the same host (i.e. the dashboard browser).
+      // Non-browser clients (curl, external fetch) have no Origin header or a mismatched one.
+      const origin = request.headers.get('origin');
+      const host = request.headers.get('host');
+      if (!origin) {
+        // No Origin header — non-browser client, require full auth
+        const auth = await requireAuth();
+        if (auth instanceof NextResponse) return auth;
+        const forbidden = requireRole(auth, 'canToggleAwayMode');
+        if (forbidden) return forbidden;
+        authUserId = auth.userId;
+      } else if (host) {
+        try {
+          const originHost = new URL(origin).host;
+          if (originHost !== host) {
+            return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+          }
+        } catch {
+          return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+        }
+      }
     }
 
     const newState: AwayModeState = enabled
