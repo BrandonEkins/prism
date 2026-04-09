@@ -4,6 +4,17 @@ All notable changes to Prism are documented in this file.
 
 ## [Unreleased]
 
+### Security
+- **CSRF**: Next.js middleware validates `Origin` header on all API mutations — cross-origin requests blocked at the edge (away-mode auto-activation exempt)
+- **WiFi config**: Password now stored AES-256-GCM encrypted in the database; decrypted on read with backward-compat for existing plaintext rows
+- **Backups**: `PGPASSWORD` moved from inline shell string to process env — prevents credential leakage in process listings
+- **Babysitter info**: Sensitive section content now requires authentication (`includeSensitive=true` requests gated behind `requireAuth`)
+- **Paprika import**: HTML payload capped at 5 MB — prevents memory exhaustion from oversized uploads
+
+### Performance
+- **Caching**: Messages, Tasks, and Photos GET endpoints now cache responses in Redis (60s / 60s / 300s TTLs) — reduces DB load on frequently-polled dashboard data
+- **Visibility polling**: `useCalendarEvents` and `usePhotos` now use `useVisibilityPolling` — polling pauses when the browser tab is hidden
+
 ### Improved
 - **Tasks**: Group control split into a "Group" primary select and a "Then by" secondary select — the nested `Person → List` / `List → Person` arrow-notation options are replaced by two independent dropdowns; "Then by" only appears when a groupable primary is chosen and task lists exist
 - **Chores**: "Group by Person" toggle replaced with a consistent "Group" dropdown (None / Person) matching Tasks' style
