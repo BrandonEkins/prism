@@ -4,7 +4,8 @@ import { db } from '@/lib/db/client';
 import { users } from '@/lib/db/schema';
 
 import bcrypt from 'bcryptjs';
-import { getCached, invalidateCache } from '@/lib/cache/redis';
+import { getCached } from '@/lib/cache/redis';
+import { invalidateEntity } from '@/lib/cache/cacheKeys';
 import { logActivity } from '@/lib/services/auditLog';
 import { logError } from '@/lib/utils/logError';
 
@@ -153,7 +154,7 @@ export async function POST(request: NextRequest) {
       createdAt: newMember.createdAt.toISOString(),
     };
 
-    await invalidateCache('family:*');
+    await invalidateEntity('family');
 
     logActivity({
       userId: auth.userId,

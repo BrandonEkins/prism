@@ -5,7 +5,7 @@ import { db } from '@/lib/db/client';
 import { users } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { saveAvatar, deleteAvatar, getAvatarPath } from '@/lib/services/avatar-storage';
-import { invalidateCache } from '@/lib/cache/redis';
+import { invalidateEntity } from '@/lib/cache/cacheKeys';
 import { validateMagicBytes } from '@/lib/utils/validateFileType';
 import { rateLimitGuard } from '@/lib/cache/rateLimit';
 import { logError } from '@/lib/utils/logError';
@@ -63,7 +63,7 @@ export async function POST(
       .set({ avatarUrl, updatedAt: new Date() })
       .where(eq(users.id, id));
 
-    await invalidateCache('family:*');
+    await invalidateEntity('family');
 
     return NextResponse.json({ avatarUrl });
   } catch (error) {
@@ -115,7 +115,7 @@ export async function DELETE(
       .set({ avatarUrl: null, updatedAt: new Date() })
       .where(eq(users.id, id));
 
-    await invalidateCache('family:*');
+    await invalidateEntity('family');
 
     return NextResponse.json({ success: true });
   } catch (error) {

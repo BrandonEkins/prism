@@ -4,7 +4,7 @@ import { db } from '@/lib/db/client';
 import { taskSources, taskLists } from '@/lib/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { getRedisClient } from '@/lib/cache/getRedisClient';
-import { invalidateCache } from '@/lib/cache/redis';
+import { invalidateEntity } from '@/lib/cache/cacheKeys';
 import { logActivity } from '@/lib/services/auditLog';
 import { logError } from '@/lib/utils/logError';
 
@@ -96,7 +96,7 @@ export async function POST(request: NextRequest) {
         );
       }
       finalTaskListId = newList.id;
-      await invalidateCache('task-lists:*');
+      await invalidateEntity('task-lists');
     } else {
       // Verify the Prism task list exists
       const [taskList] = await db
@@ -155,7 +155,7 @@ export async function POST(request: NextRequest) {
     // Clean up temp tokens
     await redis.del(tempKey);
 
-    await invalidateCache('task-sources:*');
+    await invalidateEntity('task-sources');
 
     logActivity({
       userId: auth.userId,

@@ -3,7 +3,7 @@ import { withAuth } from '@/lib/api/withAuth';
 import { db } from '@/lib/db/client';
 import { users } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
-import { invalidateCache } from '@/lib/cache/redis';
+import { invalidateEntity } from '@/lib/cache/cacheKeys';
 import { logError } from '@/lib/utils/logError';
 
 /**
@@ -28,8 +28,8 @@ export async function PUT(request: NextRequest) {
         }).where(eq(users.id, item.id));
       }
 
-      await invalidateCache('family:*');
-      await invalidateCache('calendar-groups:*');
+      await invalidateEntity('family');
+      await invalidateEntity('calendar-groups');
 
       return NextResponse.json({ success: true });
     } catch (error) {

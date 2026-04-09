@@ -5,7 +5,7 @@ import { withAuth } from '@/lib/api/withAuth';
 import { db } from '@/lib/db/client';
 import { busRoutes } from '@/lib/db/schema';
 import { validateRequest, createBusRouteSchema } from '@/lib/validations';
-import { invalidateCache } from '@/lib/cache/redis';
+import { invalidateEntity } from '@/lib/cache/cacheKeys';
 import { logError } from '@/lib/utils/logError';
 
 export async function GET() {
@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
         sortOrder: validation.data.sortOrder,
       }).returning();
 
-      await invalidateCache('bus:*');
+      await invalidateEntity('bus');
       return NextResponse.json(route, { status: 201 });
     } catch (error) {
       logError('Failed to create bus route:', error);

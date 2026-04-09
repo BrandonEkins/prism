@@ -19,7 +19,8 @@ import { meals, users } from '@/lib/db/schema';
 import { eq, and, asc, aliasedTable } from 'drizzle-orm';
 import { createMealSchema, validateRequest } from '@/lib/validations';
 import { formatMealRow } from '@/lib/utils/formatters';
-import { getCached, invalidateCache } from '@/lib/cache/redis';
+import { getCached } from '@/lib/cache/redis';
+import { invalidateEntity } from '@/lib/cache/cacheKeys';
 import { logActivity } from '@/lib/services/auditLog';
 import { logError } from '@/lib/utils/logError';
 
@@ -178,7 +179,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    await invalidateCache('meals:*');
+    await invalidateEntity('meals');
 
     logActivity({
       userId: auth.userId,

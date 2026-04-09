@@ -22,7 +22,7 @@ import { db } from '@/lib/db/client';
 import { chores, choreCompletions, users } from '@/lib/db/schema';
 import { eq, and, isNull, desc } from 'drizzle-orm';
 import { completeChoreSchema, validateRequest } from '@/lib/validations';
-import { invalidateCache } from '@/lib/cache/redis';
+import { invalidateEntity } from '@/lib/cache/cacheKeys';
 import { rateLimitGuard } from '@/lib/cache/rateLimit';
 import { calculateNextDue } from '@/lib/utils/calculateNextDue';
 import { logActivity } from '@/lib/services/auditLog';
@@ -220,8 +220,7 @@ export async function POST(
       message = `Chore completed! ${chore.pointValue} points awarded.`;
     }
 
-    await invalidateCache('chores:*');
-    await invalidateCache('goals:*');
+    await invalidateEntity('chores');
 
     logActivity({
       userId: auth.userId,
@@ -318,8 +317,7 @@ export async function DELETE(
         .where(eq(chores.id, choreId));
     });
 
-    await invalidateCache('chores:*');
-    await invalidateCache('goals:*');
+    await invalidateEntity('chores');
 
     return NextResponse.json({ success: true });
   } catch (error) {

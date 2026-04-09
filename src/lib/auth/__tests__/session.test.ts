@@ -141,12 +141,13 @@ describe('validateSession', () => {
 
     const result = await validateSession('valid-token');
 
-    expect(result).not.toBeNull();
-    expect(result!.userId).toBe('user-1');
-    expect(result!.role).toBe('parent');
-    expect(result!.createdAt).toBe(sessionData.createdAt);
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error('expected ok');
+    expect(result.session.userId).toBe('user-1');
+    expect(result.session.role).toBe('parent');
+    expect(result.session.createdAt).toBe(sessionData.createdAt);
     // Sliding window refreshes expiresAt to full session duration
-    expect(result!.expiresAt).toBeGreaterThanOrEqual(sessionData.expiresAt);
+    expect(result.session.expiresAt).toBeGreaterThanOrEqual(sessionData.expiresAt);
   });
 
   it('refreshes TTL on successful validation (sliding window)', async () => {
@@ -166,14 +167,14 @@ describe('validateSession', () => {
     );
   });
 
-  it('returns null for missing session', async () => {
+  it('returns invalid for missing session', async () => {
     mockRedisClient.get.mockResolvedValueOnce(null);
 
     const result = await validateSession('missing-token');
-    expect(result).toBeNull();
+    expect(result).toEqual({ ok: false, reason: 'invalid' });
   });
 
-  it('returns null and deletes expired session', async () => {
+  it('returns invalid and deletes expired session', async () => {
     const expiredSession = {
       userId: 'user-1', role: 'parent',
       createdAt: Date.now() - 120000, expiresAt: Date.now() - 60000, // expired 1 min ago
@@ -182,27 +183,27 @@ describe('validateSession', () => {
 
     const result = await validateSession('expired-token');
 
-    expect(result).toBeNull();
+    expect(result).toEqual({ ok: false, reason: 'invalid' });
     expect(mockRedisClient.del).toHaveBeenCalledWith('session:expired-token');
   });
 
-  it('returns null for empty token', async () => {
+  it('returns invalid for empty token', async () => {
     const result = await validateSession('');
-    expect(result).toBeNull();
+    expect(result).toEqual({ ok: false, reason: 'invalid' });
   });
 
-  it('returns null when Redis is unavailable', async () => {
+  it('returns unavailable when Redis is unreachable', async () => {
     mockGetRedisClient.mockResolvedValue(null);
 
     const result = await validateSession('some-token');
-    expect(result).toBeNull();
+    expect(result).toEqual({ ok: false, reason: 'unavailable' });
   });
 
-  it('returns null when Redis throws', async () => {
+  it('returns unavailable when Redis throws', async () => {
     mockRedisClient.get.mockRejectedValueOnce(new Error('timeout'));
 
     const result = await validateSession('error-token');
-    expect(result).toBeNull();
+    expect(result).toEqual({ ok: false, reason: 'unavailable' });
   });
 });
 

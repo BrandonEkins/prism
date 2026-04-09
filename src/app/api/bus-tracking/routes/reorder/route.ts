@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm';
 import { withAuth } from '@/lib/api/withAuth';
 import { db } from '@/lib/db/client';
 import { busRoutes } from '@/lib/db/schema';
-import { invalidateCache } from '@/lib/cache/redis';
+import { invalidateEntity } from '@/lib/cache/cacheKeys';
 import { logError } from '@/lib/utils/logError';
 
 export async function POST(request: NextRequest) {
@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
         }
       });
 
-      await invalidateCache('bus:*');
+      await invalidateEntity('bus');
       return NextResponse.json({ success: true });
     } catch (error) {
       logError('Failed to reorder bus routes:', error);

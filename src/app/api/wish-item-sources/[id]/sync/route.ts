@@ -3,7 +3,7 @@ import { db } from '@/lib/db/client';
 import { wishItemSources, wishItems } from '@/lib/db/schema';
 import { eq, and, or, isNull } from 'drizzle-orm';
 import { requireAuth, requireRole } from '@/lib/auth';
-import { invalidateCache } from '@/lib/cache/redis';
+import { invalidateEntity } from '@/lib/cache/cacheKeys';
 import { getWishItemProvider } from '@/lib/integrations/wish-items';
 import { decrypt, encrypt } from '@/lib/utils/crypto';
 import { logActivity } from '@/lib/services/auditLog';
@@ -148,8 +148,8 @@ export async function POST(
       })
       .where(eq(wishItemSources.id, sourceId));
 
-    await invalidateCache('wish:*');
-    await invalidateCache('wish-item-sources:*');
+    await invalidateEntity('wish-items');
+    await invalidateEntity('wish-item-sources');
 
     logActivity({
       userId: auth.userId,

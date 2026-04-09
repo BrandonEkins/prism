@@ -12,7 +12,7 @@ import { shoppingItems, shoppingLists, users } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { updateShoppingItemSchema, validateRequest } from '@/lib/validations';
 import { requireAuth } from '@/lib/auth';
-import { invalidateCache } from '@/lib/cache/redis';
+import { invalidateEntity } from '@/lib/cache/cacheKeys';
 import { logActivity } from '@/lib/services/auditLog';
 import { logError } from '@/lib/utils/logError';
 
@@ -130,7 +130,7 @@ export async function PATCH(
       );
     }
 
-    await invalidateCache('shopping-lists:*');
+    await invalidateEntity('shopping-lists');
 
     const checkedToggled = 'checked' in validation.data;
     const summary = checkedToggled
@@ -200,7 +200,7 @@ export async function DELETE(
       .delete(shoppingItems)
       .where(eq(shoppingItems.id, id));
 
-    await invalidateCache('shopping-lists:*');
+    await invalidateEntity('shopping-lists');
 
     logActivity({
       userId: auth.userId,

@@ -4,7 +4,7 @@ import { db } from '@/lib/db/client';
 import { users, calendarGroups } from '@/lib/db/schema';
 import { eq, and } from 'drizzle-orm';
 import bcrypt from 'bcryptjs';
-import { invalidateCache } from '@/lib/cache/redis';
+import { invalidateEntity } from '@/lib/cache/cacheKeys';
 import { logActivity } from '@/lib/services/auditLog';
 import { logError } from '@/lib/utils/logError';
 
@@ -191,8 +191,8 @@ export async function PATCH(
         ));
     }
 
-    await invalidateCache('family:*');
-    await invalidateCache('calendar-groups:*');
+    await invalidateEntity('family');
+    await invalidateEntity('calendar-groups');
 
     logActivity({
       userId: auth.userId,
@@ -263,7 +263,7 @@ export async function DELETE(
       await tx.delete(users).where(eq(users.id, id));
     });
 
-    await invalidateCache('family:*');
+    await invalidateEntity('family');
 
     logActivity({
       userId: auth.userId,

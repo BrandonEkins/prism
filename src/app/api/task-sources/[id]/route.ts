@@ -3,7 +3,7 @@ import { db } from '@/lib/db/client';
 import { taskSources } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { requireAuth, requireRole } from '@/lib/auth';
-import { invalidateCache } from '@/lib/cache/redis';
+import { invalidateEntity } from '@/lib/cache/cacheKeys';
 import { logActivity } from '@/lib/services/auditLog';
 import { logError } from '@/lib/utils/logError';
 
@@ -129,7 +129,7 @@ export async function PATCH(
       );
     }
 
-    await invalidateCache('task-sources:*');
+    await invalidateEntity('task-sources');
 
     logActivity({
       userId: auth.userId,
@@ -188,7 +188,7 @@ export async function DELETE(
 
     await db.delete(taskSources).where(eq(taskSources.id, id));
 
-    await invalidateCache('task-sources:*');
+    await invalidateEntity('task-sources');
 
     logActivity({
       userId: auth.userId,

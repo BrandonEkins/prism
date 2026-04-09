@@ -14,7 +14,7 @@ import { db } from '@/lib/db/client';
 import { wishItems } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { requireAuth } from '@/lib/auth';
-import { invalidateCache } from '@/lib/cache/redis';
+import { invalidateEntity } from '@/lib/cache/cacheKeys';
 import { logError } from '@/lib/utils/logError';
 
 interface RouteParams {
@@ -92,7 +92,7 @@ export async function POST(
       }).where(eq(wishItems.id, id));
     }
 
-    await invalidateCache('wish-items:*');
+    await invalidateEntity('wish-items');
 
     return NextResponse.json({ success: true });
   } catch (error) {

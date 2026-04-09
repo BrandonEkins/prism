@@ -19,7 +19,7 @@ import { db } from '@/lib/db/client';
 import { shoppingItems, users } from '@/lib/db/schema';
 import { eq, and, asc } from 'drizzle-orm';
 import { createShoppingItemSchema, validateRequest } from '@/lib/validations';
-import { invalidateCache } from '@/lib/cache/redis';
+import { invalidateEntity } from '@/lib/cache/cacheKeys';
 import { logActivity } from '@/lib/services/auditLog';
 import { formatShoppingItemRow } from '@/lib/utils/formatters';
 import { logError } from '@/lib/utils/logError';
@@ -157,7 +157,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    await invalidateCache('shopping-lists:*');
+    await invalidateEntity('shopping-lists');
 
     logActivity({
       userId: auth.userId,

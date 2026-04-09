@@ -49,15 +49,21 @@ export async function requireAuth(): Promise<AuthResult | NextResponse> {
     );
   }
 
-  const session = await validateSession(sessionToken);
-  if (!session) {
+  const result = await validateSession(sessionToken);
+  if (!result.ok) {
+    if (result.reason === 'unavailable') {
+      return NextResponse.json(
+        { error: 'Service unavailable — session store unreachable' },
+        { status: 503 }
+      );
+    }
     return NextResponse.json(
       { error: 'Invalid or expired session' },
       { status: 401 }
     );
   }
 
-  return { userId: session.userId, role: session.role };
+  return { userId: result.session.userId, role: result.session.role };
 }
 
 /**
@@ -79,12 +85,10 @@ export async function optionalAuth(): Promise<AuthResult | null> {
     return null;
   }
 
-  const session = await validateSession(sessionToken);
-  if (!session) {
-    return null;
-  }
+  const result = await validateSession(sessionToken);
+  if (!result.ok) return null;
 
-  return { userId: session.userId, role: session.role };
+  return { userId: result.session.userId, role: result.session.role };
 }
 
 /**

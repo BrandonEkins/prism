@@ -19,7 +19,7 @@ import { requireAuth } from '@/lib/auth';
 import { db } from '@/lib/db/client';
 import { events, calendarSources } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
-import { invalidateCache } from '@/lib/cache/redis';
+import { invalidateEntity } from '@/lib/cache/cacheKeys';
 import { updateCalendarEvent, deleteCalendarEvent, refreshAccessToken } from '@/lib/integrations/google-calendar';
 import { decrypt, encrypt } from '@/lib/utils/crypto';
 import { logActivity } from '@/lib/services/auditLog';
@@ -373,7 +373,7 @@ export async function PATCH(
     }
 
     // Invalidate events cache
-    await invalidateCache('events:*');
+    await invalidateEntity('events');
 
     logActivity({
       userId: auth.userId,
@@ -510,7 +510,7 @@ export async function DELETE(
       .where(eq(events.id, id));
 
     // Invalidate events cache
-    await invalidateCache('events:*');
+    await invalidateEntity('events');
 
     logActivity({
       userId: auth.userId,

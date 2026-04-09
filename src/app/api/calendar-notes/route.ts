@@ -11,12 +11,14 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAuth, getDisplayAuth } from '@/lib/auth';
+import { getDisplayAuth } from '@/lib/auth';
+import { withAuth } from '@/lib/api/withAuth';
 import { db } from '@/lib/db/client';
 import { calendarNotes } from '@/lib/db/schema';
 import { gte, lte, and, eq, asc } from 'drizzle-orm';
 import { upsertCalendarNoteSchema, calendarNotesQuerySchema } from '@/lib/validations';
-import { getCached, invalidateCache } from '@/lib/cache/redis';
+import { getCached } from '@/lib/cache/redis';
+import { invalidateEntity } from '@/lib/cache/cacheKeys';
 import { logError } from '@/lib/utils/logError';
 
 /**
@@ -77,13 +79,7 @@ export async function GET(request: NextRequest) {
  * Upsert a note for a date. Empty content deletes the note.
  */
 export async function PUT(request: NextRequest) {
-  const auth = await requireAuth();
-  if (auth instanceof NextResponse) return auth;
-
-  const { rateLimitGuard } = await import('@/lib/cache/rateLimit');
-  const limited = await rateLimitGuard(auth.userId, 'calendar-notes', 60, 60);
-  if (limited) return limited;
-
+  return withAuth(async (auth) => {
   try {
     const body = await request.json();
     const parsed = upsertCalendarNoteSchema.safeParse(body);
@@ -99,7 +95,7 @@ export async function PUT(request: NextRequest) {
     // Empty content = delete the note
     if (!content.trim()) {
       await db.delete(calendarNotes).where(eq(calendarNotes.date, date));
-      await invalidateCache('calendar-notes:*');
+      await invalidateEntity('calendar-notes');
       return NextResponse.json({ deleted: true, date });
     }
 
@@ -121,11 +117,12 @@ export async function PUT(request: NextRequest) {
       })
       .returning();
 
-    await invalidateCache('calendar-notes:*');
+    await invalidateEntity('calendar-notes');
 
     return NextResponse.json({ note });
   } catch (error) {
     logError('Failed to upsert calendar note:', error);
     return NextResponse.json({ error: 'Failed to save note' }, { status: 500 });
   }
+  }, { rateLimit: { feature: 'calendar-notes', limit: 60, windowSeconds: 60 } });
 }

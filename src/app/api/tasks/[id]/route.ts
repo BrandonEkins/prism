@@ -21,7 +21,7 @@ import { tasks, users } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { requireAuth, requireRole } from '@/lib/auth';
 import { formatTaskRow } from '@/lib/utils/formatters';
-import { invalidateCache } from '@/lib/cache/redis';
+import { invalidateEntity } from '@/lib/cache/cacheKeys';
 import { logActivity } from '@/lib/services/auditLog';
 import { logError } from '@/lib/utils/logError';
 
@@ -296,7 +296,7 @@ export async function PATCH(
       );
     }
 
-    await invalidateCache('tasks:*');
+    await invalidateEntity('tasks');
 
     const actionSummary = body.completed
       ? `Completed task: ${updatedTaskWithUser.title}`
@@ -381,7 +381,7 @@ export async function DELETE(
       .delete(tasks)
       .where(eq(tasks.id, id));
 
-    await invalidateCache('tasks:*');
+    await invalidateEntity('tasks');
 
     logActivity({
       userId: auth.userId,

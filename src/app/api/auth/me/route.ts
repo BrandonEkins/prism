@@ -62,9 +62,15 @@ export async function GET(request: NextRequest) {
     }
 
     // Validate session token against Redis
-    const sessionData = await validateSession(sessionToken);
+    const sessionResult = await validateSession(sessionToken);
 
-    if (!sessionData) {
+    if (!sessionResult.ok) {
+      if (sessionResult.reason === 'unavailable') {
+        return NextResponse.json(
+          { authenticated: false, user: null, error: 'Service unavailable' },
+          { status: 503 }
+        );
+      }
       // Session is invalid or expired - clear cookies
       cookieStore.set('prism_session', '', { maxAge: 0, path: '/' });
       cookieStore.set('prism_user', '', { maxAge: 0, path: '/' });
@@ -78,6 +84,8 @@ export async function GET(request: NextRequest) {
         { status: 401 }
       );
     }
+
+    const sessionData = sessionResult.session;
 
     // Verify userId from cookie matches the session
     if (sessionData.userId !== userId) {

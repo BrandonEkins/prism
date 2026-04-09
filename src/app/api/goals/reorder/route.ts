@@ -3,7 +3,7 @@ import { requireAuth, requireRole } from '@/lib/auth';
 import { db } from '@/lib/db/client';
 import { goals } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
-import { invalidateCache } from '@/lib/cache/redis';
+import { invalidateEntity } from '@/lib/cache/cacheKeys';
 import { z } from 'zod';
 import { logError } from '@/lib/utils/logError';
 
@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    await invalidateCache('goals:*');
+    await invalidateEntity('goals');
 
     return NextResponse.json({ message: 'Goals reordered' });
   } catch (error) {

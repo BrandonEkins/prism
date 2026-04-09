@@ -63,22 +63,26 @@ export async function createSession(
   }
 }
 
-export async function validateSession(token: string): Promise<SessionData | null> {
-  if (!token) return null;
+export type ValidateSessionResult =
+  | { ok: true; session: SessionData }
+  | { ok: false; reason: 'invalid' | 'unavailable' };
+
+export async function validateSession(token: string): Promise<ValidateSessionResult> {
+  if (!token) return { ok: false, reason: 'invalid' };
 
   const client = await getRedisClient();
-  if (!client) return null;
+  if (!client) return { ok: false, reason: 'unavailable' };
 
   try {
     const sessionKey = `session:${token}`;
     const data = await client.get(sessionKey);
-    if (!data) return null;
+    if (!data) return { ok: false, reason: 'invalid' };
 
     const sessionData = JSON.parse(data) as SessionData;
 
     if (sessionData.expiresAt < Date.now()) {
       await client.del(sessionKey);
-      return null;
+      return { ok: false, reason: 'invalid' };
     }
 
     // Sliding window: refresh TTL on each successful validation
@@ -92,10 +96,10 @@ export async function validateSession(token: string): Promise<SessionData | null
       // Non-critical — don't block response if refresh fails
     }
 
-    return sessionData;
+    return { ok: true, session: sessionData };
   } catch (error) {
     console.error('Failed to validate session:', error instanceof Error ? error.message : 'Unknown error');
-    return null;
+    return { ok: false, reason: 'unavailable' };
   }
 }
 

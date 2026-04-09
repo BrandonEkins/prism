@@ -20,7 +20,8 @@ import { chores, users, choreCompletions } from '@/lib/db/schema';
 import { eq, and, desc, isNull, or, lte } from 'drizzle-orm';
 import { createChoreSchema, validateRequest } from '@/lib/validations';
 import { format } from 'date-fns';
-import { getCached, invalidateCache } from '@/lib/cache/redis';
+import { getCached } from '@/lib/cache/redis';
+import { invalidateEntity } from '@/lib/cache/cacheKeys';
 import { logActivity } from '@/lib/services/auditLog';
 import { formatChoreRow } from '@/lib/utils/formatters';
 import { logError } from '@/lib/utils/logError';
@@ -220,7 +221,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    await invalidateCache('chores:*');
+    await invalidateEntity('chores');
 
     logActivity({
       userId: auth.userId,

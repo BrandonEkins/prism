@@ -3,7 +3,7 @@ import { requireAuth } from '@/lib/auth';
 import { db } from '@/lib/db/client';
 import { calendarGroups, calendarSources } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
-import { invalidateCache } from '@/lib/cache/redis';
+import { invalidateEntity } from '@/lib/cache/cacheKeys';
 import { logError } from '@/lib/utils/logError';
 
 interface RouteParams {
@@ -37,7 +37,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Group not found' }, { status: 404 });
     }
 
-    await invalidateCache('calendar-groups:*');
+    await invalidateEntity('calendar-groups');
 
     return NextResponse.json(updated);
   } catch (error) {
@@ -70,7 +70,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
 
     await db.delete(calendarGroups).where(eq(calendarGroups.id, id));
 
-    await invalidateCache('calendar-groups:*');
+    await invalidateEntity('calendar-groups');
 
     return NextResponse.json({ message: 'Group deleted' });
   } catch (error) {

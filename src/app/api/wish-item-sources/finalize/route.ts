@@ -4,7 +4,7 @@ import { db } from '@/lib/db/client';
 import { wishItemSources, users } from '@/lib/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { getRedisClient } from '@/lib/cache/getRedisClient';
-import { invalidateCache } from '@/lib/cache/redis';
+import { invalidateEntity } from '@/lib/cache/cacheKeys';
 import { logActivity } from '@/lib/services/auditLog';
 import { logError } from '@/lib/utils/logError';
 
@@ -118,7 +118,7 @@ export async function POST(request: NextRequest) {
     // Clean up temp tokens
     await redis.del(tempKey);
 
-    await invalidateCache('wish-item-sources:*');
+    await invalidateEntity('wish-item-sources');
 
     logActivity({
       userId: auth.userId,

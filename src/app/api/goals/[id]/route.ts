@@ -4,7 +4,7 @@ import { db } from '@/lib/db/client';
 import { goals, goalAchievements } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { updateGoalSchema, validateRequest } from '@/lib/validations';
-import { invalidateCache } from '@/lib/cache/redis';
+import { invalidateEntity } from '@/lib/cache/cacheKeys';
 import { logError } from '@/lib/utils/logError';
 
 interface RouteParams {
@@ -51,7 +51,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Failed to update goal' }, { status: 500 });
     }
 
-    await invalidateCache('goals:*');
+    await invalidateEntity('goals');
 
     return NextResponse.json({ goal: updated });
   } catch (error) {
@@ -76,7 +76,7 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
     }
 
     await db.delete(goals).where(eq(goals.id, id));
-    await invalidateCache('goals:*');
+    await invalidateEntity('goals');
 
     return NextResponse.json({ message: 'Goal deleted' });
   } catch (error) {

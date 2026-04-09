@@ -3,7 +3,7 @@ import { db } from '@/lib/db/client';
 import { shoppingListSources } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { requireAuth, requireRole } from '@/lib/auth';
-import { invalidateCache } from '@/lib/cache/redis';
+import { invalidateEntity } from '@/lib/cache/cacheKeys';
 import { logActivity } from '@/lib/services/auditLog';
 import { logError } from '@/lib/utils/logError';
 
@@ -40,8 +40,8 @@ export async function DELETE(
       .delete(shoppingListSources)
       .where(eq(shoppingListSources.id, id));
 
-    await invalidateCache('shopping-list-sources:*');
-    await invalidateCache('shopping:*');
+    await invalidateEntity('shopping-list-sources');
+    await invalidateEntity('shopping-lists');
 
     logActivity({
       userId: auth.userId,
@@ -110,7 +110,7 @@ export async function PATCH(
       return NextResponse.json({ error: 'Failed to update shopping list source' }, { status: 500 });
     }
 
-    await invalidateCache('shopping-list-sources:*');
+    await invalidateEntity('shopping-list-sources');
 
     logActivity({
       userId: auth.userId,

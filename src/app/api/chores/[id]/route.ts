@@ -13,7 +13,7 @@ import { db } from '@/lib/db/client';
 import { chores, users } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { updateChoreSchema, validateRequest } from '@/lib/validations';
-import { invalidateCache } from '@/lib/cache/redis';
+import { invalidateEntity } from '@/lib/cache/cacheKeys';
 import { logActivity } from '@/lib/services/auditLog';
 import { logError } from '@/lib/utils/logError';
 
@@ -214,8 +214,7 @@ export async function PATCH(
       );
     }
 
-    await invalidateCache('chores:*');
-    await invalidateCache('points:*');
+    await invalidateEntity('chores');
 
     logActivity({
       userId: auth.userId,
@@ -290,8 +289,7 @@ export async function DELETE(
       .delete(chores)
       .where(eq(chores.id, id));
 
-    await invalidateCache('chores:*');
-    await invalidateCache('points:*');
+    await invalidateEntity('chores');
 
     logActivity({
       userId: auth.userId,

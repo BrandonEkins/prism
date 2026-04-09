@@ -3,7 +3,7 @@ import { getDisplayAuth } from '@/lib/auth';
 import { db } from '@/lib/db/client';
 import { shoppingItems, shoppingLists } from '@/lib/db/schema';
 import { eq, and, ilike, isNull, or, asc } from 'drizzle-orm';
-import { invalidateCache } from '@/lib/cache/redis';
+import { invalidateEntity } from '@/lib/cache/cacheKeys';
 import { lookupBarcode } from '@/lib/integrations/product-lookup';
 
 async function getSetting(key: string): Promise<unknown> {
@@ -104,7 +104,7 @@ export async function POST(req: Request) {
       await db.update(shoppingItems)
         .set({ source: 'scan' })
         .where(eq(shoppingItems.id, existing[0]!.id));
-      await invalidateCache('shopping-lists:*');
+      await invalidateEntity('shopping-lists');
       return NextResponse.json({
         found: true,
         item: { name: product.name, brand: product.brand, category: categoryToUse },
@@ -123,7 +123,7 @@ export async function POST(req: Request) {
       notes: product.brand ?? null,
     }).returning({ id: shoppingItems.id });
 
-    await invalidateCache('shopping-lists:*');
+    await invalidateEntity('shopping-lists');
     return NextResponse.json({
       found: true,
       item: { name: product.name, brand: product.brand, category: categoryToUse },

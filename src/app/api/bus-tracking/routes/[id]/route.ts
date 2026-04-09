@@ -5,7 +5,7 @@ import { withAuth } from '@/lib/api/withAuth';
 import { db } from '@/lib/db/client';
 import { busRoutes } from '@/lib/db/schema';
 import { validateRequest, updateBusRouteSchema } from '@/lib/validations';
-import { invalidateCache } from '@/lib/cache/redis';
+import { invalidateEntity } from '@/lib/cache/cacheKeys';
 import { logError } from '@/lib/utils/logError';
 
 export async function GET(
@@ -59,7 +59,7 @@ export async function PATCH(
         return NextResponse.json({ error: 'Bus route not found' }, { status: 404 });
       }
 
-      await invalidateCache('bus:*');
+      await invalidateEntity('bus');
       return NextResponse.json(updated);
     } catch (error) {
       logError('Failed to update bus route:', error);
@@ -84,7 +84,7 @@ export async function DELETE(
         return NextResponse.json({ error: 'Bus route not found' }, { status: 404 });
       }
 
-      await invalidateCache('bus:*');
+      await invalidateEntity('bus');
       return NextResponse.json({ success: true });
     } catch (error) {
       logError('Failed to delete bus route:', error);
