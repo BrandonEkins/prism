@@ -45,9 +45,9 @@ describe('isLightColor', () => {
   });
 
   // --- Boundary / mid-range ---
-  it('returns false for pure red (#FF0000)', () => {
-    // R=1 → luminance = 0.2126 < 0.5
-    expect(isLightColor('#FF0000')).toBe(false);
+  it('returns true for pure red (#FF0000)', () => {
+    // R=1 → bgLum=0.2126; blackContrast(5.25) > whiteContrast(4.0) → needs dark text
+    expect(isLightColor('#FF0000')).toBe(true);
   });
 
   it('returns true for pure green (#00FF00)', () => {

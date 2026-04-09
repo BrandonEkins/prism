@@ -248,10 +248,10 @@ export function validateCommunityLayout(
     const constraints = WIDGET_CONSTRAINTS[widget.i];
     if (constraints) {
       if (widget.w < constraints.minW) {
-        warnings.push(`Widget "${widget.i}": w (${widget.w}) is below recommended minW of ${constraints.minW}.`);
+        errors.push(`Widget "${widget.i}": w (${widget.w}) is below recommended minW of ${constraints.minW}.`);
       }
       if (widget.h < constraints.minH) {
-        warnings.push(`Widget "${widget.i}": h (${widget.h}) is below recommended minH of ${constraints.minH}.`);
+        errors.push(`Widget "${widget.i}": h (${widget.h}) is below recommended minH of ${constraints.minH}.`);
       }
     }
 

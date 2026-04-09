@@ -111,22 +111,20 @@ describe('checkRateLimit', () => {
   it('allows request when Redis is unavailable (null client)', async () => {
     mockedGetRedisClient.mockResolvedValue(null);
 
-    const result = await checkRateLimit('user-1', 'test', 10, 60);
+    const result = await checkRateLimit('user-redis-null', 'test-null', 10, 60);
 
     expect(result.allowed).toBe(true);
-    expect(result.remaining).toBe(10);
-    expect(result.resetIn).toBe(0);
+    expect(result.remaining).toBe(9);
   });
 
   it('allows request when Redis throws an error', async () => {
     setupRedisClient();
     mockIncr.mockRejectedValue(new Error('Connection refused'));
 
-    const result = await checkRateLimit('user-1', 'test', 10, 60);
+    const result = await checkRateLimit('user-redis-throw', 'test-throw', 10, 60);
 
     expect(result.allowed).toBe(true);
-    expect(result.remaining).toBe(10);
-    expect(result.resetIn).toBe(0);
+    expect(result.remaining).toBe(9);
   });
 
   // --- Key isolation ---

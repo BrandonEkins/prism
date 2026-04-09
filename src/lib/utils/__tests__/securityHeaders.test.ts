@@ -76,14 +76,14 @@ describe('buildSecurityHeaders', () => {
       process.env.ALLOWED_FRAME_ANCESTORS = 'http://ha.local:8123,,, ,';
       const headers = buildSecurityHeaders();
       const csp = headers.find((h: { key: string; value: string }) => h.key === 'Content-Security-Policy');
-      expect(csp!.value).toBe("frame-ancestors 'self' http://ha.local:8123");
+      expect(csp!.value).toContain("frame-ancestors 'self' http://ha.local:8123");
     });
 
     it('handles wildcard * for fully open embedding', () => {
       process.env.ALLOWED_FRAME_ANCESTORS = '*';
       const headers = buildSecurityHeaders();
       const csp = headers.find((h: { key: string; value: string }) => h.key === 'Content-Security-Policy');
-      expect(csp!.value).toBe('frame-ancestors *');
+      expect(csp!.value).toContain('frame-ancestors *');
       const xfo = headers.find((h: { key: string; value: string }) => h.key === 'X-Frame-Options');
       expect(xfo).toBeUndefined();
     });

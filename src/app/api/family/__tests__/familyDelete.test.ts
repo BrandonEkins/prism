@@ -26,6 +26,11 @@ jest.mock('@/lib/db/client', () => ({
   db: {
     select: (...a: unknown[]) => mockSelect(...a),
     transaction: (...a: unknown[]) => mockTransaction(...a),
+    insert: jest.fn().mockReturnValue({
+      values: jest.fn().mockReturnValue({
+        catch: jest.fn(),
+      }),
+    }),
   },
 }));
 
