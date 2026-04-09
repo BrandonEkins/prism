@@ -31,6 +31,7 @@ import { cn } from '@/lib/utils';
 import { useOrientation } from '@/lib/hooks/useOrientation';
 import { useIsMobile } from '@/lib/hooks/useIsMobile';
 import { useAutoHideUI } from '@/lib/hooks/useAutoHideUI';
+import { useInactivityRedirect } from '@/lib/hooks/useInactivityRedirect';
 
 /**
  * APP SHELL PROPS
@@ -93,6 +94,7 @@ export function AppShell({
   const orientation = useOrientation();
   const isMobile = useIsMobile();
   const { uiHidden } = useAutoHideUI();
+  useInactivityRedirect();
   const [measureHideNav, setMeasureHideNav] = React.useState(false);
 
   // Listen for measure mode toggle from LayoutEditor

@@ -24,6 +24,7 @@ interface GlobalInputContextValue {
   lastPointerType: 'touch' | 'mouse' | 'keyboard';
   isMobile: boolean;
   activeInputRef: React.MutableRefObject<HTMLInputElement | HTMLTextAreaElement | null>;
+  activeContentEditableRef: React.MutableRefObject<HTMLElement | null>;
   setKeyboardVisible: (visible: boolean) => void;
   setIsListening: (v: boolean) => void;
   injectText: (text: string) => void;
@@ -39,6 +40,7 @@ const GlobalInputContext = createContext<GlobalInputContextValue | null>(null);
 // ---------------------------------------------------------------------------
 
 function shouldShowKeyboard(el: Element): boolean {
+  if (el instanceof HTMLElement && el.isContentEditable) return true;
   if (!(el instanceof HTMLInputElement) && !(el instanceof HTMLTextAreaElement)) return false;
   if (el instanceof HTMLInputElement) {
     return ['text', 'search', 'email', 'password'].includes(el.type.toLowerCase());
@@ -80,6 +82,7 @@ export function GlobalInputProvider({ children }: { children: React.ReactNode })
   const [lastPointerType, setLastPointerType] = useState<'touch' | 'mouse' | 'keyboard'>('mouse');
 
   const activeInputRef = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null);
+  const activeContentEditableRef = useRef<HTMLElement | null>(null);
   const originalScrollY = useRef<number | null>(null);
   const suppressedForScan = useRef(false);
   const lastPointerTypeRef = useRef<'touch' | 'mouse' | 'keyboard'>('mouse');
@@ -176,6 +179,13 @@ export function GlobalInputProvider({ children }: { children: React.ReactNode })
 
   // ---- speech recognition ----
   const handleSpeechResult = useCallback((transcript: string) => {
+    const editable = activeContentEditableRef.current;
+    if (editable) {
+      editable.focus();
+      document.execCommand('insertText', false, transcript);
+      textInjectedWhileOpen.current = true;
+      return;
+    }
     const input = activeInputRef.current;
     if (!input) return;
     const current = input.value;
@@ -246,14 +256,21 @@ export function GlobalInputProvider({ children }: { children: React.ReactNode })
       const target = e.target as Element;
       if (!shouldShowKeyboard(target)) {
         activeInputRef.current = null;
+        activeContentEditableRef.current = null;
         setIsInputFocused(false);
         setKeyboardVisibleState(false);
         return;
       }
-      activeInputRef.current = target as HTMLInputElement | HTMLTextAreaElement;
+      if (target instanceof HTMLElement && target.isContentEditable) {
+        activeContentEditableRef.current = target;
+        activeInputRef.current = null;
+      } else {
+        activeInputRef.current = target as HTMLInputElement | HTMLTextAreaElement;
+        activeContentEditableRef.current = null;
+      }
       setIsInputFocused(true);
       if (
-        lastPointerTypeRef.current === 'touch' &&
+        (lastPointerTypeRef.current === 'touch' || lastPointerTypeRef.current === 'mouse') &&
         !isMobile &&
         !suppressedForScan.current &&
         virtualKeyboardEnabled
@@ -267,6 +284,7 @@ export function GlobalInputProvider({ children }: { children: React.ReactNode })
       const next = e.relatedTarget as Element | null;
       if (next && isInsideKeyboard(next)) return;
       activeInputRef.current = null;
+      activeContentEditableRef.current = null;
       setIsInputFocused(false);
       setKeyboardVisibleState(false);
       if (!textInjectedWhileOpen.current) restoreScroll();
@@ -326,6 +344,7 @@ export function GlobalInputProvider({ children }: { children: React.ReactNode })
     lastPointerType,
     isMobile,
     activeInputRef,
+    activeContentEditableRef,
     setKeyboardVisible,
     setIsListening: () => {},
     injectText,

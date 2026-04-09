@@ -73,7 +73,7 @@ export function QuickPinModal({
 }: QuickPinModalProps) {
   // Family members from context
   const { members: contextMembers, loading: loadingMembers } = useFamily();
-  const members: QuickPinMember[] = contextMembers.filter(m => m.role).map(m => ({
+  const members: QuickPinMember[] = contextMembers.filter(m => m.name).map(m => ({
     id: m.id,
     loginIndex: m.loginIndex,
     name: m.name,

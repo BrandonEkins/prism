@@ -42,6 +42,7 @@ export function VirtualKeyboard() {
     setKeyboardVisible,
     injectText,
     activeInputRef,
+    activeContentEditableRef,
     isMobile,
     isListening,
     startListening,
@@ -74,8 +75,14 @@ export function VirtualKeyboard() {
   useEffect(() => {
     if (!visible || !containerRef.current) return;
 
+    const isContentEditable = !!activeContentEditableRef.current;
+
     const kb = new Keyboard(containerRef.current, {
-      onChange: (input) => injectText(input),
+      onChange: (input) => {
+        // For contentEditable, text is inserted character-by-character via execCommand
+        // in onKeyPress instead of replacing the full value here.
+        if (!isContentEditable) injectText(input);
+      },
       onKeyPress: (button: string) => {
         if (button === '{shift}' || button === '{lock}') {
           const next = shiftRef.current === 'default' ? 'shift' : 'default';
@@ -84,10 +91,31 @@ export function VirtualKeyboard() {
         }
         if (button === '{dismiss}') {
           setKeyboardVisible(false);
+          activeContentEditableRef.current?.blur();
           activeInputRef.current?.blur();
         }
         if (button === '{mic}') {
           if (isListening) { stopListening(); } else { startListening(); }
+        }
+        // For contentEditable: insert characters via execCommand to preserve cursor/formatting
+        if (isContentEditable && activeContentEditableRef.current) {
+          const el = activeContentEditableRef.current;
+          if (button === '{bksp}') {
+            el.focus();
+            document.execCommand('delete');
+          } else if (button === '{enter}') {
+            el.focus();
+            document.execCommand('insertParagraph');
+          } else if (button === '{space}') {
+            el.focus();
+            document.execCommand('insertText', false, ' ');
+          } else if (button === '{tab}') {
+            el.focus();
+            document.execCommand('insertText', false, '\t');
+          } else if (!button.startsWith('{')) {
+            el.focus();
+            document.execCommand('insertText', false, button);
+          }
         }
       },
       layout,
@@ -104,7 +132,7 @@ export function VirtualKeyboard() {
     });
 
     keyboardRef.current = kb;
-    // Sync initial value
+    // Sync initial value (only relevant for input/textarea; contentEditable uses execCommand)
     kb.setInput(activeInputRef.current?.value ?? '');
 
     return () => {

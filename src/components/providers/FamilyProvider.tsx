@@ -37,15 +37,17 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
         const data = await response.json();
         const next: FamilyMember[] = data.members.map((m: {
           id: string;
+          loginIndex?: number;
           name: string;
-          role: string;
+          role?: string;
           color: string;
           avatarUrl?: string | null;
           hasPin: boolean;
         }) => ({
           id: m.id,
+          loginIndex: m.loginIndex,
           name: m.name,
-          role: m.role as 'parent' | 'child' | 'guest',
+          role: m.role as 'parent' | 'child' | 'guest' | undefined,
           color: m.color,
           avatarUrl: m.avatarUrl,
           hasPin: m.hasPin,
