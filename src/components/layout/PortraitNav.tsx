@@ -8,6 +8,7 @@
 'use client';
 
 import * as React from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { User } from 'lucide-react';
@@ -74,16 +75,18 @@ export function PortraitNav({ user, onLogin, onLogout, uiHidden }: PortraitNavPr
           {user ? (
             <>
               <div
-                className="h-7 w-7 rounded-full flex items-center justify-center text-xs font-bold text-white"
+                className="relative h-7 w-7 rounded-full flex items-center justify-center text-xs font-bold text-white"
                 style={{ backgroundColor: user.color || '#6B7280' }}
               >
                 {user.avatarUrl?.startsWith('emoji:') ? (
                   <span className="text-base">{user.avatarUrl.slice(6)}</span>
                 ) : user.avatarUrl ? (
-                  <img
+                  <Image
                     src={user.avatarUrl}
                     alt={user.name}
-                    className="w-full h-full rounded-full object-cover"
+                    fill
+                    unoptimized
+                    className="rounded-full object-cover"
                   />
                 ) : (
                   user.name.charAt(0).toUpperCase()

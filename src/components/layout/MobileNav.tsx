@@ -10,6 +10,7 @@
 
 import * as React from 'react';
 import { useState } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -150,16 +151,18 @@ export function MobileNav({ user, onLogin, onLogout, uiHidden }: MobileNavProps)
               {user ? (
                 <>
                   <div
-                    className="h-5 w-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
+                    className="relative h-5 w-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
                     style={{ backgroundColor: user.color || '#6B7280' }}
                   >
                     {user.avatarUrl?.startsWith('emoji:') ? (
                       <span className="text-sm">{user.avatarUrl.slice(6)}</span>
                     ) : user.avatarUrl ? (
-                      <img
+                      <Image
                         src={user.avatarUrl}
                         alt={user.name}
-                        className="w-full h-full rounded-full object-cover"
+                        fill
+                        unoptimized
+                        className="rounded-full object-cover"
                       />
                     ) : (
                       user.name.charAt(0).toUpperCase()

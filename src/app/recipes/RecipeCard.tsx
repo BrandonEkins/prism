@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { Heart, Clock, Users, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
@@ -19,11 +20,13 @@ export function RecipeCard({ recipe, onClick, onToggleFavorite }: RecipeCardProp
       onClick={onClick}
     >
       {recipe.imageUrl && (
-        <div className="h-40 bg-muted overflow-hidden">
-          <img
+        <div className="relative h-40 bg-muted overflow-hidden">
+          <Image
             src={recipe.imageUrl}
             alt={recipe.name}
-            className="w-full h-full object-cover"
+            fill
+            unoptimized
+            className="object-cover"
           />
         </div>
       )}

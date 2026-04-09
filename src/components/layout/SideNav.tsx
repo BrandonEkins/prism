@@ -23,6 +23,7 @@
 'use client';
 
 import * as React from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { HelpCircle } from 'lucide-react';
@@ -206,16 +207,18 @@ export function SideNav({ user, onLogout, onLogin, uiHidden, className }: SideNa
             {user ? (
               <>
                 <div
-                  className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium text-white flex-shrink-0"
+                  className="relative w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium text-white flex-shrink-0"
                   style={{ backgroundColor: user.color || '#6B7280' }}
                 >
                   {user.avatarUrl?.startsWith('emoji:') ? (
                     <span className="text-lg">{user.avatarUrl.slice(6)}</span>
                   ) : user.avatarUrl ? (
-                    <img
+                    <Image
                       src={user.avatarUrl}
                       alt={user.name}
-                      className="w-full h-full rounded-full object-cover"
+                      fill
+                      unoptimized
+                      className="rounded-full object-cover"
                     />
                   ) : (
                     user.name.charAt(0).toUpperCase()
