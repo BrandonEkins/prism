@@ -17,7 +17,8 @@ import { db } from '@/lib/db/client';
 import { calendarNotes } from '@/lib/db/schema';
 import { gte, lte, and, eq, asc } from 'drizzle-orm';
 import { upsertCalendarNoteSchema, calendarNotesQuerySchema } from '@/lib/validations';
-import { getCached, invalidateCache } from '@/lib/cache/redis';
+import { getCached } from '@/lib/cache/redis';
+import { invalidateEntity } from '@/lib/cache/cacheKeys';
 import { logError } from '@/lib/utils/logError';
 
 /**
@@ -94,7 +95,7 @@ export async function PUT(request: NextRequest) {
     // Empty content = delete the note
     if (!content.trim()) {
       await db.delete(calendarNotes).where(eq(calendarNotes.date, date));
-      await invalidateCache('calendar-notes:*');
+      await invalidateEntity('calendar-notes');
       return NextResponse.json({ deleted: true, date });
     }
 
@@ -116,7 +117,7 @@ export async function PUT(request: NextRequest) {
       })
       .returning();
 
-    await invalidateCache('calendar-notes:*');
+    await invalidateEntity('calendar-notes');
 
     return NextResponse.json({ note });
   } catch (error) {

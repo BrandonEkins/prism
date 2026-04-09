@@ -3,7 +3,7 @@ import { db } from '@/lib/db/client';
 import { wishItemSources } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { requireAuth, requireRole } from '@/lib/auth';
-import { invalidateCache } from '@/lib/cache/redis';
+import { invalidateEntity } from '@/lib/cache/cacheKeys';
 import { logActivity } from '@/lib/services/auditLog';
 import { logError } from '@/lib/utils/logError';
 
@@ -40,8 +40,8 @@ export async function DELETE(
       .delete(wishItemSources)
       .where(eq(wishItemSources.id, id));
 
-    await invalidateCache('wish-item-sources:*');
-    await invalidateCache('wish:*');
+    await invalidateEntity('wish-item-sources');
+    await invalidateEntity('wish-items');
 
     logActivity({
       userId: auth.userId,
@@ -110,7 +110,7 @@ export async function PATCH(
       return NextResponse.json({ error: 'Failed to update wish item source' }, { status: 500 });
     }
 
-    await invalidateCache('wish-item-sources:*');
+    await invalidateEntity('wish-item-sources');
 
     logActivity({
       userId: auth.userId,

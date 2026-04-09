@@ -3,7 +3,7 @@ import { db } from '@/lib/db/client';
 import { taskLists } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { requireAuth, requireRole } from '@/lib/auth';
-import { invalidateCache } from '@/lib/cache/redis';
+import { invalidateEntity } from '@/lib/cache/cacheKeys';
 import { logError } from '@/lib/utils/logError';
 
 interface RouteParams {
@@ -96,8 +96,7 @@ export async function PATCH(
       .where(eq(taskLists.id, id))
       .returning();
 
-    await invalidateCache('task-lists:*');
-    await invalidateCache('tasks:*');
+    await invalidateEntity('task-lists');
 
     return NextResponse.json(updated);
   } catch (error) {
@@ -136,8 +135,7 @@ export async function DELETE(
 
     await db.delete(taskLists).where(eq(taskLists.id, id));
 
-    await invalidateCache('task-lists:*');
-    await invalidateCache('tasks:*');
+    await invalidateEntity('task-lists');
 
     return NextResponse.json({
       message: 'Task list deleted successfully',

@@ -6,7 +6,8 @@ import { eq, desc, sql, and, like } from 'drizzle-orm';
 import { savePhoto } from '@/lib/services/photo-storage';
 import { PHOTO_MAX_SIZE_MB, PHOTO_ALLOWED_TYPES } from '@/lib/constants';
 import { validateMagicBytes } from '@/lib/utils/validateFileType';
-import { getCached, invalidateCache } from '@/lib/cache/redis';
+import { getCached } from '@/lib/cache/redis';
+import { invalidateEntity } from '@/lib/cache/cacheKeys';
 import { rateLimitGuard } from '@/lib/cache/rateLimit';
 import { logError } from '@/lib/utils/logError';
 
@@ -144,7 +145,7 @@ export async function POST(request: NextRequest) {
       })
       .returning();
 
-    await invalidateCache('photos:*');
+    await invalidateEntity('photos');
 
     return NextResponse.json(photo, { status: 201 });
   } catch (error) {

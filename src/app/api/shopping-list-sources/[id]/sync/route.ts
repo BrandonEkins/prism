@@ -3,7 +3,7 @@ import { db } from '@/lib/db/client';
 import { shoppingListSources, shoppingItems } from '@/lib/db/schema';
 import { eq, and, or, isNull } from 'drizzle-orm';
 import { requireAuth, requireRole } from '@/lib/auth';
-import { invalidateCache } from '@/lib/cache/redis';
+import { invalidateEntity } from '@/lib/cache/cacheKeys';
 import { getShoppingProvider } from '@/lib/integrations/shopping';
 import { decrypt, encrypt } from '@/lib/utils/crypto';
 import { logActivity } from '@/lib/services/auditLog';
@@ -146,8 +146,8 @@ export async function POST(
       })
       .where(eq(shoppingListSources.id, sourceId));
 
-    await invalidateCache('shopping:*');
-    await invalidateCache('shopping-list-sources:*');
+    await invalidateEntity('shopping-lists');
+    await invalidateEntity('shopping-list-sources');
 
     logActivity({
       userId: auth.userId,

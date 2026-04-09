@@ -14,7 +14,7 @@ import { meals, users } from '@/lib/db/schema';
 import { eq, aliasedTable } from 'drizzle-orm';
 import { updateMealSchema, validateRequest } from '@/lib/validations';
 import { formatMealRow } from '@/lib/utils/formatters';
-import { invalidateCache } from '@/lib/cache/redis';
+import { invalidateEntity } from '@/lib/cache/cacheKeys';
 import { logActivity } from '@/lib/services/auditLog';
 import { logError } from '@/lib/utils/logError';
 
@@ -210,7 +210,7 @@ export async function PATCH(
       );
     }
 
-    await invalidateCache('meals:*');
+    await invalidateEntity('meals');
 
     const patchSummary = ('cookedBy' in validation.data && validation.data.cookedBy)
       ? `Marked cooked: ${updatedMealWithUser.name}`
@@ -266,7 +266,7 @@ export async function DELETE(
       .delete(meals)
       .where(eq(meals.id, id));
 
-    await invalidateCache('meals:*');
+    await invalidateEntity('meals');
 
     logActivity({
       userId: auth.userId,

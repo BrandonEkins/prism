@@ -3,7 +3,7 @@ import { db } from '@/lib/db/client';
 import { taskSources, tasks } from '@/lib/db/schema';
 import { eq, and, or, isNull } from 'drizzle-orm';
 import { requireAuth, requireRole } from '@/lib/auth';
-import { invalidateCache } from '@/lib/cache/redis';
+import { invalidateEntity } from '@/lib/cache/cacheKeys';
 import { getTaskProvider } from '@/lib/integrations/tasks';
 import { decrypt, encrypt } from '@/lib/utils/crypto';
 import { logActivity } from '@/lib/services/auditLog';
@@ -146,8 +146,8 @@ export async function POST(
       })
       .where(eq(taskSources.id, sourceId));
 
-    await invalidateCache('tasks:*');
-    await invalidateCache('task-sources:*');
+    await invalidateEntity('tasks');
+    await invalidateEntity('task-sources');
 
     logActivity({
       userId: auth.userId,

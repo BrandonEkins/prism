@@ -3,7 +3,7 @@ import { requireAuth, requireRole } from '@/lib/auth';
 import { db } from '@/lib/db/client';
 import { goals, goalAchievements } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
-import { invalidateCache } from '@/lib/cache/redis';
+import { invalidateEntity } from '@/lib/cache/cacheKeys';
 import { logError } from '@/lib/utils/logError';
 
 interface RouteParams {
@@ -51,8 +51,8 @@ export async function POST(_request: NextRequest, { params }: RouteParams) {
         .where(eq(goals.id, goalId));
     });
 
-    await invalidateCache('goals:*');
-    await invalidateCache('points:*');
+    await invalidateEntity('goals');
+    await invalidateEntity('points');
 
     return NextResponse.json({
       message: `Goal "${goal.name}" has been reset. Progress starts over.`,

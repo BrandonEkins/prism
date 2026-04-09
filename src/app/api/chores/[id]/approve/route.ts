@@ -13,7 +13,7 @@ import { db } from '@/lib/db/client';
 import { chores, choreCompletions, users } from '@/lib/db/schema';
 import { eq, and, isNull } from 'drizzle-orm';
 import { requireAuth, requireRole } from '@/lib/auth';
-import { invalidateCache } from '@/lib/cache/redis';
+import { invalidateEntity } from '@/lib/cache/cacheKeys';
 import { calculateNextDue } from '@/lib/utils/calculateNextDue';
 import { logActivity } from '@/lib/services/auditLog';
 import { logError } from '@/lib/utils/logError';
@@ -167,8 +167,7 @@ export async function POST(
       .from(users)
       .where(eq(users.id, auth.userId));
 
-    await invalidateCache('chores:*');
-    await invalidateCache('goals:*');
+    await invalidateEntity('chores');
 
     logActivity({
       userId: auth.userId,

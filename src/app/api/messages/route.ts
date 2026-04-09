@@ -21,7 +21,8 @@ import { db } from '@/lib/db/client';
 import { familyMessages, users } from '@/lib/db/schema';
 import { eq, desc, asc, and, gt, isNull, or, sql } from 'drizzle-orm';
 import { formatMessageRow } from '@/lib/utils/formatters';
-import { getCached, invalidateCache } from '@/lib/cache/redis';
+import { getCached } from '@/lib/cache/redis';
+import { invalidateEntity } from '@/lib/cache/cacheKeys';
 import { logActivity } from '@/lib/services/auditLog';
 import { logError } from '@/lib/utils/logError';
 
@@ -265,7 +266,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    await invalidateCache('messages:*');
+    await invalidateEntity('messages');
 
     logActivity({
       userId: body.authorId,

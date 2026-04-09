@@ -3,7 +3,7 @@ import { db } from '@/lib/db/client';
 import { wishItemSources } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { requireAuth, requireRole } from '@/lib/auth';
-import { invalidateCache } from '@/lib/cache/redis';
+import { invalidateEntity } from '@/lib/cache/cacheKeys';
 import { logActivity } from '@/lib/services/auditLog';
 import type { SyncResult } from '@/lib/integrations/wish-items/types';
 import { logError } from '@/lib/utils/logError';
@@ -83,8 +83,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    await invalidateCache('wish:*');
-    await invalidateCache('wish-item-sources:*');
+    await invalidateEntity('wish-items');
+    await invalidateEntity('wish-item-sources');
 
     const successCount = results.filter(r => r.success).length;
 

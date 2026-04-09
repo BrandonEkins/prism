@@ -19,7 +19,7 @@ import {
   TokenRevokedError,
 } from '@/lib/integrations/gmail';
 import { parseBusEmail } from '@/lib/integrations/bus-email-parser';
-import { invalidateCache } from '@/lib/cache/redis';
+import { invalidateEntity } from '@/lib/cache/cacheKeys';
 import { getBusGmailLabel } from '@/lib/services/bus-tracking-sync';
 
 const FIRSTVIEW_QUERY = 'from:support@myfirstview.com subject:"First View"';
@@ -222,7 +222,7 @@ export async function PUT(request: Request) {
         created.push(label);
       }
 
-      await invalidateCache('bus:*');
+      await invalidateEntity('bus');
 
       return NextResponse.json({
         created,

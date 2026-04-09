@@ -3,7 +3,8 @@ import { requireAuth, requireRole } from '@/lib/auth';
 import { db } from '@/lib/db/client';
 import { babysitterInfo } from '@/lib/db/schema';
 import { asc, max } from 'drizzle-orm';
-import { getCached, invalidateCache } from '@/lib/cache/redis';
+import { getCached } from '@/lib/cache/redis';
+import { invalidateEntity } from '@/lib/cache/cacheKeys';
 import { rateLimitGuard } from '@/lib/cache/rateLimit';
 import { logError } from '@/lib/utils/logError';
 
@@ -98,7 +99,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to create babysitter info' }, { status: 500 });
     }
 
-    await invalidateCache('babysitter-info:*');
+    await invalidateEntity('babysitter-info');
 
     return NextResponse.json(
       {

@@ -4,7 +4,8 @@ import { db } from '@/lib/db/client';
 import { goals, users, choreCompletions, goalAchievements, settings } from '@/lib/db/schema';
 import { eq, and, isNotNull, desc, asc, max } from 'drizzle-orm';
 import { createGoalSchema, validateRequest } from '@/lib/validations';
-import { getCached, invalidateCache } from '@/lib/cache/redis';
+import { getCached } from '@/lib/cache/redis';
+import { invalidateEntity } from '@/lib/cache/cacheKeys';
 import { rateLimitGuard } from '@/lib/cache/rateLimit';
 import { computeWaterfall, getGoalPeriodKey } from '@/lib/utils/pointWaterfall';
 import { formatGoalRow } from '@/lib/utils/formatters';
@@ -182,7 +183,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to create goal' }, { status: 500 });
     }
 
-    await invalidateCache('goals:*');
+    await invalidateEntity('goals');
 
     return NextResponse.json({ goal }, { status: 201 });
   } catch (error) {

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db/client';
 import { recipes } from '@/lib/db/schema';
 import { requireAuth, requireRole } from '@/lib/auth';
-import { invalidateCache } from '@/lib/cache/redis';
+import { invalidateEntity } from '@/lib/cache/cacheKeys';
 import { parseRecipeFromUrl } from '@/lib/utils/recipeParser';
 import { logError } from '@/lib/utils/logError';
 
@@ -112,7 +112,7 @@ export async function POST(request: NextRequest) {
       })
       .returning();
 
-    await invalidateCache('recipes:*');
+    await invalidateEntity('recipes');
 
     return NextResponse.json(newRecipe, { status: 201 });
   } catch (error) {

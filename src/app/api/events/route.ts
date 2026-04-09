@@ -24,7 +24,8 @@ import { db } from '@/lib/db/client';
 import { events, calendarSources, users, calendarGroups } from '@/lib/db/schema';
 import { eq, and, or, gte, lte, asc, isNotNull, isNull } from 'drizzle-orm';
 import { createEventSchema, validateRequest } from '@/lib/validations';
-import { getCached, invalidateCache } from '@/lib/cache/redis';
+import { getCached } from '@/lib/cache/redis';
+import { invalidateEntity } from '@/lib/cache/cacheKeys';
 import { createCalendarEvent, refreshAccessToken } from '@/lib/integrations/google-calendar';
 import { decrypt, encrypt } from '@/lib/utils/crypto';
 import { formatEventRow } from '@/lib/utils/formatters';
@@ -419,7 +420,7 @@ export async function POST(request: NextRequest) {
     const response: EventResponse = formatEventRow(eventWithSource);
 
     // Invalidate events cache
-    await invalidateCache('events:*');
+    await invalidateEntity('events');
 
     logActivity({
       userId: auth.userId,

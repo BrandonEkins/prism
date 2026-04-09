@@ -3,7 +3,8 @@ import { db } from '@/lib/db/client';
 import { taskSources, taskLists, users } from '@/lib/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { requireAuth, requireRole } from '@/lib/auth';
-import { invalidateCache, getCached } from '@/lib/cache/redis';
+import { getCached } from '@/lib/cache/redis';
+import { invalidateEntity } from '@/lib/cache/cacheKeys';
 import { logActivity } from '@/lib/services/auditLog';
 import { logError } from '@/lib/utils/logError';
 
@@ -129,7 +130,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    await invalidateCache('task-sources:*');
+    await invalidateEntity('task-sources');
 
     logActivity({
       userId: auth.userId,

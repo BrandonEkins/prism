@@ -3,7 +3,7 @@ import { db } from '@/lib/db/client';
 import { shoppingListSources } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { requireAuth, requireRole } from '@/lib/auth';
-import { invalidateCache } from '@/lib/cache/redis';
+import { invalidateEntity } from '@/lib/cache/cacheKeys';
 import { getShoppingProvider } from '@/lib/integrations/shopping';
 import { decrypt, encrypt } from '@/lib/utils/crypto';
 import { logActivity } from '@/lib/services/auditLog';
@@ -149,8 +149,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    await invalidateCache('shopping:*');
-    await invalidateCache('shopping-list-sources:*');
+    await invalidateEntity('shopping-lists');
+    await invalidateEntity('shopping-list-sources');
 
     const successCount = results.filter(r => r.success).length;
 

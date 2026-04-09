@@ -16,7 +16,7 @@ import { db } from '@/lib/db/client';
 import { wishItems, users } from '@/lib/db/schema';
 import { eq, asc, sql } from 'drizzle-orm';
 import { createWishItemSchema, validateRequest } from '@/lib/validations';
-import { invalidateCache } from '@/lib/cache/redis';
+import { invalidateEntity } from '@/lib/cache/cacheKeys';
 import { logActivity } from '@/lib/services/auditLog';
 import { formatWishItemRow } from '@/lib/utils/formatters';
 import { logError } from '@/lib/utils/logError';
@@ -132,7 +132,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    await invalidateCache('wish-items:*');
+    await invalidateEntity('wish-items');
 
     logActivity({
       userId: auth.userId,

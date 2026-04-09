@@ -12,7 +12,7 @@ import { wishItems } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { updateWishItemSchema, validateRequest } from '@/lib/validations';
 import { requireAuth } from '@/lib/auth';
-import { invalidateCache } from '@/lib/cache/redis';
+import { invalidateEntity } from '@/lib/cache/cacheKeys';
 import { logActivity } from '@/lib/services/auditLog';
 import { logError } from '@/lib/utils/logError';
 
@@ -77,7 +77,7 @@ export async function PATCH(
       );
     }
 
-    await invalidateCache('wish-items:*');
+    await invalidateEntity('wish-items');
 
     logActivity({
       userId: auth.userId,
@@ -145,7 +145,7 @@ export async function DELETE(
 
     await db.delete(wishItems).where(eq(wishItems.id, id));
 
-    await invalidateCache('wish-items:*');
+    await invalidateEntity('wish-items');
 
     logActivity({
       userId: auth.userId,

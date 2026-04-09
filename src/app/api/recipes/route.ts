@@ -3,7 +3,8 @@ import { db } from '@/lib/db/client';
 import { recipes, users } from '@/lib/db/schema';
 import { eq, desc, ilike, or, sql } from 'drizzle-orm';
 import { requireAuth, requireRole, getDisplayAuth } from '@/lib/auth';
-import { invalidateCache, getCached } from '@/lib/cache/redis';
+import { getCached } from '@/lib/cache/redis';
+import { invalidateEntity } from '@/lib/cache/cacheKeys';
 import { formatRecipeRow } from '@/lib/utils/formatters';
 import { logError } from '@/lib/utils/logError';
 
@@ -180,7 +181,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to create recipe' }, { status: 500 });
     }
 
-    await invalidateCache('recipes:*');
+    await invalidateEntity('recipes');
 
     // Re-query with user join to get createdByName for the formatter
     const [fullRecipe] = await db
