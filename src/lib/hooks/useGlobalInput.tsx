@@ -21,7 +21,6 @@ interface GlobalInputContextValue {
   keyboardVisible: boolean;
   isListening: boolean;
   isInputFocused: boolean;
-  lastPointerType: 'touch' | 'mouse' | 'keyboard';
   isMobile: boolean;
   activeInputRef: React.MutableRefObject<HTMLInputElement | HTMLTextAreaElement | null>;
   activeContentEditableRef: React.MutableRefObject<HTMLElement | null>;
@@ -79,7 +78,6 @@ export function GlobalInputProvider({ children }: { children: React.ReactNode })
   const isMobile = useIsMobile();
   const [keyboardVisible, setKeyboardVisibleState] = useState(false);
   const [isInputFocused, setIsInputFocused] = useState(false);
-  const [lastPointerType, setLastPointerType] = useState<'touch' | 'mouse' | 'keyboard'>('mouse');
 
   const activeInputRef = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null);
   const activeContentEditableRef = useRef<HTMLElement | null>(null);
@@ -244,10 +242,8 @@ export function GlobalInputProvider({ children }: { children: React.ReactNode })
   useEffect(() => {
     const onPointerDown = (e: PointerEvent) => {
       if (e.pointerType === 'touch') {
-        setLastPointerType('touch');
         lastPointerTypeRef.current = 'touch';
       } else if (e.pointerType === 'mouse') {
-        setLastPointerType('mouse');
         lastPointerTypeRef.current = 'mouse';
       }
     };
@@ -335,13 +331,12 @@ export function GlobalInputProvider({ children }: { children: React.ReactNode })
       document.removeEventListener('keydown', onKeyDown);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lastPointerType, isMobile, virtualKeyboardEnabled, scrollInputIntoView, restoreScroll]);
+  }, [isMobile, virtualKeyboardEnabled, scrollInputIntoView, restoreScroll]);
 
   const value = useMemo<GlobalInputContextValue>(() => ({
     keyboardVisible,
     isListening: speech.isListening,
     isInputFocused,
-    lastPointerType,
     isMobile,
     activeInputRef,
     activeContentEditableRef,
@@ -353,7 +348,7 @@ export function GlobalInputProvider({ children }: { children: React.ReactNode })
     virtualKeyboardEnabled,
   }), [
     keyboardVisible, speech.isListening, speech.start, speech.stop,
-    isInputFocused, lastPointerType, isMobile, setKeyboardVisible, injectText, virtualKeyboardEnabled,
+    isInputFocused, isMobile, setKeyboardVisible, injectText, virtualKeyboardEnabled,
   ]);
 
   return (
