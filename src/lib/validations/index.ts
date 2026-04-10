@@ -318,6 +318,7 @@ export const createLayoutSchema = z.object({
   widgets: z.array(widgetConfigSchema).min(1, 'At least one widget is required'),
   screensaverWidgets: z.array(widgetConfigSchema).nullable().optional(),
   orientation: z.enum(['landscape', 'portrait']).optional().default('landscape'),
+  fontScale: z.number().int().min(50).max(200).nullable().optional(),
   createdBy: uuidSchema.optional(),
 });
 

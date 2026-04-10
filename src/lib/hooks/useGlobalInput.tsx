@@ -266,7 +266,7 @@ export function GlobalInputProvider({ children }: { children: React.ReactNode })
       }
       setIsInputFocused(true);
       if (
-        (lastPointerTypeRef.current === 'touch' || lastPointerTypeRef.current === 'mouse') &&
+        lastPointerTypeRef.current === 'touch' &&
         !isMobile &&
         !suppressedForScan.current &&
         virtualKeyboardEnabled

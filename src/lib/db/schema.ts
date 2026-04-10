@@ -679,6 +679,9 @@ export const layouts = pgTable('layouts', {
   // Per-dashboard screen orientation
   orientation: varchar('orientation', { length: 20 }).default('landscape'),
 
+  // Per-dashboard font scale (percentage, e.g. 90, 100, 110 — null = 100)
+  fontScale: integer('font_scale'),
+
   createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),

@@ -24,6 +24,7 @@ import {
   ClipboardList,
   Bus,
   KeyboardIcon,
+  Monitor,
 } from 'lucide-react';
 import { PrismIcon } from '@/components/ui/PrismIcon';
 import { cn } from '@/lib/utils';
@@ -47,6 +48,7 @@ import { FeaturesSection } from './sections/FeaturesSection';
 import { ActivityLogSection } from './sections/ActivityLogSection';
 
 import { ConnectedAccountsSection } from './sections/ConnectedAccountsSection';
+import { DisplaysSection } from './sections/DisplaysSection';
 
 
 // Exported hooks (consumed by other components)
@@ -129,21 +131,22 @@ export function SettingsView() {
   const [activeSection, setActiveSection] = useState<string>(initialSection);
 
   const sections = [
-    { id: 'account', label: 'Account', icon: User },
+    { id: 'account', label: 'Account & Profile', icon: User },
     { id: 'family', label: 'Family Members', icon: Users },
     { id: 'connections', label: 'Connected Accounts', icon: Link2 },
+    { id: 'displays', label: 'Displays', icon: Monitor },
+    { id: 'display', label: 'Appearance', icon: Palette },
     { id: 'calendars', label: 'Calendars', icon: Calendar },
     { id: 'tasks', label: 'Task Sync', icon: ListTodo },
     { id: 'shopping', label: 'Shopping Sync', icon: ShoppingCart },
     { id: 'wish', label: 'Wish List Sync', icon: Gift },
     { id: 'photos', label: 'Photos', icon: ImageIcon },
     { id: 'bus', label: 'Bus Tracking', icon: Bus },
-    { id: 'babysitter', label: 'Babysitter Info', icon: Baby },
-    { id: 'display', label: 'Display', icon: Palette },
     { id: 'input', label: 'Input', icon: KeyboardIcon },
+    { id: 'babysitter', label: 'Babysitter Info', icon: Baby },
     { id: 'features', label: 'Features', icon: ToggleLeft },
     { id: 'security', label: 'Security', icon: Shield },
-    { id: 'backups', label: 'Backups', icon: Database },
+    { id: 'backups', label: 'Backups & Data', icon: Database },
     { id: 'activity', label: 'Activity Log', icon: ClipboardList },
     { id: 'about', label: 'About', icon: Info },
   ];
@@ -193,6 +196,7 @@ export function SettingsView() {
               {activeSection === 'account' && <AccountSection />}
               {activeSection === 'family' && <FamilySection />}
               {activeSection === 'connections' && <ConnectedAccountsSection />}
+              {activeSection === 'displays' && <DisplaysSection />}
               {activeSection === 'calendars' && <CalendarsSection />}
               {activeSection === 'tasks' && <TaskIntegrationsSection />}
               {activeSection === 'shopping' && <ShoppingIntegrationsSection />}

@@ -52,13 +52,13 @@ export function LayoutEditorToolbarRight({
 }: ToolbarRightProps) {
   return (
     <div className="flex items-center gap-2">
-      {/* Measure Mode */}
+      {/* Screen Preview */}
       <button
         onClick={onToggleMeasureMode}
         className={`${btnClass} bg-muted hover:bg-accent`}
-        title="Hide toolbar and nav to see true layout (Ctrl+Shift+M)"
+        title="Preview layout as it appears on a specific screen (Ctrl+Shift+M)"
       >
-        Measure
+        Preview
       </button>
 
       {/* Screensaver toggle */}

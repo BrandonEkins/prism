@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { toast } from '@/components/ui/use-toast';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useConfirmDialog } from '@/lib/hooks/useConfirmDialog';
-import { AlertTriangle, RefreshCw } from 'lucide-react';
+import { AlertTriangle, RefreshCw, Mail, HardDrive } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -22,6 +22,14 @@ interface IntegrationStatus {
     connected: boolean;
     taskSourceCount: number;
     shoppingSourceCount: number;
+  };
+  onedrive: {
+    connected: boolean;
+    sourceCount: number;
+  };
+  gmail: {
+    connected: boolean;
+    expiresAt: string | null;
   };
 }
 
@@ -137,6 +145,33 @@ export function ConnectedAccountsSection() {
 
   const handleReauthGoogle = () => {
     window.location.href = '/api/auth/google?reauth=all&returnSection=connections';
+  };
+
+  const handleConnectGmail = () => {
+    window.location.href = '/api/auth/google-bus';
+  };
+
+  const handleDisconnectGmail = async () => {
+    if (!await confirm('Disconnect Gmail?', 'This will remove your Gmail connection used for bus tracking. Bus arrival data will no longer sync.')) return;
+
+    setDisconnecting('gmail');
+    try {
+      const res = await fetch('/api/bus-tracking/connection', { method: 'DELETE' });
+      if (res.ok) {
+        toast({ title: 'Gmail disconnected successfully.', variant: 'success' });
+        fetchStatus();
+      } else {
+        toast({ title: 'Failed to disconnect Gmail.', variant: 'destructive' });
+      }
+    } catch {
+      toast({ title: 'Failed to disconnect Gmail.', variant: 'destructive' });
+    } finally {
+      setDisconnecting(null);
+    }
+  };
+
+  const handleConnectOneDrive = () => {
+    window.location.href = '/api/auth/microsoft';
   };
 
   if (loading) {
@@ -275,32 +310,116 @@ export function ConnectedAccountsSection() {
               </Button>
             </div>
           ) : (
-            <div className="space-y-2">
-              <p className="text-sm text-muted-foreground">
-                Connect Microsoft from{' '}
-                <button
-                  onClick={() => {
-                    const params = new URLSearchParams(window.location.search);
-                    params.set('section', 'tasks');
-                    window.history.pushState({}, '', `/settings?${params.toString()}`);
-                    window.dispatchEvent(new PopStateEvent('popstate'));
-                    window.location.href = '/settings?section=tasks';
-                  }}
-                  className="text-primary hover:underline font-medium"
-                >
-                  Task Integrations
-                </button>
-                {' '}or{' '}
-                <button
-                  onClick={() => {
-                    window.location.href = '/settings?section=shopping';
-                  }}
-                  className="text-primary hover:underline font-medium"
-                >
-                  Shopping Integrations
-                </button>
-              </p>
+            <p className="text-sm text-muted-foreground">
+              Connect Microsoft To-Do from{' '}
+              <a href="/settings?section=tasks" className="text-primary hover:underline font-medium">
+                Task Sync
+              </a>
+              {' '}or{' '}
+              <a href="/settings?section=shopping" className="text-primary hover:underline font-medium">
+                Shopping Sync
+              </a>
+              {' '}— you&apos;ll pick which lists to sync during setup.
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* OneDrive Card */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <MicrosoftIcon />
+              <div>
+                <CardTitle className="text-lg">OneDrive</CardTitle>
+                <CardDescription>Used for: Photos</CardDescription>
+              </div>
             </div>
+            {status?.onedrive.connected ? (
+              <Badge variant="outline" className="border-green-500 text-green-600">Connected</Badge>
+            ) : (
+              <Badge variant="secondary">Not Connected</Badge>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent>
+          {status?.onedrive.connected ? (
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                {status.onedrive.sourceCount} photo source{status.onedrive.sourceCount !== 1 ? 's' : ''} connected
+              </p>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={handleConnectOneDrive}>
+                  + Add Another Source
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => { window.location.href = '/settings?section=photos'; }}
+                  className="text-muted-foreground"
+                >
+                  Manage in Photos
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <Button onClick={handleConnectOneDrive} variant="outline" className="w-full justify-start">
+              <HardDrive className="h-4 w-4 mr-3" />
+              Connect OneDrive
+            </Button>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Gmail Card */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Mail className="h-5 w-5 text-muted-foreground" />
+              <div>
+                <CardTitle className="text-lg">Gmail</CardTitle>
+                <CardDescription>Used for: Bus Tracking</CardDescription>
+              </div>
+            </div>
+            {status?.gmail.connected ? (
+              <Badge variant="outline" className="border-green-500 text-green-600">Connected</Badge>
+            ) : (
+              <Badge variant="secondary">Not Connected</Badge>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent>
+          {status?.gmail.connected ? (
+            <div className="space-y-3">
+              {status.gmail.expiresAt && new Date(status.gmail.expiresAt) < new Date() && (
+                <div className="flex items-center gap-3 p-3 rounded-md border border-orange-500/50 bg-orange-50 dark:bg-orange-950/30">
+                  <AlertTriangle className="h-5 w-5 text-orange-500 shrink-0" />
+                  <p className="text-sm text-orange-700 dark:text-orange-400">Token expired — reconnect to resume bus tracking.</p>
+                </div>
+              )}
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={handleConnectGmail}>
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Re-authenticate
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleDisconnectGmail}
+                  disabled={disconnecting === 'gmail'}
+                  className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                >
+                  {disconnecting === 'gmail' ? 'Disconnecting...' : 'Disconnect'}
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <Button onClick={handleConnectGmail} variant="outline" className="w-full justify-start">
+              <Mail className="h-4 w-4 mr-3" />
+              Connect Gmail
+            </Button>
           )}
         </CardContent>
       </Card>

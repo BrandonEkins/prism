@@ -30,6 +30,7 @@ export interface Layout {
   widgets: WidgetConfig[];
   screensaverWidgets: WidgetConfig[] | null;
   orientation: string;
+  fontScale: number | null;
   createdBy?: string;
   createdAt: string;
   updatedAt: string;

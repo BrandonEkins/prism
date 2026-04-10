@@ -59,7 +59,7 @@ export function LayoutEditor({
 }: LayoutEditorProps) {
   const { zones, allSizeNames } = useScreenSafeZones();
   const { confirm: confirmDelete, dialogProps: confirmDialogProps } = useConfirmDialog();
-  const { measureMode, measureHideNav, toggleMeasureMode, toggleMeasureNav } = useMeasureMode();
+  const { measureMode, measureHideNav, previewZoneIndex, toggleMeasureMode, toggleMeasureNav, setPreviewZoneIndex } = useMeasureMode();
   const effectiveEnabledSizes = enabledSizes.length > 0 ? enabledSizes : allSizeNames;
 
   const [activePopover, setActivePopover] = useState<ActivePopover>(null);
@@ -117,12 +117,22 @@ export function LayoutEditor({
     if (measureMode) setActivePopover(null);
   }, [measureMode]);
 
+  const previewZones = useMemo(() =>
+    zones[screenGuideOrientation]
+      .filter(z => effectiveEnabledSizes.includes(z.name))
+      .map(z => ({ name: z.name, color: z.color })),
+    [zones, screenGuideOrientation, effectiveEnabledSizes],
+  );
+
   if (measureMode) {
     return (
       <LayoutEditorMeasureBar
         measureHideNav={measureHideNav}
         onToggleNav={toggleMeasureNav}
         onExit={toggleMeasureMode}
+        previewZones={previewZones}
+        activeZoneIndex={previewZoneIndex}
+        onZoneChange={setPreviewZoneIndex}
       />
     );
   }

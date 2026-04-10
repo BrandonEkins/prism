@@ -13,22 +13,28 @@ import { MONTH_NAMES, seasonalPalettes } from '@/lib/themes/seasonalThemes';
 import { useWallpaperSettings, useAutoOrientationSetting, useScreensaverInterval } from '@/components/layout/WallpaperBackground';
 import { useScreenOrientation } from '@/lib/hooks/useScreenOrientation';
 import { useOrientationOverride } from '../SettingsView';
-import { useFamily } from '@/components/providers/FamilyProvider';
 import { useScreensaverTimeout } from '@/lib/hooks/useScreensaverTimeout';
 import { useAutoHideUI } from '@/lib/hooks/useAutoHideUI';
 import { useAwayModeTimeout } from '@/lib/hooks/useAwayModeTimeout';
-import { useHiddenHours } from '@/lib/hooks/useHiddenHours';
-import { useScreenSafeZones, DEFAULT_SCREENS, RESOLUTION_PRESETS, computeZones } from '@/lib/hooks/useScreenSafeZones';
-import type { ScreenZoneConfig } from '@/lib/hooks/useScreenSafeZones';
-import { useWeekStartsOn } from '@/lib/hooks/useWeekStartsOn';
 
 function getCurrentMonthNum(): number {
   return new Date().getMonth() + 1;
 }
 
+function SectionDivider({ label }: { label: string }) {
+  return (
+    <div className="flex items-center gap-3 pt-2">
+      <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">
+        {label}
+      </span>
+      <div className="flex-1 h-px bg-border" />
+    </div>
+  );
+}
+
 export function DisplaySection() {
   const { theme, setTheme } = useTheme();
-  const { seasonalTheme, activeMonth, setSeasonalTheme, palette } = useSeasonalTheme();
+  const { seasonalTheme, setSeasonalTheme, palette } = useSeasonalTheme();
 
   const mode: 'auto' | 'manual' | 'off' =
     seasonalTheme === 'none' ? 'off' :
@@ -41,19 +47,19 @@ export function DisplaySection() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div>
-        <h2 className="text-2xl font-bold">Display Settings</h2>
+        <h2 className="text-2xl font-bold">Appearance</h2>
         <p className="text-muted-foreground">
-          Customize how the dashboard looks
+          Customize how the dashboard looks and behaves
         </p>
       </div>
 
-      <DisplayUserCard />
+      <SectionDivider label="Theme" />
 
       <Card>
         <CardHeader>
-          <CardTitle>Theme</CardTitle>
+          <CardTitle>Color Scheme</CardTitle>
           <CardDescription>
             Choose your preferred color scheme
           </CardDescription>
@@ -164,91 +170,18 @@ export function DisplaySection() {
         </CardContent>
       </Card>
 
+      <SectionDivider label="Wallpaper & Display" />
+
       <WallpaperSettingsCard />
-
-      <TimersCard />
-
-      <CalendarHoursCard />
-
-      <WeekStartCard />
-
-      <LocationCard />
 
       <OrientationCard />
 
-      <ScreenSafeZonesCard />
+      <SectionDivider label="Behavior" />
+
+      <TimersCard />
+
+      <LocationCard />
     </div>
-  );
-}
-
-function DisplayUserCard() {
-  const { members } = useFamily();
-  const [displayUserId, setDisplayUserId] = useState<string>('');
-  const [saving, setSaving] = useState(false);
-  const [loaded, setLoaded] = useState(false);
-
-  const parentMembers = members.filter(m => m.role === 'parent');
-
-  const fetchSetting = useCallback(async () => {
-    try {
-      const res = await fetch('/api/settings');
-      if (res.ok) {
-        const data = await res.json();
-        setDisplayUserId((data.settings?.displayUserId as string) || '');
-      }
-    } catch { /* ignore */ }
-    setLoaded(true);
-  }, []);
-
-  useEffect(() => {
-    fetchSetting();
-  }, [fetchSetting]);
-
-  const handleChange = async (value: string) => {
-    setDisplayUserId(value);
-    setSaving(true);
-    try {
-      await fetch('/api/settings', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          key: 'displayUserId',
-          value: value || null,
-        }),
-      });
-    } catch { /* ignore */ }
-    setSaving(false);
-  };
-
-  if (!loaded) return null;
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Default Display User</CardTitle>
-        <CardDescription>
-          When no one is logged in, the dashboard shows data as this user would see it (read-only).
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <select
-          value={displayUserId}
-          onChange={(e) => handleChange(e.target.value)}
-          disabled={saving}
-          className="w-full border border-border rounded px-3 py-2 text-sm bg-background"
-        >
-          <option value="">None (empty dashboard when logged out)</option>
-          {parentMembers.map((m) => (
-            <option key={m.id} value={m.id}>
-              {m.name}
-            </option>
-          ))}
-        </select>
-        {saving && (
-          <p className="text-xs text-muted-foreground">Saving...</p>
-        )}
-      </CardContent>
-    </Card>
   );
 }
 
@@ -456,110 +389,6 @@ function OrientationCard() {
   );
 }
 
-function CalendarHoursCard() {
-  const { settings, loaded, setSettings } = useHiddenHours();
-
-  const hours = Array.from({ length: 24 }, (_, i) => i);
-  const formatHour = (h: number) => {
-    if (h === 0) return '12 AM';
-    if (h === 12) return '12 PM';
-    if (h < 12) return `${h} AM`;
-    return `${h - 12} PM`;
-  };
-
-  if (!loaded) return null;
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Calendar Hours</CardTitle>
-        <CardDescription>
-          Hide a time range from day and week calendar views. When hidden, the remaining hours
-          auto-resize to fill the available space. Toggle visibility with the clock button in calendar views.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="flex items-center gap-3">
-          <span className="text-sm text-muted-foreground">Hide hours from</span>
-          <select
-            value={settings.startHour}
-            onChange={(e) => setSettings({ startHour: Number(e.target.value) })}
-            className="border border-border rounded px-2 py-1 text-sm bg-background"
-          >
-            {hours.map((h) => (
-              <option key={h} value={h}>
-                {formatHour(h)}
-              </option>
-            ))}
-          </select>
-          <span className="text-sm text-muted-foreground">to</span>
-          <select
-            value={settings.endHour}
-            onChange={(e) => setSettings({ endHour: Number(e.target.value) })}
-            className="border border-border rounded px-2 py-1 text-sm bg-background"
-          >
-            {hours.map((h) => (
-              <option key={h} value={h}>
-                {formatHour(h)}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="text-xs text-muted-foreground">
-          Hiding {formatHour(settings.startHour)} to {formatHour(settings.endHour)} ({
-            settings.startHour <= settings.endHour
-              ? settings.endHour - settings.startHour
-              : 24 - settings.startHour + settings.endHour
-          } hours)
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-
-function WeekStartCard() {
-  const { weekStartsOn, setWeekStartsOn } = useWeekStartsOn();
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Week Starts On</CardTitle>
-        <CardDescription>
-          Controls when weekly goals reset, calendar week boundaries, and meal planning weeks.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setWeekStartsOn(0)}
-            className={cn(
-              'px-4 py-2 rounded-l-md text-sm font-medium border transition-colors',
-              weekStartsOn === 0
-                ? 'bg-primary text-primary-foreground border-primary'
-                : 'border-border hover:bg-accent'
-            )}
-          >
-            Sunday
-          </button>
-          <button
-            onClick={() => setWeekStartsOn(1)}
-            className={cn(
-              'px-4 py-2 rounded-r-md text-sm font-medium border border-l-0 transition-colors',
-              weekStartsOn === 1
-                ? 'bg-primary text-primary-foreground border-primary'
-                : 'border-border hover:bg-accent'
-            )}
-          >
-            Monday
-          </button>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-
 function LocationCard() {
   const [zipCode, setZipCode] = useState('');
   const [city, setCity] = useState('');
@@ -651,145 +480,6 @@ function LocationCard() {
           />
         </div>
         {saving && <p className="text-xs text-muted-foreground">Saving...</p>}
-      </CardContent>
-    </Card>
-  );
-}
-
-const PRESET_COLORS = ['#3B82F6', '#EF4444', '#F59E0B', '#22C55E', '#8B5CF6', '#EC4899', '#06B6D4', '#F97316'];
-
-function ScreenSafeZonesCard() {
-  const { screens, setScreens, resetToDefaults } = useScreenSafeZones();
-
-  const updateScreen = (idx: number, patch: Partial<ScreenZoneConfig>) => {
-    setScreens(screens.map((s, i) => i === idx ? { ...s, ...patch } : s));
-  };
-
-  const removeScreen = (idx: number) => {
-    setScreens(screens.filter((_, i) => i !== idx));
-  };
-
-  const addScreen = (width = 1920, height = 1080, name = 'New') => {
-    const usedColors = screens.map(s => s.color);
-    const nextColor = PRESET_COLORS.find(c => !usedColors.includes(c)) || '#6B7280';
-    // Avoid duplicate names
-    const existing = screens.some(s => s.name === name);
-    const label = existing ? `${name} (2)` : name;
-    setScreens([...screens, { name: label, width, height, color: nextColor }]);
-  };
-
-  const useMyScreen = () => {
-    if (typeof window === 'undefined') return;
-    const w = window.screen.width;
-    const h = window.screen.height;
-    addScreen(w, h, `My Screen ${w}x${h}`);
-  };
-
-  // Compute grid values for display
-  const landscapeZones = computeZones(screens, 'landscape');
-  const portraitZones = computeZones(screens, 'portrait');
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Screen Safe Zones</CardTitle>
-        <CardDescription>
-          Define visible-area guides for different screen resolutions in the layout designer.
-          Each zone draws a dashed rectangle on the grid showing how much content fits on that screen.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <p className="text-xs text-muted-foreground">
-          The grid is responsive — columns and rows are computed from each screen&apos;s resolution
-          and RGL breakpoints. Enter resolutions and the grid size is computed automatically.
-        </p>
-
-        <div className="space-y-2">
-          <div className="grid grid-cols-[auto_1fr_5rem_5rem_8rem_2rem] gap-2 items-center text-xs text-muted-foreground font-medium px-1">
-            <span>Color</span>
-            <span>Label</span>
-            <span>Width</span>
-            <span>Height</span>
-            <span>Grid (L / P)</span>
-            <span />
-          </div>
-          {screens.map((screen, idx) => {
-            const lz = landscapeZones[idx];
-            const pz = portraitZones[idx];
-            return (
-              <div key={idx} className="grid grid-cols-[auto_1fr_5rem_5rem_8rem_2rem] gap-2 items-center">
-                <input
-                  type="color"
-                  value={screen.color}
-                  onChange={(e) => updateScreen(idx, { color: e.target.value })}
-                  className="w-7 h-7 rounded border border-border cursor-pointer bg-transparent"
-                />
-                <Input
-                  value={screen.name}
-                  onChange={(e) => updateScreen(idx, { name: e.target.value })}
-                  className="h-8 text-sm"
-                />
-                <Input
-                  type="number"
-                  min={320}
-                  max={7680}
-                  value={screen.width}
-                  onChange={(e) => updateScreen(idx, { width: parseInt(e.target.value) || 320 })}
-                  className="h-8 text-sm"
-                />
-                <Input
-                  type="number"
-                  min={320}
-                  max={4320}
-                  value={screen.height}
-                  onChange={(e) => updateScreen(idx, { height: parseInt(e.target.value) || 320 })}
-                  className="h-8 text-sm"
-                />
-                <span className="text-xs text-muted-foreground tabular-nums">
-                  {lz ? `${lz.cols}×${lz.rows}` : '–'} / {pz ? `${pz.cols}×${pz.rows}` : '–'}
-                </span>
-                <button
-                  onClick={() => removeScreen(idx)}
-                  className="text-muted-foreground hover:text-destructive transition-colors text-lg leading-none"
-                  title="Remove"
-                >
-                  &times;
-                </button>
-              </div>
-            );
-          })}
-        </div>
-
-        <div className="space-y-3">
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className="text-xs text-muted-foreground mr-1">Presets:</span>
-            {RESOLUTION_PRESETS.map((p) => (
-              <button
-                key={p.label}
-                onClick={() => addScreen(p.width, p.height, p.label)}
-                className="px-2 py-0.5 text-xs rounded border border-border hover:bg-accent/50 transition-colors"
-              >
-                {p.label}
-              </button>
-            ))}
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => addScreen()}>
-              + Add Zone
-            </Button>
-            <Button variant="outline" size="sm" onClick={useMyScreen}>
-              Use my screen ({typeof window !== 'undefined' ? `${window.screen.width}×${window.screen.height}` : '–'})
-            </Button>
-            <Button variant="ghost" size="sm" onClick={resetToDefaults} className="text-muted-foreground">
-              Reset to Defaults
-            </Button>
-          </div>
-        </div>
-
-        <p className="text-xs text-muted-foreground">
-          Enter screen resolutions in CSS pixels. Grid columns and rows are computed from the resolution and RGL breakpoints. Changes apply immediately in the layout designer.
-        </p>
       </CardContent>
     </Card>
   );

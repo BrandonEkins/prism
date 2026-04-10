@@ -313,7 +313,8 @@ CREATE TABLE IF NOT EXISTS public.layouts (
     updated_at timestamp without time zone DEFAULT now() NOT NULL,
     slug character varying(100),
     screensaver_widgets jsonb,
-    orientation character varying(20) DEFAULT 'landscape'::character varying
+    orientation character varying(20) DEFAULT 'landscape'::character varying,
+    font_scale integer
 );
 
 --

@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { User } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { UserAvatar } from '@/components/ui/avatar';
+import { useFamily } from '@/components/providers/FamilyProvider';
 
 export function AccountSection() {
   const [currentUser, setCurrentUser] = useState<{
@@ -38,9 +39,9 @@ export function AccountSection() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold">Account</h2>
+        <h2 className="text-2xl font-bold">Account &amp; Profile</h2>
         <p className="text-muted-foreground">
-          View your current session
+          Current session and dashboard defaults
         </p>
       </div>
 
@@ -85,6 +86,79 @@ export function AccountSection() {
           )}
         </CardContent>
       </Card>
+
+      <DefaultDisplayUserCard />
     </div>
+  );
+}
+
+function DefaultDisplayUserCard() {
+  const { members } = useFamily();
+  const [displayUserId, setDisplayUserId] = useState<string>('');
+  const [saving, setSaving] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+
+  const parentMembers = members.filter(m => m.role === 'parent');
+
+  const fetchSetting = useCallback(async () => {
+    try {
+      const res = await fetch('/api/settings');
+      if (res.ok) {
+        const data = await res.json();
+        setDisplayUserId((data.settings?.displayUserId as string) || '');
+      }
+    } catch { /* ignore */ }
+    setLoaded(true);
+  }, []);
+
+  useEffect(() => {
+    fetchSetting();
+  }, [fetchSetting]);
+
+  const handleChange = async (value: string) => {
+    setDisplayUserId(value);
+    setSaving(true);
+    try {
+      await fetch('/api/settings', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          key: 'displayUserId',
+          value: value || null,
+        }),
+      });
+    } catch { /* ignore */ }
+    setSaving(false);
+  };
+
+  if (!loaded) return null;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Default Display User</CardTitle>
+        <CardDescription>
+          When no one is logged in, the dashboard shows data as this user would see it (read-only).
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <select
+          value={displayUserId}
+          onChange={(e) => handleChange(e.target.value)}
+          disabled={saving}
+          className="w-full border border-border rounded px-3 py-2 text-sm bg-background"
+        >
+          <option value="">None (empty dashboard when logged out)</option>
+          {parentMembers.map((m) => (
+            <option key={m.id} value={m.id}>
+              {m.name}
+            </option>
+          ))}
+        </select>
+        {saving && (
+          <p className="text-xs text-muted-foreground">Saving...</p>
+        )}
+      </CardContent>
+    </Card>
   );
 }

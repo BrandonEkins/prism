@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getDisplayAuth } from '@/lib/auth';
 import { db } from '@/lib/db/client';
-import { calendarSources, taskSources, shoppingListSources } from '@/lib/db/schema';
+import { calendarSources, taskSources, shoppingListSources, photoSources, apiCredentials } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { logError } from '@/lib/utils/logError';
 
@@ -51,6 +51,18 @@ export async function GET() {
 
     const microsoftConnected = msTaskSources.length > 0 || msShoppingSources.length > 0;
 
+    // OneDrive: check photo_sources with type='onedrive'
+    const onedriveSources = await db
+      .select({ id: photoSources.id, name: photoSources.name, lastSynced: photoSources.lastSynced })
+      .from(photoSources)
+      .where(eq(photoSources.type, 'onedrive'));
+
+    // Gmail: check api_credentials with service='gmail-bus'
+    const gmailCred = await db.query.apiCredentials.findFirst({
+      where: (c, { eq: eqFn }) => eqFn(c.service, 'gmail-bus'),
+      columns: { expiresAt: true, updatedAt: true },
+    });
+
     return NextResponse.json({
       google: {
         connected: googleConnected || googleTaskSources.length > 0,
@@ -63,6 +75,14 @@ export async function GET() {
         connected: microsoftConnected,
         taskSourceCount: msTaskSources.length,
         shoppingSourceCount: msShoppingSources.length,
+      },
+      onedrive: {
+        connected: onedriveSources.length > 0,
+        sourceCount: onedriveSources.length,
+      },
+      gmail: {
+        connected: !!gmailCred,
+        expiresAt: gmailCred?.expiresAt?.toISOString() || null,
       },
     });
   } catch (error) {

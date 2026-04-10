@@ -45,7 +45,7 @@ export function LayoutGridEditor({
   const cols = GRID_COLS;
   const containerPadding = 12;
   const margin = marginProp;
-  const { width, containerRef, mounted, cellSize } = useSquareCells(cols, containerPadding, margin);
+  const { width, containerRef, mounted, cellSize: rawCellSize } = useSquareCells(cols, containerPadding, margin);
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === 'dark';
   const [selectedWidget, setSelectedWidget] = useState<string | null>(null);
@@ -54,6 +54,7 @@ export function LayoutGridEditor({
   const [openPopover, setOpenPopover] = useState<'fill' | 'outline' | 'text' | 'grid' | null>(null);
   const [measureMode, setMeasureMode] = useState(false);
   const [measureHideNav, setMeasureHideNav] = useState(true);
+  const [previewZoneIndex, setPreviewZoneIndex] = useState(0);
 
   useEffect(() => {
     const handler = (e: Event) => {
@@ -64,6 +65,7 @@ export function LayoutGridEditor({
       } else {
         setMeasureMode(d.active);
         setMeasureHideNav(d.active && d.hideNav);
+        if (typeof d.zoneIndex === 'number') setPreviewZoneIndex(d.zoneIndex);
       }
     };
     window.addEventListener('prism:measure-mode', handler);
@@ -78,6 +80,28 @@ export function LayoutGridEditor({
 
   const screenGuideOrientation = screenGuideOrientationProp ?? screenGuideOrientationInternal;
   const enabledSizes = enabledSizesProp ?? enabledSizesInternal;
+
+  // In measure mode, scale cell size so the active safe zone fills the available viewport.
+  // This way the zone expands/contracts automatically when nav/toolbar hide or reappear —
+  // no need to configure separate "with bars" vs "without bars" safe zones.
+  const cellSize = useMemo(() => {
+    if (!measureMode || !mounted || width <= 0) return rawCellSize;
+
+    const activeSafeZones = SAFE_ZONES[screenGuideOrientation].filter(z => enabledSizes.includes(z.name));
+    const zone = activeSafeZones[previewZoneIndex] ?? activeSafeZones[0];
+    if (!zone) return rawCellSize;
+
+    const effectiveHeaderOffset = measureHideNav ? 0 : 50;
+    const effectiveBottomOffset = measureHideNav ? 0 : bottomOffset;
+    const availableH = window.innerHeight - effectiveHeaderOffset - effectiveBottomOffset - 2 * containerPadding;
+    const availableW = width - 2 * containerPadding;
+
+    // Cell size that makes zone.rows fill availableH, and zone.cols fill availableW
+    const hCell = Math.floor((availableH + margin) / zone.rows) - margin;
+    const wCell = Math.floor((availableW + margin) / zone.cols) - margin;
+
+    return Math.max(16, Math.min(hCell, wCell));
+  }, [measureMode, mounted, rawCellSize, SAFE_ZONES, screenGuideOrientation, enabledSizes, previewZoneIndex, measureHideNav, bottomOffset, margin, containerPadding, width]);
 
   const visibleRows = useMemo(() => {
     if (typeof window === 'undefined') return 24;
@@ -553,23 +577,42 @@ export function LayoutGridEditor({
         {safeZones.map(zone => {
           const rectW = zone.cols * patternW - margin;
           const rectH = zone.rows * patternH - margin;
+          // Corner bracket arm length: ~8% of the smaller dimension, clamped 18–44px
+          const arm = Math.round(Math.min(Math.min(rectW, rectH) * 0.08, 44));
+          const t = 5; // stroke thickness px
+          const glow = `drop-shadow(0 0 4px ${zone.color}) drop-shadow(0 0 8px ${zone.color}bb)`;
+          const cornerStyle = (pos: 'tl' | 'tr' | 'bl' | 'br'): React.CSSProperties => ({
+            position: 'absolute',
+            width: arm,
+            height: arm,
+            borderColor: zone.color,
+            borderStyle: 'solid',
+            borderWidth: 0,
+            ...(pos === 'tl' && { top: 0, left: 0, borderTopWidth: t, borderLeftWidth: t }),
+            ...(pos === 'tr' && { top: 0, right: 0, borderTopWidth: t, borderRightWidth: t }),
+            ...(pos === 'bl' && { bottom: 0, left: 0, borderBottomWidth: t, borderLeftWidth: t }),
+            ...(pos === 'br' && { bottom: 0, right: 0, borderBottomWidth: t, borderRightWidth: t }),
+            filter: glow,
+          });
           return (
             <div
               key={`rect-${zone.name}`}
               className="absolute"
-              style={{
-                left: 0,
-                top: 0,
-                width: rectW,
-                height: rectH,
-                border: `2px dashed ${zone.color}`,
-                boxSizing: 'border-box',
-                opacity: 0.6,
-              }}
+              style={{ left: 0, top: 0, width: rectW, height: rectH }}
             >
+              <div style={cornerStyle('tl')} />
+              <div style={cornerStyle('tr')} />
+              <div style={cornerStyle('bl')} />
+              <div style={cornerStyle('br')} />
               <span
-                className="absolute text-[10px] px-1 py-0.5 rounded-tl font-medium"
-                style={{ backgroundColor: zone.color, color: 'white', bottom: 2, right: 2 }}
+                className="absolute text-[10px] px-1 py-0.5 rounded font-semibold"
+                style={{
+                  backgroundColor: zone.color,
+                  color: 'white',
+                  bottom: arm + 4,
+                  right: 0,
+                  filter: `drop-shadow(0 0 4px ${zone.color}) drop-shadow(0 1px 3px rgba(0,0,0,0.7))`,
+                }}
               >
                 {zone.name}
               </span>

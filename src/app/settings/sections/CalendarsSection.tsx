@@ -14,6 +14,8 @@ import { Switch } from '@/components/ui/switch';
 import { useCalendarSources } from '@/lib/hooks';
 import { useFamily } from '@/components/providers';
 import { CalendarColorPicker } from '../components/CalendarColorPicker';
+import { useHiddenHours } from '@/lib/hooks/useHiddenHours';
+import { useWeekStartsOn } from '@/lib/hooks/useWeekStartsOn';
 
 export function CalendarsSection() {
   const { confirm, dialogProps: confirmDialogProps } = useConfirmDialog();
@@ -617,6 +619,119 @@ export function CalendarsSection() {
         </CardContent>
       </Card>
       <ConfirmDialog {...confirmDialogProps} />
+
+      <div className="flex items-center gap-3 pt-2">
+        <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">
+          Calendar Preferences
+        </span>
+        <div className="flex-1 h-px bg-border" />
+      </div>
+
+      <CalendarHoursCard />
+
+      <WeekStartCard />
     </div>
+  );
+}
+
+function CalendarHoursCard() {
+  const { settings, loaded, setSettings } = useHiddenHours();
+
+  const hours = Array.from({ length: 24 }, (_, i) => i);
+  const formatHour = (h: number) => {
+    if (h === 0) return '12 AM';
+    if (h === 12) return '12 PM';
+    if (h < 12) return `${h} AM`;
+    return `${h - 12} PM`;
+  };
+
+  if (!loaded) return null;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Calendar Hours</CardTitle>
+        <CardDescription>
+          Hide a time range from day and week calendar views. When hidden, the remaining hours
+          auto-resize to fill the available space. Toggle visibility with the clock button in calendar views.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="flex items-center gap-3">
+          <span className="text-sm text-muted-foreground">Hide hours from</span>
+          <select
+            value={settings.startHour}
+            onChange={(e) => setSettings({ startHour: Number(e.target.value) })}
+            className="border border-border rounded px-2 py-1 text-sm bg-background"
+          >
+            {hours.map((h) => (
+              <option key={h} value={h}>
+                {formatHour(h)}
+              </option>
+            ))}
+          </select>
+          <span className="text-sm text-muted-foreground">to</span>
+          <select
+            value={settings.endHour}
+            onChange={(e) => setSettings({ endHour: Number(e.target.value) })}
+            className="border border-border rounded px-2 py-1 text-sm bg-background"
+          >
+            {hours.map((h) => (
+              <option key={h} value={h}>
+                {formatHour(h)}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="text-xs text-muted-foreground">
+          Hiding {formatHour(settings.startHour)} to {formatHour(settings.endHour)} ({
+            settings.startHour <= settings.endHour
+              ? settings.endHour - settings.startHour
+              : 24 - settings.startHour + settings.endHour
+          } hours)
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function WeekStartCard() {
+  const { weekStartsOn, setWeekStartsOn } = useWeekStartsOn();
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Week Starts On</CardTitle>
+        <CardDescription>
+          Controls when weekly goals reset, calendar week boundaries, and meal planning weeks.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setWeekStartsOn(0)}
+            className={cn(
+              'px-4 py-2 rounded-l-md text-sm font-medium border transition-colors',
+              weekStartsOn === 0
+                ? 'bg-primary text-primary-foreground border-primary'
+                : 'border-border hover:bg-accent'
+            )}
+          >
+            Sunday
+          </button>
+          <button
+            onClick={() => setWeekStartsOn(1)}
+            className={cn(
+              'px-4 py-2 rounded-r-md text-sm font-medium border border-l-0 transition-colors',
+              weekStartsOn === 1
+                ? 'bg-primary text-primary-foreground border-primary'
+                : 'border-border hover:bg-accent'
+            )}
+          >
+            Monday
+          </button>
+        </div>
+      </CardContent>
+    </Card>
   );
 }

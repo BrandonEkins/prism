@@ -5,28 +5,34 @@ import { useState, useCallback, useEffect } from 'react';
 export function useMeasureMode() {
   const [measureMode, setMeasureMode] = useState(false);
   const [measureHideNav, setMeasureHideNav] = useState(true);
+  const [previewZoneIndex, setPreviewZoneIndexState] = useState(0);
 
-  const dispatchMeasure = useCallback((active: boolean, hideNav: boolean) => {
+  const dispatchMeasure = useCallback((active: boolean, hideNav: boolean, zoneIndex: number) => {
     window.dispatchEvent(new CustomEvent('prism:measure-mode', {
-      detail: { active, hideNav },
+      detail: { active, hideNav, zoneIndex },
     }));
   }, []);
 
   const toggleMeasureMode = useCallback(() => {
     setMeasureMode(prev => {
       const next = !prev;
-      dispatchMeasure(next, measureHideNav);
+      dispatchMeasure(next, measureHideNav, previewZoneIndex);
       return next;
     });
-  }, [dispatchMeasure, measureHideNav]);
+  }, [dispatchMeasure, measureHideNav, previewZoneIndex]);
 
   const toggleMeasureNav = useCallback(() => {
     setMeasureHideNav(prev => {
       const next = !prev;
-      dispatchMeasure(true, next);
+      dispatchMeasure(true, next, previewZoneIndex);
       return next;
     });
-  }, [dispatchMeasure]);
+  }, [dispatchMeasure, previewZoneIndex]);
+
+  const setPreviewZoneIndex = useCallback((idx: number) => {
+    setPreviewZoneIndexState(idx);
+    dispatchMeasure(true, measureHideNav, idx);
+  }, [dispatchMeasure, measureHideNav]);
 
   // Keyboard shortcut: Ctrl+Shift+M
   useEffect(() => {
@@ -43,9 +49,9 @@ export function useMeasureMode() {
   // Clean up on unmount
   useEffect(() => {
     return () => {
-      dispatchMeasure(false, false);
+      dispatchMeasure(false, false, 0);
     };
   }, [dispatchMeasure]);
 
-  return { measureMode, measureHideNav, toggleMeasureMode, toggleMeasureNav };
+  return { measureMode, measureHideNav, previewZoneIndex, toggleMeasureMode, toggleMeasureNav, setPreviewZoneIndex };
 }
