@@ -55,6 +55,24 @@ export function VirtualKeyboard() {
   const containerRef = useRef<HTMLDivElement>(null);
   const keyboardRef = useRef<Keyboard | null>(null);
   const shiftRef = useRef<'default' | 'shift'>('default');
+  // isContentEditable is captured per-show so we don't need to re-init the keyboard
+  const isContentEditableRef = useRef(false);
+
+  // Stable refs for values used inside keyboard callbacks
+  const injectTextRef = useRef(injectText);
+  injectTextRef.current = injectText;
+  const setKeyboardVisibleRef = useRef(setKeyboardVisible);
+  setKeyboardVisibleRef.current = setKeyboardVisible;
+  const activeInputRef2 = useRef(activeInputRef);
+  activeInputRef2.current = activeInputRef;
+  const activeContentEditableRef2 = useRef(activeContentEditableRef);
+  activeContentEditableRef2.current = activeContentEditableRef;
+  const isListeningRef = useRef(isListening);
+  isListeningRef.current = isListening;
+  const startListeningRef = useRef(startListening);
+  startListeningRef.current = startListening;
+  const stopListeningRef = useRef(stopListening);
+  stopListeningRef.current = stopListening;
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -71,17 +89,24 @@ export function VirtualKeyboard() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [keyboardVisible]);
 
-  // Init/destroy simple-keyboard
+  // Capture isContentEditable state and reset shift when keyboard becomes visible
   useEffect(() => {
-    if (!visible || !containerRef.current) return;
+    if (keyboardVisible && keyboardRef.current) {
+      isContentEditableRef.current = !!activeContentEditableRef2.current.current;
+      shiftRef.current = 'default';
+      keyboardRef.current.setOptions({ layoutName: 'default' });
+      keyboardRef.current.setInput(activeInputRef2.current.current?.value ?? '');
+    }
+  }, [keyboardVisible]);
 
-    const isContentEditable = !!activeContentEditableRef.current;
+  // Init simple-keyboard ONCE after mount — avoids expensive re-init on every show/hide.
+  // On slow devices (Wyse 3040), re-initializing on every focus was causing noticeable lag.
+  useEffect(() => {
+    if (!mounted || !containerRef.current || keyboardRef.current) return;
 
     const kb = new Keyboard(containerRef.current, {
       onChange: (input) => {
-        // For contentEditable, text is inserted character-by-character via execCommand
-        // in onKeyPress instead of replacing the full value here.
-        if (!isContentEditable) injectText(input);
+        if (!isContentEditableRef.current) injectTextRef.current(input);
       },
       onKeyPress: (button: string) => {
         if (button === '{shift}' || button === '{lock}') {
@@ -89,26 +114,25 @@ export function VirtualKeyboard() {
           shiftRef.current = next;
           kb.setOptions({ layoutName: next });
         }
-        if (button === '{enter}' && !isContentEditable && activeInputRef.current) {
-          const el = activeInputRef.current;
-          el.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', bubbles: true, cancelable: true }));
-          el.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', code: 'Enter', bubbles: true }));
-          // Close keyboard after submitting a single-line input; textarea keeps it open
-          if (el instanceof HTMLInputElement) {
-            setKeyboardVisible(false);
+        const activeInput = activeInputRef2.current.current;
+        const activeContentEditable = activeContentEditableRef2.current.current;
+        if (button === '{enter}' && !isContentEditableRef.current && activeInput) {
+          activeInput.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', bubbles: true, cancelable: true }));
+          activeInput.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', code: 'Enter', bubbles: true }));
+          if (activeInput instanceof HTMLInputElement) {
+            setKeyboardVisibleRef.current(false);
           }
         }
         if (button === '{dismiss}') {
-          setKeyboardVisible(false);
-          activeContentEditableRef.current?.blur();
-          activeInputRef.current?.blur();
+          setKeyboardVisibleRef.current(false);
+          activeContentEditable?.blur();
+          activeInput?.blur();
         }
         if (button === '{mic}') {
-          if (isListening) { stopListening(); } else { startListening(); }
+          if (isListeningRef.current) { stopListeningRef.current(); } else { startListeningRef.current(); }
         }
-        // For contentEditable: insert characters via execCommand to preserve cursor/formatting
-        if (isContentEditable && activeContentEditableRef.current) {
-          const el = activeContentEditableRef.current;
+        if (isContentEditableRef.current && activeContentEditable) {
+          const el = activeContentEditable;
           if (button === '{bksp}') {
             el.focus();
             document.execCommand('delete');
@@ -141,15 +165,13 @@ export function VirtualKeyboard() {
     });
 
     keyboardRef.current = kb;
-    // Sync initial value (only relevant for input/textarea; contentEditable uses execCommand)
-    kb.setInput(activeInputRef.current?.value ?? '');
 
     return () => {
       kb.destroy();
       keyboardRef.current = null;
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visible]);
+  }, [mounted]);
 
   // Sync keyboard value when active input changes
   useEffect(() => {
@@ -158,13 +180,14 @@ export function VirtualKeyboard() {
     }
   });
 
-  // Is this a password input? Hide mic button.
   const isPassword =
     activeInputRef.current instanceof HTMLInputElement &&
     activeInputRef.current.type === 'password';
 
-  if (!mounted || isMobile || !visible) return null;
+  if (!mounted || isMobile) return null;
 
+  // Always render the container so the Keyboard instance stays alive.
+  // Show/hide via CSS — avoids re-init cost on every focus event.
   return createPortal(
     <div
       data-virtual-keyboard
@@ -172,9 +195,12 @@ export function VirtualKeyboard() {
         'fixed bottom-0 left-0 right-0 z-[9000]',
         'bg-background border-t border-border shadow-2xl',
         isListening && 'is-listening',
-        isExiting ? 'animate-keyboard-out' : 'animate-keyboard-in',
+        visible && (isExiting ? 'animate-keyboard-out' : 'animate-keyboard-in'),
       )}
-      style={{ height: '38vh', minHeight: 320, maxHeight: 480 }}
+      style={{
+        height: '38vh', minHeight: 320, maxHeight: 480,
+        display: visible ? undefined : 'none',
+      }}
       onPointerDown={e => { e.stopPropagation(); e.preventDefault(); }}
     >
       <div

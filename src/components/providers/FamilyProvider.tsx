@@ -76,6 +76,12 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
   // Refresh every 10 minutes with visibility-based pause
   useVisibilityPolling(fetchMembers, 10 * 60 * 1000);
 
+  // Refresh immediately after login so member IDs + roles are real
+  useEffect(() => {
+    window.addEventListener('prism:auth-changed', fetchMembers);
+    return () => window.removeEventListener('prism:auth-changed', fetchMembers);
+  }, [fetchMembers]);
+
   return (
     <FamilyContext.Provider value={{ members, loading, error, refresh: fetchMembers }}>
       {children}

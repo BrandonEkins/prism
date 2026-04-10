@@ -100,12 +100,10 @@ export function useTasksViewData() {
   }, [autoSync]);
 
   useEffect(() => {
-    if (apiTasks.length > 0) {
-      setTasks(apiTasks.map(t => ({
-        ...t,
-        dueDate: t.dueDate instanceof Date ? t.dueDate : (t.dueDate ? new Date(t.dueDate) : undefined),
-      })));
-    }
+    setTasks(apiTasks.map(t => ({
+      ...t,
+      dueDate: t.dueDate instanceof Date ? t.dueDate : (t.dueDate ? new Date(t.dueDate) : undefined),
+    })));
   }, [apiTasks]);
 
   const filteredTasks = useMemo(() => {

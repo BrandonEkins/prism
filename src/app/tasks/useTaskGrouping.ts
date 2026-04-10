@@ -80,19 +80,30 @@ export function useTaskGrouping({
   const tasksByUser = useMemo(() => {
     if (groupMode !== 'person') return null;
 
-    const groups: { user: { id: string; name: string; color: string } | null; tasks: Task[] }[] = [];
+    // Build assignee list from task data itself — works even when familyMembers has
+    // empty IDs (unauthenticated state: /api/family returns id:'' before login).
+    const assigneeMap = new Map<string, { id: string; name: string; color: string }>();
+    filteredTasks.forEach(t => { if (t.assignedTo) assigneeMap.set(t.assignedTo.id, t.assignedTo); });
 
-    familyMembers.forEach((member) => {
-      const userTasks = filteredTasks.filter((t) => t.assignedTo?.id === member.id);
-      if (userTasks.length > 0) {
-        groups.push({ user: member, tasks: userTasks });
+    // Preserve familyMembers display order where we have real IDs
+    const ordered: { id: string; name: string; color: string }[] = [];
+    familyMembers.forEach(member => {
+      if (member.id && assigneeMap.has(member.id)) {
+        ordered.push(member);
+        assigneeMap.delete(member.id);
       }
     });
+    // Any assignees not yet in familyMembers (e.g., before family refresh post-login)
+    assigneeMap.forEach(a => ordered.push(a));
 
-    const unassigned = filteredTasks.filter((t) => !t.assignedTo);
-    if (unassigned.length > 0) {
-      groups.push({ user: null, tasks: unassigned });
-    }
+    const groups: { user: { id: string; name: string; color: string } | null; tasks: Task[] }[] = [];
+    ordered.forEach(member => {
+      const userTasks = filteredTasks.filter(t => t.assignedTo?.id === member.id);
+      if (userTasks.length > 0) groups.push({ user: member, tasks: userTasks });
+    });
+
+    const unassigned = filteredTasks.filter(t => !t.assignedTo);
+    if (unassigned.length > 0) groups.push({ user: null, tasks: unassigned });
 
     return groups;
   }, [groupMode, filteredTasks, familyMembers]);

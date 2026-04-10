@@ -162,8 +162,21 @@ export function QuickPinModal({
         });
 
         if (response.ok) {
-          onAuthenticated(selectedMember);
+          const data = await response.json();
+          // Use API response for real id + role — FamilyProvider may have empty id / undefined
+          // role when the app loaded unauthenticated.
+          const authenticatedMember: QuickPinMember = {
+            id: data.user.id,
+            name: data.user.name,
+            role: data.user.role as 'parent' | 'child' | 'guest',
+            color: data.user.color,
+            avatarUrl: data.user.avatarUrl ?? undefined,
+            loginIndex: selectedMember.loginIndex,
+          };
+          onAuthenticated(authenticatedMember);
           onOpenChange(false);
+          // Refresh FamilyProvider so member IDs + roles reflect the now-authenticated session
+          window.dispatchEvent(new Event('prism:auth-changed'));
         } else {
           setError('Incorrect PIN');
           setIsShaking(true);

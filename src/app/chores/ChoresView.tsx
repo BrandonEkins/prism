@@ -81,12 +81,29 @@ export function ChoresView() {
 
   const choresByUser = useMemo(() => {
     if (!groupByUser) return null;
+
+    // Build assignee list from chore data itself — works even when familyMembers has
+    // empty IDs (unauthenticated state: /api/family returns id:'' before login).
+    const assigneeMap = new Map<string, { id: string; name: string; color: string }>();
+    effectiveFilteredChores.forEach(c => { if (c.assignedTo) assigneeMap.set(c.assignedTo.id, c.assignedTo); });
+
+    // Preserve familyMembers display order where we have real IDs
+    const ordered: { id: string; name: string; color: string }[] = [];
+    familyMembers.forEach(member => {
+      if (member.id && assigneeMap.has(member.id)) {
+        ordered.push(member);
+        assigneeMap.delete(member.id);
+      }
+    });
+    assigneeMap.forEach(a => ordered.push(a));
+
     const groups: { user: { id: string; name: string; color: string } | null; chores: typeof effectiveFilteredChores }[] = [];
-    familyMembers.forEach((member) => {
-      const userChores = effectiveFilteredChores.filter((c) => c.assignedTo?.id === member.id);
+    ordered.forEach(member => {
+      const userChores = effectiveFilteredChores.filter(c => c.assignedTo?.id === member.id);
       if (userChores.length > 0) groups.push({ user: member, chores: userChores });
     });
-    const unassigned = effectiveFilteredChores.filter((c) => !c.assignedTo);
+
+    const unassigned = effectiveFilteredChores.filter(c => !c.assignedTo);
     if (unassigned.length > 0) groups.push({ user: null, chores: unassigned });
     return groups;
   }, [groupByUser, effectiveFilteredChores, familyMembers]);
@@ -164,7 +181,7 @@ export function ChoresView() {
               <ClipboardList className="h-12 w-12 mb-4 opacity-50" /><p>No chores found</p>
               <Button variant="outline" size="sm" className="mt-4" onClick={handleAddWithAuth}>Add your first chore</Button>
             </div>
-          ) : groupByUser && choresByUser ? (
+          ) : groupByUser && choresByUser && choresByUser.length > 0 ? (
             <ChoreGroupGrid choresByUser={choresByUser} inlineChoreByUser={inlineChoreByUser}
               setInlineChoreByUser={setInlineChoreByUser} inlineAddChore={inlineAddChore}
               completeChore={completeChore} editChore={editChore} deleteChore={deleteChore}

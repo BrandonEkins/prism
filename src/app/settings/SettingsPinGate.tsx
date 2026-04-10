@@ -38,6 +38,8 @@ export function SettingsPinGate() {
         color: user.color,
         avatarUrl: user.avatarUrl ?? undefined,
       });
+      // Refresh FamilyProvider so member IDs + roles reflect the authenticated session
+      window.dispatchEvent(new Event('prism:auth-changed'));
     }
   }, [setActiveUser]);
 
