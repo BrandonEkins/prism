@@ -1,7 +1,7 @@
 # Prism
 
 > [!IMPORTANT]
-> **Upgrading from before April 11, 2025?** Database migrations now run automatically on container startup. Run `git pull && docker-compose up -d --build` and your database will update itself — no manual steps required.
+> **Upgrading from before April 11, 2026?** Database migrations now run automatically on container startup. Run `git pull && docker-compose up -d --build` and your database will update itself — no manual steps required.
 
 **A subscription-free, self-hosted family dashboard that integrates with the tools you already use without becoming yet another system of record.**
 
