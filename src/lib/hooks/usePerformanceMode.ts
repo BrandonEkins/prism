@@ -17,10 +17,28 @@ const HTML_CLASS = 'performance-mode';
 export function usePerformanceMode() {
   const [enabled, setEnabledState] = useState(false);
 
-  // Read from localStorage on mount and apply class
+  // Read from localStorage on mount and apply class.
+  // Supports ?perf=1 URL param for kiosk/headless devices that can't reach Settings:
+  //   loading with ?perf=1  → enables and persists performance mode
+  //   loading with ?perf=0  → disables and persists performance mode
+  // The param is stripped from the URL after being applied.
   useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    const on = stored === 'true';
+    const params = new URLSearchParams(window.location.search);
+    const paramVal = params.get('perf');
+
+    let on: boolean;
+    if (paramVal === '1' || paramVal === '0') {
+      on = paramVal === '1';
+      localStorage.setItem(STORAGE_KEY, String(on));
+      // Remove the param from the URL without a page reload
+      params.delete('perf');
+      const newSearch = params.toString();
+      const newUrl = window.location.pathname + (newSearch ? `?${newSearch}` : '') + window.location.hash;
+      window.history.replaceState(null, '', newUrl);
+    } else {
+      on = localStorage.getItem(STORAGE_KEY) === 'true';
+    }
+
     setEnabledState(on);
     document.documentElement.classList.toggle(HTML_CLASS, on);
   }, []);
