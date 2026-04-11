@@ -211,7 +211,7 @@ export function DashboardHeader({
   const hidden = uiHidden || measureHideChrome;
   return (
     <header className={cn(
-      'flex-shrink-0 bg-card/85 backdrop-blur-sm px-4 py-2 transition-all duration-500 ease-in-out',
+      'flex-shrink-0 bg-card/95 backdrop-blur-sm px-4 py-2 transition-all duration-500 ease-in-out',
       hidden ? 'opacity-0 -translate-y-full h-0 py-0 overflow-hidden delay-0' : 'delay-200'
     )}>
       <div className="flex items-center justify-end gap-2">
