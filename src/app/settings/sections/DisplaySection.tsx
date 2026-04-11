@@ -16,6 +16,7 @@ import { useOrientationOverride } from '../SettingsView';
 import { useScreensaverTimeout } from '@/lib/hooks/useScreensaverTimeout';
 import { useAutoHideUI } from '@/lib/hooks/useAutoHideUI';
 import { useAwayModeTimeout } from '@/lib/hooks/useAwayModeTimeout';
+import { usePerformanceMode } from '@/lib/hooks/usePerformanceMode';
 
 function getCurrentMonthNum(): number {
   return new Date().getMonth() + 1;
@@ -172,6 +173,8 @@ export function DisplaySection() {
 
       <SectionDivider label="Wallpaper & Display" />
 
+      <PerformanceModeCard />
+
       <WallpaperSettingsCard />
 
       <OrientationCard />
@@ -283,6 +286,34 @@ function TimersCard() {
           <p className="text-xs text-muted-foreground pl-2">
             After the specified idle time, Away Mode activates automatically for privacy.
           </p>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function PerformanceModeCard() {
+  const { enabled, setEnabled } = usePerformanceMode();
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Performance Mode</CardTitle>
+        <CardDescription>
+          Reduces visual effects for smoother performance on low-end devices
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <span className="text-sm font-medium">Enable performance mode</span>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Removes blur effects and animations. Recommended for thin clients and older hardware.
+            </p>
+          </div>
+          <Switch
+            checked={enabled}
+            onCheckedChange={setEnabled}
+          />
         </div>
       </CardContent>
     </Card>

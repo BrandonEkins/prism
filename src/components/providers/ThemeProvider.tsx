@@ -16,6 +16,7 @@
 import * as React from 'react';
 import { createContext, useContext, useEffect, useState } from 'react';
 import { useSeasonalTheme } from '@/lib/hooks/useSeasonalTheme';
+import { usePerformanceMode } from '@/lib/hooks/usePerformanceMode';
 
 /**
  * Theme modes
@@ -138,6 +139,8 @@ export function ThemeProvider({
 
   // Apply seasonal theme CSS variables globally
   useSeasonalTheme();
+  // Apply performance-mode class on <html> from localStorage preference
+  usePerformanceMode();
 
   // Prevent flash of wrong theme during SSR
   // Return null or a loading state until mounted
