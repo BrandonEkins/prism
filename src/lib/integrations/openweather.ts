@@ -121,15 +121,28 @@ function mpsToMph(mps: number): number {
 }
 
 /**
+ * Build a location query string for the OWM API.
+ * Prefers lat/lon (unambiguous) over the legacy string query.
+ */
+function buildLocationParam(loc: LocationParam): string {
+  if (typeof loc === 'object' && 'lat' in loc) {
+    return `lat=${loc.lat}&lon=${loc.lon}`;
+  }
+  return `q=${encodeURIComponent(loc as string)}`;
+}
+
+export type LocationParam = string | { lat: number; lon: number };
+
+/**
  * Fetch current weather data
  */
 export async function fetchCurrentWeather(
-  location?: string
+  location?: LocationParam
 ): Promise<CurrentWeather & { locationName: string }> {
   const config = getConfig();
-  const loc = location || config.location;
+  const loc = location ?? config.location;
 
-  const url = `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(loc)}&appid=${config.apiKey}`;
+  const url = `https://api.openweathermap.org/data/2.5/weather?${buildLocationParam(loc)}&appid=${config.apiKey}`;
 
   const response = await fetch(url, { next: { revalidate: 300 } }); // Cache for 5 minutes
 
@@ -159,15 +172,15 @@ export async function fetchCurrentWeather(
 /**
  * Fetch 5-day forecast (returns raw data too for period extraction)
  */
-async function fetchForecastRaw(location?: string): Promise<{
+async function fetchForecastRaw(location?: LocationParam): Promise<{
   forecast: ForecastDay[];
   raw: OpenWeatherForecast['list'];
   locationName: string;
 }> {
   const config = getConfig();
-  const loc = location || config.location;
+  const loc = location ?? config.location;
 
-  const url = `https://api.openweathermap.org/data/2.5/forecast?q=${encodeURIComponent(loc)}&appid=${config.apiKey}`;
+  const url = `https://api.openweathermap.org/data/2.5/forecast?${buildLocationParam(loc)}&appid=${config.apiKey}`;
 
   const response = await fetch(url, { next: { revalidate: 1800 } }); // Cache for 30 minutes
 
@@ -249,7 +262,7 @@ async function fetchForecastRaw(location?: string): Promise<{
 /**
  * Fetch 5-day forecast (public API)
  */
-export async function fetchForecast(location?: string): Promise<{
+export async function fetchForecast(location?: LocationParam): Promise<{
   forecast: ForecastDay[];
   locationName: string;
 }> {
@@ -299,7 +312,7 @@ function extractPeriods(forecastList: OpenWeatherForecast['list']): ForecastPeri
 /**
  * Fetch complete weather data (current + forecast)
  */
-export async function fetchWeatherData(location?: string): Promise<WeatherData> {
+export async function fetchWeatherData(location?: LocationParam): Promise<WeatherData> {
   const [currentData, forecastData] = await Promise.all([
     fetchCurrentWeather(location),
     fetchForecastRaw(location),

@@ -12,7 +12,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { optionalAuth } from '@/lib/auth';
-import { fetchWeatherData } from '@/lib/integrations/openweather';
+import { fetchWeatherData, type LocationParam } from '@/lib/integrations/openweather';
 import { getCached } from '@/lib/cache/redis';
 import { db } from '@/lib/db/client';
 import { settings } from '@/lib/db/schema';
@@ -23,16 +23,24 @@ import { logError } from '@/lib/utils/logError';
 const WEATHER_CACHE_TTL = 30 * 60;
 
 /**
- * Resolve location string: query param > DB setting > env var > default
+ * Resolve location: query param > DB setting (lat/lon preferred, legacy string fallback) > env var > default
  */
-async function resolveLocation(queryLocation: string | null): Promise<string> {
+async function resolveLocation(queryLocation: string | null): Promise<LocationParam> {
   if (queryLocation) return queryLocation;
 
-  // DB setting takes priority over env var
   try {
     const [row] = await db.select().from(settings).where(eq(settings.key, 'location'));
     if (row?.value) {
-      const val = row.value as { zipCode?: string; city?: string; state?: string; country?: string };
+      const val = row.value as {
+        // New format: geocoded lat/lon
+        lat?: number; lon?: number; displayName?: string;
+        // Legacy format: free-text fields
+        zipCode?: string; city?: string; state?: string; country?: string;
+      };
+      if (val.lat !== undefined && val.lon !== undefined) {
+        return { lat: val.lat, lon: val.lon };
+      }
+      // Legacy fallback — still works for existing installs
       if (val.zipCode) return `${val.zipCode},US`;
       if (val.city) return [val.city, val.state, val.country || 'US'].filter(Boolean).join(',');
     }
