@@ -3,8 +3,26 @@ name: Test Fresh Install
 on:
   push:
     branches: [master, main]
+    paths:
+      - 'src/**'
+      - 'Dockerfile'
+      - 'docker-compose.yml'
+      - 'package*.json'
+      - 'scripts/install.sh'
+      - 'scripts/migrate.js'
+      - 'drizzle/**'
+      - '.github/workflows/test-install.yml'
   pull_request:
     branches: [master, main]
+    paths:
+      - 'src/**'
+      - 'Dockerfile'
+      - 'docker-compose.yml'
+      - 'package*.json'
+      - 'scripts/install.sh'
+      - 'scripts/migrate.js'
+      - 'drizzle/**'
+      - '.github/workflows/test-install.yml'
   workflow_dispatch:  # Allow manual trigger
 
 jobs:
