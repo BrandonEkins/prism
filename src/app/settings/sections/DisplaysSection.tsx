@@ -137,21 +137,26 @@ export function DisplaysSection() {
                       </div>
                       <span className="text-base text-muted-foreground w-6">A</span>
                     </div>
-                    <div className="flex justify-between px-1">
-                      {FONT_SCALE_OPTIONS.filter(s => s % 25 === 0 || s === 100).map((s) => (
-                        <button
-                          key={s}
-                          onClick={() => updateFontScale(layout.id, s)}
-                          className={cn(
-                            'text-xs px-1 py-0.5 rounded transition-colors',
-                            scale === s
-                              ? 'text-primary font-medium'
-                              : 'text-muted-foreground hover:text-foreground'
-                          )}
-                        >
-                          {s}%
-                        </button>
-                      ))}
+                    {/* Quick-select labels — positioned proportionally on the 75–150 scale */}
+                    <div className="relative h-5 mt-0.5">
+                      {[75, 100, 125, 150].map((s) => {
+                        const pct = ((s - 75) / 75) * 100;
+                        return (
+                          <button
+                            key={s}
+                            onClick={() => updateFontScale(layout.id, s)}
+                            className={cn(
+                              'absolute text-xs px-0.5 py-0.5 rounded transition-colors -translate-x-1/2',
+                              scale === s
+                                ? 'text-primary font-medium'
+                                : 'text-muted-foreground hover:text-foreground'
+                            )}
+                            style={{ left: `${pct}%` }}
+                          >
+                            {s}%
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
 

@@ -169,7 +169,7 @@ export function WeekView({
                 className={cn(
                   'p-1 rounded-full transition-colors',
                   hiddenSettings.enabled
-                    ? 'bg-primary text-primary-foreground'
+                    ? 'bg-blue-500 text-white'
                     : 'hover:bg-accent text-muted-foreground'
                 )}
                 title={hiddenSettings.enabled ? 'Show all hours' : 'Hide time block'}
@@ -229,7 +229,7 @@ export function WeekView({
                 className={cn(
                   'p-1.5 rounded-full transition-colors',
                   hiddenSettings.enabled
-                    ? 'bg-primary text-primary-foreground'
+                    ? 'bg-blue-500 text-white'
                     : 'hover:bg-accent text-muted-foreground'
                 )}
                 title={hiddenSettings.enabled ? 'Show all hours' : 'Hide time block'}
