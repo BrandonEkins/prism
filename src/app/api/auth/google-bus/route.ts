@@ -12,7 +12,7 @@ export async function GET() {
 
   try {
     const state = JSON.stringify({ returnSection: 'bus' });
-    const authUrl = getGmailAuthUrl(state);
+    const authUrl = await getGmailAuthUrl(state);
     return NextResponse.redirect(authUrl);
   } catch (error) {
     logError('Failed to initiate Gmail OAuth:', error);

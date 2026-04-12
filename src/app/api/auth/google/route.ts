@@ -19,7 +19,7 @@ export async function GET(request: Request) {
     if (userId) stateObj.userId = userId;
     if (reauth) stateObj.reauth = reauth;
     const state = JSON.stringify(stateObj);
-    const authUrl = getGoogleAuthUrl(state);
+    const authUrl = await getGoogleAuthUrl(state);
 
     return NextResponse.redirect(authUrl);
   } catch (error) {

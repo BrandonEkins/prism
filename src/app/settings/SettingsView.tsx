@@ -263,6 +263,19 @@ export function SettingsView() {
                       </div>
                     </CardContent>
                   </Card>
+                  <Card>
+                    <CardContent className="p-6 flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">Setup Wizard</p>
+                        <p className="text-sm text-muted-foreground">
+                          Re-run the initial setup to update credentials or add integrations.
+                        </p>
+                      </div>
+                      <Button variant="outline" asChild>
+                        <Link href="/setup/rerun">Re-run wizard</Link>
+                      </Button>
+                    </CardContent>
+                  </Card>
                 </div>
               )}
             </div>

@@ -15,7 +15,7 @@ export async function GET(request: Request) {
     const sourceName = searchParams.get('sourceName') || 'OneDrive Photos';
 
     const state = JSON.stringify({ sourceName });
-    const authUrl = getMicrosoftAuthUrl(state);
+    const authUrl = await getMicrosoftAuthUrl(state);
 
     return NextResponse.redirect(authUrl);
   } catch (error) {
