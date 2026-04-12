@@ -1,9 +1,10 @@
 /**
  * GET /api/location-search?q=...
  *
- * Proxies the OpenWeatherMap Geocoding API to resolve city/postal code queries
- * into lat/lon coordinates. Results are used by the weather widget and the
- * location picker in Display settings.
+ * Geocodes city names and postal codes into lat/lon coordinates.
+ * Uses Nominatim (OpenStreetMap) as the primary source — no API key required,
+ * handles typos and partial names well. Falls back to OWM for postal codes
+ * when available.
  *
  * No auth required — read-only, no PII, results are publicly available geodata.
  *
@@ -19,12 +20,19 @@ export interface LocationCandidate {
   country: string;
 }
 
-interface OWMGeoResult {
-  name: string;
-  lat: number;
-  lon: number;
-  country: string;
-  state?: string;
+interface NominatimResult {
+  display_name: string;
+  lat: string;
+  lon: string;
+  address?: {
+    country_code?: string;
+    country?: string;
+    city?: string;
+    town?: string;
+    village?: string;
+    state?: string;
+    postcode?: string;
+  };
 }
 
 interface OWMZipResult {
@@ -34,11 +42,13 @@ interface OWMZipResult {
   country: string;
 }
 
-function formatDisplayName(name: string, state: string | undefined, country: string): string {
-  const parts = [name];
-  if (state) parts.push(state);
-  parts.push(country);
-  return parts.join(', ');
+function shortDisplayName(result: NominatimResult): string {
+  const a = result.address;
+  if (!a) return result.display_name.split(',').slice(0, 3).join(',').trim();
+  const city = a.city ?? a.town ?? a.village ?? '';
+  const state = a.state ?? '';
+  const country = a.country ?? a.country_code?.toUpperCase() ?? '';
+  return [city, state, country].filter(Boolean).join(', ');
 }
 
 export async function GET(request: NextRequest) {
@@ -47,45 +57,62 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ results: [] });
   }
 
-  const apiKey = process.env.OPENWEATHER_API_KEY;
-  if (!apiKey) {
-    return NextResponse.json({ error: 'Weather API not configured' }, { status: 503 });
-  }
-
   try {
     const results: LocationCandidate[] = [];
 
-    // Try zip/postal code format first (digits only, or digits+country e.g. "60601" or "60601,US")
+    // For postal codes, try OWM first (more reliable for zip lookup)
     const zipMatch = q.match(/^(\d{4,10})(?:[,\s]+([A-Za-z]{2}))?$/);
     if (zipMatch) {
-      const zip = zipMatch[1]!;
-      const country = zipMatch[2] ?? 'US';
-      const url = `https://api.openweathermap.org/geo/1.0/zip?zip=${encodeURIComponent(zip)},${country}&appid=${apiKey}`;
-      const res = await fetch(url, { next: { revalidate: 3600 } });
-      if (res.ok) {
-        const data: OWMZipResult = await res.json();
-        results.push({
-          displayName: formatDisplayName(data.name, undefined, data.country),
-          lat: data.lat,
-          lon: data.lon,
-          country: data.country,
-        });
+      const apiKey = process.env.OPENWEATHER_API_KEY;
+      if (apiKey) {
+        const zip = zipMatch[1]!;
+        const country = zipMatch[2] ?? 'US';
+        const url = `https://api.openweathermap.org/geo/1.0/zip?zip=${encodeURIComponent(zip)},${country}&appid=${apiKey}`;
+        try {
+          const res = await fetch(url, { next: { revalidate: 3600 } });
+          if (res.ok) {
+            const data: OWMZipResult = await res.json();
+            results.push({
+              displayName: `${data.name}, ${data.country}`,
+              lat: data.lat,
+              lon: data.lon,
+              country: data.country,
+            });
+          }
+        } catch { /* fall through to Nominatim */ }
       }
     }
 
-    // Always also try free-text geocoding (handles city names and any missed zip formats)
-    const geoUrl = `https://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(q)}&limit=5&appid=${apiKey}`;
-    const geoRes = await fetch(geoUrl, { next: { revalidate: 3600 } });
-    if (geoRes.ok) {
-      const geoData: OWMGeoResult[] = await geoRes.json();
-      for (const item of geoData) {
-        const displayName = formatDisplayName(item.name, item.state, item.country);
-        // Deduplicate against zip result (same lat/lon within ~0.01 degrees)
+    // Nominatim for city names (and as fallback for postal codes)
+    // featuretype=city,town,village limits to populated places for cleaner results
+    const nominatimUrl = new URL('https://nominatim.openstreetmap.org/search');
+    nominatimUrl.searchParams.set('q', q);
+    nominatimUrl.searchParams.set('format', 'json');
+    nominatimUrl.searchParams.set('addressdetails', '1');
+    nominatimUrl.searchParams.set('limit', '8');
+    nominatimUrl.searchParams.set('featuretype', 'city');
+
+    const nominatimRes = await fetch(nominatimUrl.toString(), {
+      headers: { 'User-Agent': 'Prism-Family-Dashboard/1.0' },
+      next: { revalidate: 3600 },
+    });
+
+    if (nominatimRes.ok) {
+      const data: NominatimResult[] = await nominatimRes.json();
+      for (const item of data) {
+        const lat = parseFloat(item.lat);
+        const lon = parseFloat(item.lon);
         const isDupe = results.some(
-          r => Math.abs(r.lat - item.lat) < 0.01 && Math.abs(r.lon - item.lon) < 0.01
+          r => Math.abs(r.lat - lat) < 0.05 && Math.abs(r.lon - lon) < 0.05
         );
         if (!isDupe) {
-          results.push({ displayName, lat: item.lat, lon: item.lon, country: item.country });
+          const country = item.address?.country_code?.toUpperCase() ?? item.address?.country ?? '';
+          results.push({
+            displayName: shortDisplayName(item),
+            lat,
+            lon,
+            country,
+          });
         }
       }
     }

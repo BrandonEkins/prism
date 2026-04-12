@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Monitor, ExternalLink } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
@@ -13,17 +13,34 @@ const FONT_SCALE_OPTIONS = [75, 80, 85, 90, 95, 100, 105, 110, 115, 120, 130, 14
 export function DisplaysSection() {
   const { layouts, loading } = useLayouts();
   const [saving, setSaving] = useState<string | null>(null);
+  // Optimistic local scale values — keyed by layout id
+  const [localScales, setLocalScales] = useState<Record<string, number>>({});
 
-  const updateFontScale = async (layoutId: string, scale: number | null) => {
+  // Initialise local scales from loaded layouts (only once per layout)
+  useEffect(() => {
+    if (layouts.length === 0) return;
+    setLocalScales((prev) => {
+      const next = { ...prev };
+      for (const l of layouts) {
+        if (!(l.id in next)) next[l.id] = l.fontScale ?? 100;
+      }
+      return next;
+    });
+  }, [layouts]);
+
+  const updateFontScale = async (layoutId: string, scale: number) => {
+    // Update local state immediately so the slider feels responsive
+    setLocalScales((prev) => ({ ...prev, [layoutId]: scale }));
     setSaving(layoutId);
     try {
       await fetch(`/api/layouts/${layoutId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fontScale: scale }),
+        body: JSON.stringify({ fontScale: scale === 100 ? null : scale }),
       });
     } catch {
-      // silent — the select will revert on next load
+      // Revert on failure
+      setLocalScales((prev) => ({ ...prev, [layoutId]: layouts.find(l => l.id === layoutId)?.fontScale ?? 100 }));
     } finally {
       setSaving(null);
     }
@@ -54,7 +71,7 @@ export function DisplaysSection() {
       ) : (
         <div className="space-y-3">
           {layouts.map((layout) => {
-            const scale = layout.fontScale ?? 100;
+            const scale = localScales[layout.id] ?? layout.fontScale ?? 100;
             const url = layout.slug ? `/d/${layout.slug}` : '/';
             return (
               <Card key={layout.id}>
@@ -100,10 +117,7 @@ export function DisplaysSection() {
                         max={150}
                         step={5}
                         value={scale}
-                        onChange={(e) => {
-                          const val = Number(e.target.value);
-                          updateFontScale(layout.id, val === 100 ? null : val);
-                        }}
+                        onChange={(e) => updateFontScale(layout.id, Number(e.target.value))}
                         disabled={saving === layout.id}
                         className="flex-1 accent-primary"
                       />
@@ -113,7 +127,7 @@ export function DisplaysSection() {
                       {FONT_SCALE_OPTIONS.filter(s => s % 25 === 0 || s === 100).map((s) => (
                         <button
                           key={s}
-                          onClick={() => updateFontScale(layout.id, s === 100 ? null : s)}
+                          onClick={() => updateFontScale(layout.id, s)}
                           className={cn(
                             'text-xs px-1 py-0.5 rounded transition-colors',
                             scale === s
