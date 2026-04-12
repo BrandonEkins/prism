@@ -28,7 +28,7 @@ export function useTasksViewData() {
   const { members: familyMembers } = useFamily();
 
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [filterPerson, setFilterPerson] = useState<string | null>(null);
+  const [filterPerson, setFilterPerson] = useState<string[] | null>(null);
   const [filterPriority, setFilterPriority] = useState<string | null>(null);
   const [showCompleted, setShowCompleted] = useState(false);
   const [filterList, setFilterList] = useState<string | null>(null);
@@ -108,8 +108,8 @@ export function useTasksViewData() {
 
   const filteredTasks = useMemo(() => {
     let result = [...tasks];
-    if (filterPerson) {
-      result = result.filter((task) => task.assignedTo?.id === filterPerson);
+    if (filterPerson && filterPerson.length > 0) {
+      result = result.filter((task) => task.assignedTo?.id && filterPerson.includes(task.assignedTo.id));
     }
     if (filterPriority) {
       result = result.filter((task) => task.priority === filterPriority);

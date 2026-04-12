@@ -51,6 +51,7 @@ export interface Chore {
     id: string;
     name: string;
     color: string;
+    avatarUrl?: string | null;
   };
   createdAt: Date | string;
   updatedAt?: string;

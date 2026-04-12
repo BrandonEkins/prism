@@ -34,11 +34,12 @@ export function WishesView() {
 
   const [activeTab, setActiveTab] = useState<'wishes' | 'ideas'>('wishes');
 
-  // null = "All" (grouped by person), string = single person's list
-  const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
+  // null = "All" (grouped by person), string[] = filtered to those members
+  const [selectedMemberIds, setSelectedMemberIds] = useState<string[] | null>(null);
   const viewerId = activeUser?.id || undefined;
 
-  // Fetch all items when "All" is selected, or a specific member's items
+  // Single selection optimises fetch; multi/none fetches all
+  const selectedMemberId = selectedMemberIds?.length === 1 ? selectedMemberIds[0]! : null;
   const fetchMemberId = selectedMemberId || 'all';
 
   const {
@@ -62,7 +63,7 @@ export function WishesView() {
   const orientation = useOrientation();
   const isMobile = useIsMobile();
   const isPortrait = orientation === 'portrait';
-  const showingAll = selectedMemberId === null;
+  const showingAll = !selectedMemberIds || selectedMemberIds.length === 0;
 
   // --- Card drag-to-swap ---
   const memberIds = useMemo(() => members.map(m => m.id), [members]);
@@ -250,8 +251,8 @@ export function WishesView() {
         {activeTab === 'wishes' && !familyLoading && members.length > 0 && (
           <PersonFilter
             members={members}
-            selected={selectedMemberId}
-            onSelect={(id) => setSelectedMemberId(id)}
+            selected={selectedMemberIds}
+            onSelect={setSelectedMemberIds}
           />
         )}
       </div>
@@ -264,13 +265,13 @@ export function WishesView() {
           <div className="text-muted-foreground text-center py-8">Loading...</div>
         ) : error ? (
           <div className="text-destructive text-center py-8">{error}</div>
-        ) : showingAll ? (
-          /* Grid view: one card per family member, draggable */
+        ) : (
+          /* Grid view: one card per family member (filtered if selection active), draggable */
           <div className={cn(
             'grid gap-3 h-full',
             isMobile ? 'grid-cols-1' : isPortrait ? 'grid-cols-2' : 'grid-cols-3'
           )}>
-            {orderedMembers.map(member => {
+            {orderedMembers.filter(m => showingAll || selectedMemberIds!.includes(m.id)).map(member => {
               const memberItems = groupedItems?.[member.id] || [];
               const isDragging = draggedMemberId === member.id;
               return (
@@ -291,21 +292,6 @@ export function WishesView() {
               );
             })}
           </div>
-        ) : (
-          /* Single person view */
-          <SinglePersonView
-            items={items}
-            memberId={selectedMemberId!}
-            member={members.find(m => m.id === selectedMemberId)}
-            isOwnList={isOwnList(selectedMemberId!)}
-            viewerId={viewerId}
-            quickAddName={quickAddName}
-            setQuickAddName={setQuickAddName}
-            onQuickAdd={() => handleQuickAdd()}
-            onEdit={handleOpenEditModal}
-            onDelete={handleDelete}
-            onClaim={handleClaim}
-          />
         )}
       </div>
 

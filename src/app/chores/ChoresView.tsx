@@ -71,7 +71,7 @@ export function ChoresView() {
     return filteredChores.filter((chore) => categoryFilters.has(chore.category));
   }, [filteredChores, categoryFilters]);
 
-  const hasActiveFilters = filterPerson !== null || categoryFilters.size > 0;
+  const hasActiveFilters = (filterPerson !== null && filterPerson.length > 0) || categoryFilters.size > 0;
 
   const clearFilters = () => {
     setFilterPerson(null);

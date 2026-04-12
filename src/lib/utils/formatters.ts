@@ -251,6 +251,7 @@ export function formatChoreRow(row: {
   assignedToId: string | null;
   assignedToName: string | null;
   assignedToColor: string | null;
+  assignedToAvatar?: string | null;
 }, pendingCompletion?: {
   completionId: string;
   completedAt: string;
@@ -274,6 +275,7 @@ export function formatChoreRow(row: {
       id: row.assignedToId,
       name: row.assignedToName,
       color: row.assignedToColor,
+      avatarUrl: row.assignedToAvatar ?? null,
     } : null,
     pendingApproval: pendingCompletion || null,
   };

@@ -55,7 +55,7 @@ export function MessagesView() {
 
   // State
   const { messages, loading, error, refresh, deleteMessage, updateMessage } = useMessages();
-  const [filterAuthor, setFilterAuthor] = useState<string | null>(null);
+  const [filterAuthor, setFilterAuthor] = useState<string[] | null>(null);
   const [groupByPerson, setGroupByPerson] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
 
@@ -79,8 +79,8 @@ export function MessagesView() {
     let result = [...messages];
 
     // Apply author filter
-    if (filterAuthor) {
-      result = result.filter((msg) => msg.author.id === filterAuthor);
+    if (filterAuthor && filterAuthor.length > 0) {
+      result = result.filter((msg) => filterAuthor.includes(msg.author.id));
     }
 
     // Sort: pinned first, then by date (newest first)

@@ -36,7 +36,7 @@ export function useChoresViewData() {
   const { members: familyMembers } = useFamily();
 
   const [chores, setChores] = useState<Chore[]>([]);
-  const [filterPerson, setFilterPerson] = useState<string | null>(null);
+  const [filterPerson, setFilterPerson] = useState<string[] | null>(null);
   const [filterCategory, setFilterCategory] = useState<string | null>(null);
   const [showDisabled, setShowDisabled] = useState(false);
   const [hideCompleted, setHideCompleted] = useState(false);
@@ -80,8 +80,8 @@ export function useChoresViewData() {
 
   const filteredChores = useMemo(() => {
     let result = [...chores];
-    if (filterPerson) {
-      result = result.filter((chore) => chore.assignedTo?.id === filterPerson);
+    if (filterPerson && filterPerson.length > 0) {
+      result = result.filter((chore) => chore.assignedTo?.id && filterPerson.includes(chore.assignedTo.id));
     }
     if (filterCategory) {
       result = result.filter((chore) => chore.category === filterCategory);

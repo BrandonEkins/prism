@@ -144,6 +144,7 @@ export function ChoreItem({
             <div className="flex items-center gap-1">
               <UserAvatar
                 name={chore.assignedTo.name}
+                imageUrl={chore.assignedTo.avatarUrl}
                 color={chore.assignedTo.color}
                 size="sm"
                 className="h-4 w-4 text-[8px]"

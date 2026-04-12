@@ -184,7 +184,6 @@ export function UserAvatar({
         className={cn(
           sizeClasses[size],
           'rounded-full flex items-center justify-center shrink-0',
-          'ring-2 ring-black/10 dark:ring-white/15',
           className
         )}
         style={color ? { backgroundColor: color } : { backgroundColor: 'hsl(var(--muted))' }}
@@ -195,7 +194,7 @@ export function UserAvatar({
   }
 
   return (
-    <Avatar className={cn(sizeClasses[size], 'ring-2 ring-black/10 dark:ring-white/15', className)}>
+    <Avatar className={cn(sizeClasses[size], className)}>
       {imageUrl && (
         <AvatarImage src={imageUrl} alt={name} />
       )}

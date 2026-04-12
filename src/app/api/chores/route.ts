@@ -98,6 +98,7 @@ export async function GET(request: NextRequest) {
           assignedToId: chores.assignedTo,
           assignedToName: users.name,
           assignedToColor: users.color,
+          assignedToAvatar: users.avatarUrl,
         })
         .from(chores)
         .leftJoin(users, eq(chores.assignedTo, users.id))

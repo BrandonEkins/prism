@@ -57,7 +57,7 @@ export function TasksView() {
     tasksByUser, tasksByList, tasksByPersonThenList, tasksByListThenPerson,
   } = useTaskGrouping({ filteredTasks, familyMembers, taskLists, filterList, refreshTasks, requireAuth });
 
-  const hasActiveFilters = filterPerson !== null || filterPriority !== null || filterList !== null;
+  const hasActiveFilters = (filterPerson !== null && filterPerson.length > 0) || filterPriority !== null || filterList !== null;
   const clearFilters = () => { setFilterPerson(null); setFilterPriority(null); setFilterList(null); };
 
   const handleAddWithAuth = async () => {
