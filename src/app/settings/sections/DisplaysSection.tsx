@@ -28,22 +28,29 @@ export function DisplaysSection() {
     });
   }, [layouts]);
 
-  const updateFontScale = async (layoutId: string, scale: number) => {
-    // Update local state immediately so the slider feels responsive
+  const saveTimers = useState<Record<string, ReturnType<typeof setTimeout>>>({});
+
+  const updateFontScale = (layoutId: string, scale: number) => {
+    // Update local state immediately — slider stays responsive
     setLocalScales((prev) => ({ ...prev, [layoutId]: scale }));
-    setSaving(layoutId);
-    try {
-      await fetch(`/api/layouts/${layoutId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fontScale: scale === 100 ? null : scale }),
-      });
-    } catch {
-      // Revert on failure
-      setLocalScales((prev) => ({ ...prev, [layoutId]: layouts.find(l => l.id === layoutId)?.fontScale ?? 100 }));
-    } finally {
-      setSaving(null);
-    }
+
+    // Debounce DB write so rapid slider drags don't spam the API
+    const timers = saveTimers[0];
+    if (timers[layoutId]) clearTimeout(timers[layoutId]);
+    timers[layoutId] = setTimeout(async () => {
+      setSaving(layoutId);
+      try {
+        await fetch(`/api/layouts/${layoutId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ fontScale: scale === 100 ? null : scale }),
+        });
+      } catch {
+        setLocalScales((prev) => ({ ...prev, [layoutId]: layouts.find(l => l.id === layoutId)?.fontScale ?? 100 }));
+      } finally {
+        setSaving(null);
+      }
+    }, 400);
   };
 
   return (
@@ -111,16 +118,23 @@ export function DisplaysSection() {
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="text-xs text-muted-foreground w-6">A</span>
-                      <input
-                        type="range"
-                        min={75}
-                        max={150}
-                        step={5}
-                        value={scale}
-                        onChange={(e) => updateFontScale(layout.id, Number(e.target.value))}
-                        disabled={saving === layout.id}
-                        className="flex-1 accent-primary"
-                      />
+                      <div className="flex-1 relative">
+                        <input
+                          type="range"
+                          min={75}
+                          max={150}
+                          step={5}
+                          value={scale}
+                          onChange={(e) => updateFontScale(layout.id, Number(e.target.value))}
+                          className="w-full accent-primary"
+                        />
+                        {/* 100% marker — sits at 33% from left on the 75–150 range */}
+                        <div
+                          className="absolute top-1/2 -translate-y-1/2 w-0.5 h-2 bg-muted-foreground/40 pointer-events-none"
+                          style={{ left: 'calc(33.3% - 1px)' }}
+                          title="100% default"
+                        />
+                      </div>
                       <span className="text-base text-muted-foreground w-6">A</span>
                     </div>
                     <div className="flex justify-between px-1">
