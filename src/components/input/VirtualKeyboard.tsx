@@ -89,12 +89,14 @@ export function VirtualKeyboard() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [keyboardVisible]);
 
-  // Capture isContentEditable state and reset shift when keyboard becomes visible
+  // Capture isContentEditable state and reset shift when keyboard becomes visible.
+  // Always force layoutName back to 'default' — prevents react-simple-keyboard from
+  // getting stuck in a numeric layout when a numeric/password input had focus.
   useEffect(() => {
     if (keyboardVisible && keyboardRef.current) {
       isContentEditableRef.current = !!activeContentEditableRef2.current.current;
       shiftRef.current = 'default';
-      keyboardRef.current.setOptions({ layoutName: 'default' });
+      keyboardRef.current.setOptions({ layoutName: 'default', layout });
       keyboardRef.current.setInput(activeInputRef2.current.current?.value ?? '');
     }
   }, [keyboardVisible]);

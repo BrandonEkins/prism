@@ -152,7 +152,6 @@ export function FamilyStep({ onNext, onBack }: FamilyStepProps) {
             <Input
               id="member-pin"
               type="password"
-              inputMode="numeric"
               maxLength={8}
               placeholder="4–8 digits"
               value={pin}
@@ -168,18 +167,14 @@ export function FamilyStep({ onNext, onBack }: FamilyStepProps) {
 
         <div className="flex gap-3 pt-1">
           <Button variant="ghost" onClick={onBack} className="flex-1">Back</Button>
-          <Button
-            onClick={onNext}
-            disabled={added.length === 0}
-            className="flex-1"
-          >
+          <Button onClick={onNext} className="flex-1">
             Continue <ChevronRight className="h-4 w-4 ml-1" />
           </Button>
         </div>
 
         {added.length === 0 && (
           <p className="text-xs text-center text-muted-foreground -mt-1">
-            Add at least one family member to continue.
+            Add a member above, or skip if your family is already set up.
           </p>
         )}
       </CardContent>

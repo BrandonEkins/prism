@@ -34,6 +34,7 @@ import { cn } from '@/lib/utils';
 import { AwayModeToggle } from '@/components/away-mode';
 import { BabysitterModeToggle } from '@/components/babysitter-mode';
 import { useAutoHideUI } from '@/lib/hooks/useAutoHideUI';
+import { RefreshCw } from 'lucide-react';
 
 
 /**
@@ -225,6 +226,15 @@ export function DashboardHeader({
             <GridEditIcon />
           </button>
         )}
+
+        {/* Refresh page */}
+        <button
+          onClick={() => window.location.reload()}
+          className="p-2 rounded-md hover:bg-accent transition-colors"
+          aria-label="Refresh page"
+        >
+          <RefreshCw className="h-5 w-5" />
+        </button>
 
         {/* Babysitter mode button */}
         <BabysitterModeToggle />
