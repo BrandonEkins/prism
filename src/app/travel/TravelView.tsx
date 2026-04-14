@@ -90,8 +90,8 @@ export function TravelView() {
     for (const stop of pendingChildren?.stops ?? []) {
       await addPin({ ...base, name: stop.name, latitude: stop.latitude, longitude: stop.longitude, placeName: stop.placeName ?? null, pinType: 'stop', parentId: newPin.id });
     }
-    for (const name of pendingChildren?.parks ?? []) {
-      await addPin({ ...base, latitude: 0, longitude: 0, name, pinType: 'national_park', parentId: newPin.id });
+    for (const park of pendingChildren?.parks ?? []) {
+      await addPin({ ...base, name: park.name, latitude: park.latitude, longitude: park.longitude, placeName: park.placeName ?? null, pinType: 'national_park', parentId: newPin.id });
     }
 
     setSelectedPinId(newPin.id);
@@ -105,8 +105,8 @@ export function TravelView() {
     for (const stop of pendingChildren?.stops ?? []) {
       await addPin({ ...base, name: stop.name, latitude: stop.latitude, longitude: stop.longitude, placeName: stop.placeName ?? null, pinType: 'stop', parentId: id });
     }
-    for (const name of pendingChildren?.parks ?? []) {
-      await addPin({ ...base, latitude: 0, longitude: 0, name, pinType: 'national_park', parentId: id });
+    for (const park of pendingChildren?.parks ?? []) {
+      await addPin({ ...base, name: park.name, latitude: park.latitude, longitude: park.longitude, placeName: park.placeName ?? null, pinType: 'national_park', parentId: id });
     }
     // Set overlay after children are created so they appear immediately in the detail panel
     setOverlay({ mode: 'detail', pin: updated });
@@ -131,6 +131,11 @@ export function TravelView() {
     }
     setOverlay({ mode: 'none' });
   }, [deletePin, pins]);
+
+  const handleDeleteChild = useCallback(async (childId: string) => {
+    await deletePin(childId);
+    // Stay on the parent detail — the useEffect will refresh childPins via pins state
+  }, [deletePin]);
 
   const closeOverlay = useCallback(() => {
     setOverlay({ mode: 'none' });
@@ -256,6 +261,7 @@ export function TravelView() {
                   photoCount={photoCounts[overlay.pin.id] ?? 0}
                   onUpdate={(data, pendingChildren) => handleUpdate(overlay.pin.id, data, pendingChildren)}
                   onDelete={() => handleDelete(overlay.pin.id)}
+                  onDeleteChild={handleDeleteChild}
                   onClose={closeOverlay}
                   onAddChild={handleAddChild}
                   onSelectChild={(child) => {

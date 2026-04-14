@@ -249,6 +249,24 @@ export function TravelGlobe({ pins, selectedPinId, onPinClick, onMapClick }: Tra
     map.on('load', () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (map as any).setProjection({ type: 'globe' });
+
+      // Trip lines: GeoJSON source updated when a parent pin is selected
+      map.addSource('trip-lines', {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: [] },
+      });
+      map.addLayer({
+        id: 'trip-lines',
+        type: 'line',
+        source: 'trip-lines',
+        layout: { 'line-join': 'round', 'line-cap': 'round' },
+        paint: {
+          'line-color': ['get', 'color'],
+          'line-width': 1.5,
+          'line-opacity': 0.55,
+          'line-dasharray': [3, 2],
+        },
+      });
     });
 
     map.on('zoomend', () => {
@@ -334,6 +352,40 @@ export function TravelGlobe({ pins, selectedPinId, onPinClick, onMapClick }: Tra
       markersRef.current.set(pin.id, marker);
     }
   }, [pins, selectedPinId, zoomTier]);
+
+  // Update trip lines when selection or pins change
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !map.isStyleLoaded()) return;
+    const source = map.getSource('trip-lines') as maplibregl.GeoJSONSource | undefined;
+    if (!source) return;
+
+    const parent = selectedPinId ? pins.find((p) => p.id === selectedPinId) : null;
+    if (!parent || parent.latitude === 0 && parent.longitude === 0) {
+      source.setData({ type: 'FeatureCollection', features: [] });
+      return;
+    }
+
+    const children = pins.filter(
+      (p) => p.parentId === selectedPinId && (p.latitude !== 0 || p.longitude !== 0)
+    );
+
+    const features = children.map((c) => ({
+      type: 'Feature' as const,
+      properties: {
+        color: c.pinType === 'national_park' ? NPS_COLOR : '#8B5CF6',
+      },
+      geometry: {
+        type: 'LineString' as const,
+        coordinates: [
+          [parent.longitude, parent.latitude],
+          [c.longitude, c.latitude],
+        ],
+      },
+    }));
+
+    source.setData({ type: 'FeatureCollection', features });
+  }, [pins, selectedPinId]);
 
   // Fly to selected pin
   useEffect(() => {

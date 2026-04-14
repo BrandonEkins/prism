@@ -28,7 +28,7 @@ export interface PendingStop {
 
 export interface PinPendingChildren {
   stops: PendingStop[];
-  parks: string[];
+  parks: PendingStop[];
 }
 
 interface PinFormProps {
@@ -78,7 +78,7 @@ export function PinForm({ pin, initialLatLng, parentId, pinType = 'location', ch
   const [stopSearching, setStopSearching] = useState(false);
   const stopTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const [pendingParks, setPendingParks] = useState<string[]>([]);
+  const [pendingParks, setPendingParks] = useState<PendingStop[]>([]);
   const [parkSearch, setParkSearch] = useState('');
   const [showParkPicker, setShowParkPicker] = useState(false);
   const [showStops, setShowStops] = useState(false);
@@ -179,10 +179,25 @@ export function PinForm({ pin, initialLatLng, parentId, pinType = 'location', ch
     setStopResults([]);
   };
 
-  const togglePendingPark = (name: string) => {
-    setPendingParks((prev) =>
-      prev.includes(name) ? prev.filter((p) => p !== name) : [...prev, name]
-    );
+  const togglePendingPark = async (name: string) => {
+    if (pendingParks.some((p) => p.name === name)) {
+      setPendingParks((prev) => prev.filter((p) => p.name !== name));
+      return;
+    }
+    // Optimistically add, then fill in coordinates from geocode
+    setPendingParks((prev) => [...prev, { name, latitude: 0, longitude: 0 }]);
+    try {
+      const res = await fetch(`/api/travel/geocode?q=${encodeURIComponent(name + ' National Park')}`);
+      const data = await res.json();
+      const first = data.results?.[0];
+      if (first) {
+        setPendingParks((prev) => prev.map((p) =>
+          p.name === name ? { name, latitude: first.latitude, longitude: first.longitude, placeName: first.fullName } : p
+        ));
+      }
+    } catch {
+      // keep with no location — user can set it from the detail view
+    }
   };
 
   const filteredParks = NPS_UNITS.filter((u) =>
@@ -498,10 +513,10 @@ export function PinForm({ pin, initialLatLng, parentId, pinType = 'location', ch
                 </div>
                 <ul className="max-h-40 overflow-y-auto">
                   {filteredParks.map((u) => {
-                    const selected = pendingParks.includes(u.name);
+                    const selected = pendingParks.some((p) => p.name === u.name);
                     return (
                       <li key={u.name}>
-                        <button type="button" onClick={() => togglePendingPark(u.name)}
+                        <button type="button" onClick={() => { void togglePendingPark(u.name); }}
                           className={cn('w-full text-left px-3 py-1.5 text-sm flex items-center gap-2 transition-colors',
                             selected ? 'bg-emerald-50 dark:bg-emerald-900/20' : 'hover:bg-muted')}
                         >
@@ -526,9 +541,12 @@ export function PinForm({ pin, initialLatLng, parentId, pinType = 'location', ch
             {pendingParks.length > 0 && !showParkPicker && (
               <div className="flex flex-wrap gap-1">
                 {pendingParks.map((p) => (
-                  <Badge key={p} className="bg-emerald-700 text-white gap-1 pr-1 text-xs">
-                    🌲 {p}
-                    <button type="button" onClick={() => togglePendingPark(p)} className="hover:opacity-75">
+                  <Badge key={p.name} className="bg-emerald-700 text-white gap-1 pr-1 text-xs">
+                    🌲 {p.name}
+                    {p.latitude === 0 && p.longitude === 0 && (
+                      <span className="text-[10px] text-emerald-200 ml-0.5">locating…</span>
+                    )}
+                    <button type="button" onClick={() => { void togglePendingPark(p.name); }} className="hover:opacity-75">
                       <X className="h-3 w-3" />
                     </button>
                   </Badge>

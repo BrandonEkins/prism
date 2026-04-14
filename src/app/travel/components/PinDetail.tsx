@@ -16,12 +16,13 @@ interface PinDetailProps {
   photoCount: number;
   onUpdate: (data: Partial<TravelPin>, pendingChildren?: PinPendingChildren) => Promise<void>;
   onDelete: () => void;
+  onDeleteChild: (id: string) => void;
   onClose: () => void;
   onAddChild: (parentId: string, pinType: PinType) => void;
   onSelectChild: (child: TravelPin) => void;
 }
 
-export function PinDetail({ pin, childPins, photoCount, onUpdate, onDelete, onClose, onAddChild, onSelectChild }: PinDetailProps) {
+export function PinDetail({ pin, childPins, photoCount, onUpdate, onDelete, onDeleteChild, onClose, onAddChild, onSelectChild }: PinDetailProps) {
   const [editing, setEditing] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
@@ -107,12 +108,20 @@ export function PinDetail({ pin, childPins, photoCount, onUpdate, onDelete, onCl
               {stops.length > 0 ? (
                 <div className="flex flex-wrap gap-1.5">
                   {stops.map((s) => (
-                    <button key={s.id} onClick={() => onSelectChild(s)}
-                      className="flex items-center gap-1 px-2.5 py-1 rounded-full border border-violet-300 text-violet-700 dark:border-violet-700 dark:text-violet-400 text-xs hover:bg-violet-50 dark:hover:bg-violet-900/20 transition-colors"
-                    >
-                      📍 {s.name}
-                      {!s.latitude && !s.longitude && <span className="text-[10px] text-amber-500 ml-0.5">no location</span>}
-                    </button>
+                    <div key={s.id} className="flex items-center gap-0 rounded-full border border-violet-300 dark:border-violet-700 overflow-hidden">
+                      <button onClick={() => onSelectChild(s)}
+                        className="flex items-center gap-1 pl-2.5 pr-2 py-1 text-violet-700 dark:text-violet-400 text-xs hover:bg-violet-50 dark:hover:bg-violet-900/20 transition-colors"
+                      >
+                        📍 {s.name}
+                        {!s.latitude && !s.longitude && <span className="text-[10px] text-amber-500 ml-0.5">no location</span>}
+                      </button>
+                      <button onClick={() => onDeleteChild(s.id)}
+                        className="pr-2 py-1 text-violet-400 hover:text-red-500 transition-colors"
+                        title="Remove stop"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
                   ))}
                 </div>
               ) : (
@@ -139,13 +148,20 @@ export function PinDetail({ pin, childPins, photoCount, onUpdate, onDelete, onCl
               {parks.length > 0 ? (
                 <div className="flex flex-wrap gap-1.5">
                   {parks.map((p) => (
-                    <button key={p.id} onClick={() => onSelectChild(p)}
-                      className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs text-white hover:opacity-90 transition-opacity"
-                      style={{ backgroundColor: NPS_COLOR }}
-                    >
-                      🌲 {p.name}
-                      {!p.latitude && !p.longitude && <span className="text-[10px] text-emerald-200 ml-0.5">no location</span>}
-                    </button>
+                    <div key={p.id} className="flex items-center gap-0 rounded-full overflow-hidden" style={{ backgroundColor: NPS_COLOR }}>
+                      <button onClick={() => onSelectChild(p)}
+                        className="flex items-center gap-1 pl-2.5 pr-2 py-1 text-xs text-white hover:opacity-90 transition-opacity"
+                      >
+                        🌲 {p.name}
+                        {!p.latitude && !p.longitude && <span className="text-[10px] text-emerald-200 ml-0.5">no location</span>}
+                      </button>
+                      <button onClick={() => onDeleteChild(p.id)}
+                        className="pr-2 py-1 text-emerald-200 hover:text-white transition-colors"
+                        title="Remove park"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
                   ))}
                 </div>
               ) : (
