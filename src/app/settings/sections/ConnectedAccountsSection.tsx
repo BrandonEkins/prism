@@ -5,10 +5,11 @@ import { useSearchParams } from 'next/navigation';
 import { toast } from '@/components/ui/use-toast';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useConfirmDialog } from '@/lib/hooks/useConfirmDialog';
-import { AlertTriangle, RefreshCw, Mail, HardDrive } from 'lucide-react';
+import { AlertTriangle, RefreshCw, Mail, HardDrive, Globe, Wand2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import Link from 'next/link';
 
 interface IntegrationStatus {
   google: {
@@ -94,6 +95,16 @@ export function ConnectedAccountsSection() {
       window.history.replaceState({}, '', '/settings?section=connections');
     } else if (error === 'google_auth_failed') {
       toast({ title: 'Google authentication failed. Please try again.', variant: 'destructive' });
+      window.history.replaceState({}, '', '/settings?section=connections');
+    } else if (success === 'onedrive_connected') {
+      toast({ title: 'OneDrive connected successfully!', variant: 'success' });
+      fetchStatus();
+      window.history.replaceState({}, '', '/settings?section=connections');
+    } else if (error === 'microsoft_auth_denied') {
+      toast({ title: 'OneDrive authorization was denied or cancelled.', variant: 'destructive' });
+      window.history.replaceState({}, '', '/settings?section=connections');
+    } else if (error === 'microsoft_auth_failed') {
+      toast({ title: 'OneDrive authentication failed. Please try again.', variant: 'destructive' });
       window.history.replaceState({}, '', '/settings?section=connections');
     } else if (error === 'missing_code') {
       toast({ title: 'Authorization code was missing. Please try again.', variant: 'destructive' });
@@ -188,9 +199,17 @@ export function ConnectedAccountsSection() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold">Connected Accounts</h2>
-        <p className="text-muted-foreground">Manage third-party service connections</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold">Connected Accounts</h2>
+          <p className="text-muted-foreground">Manage third-party service connections</p>
+        </div>
+        <Button variant="outline" size="sm" asChild>
+          <Link href="/setup/rerun">
+            <Wand2 className="h-4 w-4 mr-2" />
+            Setup Wizard
+          </Link>
+        </Button>
       </div>
 
       {/* Google Card */}

@@ -43,22 +43,19 @@ interface GmailMessagePart {
   parts?: GmailMessagePart[];
 }
 
-function getConfig() {
-  const clientId = process.env.GOOGLE_CLIENT_ID;
-  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-  const redirectUri = process.env.GOOGLE_GMAIL_REDIRECT_URI;
-
-  if (!clientId || !clientSecret || !redirectUri) {
+async function getConfig() {
+  const { getGoogleCredentials } = await import('@/lib/integrations/credentialStore');
+  const creds = await getGoogleCredentials();
+  if (!creds) {
     throw new Error(
-      'Missing Gmail OAuth configuration. Set GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, and GOOGLE_GMAIL_REDIRECT_URI in .env'
+      'Missing Gmail OAuth configuration. Configure in Settings → Setup Wizard or set GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, and GOOGLE_GMAIL_REDIRECT_URI in .env'
     );
   }
-
-  return { clientId, clientSecret, redirectUri };
+  return { clientId: creds.clientId, clientSecret: creds.clientSecret, redirectUri: creds.gmailRedirectUri };
 }
 
-export function getGmailAuthUrl(state?: string): string {
-  const { clientId, redirectUri } = getConfig();
+export async function getGmailAuthUrl(state?: string): Promise<string> {
+  const { clientId, redirectUri } = await getConfig();
 
   const params = new URLSearchParams({
     client_id: clientId,
@@ -77,7 +74,7 @@ export function getGmailAuthUrl(state?: string): string {
 }
 
 export async function exchangeGmailCodeForTokens(code: string): Promise<GmailTokens> {
-  const { clientId, clientSecret, redirectUri } = getConfig();
+  const { clientId, clientSecret, redirectUri } = await getConfig();
 
   const response = await fetch(GOOGLE_TOKEN_URL, {
     method: 'POST',
@@ -100,7 +97,7 @@ export async function exchangeGmailCodeForTokens(code: string): Promise<GmailTok
 }
 
 export async function refreshGmailAccessToken(refreshToken: string): Promise<GmailTokens> {
-  const { clientId, clientSecret } = getConfig();
+  const { clientId, clientSecret } = await getConfig();
 
   const response = await fetch(GOOGLE_TOKEN_URL, {
     method: 'POST',

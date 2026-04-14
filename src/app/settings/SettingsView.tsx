@@ -25,6 +25,7 @@ import {
   Bus,
   KeyboardIcon,
   Monitor,
+  Wand2,
 } from 'lucide-react';
 import { PrismIcon } from '@/components/ui/PrismIcon';
 import { cn } from '@/lib/utils';
@@ -189,6 +190,7 @@ export function SettingsView() {
                 );
               })}
             </div>
+
           </nav>
 
           <div className="flex-1 overflow-y-auto p-6">

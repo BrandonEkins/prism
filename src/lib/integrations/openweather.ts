@@ -60,10 +60,11 @@ interface OpenWeatherForecast {
 }
 
 /**
- * Get configuration from environment
+ * Get configuration — checks DB credentials store first, falls back to env.
  */
-function getConfig() {
-  const apiKey = process.env.OPENWEATHER_API_KEY;
+async function getConfig() {
+  const { getWeatherApiKey } = await import('@/lib/integrations/credentialStore');
+  const apiKey = await getWeatherApiKey();
   const location = process.env.WEATHER_LOCATION || 'Springfield,IL,US';
 
   if (!apiKey) {
@@ -139,7 +140,7 @@ export type LocationParam = string | { lat: number; lon: number };
 export async function fetchCurrentWeather(
   location?: LocationParam
 ): Promise<CurrentWeather & { locationName: string }> {
-  const config = getConfig();
+  const config = await getConfig();
   const loc = location ?? config.location;
 
   const url = `https://api.openweathermap.org/data/2.5/weather?${buildLocationParam(loc)}&appid=${config.apiKey}`;
@@ -177,7 +178,7 @@ async function fetchForecastRaw(location?: LocationParam): Promise<{
   raw: OpenWeatherForecast['list'];
   locationName: string;
 }> {
-  const config = getConfig();
+  const config = await getConfig();
   const loc = location ?? config.location;
 
   const url = `https://api.openweathermap.org/data/2.5/forecast?${buildLocationParam(loc)}&appid=${config.apiKey}`;

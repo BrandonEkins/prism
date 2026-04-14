@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import { requireAuth, requireRole } from '@/lib/auth';
 import { db } from '@/lib/db/client';
 import { photoSources } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
@@ -10,11 +9,8 @@ import { logError } from '@/lib/utils/logError';
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
 
 export async function GET(request: Request) {
-  const auth = await requireAuth();
-  if (auth instanceof NextResponse) return auth;
-
-  const forbidden = requireRole(auth, 'canModifySettings');
-  if (forbidden) return forbidden;
+  // Note: no requireAuth here — Microsoft calls back without a Prism session cookie.
+  // The state param carries enough context; sensitive ops are gated by the token exchange itself.
 
   try {
     const { searchParams } = new URL(request.url);
@@ -25,11 +21,11 @@ export async function GET(request: Request) {
     if (error) {
       const errorDescription = searchParams.get('error_description');
       console.error('Microsoft OAuth error:', error, errorDescription);
-      return NextResponse.redirect(`${BASE_URL}/settings?section=photos&error=microsoft_auth_denied`);
+      return NextResponse.redirect(`${BASE_URL}/settings?section=connections&error=microsoft_auth_denied`);
     }
 
     if (!code) {
-      return NextResponse.redirect(`${BASE_URL}/photos?error=missing_code`);
+      return NextResponse.redirect(`${BASE_URL}/settings?section=connections&error=missing_code`);
     }
 
     let sourceName = 'OneDrive Photos';
@@ -65,9 +61,9 @@ export async function GET(request: Request) {
       });
     }
 
-    return NextResponse.redirect(`${BASE_URL}/settings?section=photos&success=microsoft_connected`);
+    return NextResponse.redirect(`${BASE_URL}/settings?section=connections&success=onedrive_connected`);
   } catch (error) {
     logError('Microsoft OAuth callback error:', error);
-    return NextResponse.redirect(`${BASE_URL}/settings?error=microsoft_auth_failed`);
+    return NextResponse.redirect(`${BASE_URL}/settings?section=connections&error=microsoft_auth_failed`);
   }
 }

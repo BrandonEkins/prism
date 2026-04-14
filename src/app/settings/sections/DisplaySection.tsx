@@ -307,7 +307,7 @@ function PerformanceModeCard() {
           <div>
             <span className="text-sm font-medium">Enable performance mode</span>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Removes blur effects and animations. Recommended for thin clients and older hardware.
+              Disables backdrop blur (the main GPU cost on thin clients). Recommended for Wyse, NUC, and other low-end kiosk hardware.
             </p>
           </div>
           <Switch

@@ -11,6 +11,7 @@ import {
   ImageIcon,
   Gift,
   Baby,
+  Globe,
   Settings,
 } from 'lucide-react';
 
@@ -34,6 +35,7 @@ export const ALL_NAV_ITEMS: NavItem[] = [
   { label: 'Photos', href: '/photos', icon: ImageIcon },
   { label: 'Wishes', href: '/wishes', icon: Gift },
   { label: 'Babysitter', href: '/babysitter', icon: Baby },
+  { label: 'Travel', href: '/travel', icon: Globe },
   { label: 'Settings', href: '/settings', icon: Settings },
 ];
 

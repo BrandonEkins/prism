@@ -27,22 +27,19 @@ export interface OneDriveItem {
   '@microsoft.graph.downloadUrl'?: string;
 }
 
-function getConfig() {
-  const clientId = process.env.MICROSOFT_CLIENT_ID;
-  const clientSecret = process.env.MICROSOFT_CLIENT_SECRET;
-  const redirectUri = process.env.MICROSOFT_REDIRECT_URI;
-
-  if (!clientId || !clientSecret || !redirectUri) {
+async function getConfig() {
+  const { getMicrosoftCredentials } = await import('@/lib/integrations/credentialStore');
+  const creds = await getMicrosoftCredentials();
+  if (!creds) {
     throw new Error(
-      'Missing Microsoft OAuth configuration. Set MICROSOFT_CLIENT_ID, MICROSOFT_CLIENT_SECRET, and MICROSOFT_REDIRECT_URI in .env'
+      'Missing Microsoft OAuth configuration. Configure in Settings → Setup Wizard or set MICROSOFT_CLIENT_ID, MICROSOFT_CLIENT_SECRET, and MICROSOFT_REDIRECT_URI in .env'
     );
   }
-
-  return { clientId, clientSecret, redirectUri };
+  return creds;
 }
 
-export function getMicrosoftAuthUrl(state?: string): string {
-  const { clientId, redirectUri } = getConfig();
+export async function getMicrosoftAuthUrl(state?: string): Promise<string> {
+  const { clientId, redirectUri } = await getConfig();
 
   const params = new URLSearchParams({
     client_id: clientId,
@@ -60,7 +57,7 @@ export function getMicrosoftAuthUrl(state?: string): string {
 }
 
 export async function exchangeCodeForTokens(code: string): Promise<MicrosoftTokens> {
-  const { clientId, clientSecret, redirectUri } = getConfig();
+  const { clientId, clientSecret, redirectUri } = await getConfig();
 
   const response = await fetch(MICROSOFT_TOKEN_URL, {
     method: 'POST',
@@ -83,7 +80,7 @@ export async function exchangeCodeForTokens(code: string): Promise<MicrosoftToke
 }
 
 export async function refreshAccessToken(refreshToken: string): Promise<MicrosoftTokens> {
-  const { clientId, clientSecret } = getConfig();
+  const { clientId, clientSecret } = await getConfig();
 
   const response = await fetch(MICROSOFT_TOKEN_URL, {
     method: 'POST',

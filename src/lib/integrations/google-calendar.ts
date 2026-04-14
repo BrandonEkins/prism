@@ -74,27 +74,24 @@ export interface GoogleTokens {
 }
 
 /**
- * Get environment variables
+ * Get credentials — checks DB credential store first, falls back to env vars.
  */
-function getConfig() {
-  const clientId = process.env.GOOGLE_CLIENT_ID;
-  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-  const redirectUri = process.env.GOOGLE_REDIRECT_URI;
-
-  if (!clientId || !clientSecret || !redirectUri) {
+async function getConfig() {
+  const { getGoogleCredentials } = await import('@/lib/integrations/credentialStore');
+  const creds = await getGoogleCredentials();
+  if (!creds) {
     throw new Error(
-      'Missing Google OAuth configuration. Please set GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, and GOOGLE_REDIRECT_URI in .env'
+      'Missing Google OAuth configuration. Configure in Settings → Setup Wizard or set GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, and GOOGLE_REDIRECT_URI in .env'
     );
   }
-
-  return { clientId, clientSecret, redirectUri };
+  return creds;
 }
 
 /**
  * Generate the Google OAuth authorization URL
  */
-export function getGoogleAuthUrl(state?: string): string {
-  const { clientId, redirectUri } = getConfig();
+export async function getGoogleAuthUrl(state?: string): Promise<string> {
+  const { clientId, redirectUri } = await getConfig();
 
   const params = new URLSearchParams({
     client_id: clientId,
@@ -116,7 +113,7 @@ export function getGoogleAuthUrl(state?: string): string {
  * Exchange authorization code for tokens
  */
 export async function exchangeCodeForTokens(code: string): Promise<GoogleTokens> {
-  const { clientId, clientSecret, redirectUri } = getConfig();
+  const { clientId, clientSecret, redirectUri } = await getConfig();
 
   const response = await fetch(GOOGLE_TOKEN_URL, {
     method: 'POST',
@@ -154,7 +151,7 @@ export class TokenRevokedError extends Error {
  * Refresh access token using refresh token
  */
 export async function refreshAccessToken(refreshToken: string): Promise<GoogleTokens> {
-  const { clientId, clientSecret } = getConfig();
+  const { clientId, clientSecret } = await getConfig();
 
   const response = await fetch(GOOGLE_TOKEN_URL, {
     method: 'POST',

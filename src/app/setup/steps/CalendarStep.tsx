@@ -38,7 +38,7 @@ export function CalendarStep({ onNext, onBack, appUrl }: CalendarStepProps) {
   const [copiedUri, setCopiedUri] = useState('');
 
   const redirectUri = `${appUrl}/api/auth/google/callback`;
-  const gmailRedirectUri = `${appUrl}/api/auth/gmail/callback`;
+  const gmailRedirectUri = `${appUrl}/api/auth/google-bus/callback`;
 
   const addIcal = async () => {
     if (!icalUrl.trim()) return;

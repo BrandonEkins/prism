@@ -1061,6 +1061,10 @@ export const photos = pgTable('photos', {
   // Comma-separated display contexts (e.g., "wallpaper,screensaver")
   usage: varchar('usage', { length: 100 }).default('wallpaper,gallery,screensaver').notNull(),
 
+  // GPS coordinates extracted from EXIF (for travel map auto-linking)
+  latitude: decimal('latitude', { precision: 9, scale: 6 }),
+  longitude: decimal('longitude', { precision: 10, scale: 6 }),
+
   createdAt: timestamp('created_at').defaultNow().notNull(),
 }, (table) => ({
   sourceIdIdx: index('photos_source_id_idx').on(table.sourceId),
@@ -1374,3 +1378,121 @@ export const wishItemSourcesRelations = relations(wishItemSources, ({ one, many 
   }),
   items: many(wishItems),
 }));
+
+
+// ─── TRAVEL MAP ────────────────────────────────────────────────────────────────
+
+export const travelPins = pgTable('travel_pins', {
+  id: uuid('id').defaultRandom().primaryKey(),
+
+  name: varchar('name', { length: 255 }).notNull(),
+  description: text('description'),
+
+  // Geographic coordinates
+  latitude: decimal('latitude', { precision: 9, scale: 6 }).notNull(),
+  longitude: decimal('longitude', { precision: 10, scale: 6 }).notNull(),
+
+  // Human-readable location name (from Nominatim or manual entry)
+  placeName: varchar('place_name', { length: 255 }),
+
+  // Pin status
+  status: varchar('status', { length: 20 }).notNull().default('want_to_go')
+    .$type<'want_to_go' | 'been_there'>(),
+
+  // Star flag — bucket list item (works on either status)
+  isBucketList: boolean('is_bucket_list').default(false).notNull(),
+
+  // Optional trip label (e.g. "Spring Break 2026", "Summer Family Trip 2025")
+  tripLabel: varchar('trip_label', { length: 255 }),
+
+  // Optional color override (hex). Falls back to status default.
+  color: varchar('color', { length: 7 }),
+
+  // Trip dates
+  visitedDate: date('visited_date'),
+  visitedEndDate: date('visited_end_date'),
+
+  // Year for quick filtering (derived from visitedDate on creation)
+  year: integer('year'),
+
+  // Free-form tags (e.g. "Road Trip", "National Park", "Beach")
+  tags: jsonb('tags').default([]).notNull()
+    .$type<string[]>(),
+
+  // Key stops within a multi-location trip (e.g. ["Kauaʻi", "Hawaiʻi Island"])
+  stops: jsonb('stops').$type<string[]>().default([]).notNull(),
+
+  // National Parks / Monuments visited at this location
+  nationalParks: jsonb('national_parks').$type<string[]>().default([]).notNull(),
+
+  // Parent pin (for stops and national park sub-pins); FK enforced in migration
+  parentId: uuid('parent_id'),
+
+  // Pin kind: 'location' (root), 'stop' (stop/city within a trip), 'national_park'
+  pinType: varchar('pin_type', { length: 20 }).notNull().default('location')
+    .$type<'location' | 'stop' | 'national_park'>(),
+
+  // Radius in km for auto-linking photos by GPS proximity
+  photoRadiusKm: decimal('photo_radius_km', { precision: 6, scale: 2 }).default('50'),
+
+  createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+
+  sortOrder: integer('sort_order').default(0).notNull(),
+
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => ({
+  yearIdx: index('travel_pins_year_idx').on(table.year),
+  parentIdIdx: index('travel_pins_parent_id_idx').on(table.parentId),
+}));
+
+
+export const travelPinPhotos = pgTable('travel_pin_photos', {
+  id: uuid('id').defaultRandom().primaryKey(),
+
+  pinId: uuid('pin_id')
+    .references(() => travelPins.id, { onDelete: 'cascade' })
+    .notNull(),
+
+  photoId: uuid('photo_id')
+    .references(() => photos.id, { onDelete: 'cascade' })
+    .notNull(),
+
+  // Whether the user manually linked this (vs auto-linked by GPS proximity)
+  linkedManually: boolean('linked_manually').default(false).notNull(),
+
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (table) => ({
+  pinPhotoUnique: uniqueIndex('travel_pin_photos_pin_photo_idx').on(table.pinId, table.photoId),
+  pinIdIdx: index('travel_pin_photos_pin_id_idx').on(table.pinId),
+  photoIdIdx: index('travel_pin_photos_photo_id_idx').on(table.photoId),
+}));
+
+
+
+
+export const travelPinsRelations = relations(travelPins, ({ one, many }) => ({
+  createdByUser: one(users, {
+    fields: [travelPins.createdBy],
+    references: [users.id],
+  }),
+  parent: one(travelPins, {
+    fields: [travelPins.parentId],
+    references: [travelPins.id],
+    relationName: 'childPins',
+  }),
+  children: many(travelPins, { relationName: 'childPins' }),
+  pinPhotos: many(travelPinPhotos),
+}));
+
+export const travelPinPhotosRelations = relations(travelPinPhotos, ({ one }) => ({
+  pin: one(travelPins, {
+    fields: [travelPinPhotos.pinId],
+    references: [travelPins.id],
+  }),
+  photo: one(photos, {
+    fields: [travelPinPhotos.photoId],
+    references: [photos.id],
+  }),
+}));
+

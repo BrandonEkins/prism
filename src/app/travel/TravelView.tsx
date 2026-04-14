@@ -1,0 +1,287 @@
+'use client';
+
+import { useState, useCallback, useEffect } from 'react';
+import dynamic from 'next/dynamic';
+import { Globe, List, Loader2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { PageWrapper } from '@/components/layout/PageWrapper';
+import { useTravelData } from './useTravelData';
+import { PinList } from './components/PinList';
+import { PinDetail } from './components/PinDetail';
+import { PinForm } from './components/PinForm';
+import type { PinPendingChildren } from './components/PinForm';
+import type { TravelPin, PinType } from './types';
+
+// MapLibre must be client-only
+const TravelGlobe = dynamic(
+  () => import('./components/TravelGlobe').then((m) => m.TravelGlobe),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex-1 flex items-center justify-center bg-muted/20 rounded-lg">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    ),
+  }
+);
+
+type ActiveTab = 'globe' | 'places';
+type Overlay =
+  | { mode: 'none' }
+  | { mode: 'detail'; pin: TravelPin }
+  | { mode: 'add'; latLng?: { lat: number; lng: number }; parentId?: string; pinType?: PinType };
+
+export function TravelView() {
+  const { pins, loading, addPin, updatePin, deletePin } = useTravelData();
+  const [activeTab, setActiveTab] = useState<ActiveTab>('globe');
+  const [selectedPinId, setSelectedPinId] = useState<string | null>(null);
+  const [overlay, setOverlay] = useState<Overlay>({ mode: 'none' });
+  const [showAllChildren, setShowAllChildren] = useState(false);
+
+  // Photo counts — Phase 2
+  const photoCounts: Record<string, number> = {};
+
+  const handlePinClick = useCallback((pin: TravelPin) => {
+    setSelectedPinId(pin.id);
+    setOverlay({ mode: 'detail', pin });
+  }, []);
+
+  const handleListSelectPin = useCallback((pin: TravelPin) => {
+    setSelectedPinId(pin.id);
+    setOverlay({ mode: 'detail', pin });
+    setActiveTab('globe');
+  }, []);
+
+  const handleMapClick = useCallback((lat: number, lng: number) => {
+    setOverlay((prev) => {
+      if (prev.mode === 'add') return prev;
+      return { mode: 'add', latLng: { lat, lng } };
+    });
+    setSelectedPinId(null);
+  }, []);
+
+  const handleAddFromList = useCallback(() => {
+    setOverlay({ mode: 'add' });
+    setSelectedPinId(null);
+    setActiveTab('globe');
+  }, []);
+
+  // Open form to add a child pin (stop or national park) under a parent
+  const handleAddChild = useCallback((parentId: string, pinType: PinType) => {
+    setOverlay({ mode: 'add', parentId, pinType });
+  }, []);
+
+  const handleSaveNew = useCallback(async (data: Partial<TravelPin>, pendingChildren?: PinPendingChildren) => {
+    const newPin = await addPin(data as Omit<TravelPin, 'id' | 'createdAt' | 'updatedAt' | 'createdBy'>);
+
+    // If it's a child pin, return to parent detail
+    if (newPin.parentId) {
+      const parent = pins.find((p) => p.id === newPin.parentId);
+      if (parent) {
+        setOverlay({ mode: 'detail', pin: parent });
+        setSelectedPinId(parent.id);
+        return;
+      }
+    }
+
+    // Create any pending child stops/parks
+    const base = { latitude: 0, longitude: 0, status: 'want_to_go' as const, isBucketList: false, tags: [], stops: [], nationalParks: [], sortOrder: 0, photoRadiusKm: 50 };
+    for (const name of pendingChildren?.stops ?? []) {
+      await addPin({ ...base, name, pinType: 'stop', parentId: newPin.id });
+    }
+    for (const name of pendingChildren?.parks ?? []) {
+      await addPin({ ...base, name, pinType: 'national_park', parentId: newPin.id });
+    }
+
+    setSelectedPinId(newPin.id);
+    setOverlay({ mode: 'detail', pin: newPin });
+  }, [addPin, pins]);
+
+  const handleUpdate = useCallback(async (id: string, data: Partial<TravelPin>, pendingChildren?: PinPendingChildren) => {
+    const updated = await updatePin(id, data);
+    // Create any new pending child stops/parks added during edit
+    const base = { latitude: 0, longitude: 0, status: 'want_to_go' as const, isBucketList: false, tags: [], stops: [], nationalParks: [], sortOrder: 0, photoRadiusKm: 50 };
+    for (const name of pendingChildren?.stops ?? []) {
+      await addPin({ ...base, name, pinType: 'stop', parentId: id });
+    }
+    for (const name of pendingChildren?.parks ?? []) {
+      await addPin({ ...base, name, pinType: 'national_park', parentId: id });
+    }
+    setOverlay({ mode: 'detail', pin: updated });
+  }, [updatePin, addPin]);
+
+  const handleDelete = useCallback(async (id: string) => {
+    // If deleting a child pin, return to parent's detail
+    const pin = pins.find((p) => p.id === id);
+    const parentId = pin?.parentId;
+
+    await deletePin(id);
+    setSelectedPinId(null);
+
+    if (parentId) {
+      const parent = pins.find((p) => p.id === parentId);
+      if (parent) {
+        setOverlay({ mode: 'detail', pin: parent });
+        setSelectedPinId(parentId);
+        return;
+      }
+    }
+    setOverlay({ mode: 'none' });
+  }, [deletePin, pins]);
+
+  const closeOverlay = useCallback(() => {
+    setOverlay({ mode: 'none' });
+    setSelectedPinId(null);
+  }, []);
+
+  // Keep detail overlay fresh when pins update
+  useEffect(() => {
+    if (overlay.mode === 'detail') {
+      const fresh = pins.find((p) => p.id === overlay.pin.id);
+      if (fresh) setOverlay({ mode: 'detail', pin: fresh });
+    }
+  }, [pins]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Determine which child pins to show on the globe:
+  // - always show children of the currently selected pin
+  // - if showAllChildren, show ALL child pins
+  const visibleChildParentIds = new Set<string>();
+  if (showAllChildren) {
+    pins.forEach((p) => { if (p.parentId) visibleChildParentIds.add(p.parentId); });
+  } else if (selectedPinId) {
+    visibleChildParentIds.add(selectedPinId);
+  }
+
+  const visiblePins = pins.filter(
+    (p) => !p.parentId || visibleChildParentIds.has(p.parentId)
+  );
+
+  // Root pins (no parent) for the Places list
+  const rootPins = pins.filter((p) => !p.parentId);
+
+  return (
+    <PageWrapper>
+      <div className="flex flex-col h-screen overflow-hidden">
+        {/* Tab bar */}
+        <div className="flex items-center gap-1 px-4 pt-3 pb-0 border-b border-border shrink-0 bg-background">
+          <button
+            onClick={() => setActiveTab('globe')}
+            className={cn(
+              'flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 transition-colors -mb-px',
+              activeTab === 'globe'
+                ? 'border-primary text-foreground'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
+            )}
+          >
+            <Globe className="h-4 w-4" />
+            Globe
+          </button>
+          <button
+            onClick={() => setActiveTab('places')}
+            className={cn(
+              'flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 transition-colors -mb-px',
+              activeTab === 'places'
+                ? 'border-primary text-foreground'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
+            )}
+          >
+            <List className="h-4 w-4" />
+            Places
+            {rootPins.length > 0 && (
+              <span className="text-xs bg-muted text-muted-foreground rounded-full px-1.5 py-0.5 leading-none">
+                {rootPins.length}
+              </span>
+            )}
+          </button>
+        </div>
+
+        {/* Tab content */}
+        <div className="flex-1 relative overflow-hidden">
+          {/* Globe tab */}
+          <div className={cn('absolute inset-0 flex', activeTab !== 'globe' && 'invisible pointer-events-none')}>
+            <div className="flex-1 p-4 flex relative">
+              <TravelGlobe
+                pins={visiblePins}
+                selectedPinId={selectedPinId}
+                onPinClick={handlePinClick}
+                onMapClick={handleMapClick}
+              />
+              {/* Sub-locations toggle — overlaid on globe via parent's relative context */}
+              <button
+                onClick={() => setShowAllChildren((v) => !v)}
+                title={showAllChildren ? 'Hide all sub-locations' : 'Show all sub-locations on map'}
+                className={cn(
+                  'absolute top-7 left-7 z-10 flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium shadow transition-colors',
+                  showAllChildren
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-background/90 text-foreground border border-border hover:bg-muted'
+                )}
+              >
+                <Globe className="h-3.5 w-3.5" />
+                Sub-locations
+              </button>
+            </div>
+
+            {/* Overlay panel */}
+            <div className={cn(
+              'absolute top-4 right-4 bottom-4 w-96 bg-card border border-border rounded-lg shadow-xl flex flex-col transition-transform duration-200',
+              overlay.mode === 'none' ? 'translate-x-[calc(100%+2rem)]' : 'translate-x-0'
+            )}>
+              {overlay.mode === 'add' ? (
+                <PinForm
+                  initialLatLng={overlay.latLng}
+                  parentId={overlay.parentId}
+                  pinType={overlay.pinType ?? 'location'}
+                  onSave={handleSaveNew}
+                  onCancel={() => {
+                    // If adding a child, go back to parent detail
+                    if (overlay.parentId) {
+                      const parent = pins.find((p) => p.id === overlay.parentId);
+                      if (parent) {
+                        setOverlay({ mode: 'detail', pin: parent });
+                        setSelectedPinId(parent.id);
+                        return;
+                      }
+                    }
+                    closeOverlay();
+                  }}
+                />
+              ) : overlay.mode === 'detail' ? (
+                <PinDetail
+                  pin={overlay.pin}
+                  childPins={pins.filter((p) => p.parentId === overlay.pin.id)}
+                  photoCount={photoCounts[overlay.pin.id] ?? 0}
+                  onUpdate={(data) => handleUpdate(overlay.pin.id, data)}
+                  onDelete={() => handleDelete(overlay.pin.id)}
+                  onClose={closeOverlay}
+                  onAddChild={handleAddChild}
+                  onSelectChild={(child) => {
+                    setSelectedPinId(child.id);
+                    setOverlay({ mode: 'detail', pin: child });
+                  }}
+                />
+              ) : null}
+            </div>
+          </div>
+
+          {/* Places tab */}
+          <div className={cn('absolute inset-0 overflow-y-auto', activeTab !== 'places' && 'invisible pointer-events-none')}>
+            {loading ? (
+              <div className="flex items-center justify-center h-32">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : (
+              <PinList
+                pins={rootPins}
+                selectedPinId={selectedPinId}
+                photoCounts={photoCounts}
+                onSelectPin={handleListSelectPin}
+                onAddPin={handleAddFromList}
+              />
+            )}
+          </div>
+        </div>
+      </div>
+    </PageWrapper>
+  );
+}

@@ -1,9 +1,51 @@
 --
 -- PostgreSQL database dump
+-- Generated from live DB. Regenerate with: docker exec prism-db pg_dump -U prism -d prism --schema-only --no-owner --no-privileges --no-comments
 --
 
 -- Dumped from database version 15.15
 -- Dumped by pg_dump version 15.15
+
+--
+-- Name: update_updated_at_column(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.update_updated_at_column() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$;
+
+--
+-- Name: __prism_migrations; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS public.__prism_migrations (
+    id integer NOT NULL,
+    name character varying(255) NOT NULL,
+    applied_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+--
+-- Name: __prism_migrations_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.__prism_migrations_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+--
+-- Name: __prism_migrations_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.__prism_migrations_id_seq OWNED BY public.__prism_migrations.id;
 
 --
 -- Name: api_credentials; Type: TABLE; Schema: public; Owner: -
@@ -27,9 +69,9 @@ CREATE TABLE IF NOT EXISTS public.api_tokens (
     name character varying(100) NOT NULL,
     token_hash character varying(64) NOT NULL,
     created_by uuid NOT NULL,
-    scopes jsonb DEFAULT '["*"]'::jsonb NOT NULL,
     last_used_at timestamp without time zone,
-    created_at timestamp without time zone DEFAULT now() NOT NULL
+    created_at timestamp without time zone DEFAULT now() NOT NULL,
+    scopes jsonb DEFAULT '["*"]'::jsonb NOT NULL
 );
 
 --
@@ -416,7 +458,9 @@ CREATE TABLE IF NOT EXISTS public.photos (
     favorite boolean DEFAULT false NOT NULL,
     orientation character varying(20),
     usage character varying(100) DEFAULT 'wallpaper,gallery,screensaver'::character varying NOT NULL,
-    created_at timestamp without time zone DEFAULT now() NOT NULL
+    created_at timestamp without time zone DEFAULT now() NOT NULL,
+    latitude numeric(9,6),
+    longitude numeric(10,6)
 );
 
 --
@@ -586,6 +630,48 @@ CREATE TABLE IF NOT EXISTS public.tasks (
 );
 
 --
+-- Name: travel_pin_photos; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS public.travel_pin_photos (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    pin_id uuid NOT NULL,
+    photo_id uuid NOT NULL,
+    linked_manually boolean DEFAULT false NOT NULL,
+    created_at timestamp without time zone DEFAULT now() NOT NULL
+);
+
+--
+-- Name: travel_pins; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS public.travel_pins (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    name character varying(255) NOT NULL,
+    description text,
+    latitude numeric(9,6) NOT NULL,
+    longitude numeric(10,6) NOT NULL,
+    place_name character varying(255),
+    color character varying(7),
+    visited_date date,
+    visited_end_date date,
+    year integer,
+    tags jsonb DEFAULT '[]'::jsonb NOT NULL,
+    photo_radius_km numeric(6,2) DEFAULT 50,
+    created_by uuid,
+    sort_order integer DEFAULT 0 NOT NULL,
+    created_at timestamp without time zone DEFAULT now() NOT NULL,
+    updated_at timestamp without time zone DEFAULT now() NOT NULL,
+    status character varying(20) DEFAULT 'want_to_go'::character varying NOT NULL,
+    is_bucket_list boolean DEFAULT false NOT NULL,
+    trip_label character varying(255),
+    stops jsonb DEFAULT '[]'::jsonb NOT NULL,
+    national_parks jsonb DEFAULT '[]'::jsonb NOT NULL,
+    parent_id uuid,
+    pin_type character varying(20) DEFAULT 'location'::character varying NOT NULL
+);
+
+--
 -- Name: users; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -645,6 +731,26 @@ CREATE TABLE IF NOT EXISTS public.wish_items (
     created_at timestamp without time zone DEFAULT now() NOT NULL,
     updated_at timestamp without time zone DEFAULT now() NOT NULL
 );
+
+--
+-- Name: __prism_migrations id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.__prism_migrations ALTER COLUMN id SET DEFAULT nextval('public.__prism_migrations_id_seq'::regclass);
+
+--
+-- Name: __prism_migrations __prism_migrations_name_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.__prism_migrations
+    ADD CONSTRAINT __prism_migrations_name_key UNIQUE (name);
+
+--
+-- Name: __prism_migrations __prism_migrations_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.__prism_migrations
+    ADD CONSTRAINT __prism_migrations_pkey PRIMARY KEY (id);
 
 --
 -- Name: api_credentials api_credentials_pkey; Type: CONSTRAINT; Schema: public; Owner: -
@@ -885,6 +991,27 @@ ALTER TABLE ONLY public.tasks
     ADD CONSTRAINT tasks_pkey PRIMARY KEY (id);
 
 --
+-- Name: travel_pin_photos travel_pin_photos_pin_photo_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.travel_pin_photos
+    ADD CONSTRAINT travel_pin_photos_pin_photo_key UNIQUE (pin_id, photo_id);
+
+--
+-- Name: travel_pin_photos travel_pin_photos_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.travel_pin_photos
+    ADD CONSTRAINT travel_pin_photos_pkey PRIMARY KEY (id);
+
+--
+-- Name: travel_pins travel_pins_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.travel_pins
+    ADD CONSTRAINT travel_pins_pkey PRIMARY KEY (id);
+
+--
 -- Name: users users_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1092,6 +1219,12 @@ CREATE INDEX IF NOT EXISTS family_messages_expires_at_idx ON public.family_messa
 CREATE INDEX IF NOT EXISTS gift_ideas_created_by_idx ON public.gift_ideas USING btree (created_by);
 
 --
+-- Name: gift_ideas_for_user_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS gift_ideas_for_user_id_idx ON public.gift_ideas USING btree (for_user_id);
+
+--
 -- Name: gift_ideas_for_user_idx; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1110,6 +1243,12 @@ CREATE INDEX IF NOT EXISTS goal_achievements_goal_id_idx ON public.goal_achievem
 CREATE UNIQUE INDEX IF NOT EXISTS goal_achievements_goal_user_period_idx ON public.goal_achievements USING btree (goal_id, user_id, period_start);
 
 --
+-- Name: goal_achievements_unique_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX IF NOT EXISTS goal_achievements_unique_idx ON public.goal_achievements USING btree (goal_id, user_id, period_start);
+
+--
 -- Name: goal_achievements_user_id_idx; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1126,6 +1265,12 @@ CREATE INDEX IF NOT EXISTS goals_active_idx ON public.goals USING btree (active)
 --
 
 CREATE INDEX IF NOT EXISTS goals_active_priority_idx ON public.goals USING btree (active, priority);
+
+--
+-- Name: layouts_slug_unique_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX IF NOT EXISTS layouts_slug_unique_idx ON public.layouts USING btree (slug) WHERE (slug IS NOT NULL);
 
 --
 -- Name: maintenance_reminders_next_due_idx; Type: INDEX; Schema: public; Owner: -
@@ -1212,6 +1357,12 @@ CREATE INDEX IF NOT EXISTS shopping_items_external_id_idx ON public.shopping_ite
 CREATE INDEX IF NOT EXISTS shopping_items_list_id_idx ON public.shopping_items USING btree (list_id);
 
 --
+-- Name: shopping_items_shopping_list_source_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS shopping_items_shopping_list_source_id_idx ON public.shopping_items USING btree (shopping_list_source_id);
+
+--
 -- Name: shopping_items_source_idx; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1272,10 +1423,40 @@ CREATE INDEX IF NOT EXISTS tasks_external_id_idx ON public.tasks USING btree (ex
 CREATE INDEX IF NOT EXISTS tasks_list_id_idx ON public.tasks USING btree (list_id);
 
 --
+-- Name: tasks_task_source_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS tasks_task_source_id_idx ON public.tasks USING btree (task_source_id);
+
+--
 -- Name: tasks_task_source_idx; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX IF NOT EXISTS tasks_task_source_idx ON public.tasks USING btree (task_source_id);
+
+--
+-- Name: travel_pin_photos_photo_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS travel_pin_photos_photo_id_idx ON public.travel_pin_photos USING btree (photo_id);
+
+--
+-- Name: travel_pin_photos_pin_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS travel_pin_photos_pin_id_idx ON public.travel_pin_photos USING btree (pin_id);
+
+--
+-- Name: travel_pins_parent_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS travel_pins_parent_id_idx ON public.travel_pins USING btree (parent_id);
+
+--
+-- Name: travel_pins_year_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS travel_pins_year_idx ON public.travel_pins USING btree (year);
 
 --
 -- Name: users_email_idx; Type: INDEX; Schema: public; Owner: -
@@ -1290,10 +1471,28 @@ CREATE INDEX IF NOT EXISTS users_email_idx ON public.users USING btree (email);
 CREATE INDEX IF NOT EXISTS wish_item_sources_member_idx ON public.wish_item_sources USING btree (member_id);
 
 --
+-- Name: wish_item_sources_unique_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX IF NOT EXISTS wish_item_sources_unique_idx ON public.wish_item_sources USING btree (user_id, member_id, provider);
+
+--
+-- Name: wish_item_sources_user_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS wish_item_sources_user_id_idx ON public.wish_item_sources USING btree (user_id);
+
+--
 -- Name: wish_item_sources_user_provider_idx; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX IF NOT EXISTS wish_item_sources_user_provider_idx ON public.wish_item_sources USING btree (user_id, provider);
+
+--
+-- Name: wish_items_added_by_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS wish_items_added_by_idx ON public.wish_items USING btree (added_by);
 
 --
 -- Name: wish_items_claimed_idx; Type: INDEX; Schema: public; Owner: -
@@ -1318,6 +1517,12 @@ CREATE INDEX IF NOT EXISTS wish_items_member_id_idx ON public.wish_items USING b
 --
 
 CREATE INDEX IF NOT EXISTS wish_items_source_idx ON public.wish_items USING btree (wish_item_source_id);
+
+--
+-- Name: wish_items_wish_item_source_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS wish_items_wish_item_source_id_idx ON public.wish_items USING btree (wish_item_source_id);
 
 --
 -- Name: api_tokens api_tokens_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
@@ -1831,6 +2036,34 @@ ALTER TABLE ONLY public.tasks
     ADD CONSTRAINT tasks_task_source_id_fkey FOREIGN KEY (task_source_id) REFERENCES public.task_sources(id) ON DELETE SET NULL;
 
 --
+-- Name: travel_pin_photos travel_pin_photos_photo_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.travel_pin_photos
+    ADD CONSTRAINT travel_pin_photos_photo_id_fkey FOREIGN KEY (photo_id) REFERENCES public.photos(id) ON DELETE CASCADE;
+
+--
+-- Name: travel_pin_photos travel_pin_photos_pin_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.travel_pin_photos
+    ADD CONSTRAINT travel_pin_photos_pin_id_fkey FOREIGN KEY (pin_id) REFERENCES public.travel_pins(id) ON DELETE CASCADE;
+
+--
+-- Name: travel_pins travel_pins_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.travel_pins
+    ADD CONSTRAINT travel_pins_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id) ON DELETE SET NULL;
+
+--
+-- Name: travel_pins travel_pins_parent_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.travel_pins
+    ADD CONSTRAINT travel_pins_parent_id_fkey FOREIGN KEY (parent_id) REFERENCES public.travel_pins(id) ON DELETE CASCADE;
+
+--
 -- Name: wish_item_sources wish_item_sources_member_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1875,4 +2108,3 @@ ALTER TABLE ONLY public.wish_items
 --
 -- PostgreSQL database dump complete
 --
-

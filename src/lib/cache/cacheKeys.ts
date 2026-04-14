@@ -45,7 +45,8 @@ export type CacheEntity =
   | 'layouts'
   | 'maintenance'
   | 'gift-ideas'
-  | 'audit-logs';
+  | 'audit-logs'
+  | 'travel';
 
 /**
  * Cross-entity invalidation graph.
