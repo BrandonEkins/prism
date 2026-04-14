@@ -72,6 +72,16 @@ export function PinForm({ pin, initialLatLng, parentId, pinType = 'location', ch
   const [showParkPicker, setShowParkPicker] = useState(false);
   const [showStops, setShowStops] = useState(false);
 
+  // Sync when user clicks a new spot on the map while the form is already open
+  useEffect(() => {
+    if (initialLatLng) {
+      setLat(initialLatLng.lat);
+      setLng(initialLatLng.lng);
+      setPlaceName('');
+      setSearchResults([]);
+    }
+  }, [initialLatLng?.lat, initialLatLng?.lng]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const hasLocation = lat !== 0 || lng !== 0;
 
   const searchLocation = useCallback(async (q: string) => {
@@ -101,7 +111,8 @@ export function PinForm({ pin, initialLatLng, parentId, pinType = 'location', ch
 
   const selectResult = (result: GeocodeResult) => {
     const shortName = result.displayName.split(',')[0]?.trim() ?? result.displayName;
-    if (!inputValue || !pin) setInputValue(shortName);
+    // Always update name when editing unless user has typed a custom name that differs from any previous geocode result
+    if (!inputValue || !pin || inputValue === placeName.split(',')[0]?.trim()) setInputValue(shortName);
     setLat(result.latitude);
     setLng(result.longitude);
     setPlaceName(result.displayName);
@@ -169,7 +180,7 @@ export function PinForm({ pin, initialLatLng, parentId, pinType = 'location', ch
           parentId: pin?.parentId ?? parentId ?? null,
           pinType: effectivePinType,
         },
-        isNewRootPin ? { stops: pendingStops, parks: pendingParks } : undefined
+        (pendingStops.length > 0 || pendingParks.length > 0) ? { stops: pendingStops, parks: pendingParks } : undefined
       );
     } finally {
       setSaving(false);

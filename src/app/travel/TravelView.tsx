@@ -54,7 +54,8 @@ export function TravelView() {
 
   const handleMapClick = useCallback((lat: number, lng: number) => {
     setOverlay((prev) => {
-      if (prev.mode === 'add') return prev;
+      // If already in add mode, update the drop point so the form reflects the new location
+      if (prev.mode === 'add') return { ...prev, latLng: { lat, lng } };
       return { mode: 'add', latLng: { lat, lng } };
     });
     setSelectedPinId(null);
@@ -107,7 +108,9 @@ export function TravelView() {
     for (const name of pendingChildren?.parks ?? []) {
       await addPin({ ...base, name, pinType: 'national_park', parentId: id });
     }
+    // Set overlay after children are created so they appear immediately in the detail panel
     setOverlay({ mode: 'detail', pin: updated });
+    setSelectedPinId(id);
   }, [updatePin, addPin]);
 
   const handleDelete = useCallback(async (id: string) => {
@@ -251,7 +254,7 @@ export function TravelView() {
                   pin={overlay.pin}
                   childPins={pins.filter((p) => p.parentId === overlay.pin.id)}
                   photoCount={photoCounts[overlay.pin.id] ?? 0}
-                  onUpdate={(data) => handleUpdate(overlay.pin.id, data)}
+                  onUpdate={(data, pendingChildren) => handleUpdate(overlay.pin.id, data, pendingChildren)}
                   onDelete={() => handleDelete(overlay.pin.id)}
                   onClose={closeOverlay}
                   onAddChild={handleAddChild}

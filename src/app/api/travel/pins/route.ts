@@ -148,7 +148,17 @@ export async function POST(request: NextRequest) {
       summary: `Added travel pin: ${d.name}`,
     });
 
-    return NextResponse.json(formatPin({ ...newPin, createdByName: null, createdByColor: null }), { status: 201 });
+    // Re-query with user join so createdBy is a proper { id, name, color } object
+    const [withUser] = await db
+      .select({ ...getTableColumns(travelPins), createdByName: users.name, createdByColor: users.color })
+      .from(travelPins)
+      .leftJoin(users, eq(travelPins.createdBy, users.id))
+      .where(eq(travelPins.id, newPin.id));
+
+    return NextResponse.json(
+      withUser ? formatPin(withUser) : formatPin({ ...newPin, createdByName: null, createdByColor: null }),
+      { status: 201 }
+    );
   } catch (error) {
     logError('Error creating travel pin:', error);
     return NextResponse.json({ error: 'Failed to create travel pin' }, { status: 500 });

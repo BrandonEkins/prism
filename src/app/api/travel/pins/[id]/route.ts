@@ -7,12 +7,44 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
 import { db } from '@/lib/db/client';
-import { travelPins } from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
+import { travelPins, users } from '@/lib/db/schema';
+import { eq, getTableColumns } from 'drizzle-orm';
 import { invalidateEntity } from '@/lib/cache/cacheKeys';
 import { logActivity } from '@/lib/services/auditLog';
 import { logError } from '@/lib/utils/logError';
 import { z } from 'zod';
+
+// Shared formatter — keeps PATCH response shape identical to GET
+function formatPin(row: typeof travelPins.$inferSelect & {
+  createdByName: string | null;
+  createdByColor: string | null;
+}) {
+  return {
+    id: row.id,
+    name: row.name,
+    description: row.description,
+    latitude: parseFloat(row.latitude as unknown as string),
+    longitude: parseFloat(row.longitude as unknown as string),
+    placeName: row.placeName,
+    status: row.status,
+    isBucketList: row.isBucketList,
+    tripLabel: row.tripLabel,
+    color: row.color,
+    visitedDate: row.visitedDate,
+    visitedEndDate: row.visitedEndDate,
+    year: row.year,
+    tags: (row.tags as string[]) || [],
+    stops: (row.stops as string[]) || [],
+    nationalParks: (row.nationalParks as string[]) || [],
+    parentId: row.parentId,
+    pinType: row.pinType,
+    photoRadiusKm: row.photoRadiusKm ? parseFloat(row.photoRadiusKm as unknown as string) : 50,
+    createdBy: row.createdBy ? { id: row.createdBy, name: row.createdByName, color: row.createdByColor } : null,
+    sortOrder: row.sortOrder,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
+  };
+}
 
 const updatePinSchema = z.object({
   name: z.string().min(1).max(255).optional(),
@@ -86,7 +118,15 @@ export async function PATCH(
     if (!updated) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
     await invalidateEntity('travel');
-    return NextResponse.json(updated);
+
+    // Re-query with user join so the response shape matches GET (lat/lng as numbers, createdBy as object)
+    const [withUser] = await db
+      .select({ ...getTableColumns(travelPins), createdByName: users.name, createdByColor: users.color })
+      .from(travelPins)
+      .leftJoin(users, eq(travelPins.createdBy, users.id))
+      .where(eq(travelPins.id, id));
+
+    return NextResponse.json(withUser ? formatPin(withUser) : formatPin({ ...updated, createdByName: null, createdByColor: null }));
   } catch (error) {
     logError('Error updating travel pin:', error);
     return NextResponse.json({ error: 'Failed to update travel pin' }, { status: 500 });
