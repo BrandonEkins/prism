@@ -86,12 +86,12 @@ export function TravelView() {
     }
 
     // Create any pending child stops/parks
-    const base = { latitude: 0, longitude: 0, status: 'want_to_go' as const, isBucketList: false, tags: [], stops: [], nationalParks: [], sortOrder: 0, photoRadiusKm: 50 };
-    for (const name of pendingChildren?.stops ?? []) {
-      await addPin({ ...base, name, pinType: 'stop', parentId: newPin.id });
+    const base = { status: 'want_to_go' as const, isBucketList: false, tags: [], stops: [], nationalParks: [], sortOrder: 0, photoRadiusKm: 50 };
+    for (const stop of pendingChildren?.stops ?? []) {
+      await addPin({ ...base, name: stop.name, latitude: stop.latitude, longitude: stop.longitude, placeName: stop.placeName ?? null, pinType: 'stop', parentId: newPin.id });
     }
     for (const name of pendingChildren?.parks ?? []) {
-      await addPin({ ...base, name, pinType: 'national_park', parentId: newPin.id });
+      await addPin({ ...base, latitude: 0, longitude: 0, name, pinType: 'national_park', parentId: newPin.id });
     }
 
     setSelectedPinId(newPin.id);
@@ -101,12 +101,12 @@ export function TravelView() {
   const handleUpdate = useCallback(async (id: string, data: Partial<TravelPin>, pendingChildren?: PinPendingChildren) => {
     const updated = await updatePin(id, data);
     // Create any new pending child stops/parks added during edit
-    const base = { latitude: 0, longitude: 0, status: 'want_to_go' as const, isBucketList: false, tags: [], stops: [], nationalParks: [], sortOrder: 0, photoRadiusKm: 50 };
-    for (const name of pendingChildren?.stops ?? []) {
-      await addPin({ ...base, name, pinType: 'stop', parentId: id });
+    const base = { status: 'want_to_go' as const, isBucketList: false, tags: [], stops: [], nationalParks: [], sortOrder: 0, photoRadiusKm: 50 };
+    for (const stop of pendingChildren?.stops ?? []) {
+      await addPin({ ...base, name: stop.name, latitude: stop.latitude, longitude: stop.longitude, placeName: stop.placeName ?? null, pinType: 'stop', parentId: id });
     }
     for (const name of pendingChildren?.parks ?? []) {
-      await addPin({ ...base, name, pinType: 'national_park', parentId: id });
+      await addPin({ ...base, latitude: 0, longitude: 0, name, pinType: 'national_park', parentId: id });
     }
     // Set overlay after children are created so they appear immediately in the detail panel
     setOverlay({ mode: 'detail', pin: updated });

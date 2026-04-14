@@ -19,8 +19,15 @@ import type { TravelPin, PinStatus, PinType, GeocodeResult } from '../types';
 import { STATUS_CONFIG } from '../types';
 import { NPS_UNITS } from '../constants/nationalParks';
 
+export interface PendingStop {
+  name: string;
+  latitude: number;
+  longitude: number;
+  placeName?: string;
+}
+
 export interface PinPendingChildren {
-  stops: string[];
+  stops: PendingStop[];
   parks: string[];
 }
 
@@ -64,9 +71,13 @@ export function PinForm({ pin, initialLatLng, parentId, pinType = 'location', ch
   const [tagInput, setTagInput] = useState((pin?.tags ?? []).join(', '));
   const [saving, setSaving] = useState(false);
 
-  // Pending children (new root pins only)
-  const [pendingStops, setPendingStops] = useState<string[]>([]);
-  const [stopInput, setStopInput] = useState('');
+  // Pending stops — geocode-backed
+  const [pendingStops, setPendingStops] = useState<PendingStop[]>([]);
+  const [stopQuery, setStopQuery] = useState('');
+  const [stopResults, setStopResults] = useState<GeocodeResult[]>([]);
+  const [stopSearching, setStopSearching] = useState(false);
+  const stopTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const [pendingParks, setPendingParks] = useState<string[]>([]);
   const [parkSearch, setParkSearch] = useState('');
   const [showParkPicker, setShowParkPicker] = useState(false);
@@ -109,6 +120,23 @@ export function PinForm({ pin, initialLatLng, parentId, pinType = 'location', ch
     }
   }, [selectedPark]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Stop geocode search
+  useEffect(() => {
+    if (stopTimer.current) clearTimeout(stopTimer.current);
+    if (stopQuery.trim().length < 2) { setStopResults([]); return; }
+    stopTimer.current = setTimeout(async () => {
+      setStopSearching(true);
+      try {
+        const res = await fetch(`/api/travel/geocode?q=${encodeURIComponent(stopQuery)}`);
+        const data = await res.json();
+        setStopResults(data.results ?? []);
+      } finally {
+        setStopSearching(false);
+      }
+    }, 350);
+    return () => { if (stopTimer.current) clearTimeout(stopTimer.current); };
+  }, [stopQuery]);
+
   const selectResult = (result: GeocodeResult) => {
     const shortName = result.displayName.split(',')[0]?.trim() ?? result.displayName;
     // Always update name when editing unless user has typed a custom name that differs from any previous geocode result
@@ -133,10 +161,22 @@ export function PinForm({ pin, initialLatLng, parentId, pinType = 'location', ch
     clearLocation();
   };
 
-  const addStop = () => {
-    const s = stopInput.trim();
-    if (s && !pendingStops.includes(s)) setPendingStops((prev) => [...prev, s]);
-    setStopInput('');
+  const selectStopResult = (result: GeocodeResult) => {
+    const name = result.displayName.split(',')[0]?.trim() ?? result.displayName;
+    const stop: PendingStop = { name, latitude: result.latitude, longitude: result.longitude, placeName: result.displayName };
+    if (!pendingStops.some((s) => s.name === name)) {
+      setPendingStops((prev) => [...prev, stop]);
+    }
+    setStopQuery('');
+    setStopResults([]);
+  };
+
+  const addStopByName = () => {
+    const name = stopQuery.trim();
+    if (!name || pendingStops.some((s) => s.name === name)) return;
+    setPendingStops((prev) => [...prev, { name, latitude: 0, longitude: 0 }]);
+    setStopQuery('');
+    setStopResults([]);
   };
 
   const togglePendingPark = (name: string) => {
@@ -373,28 +413,47 @@ export function PinForm({ pin, initialLatLng, parentId, pinType = 'location', ch
                     ))}
                   </div>
                 )}
-                {/* Add new stops */}
-                <div className="flex gap-2">
+                {/* Geocode search for new stops */}
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                   <Input
-                    placeholder="e.g. Kauai, Big Island, Honolulu"
-                    value={stopInput}
-                    onChange={(e) => setStopInput(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addStop(); } }}
-                    className="text-sm"
+                    placeholder="Search for a stop, city, or island…"
+                    value={stopQuery}
+                    onChange={(e) => setStopQuery(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addStopByName(); } }}
+                    className="pl-8 pr-8 text-sm"
                   />
-                  <Button type="button" variant="outline" size="icon" onClick={addStop} disabled={!stopInput.trim()}>
-                    <Plus className="h-4 w-4" />
-                  </Button>
+                  {stopSearching && <Loader2 className="absolute right-2.5 top-2.5 h-4 w-4 animate-spin text-muted-foreground" />}
+                  {stopResults.length > 0 && (
+                    <ul className="absolute z-50 top-full left-0 right-0 bg-popover border border-border rounded-md shadow-lg mt-1 overflow-hidden max-h-44 overflow-y-auto">
+                      {stopResults.map((r) => (
+                        <li key={r.placeId}>
+                          <button type="button" onClick={() => selectStopResult(r)}
+                            className="w-full text-left px-3 py-2 text-sm hover:bg-accent transition-colors"
+                          >
+                            <div className="font-medium">{r.displayName.split(',')[0]?.trim()}</div>
+                            <div className="text-xs text-muted-foreground truncate">{r.displayName}</div>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  New stops will be added as pins — set their map location from the detail view.
-                </p>
+                {/* Pending stops chips */}
                 {pendingStops.length > 0 && (
                   <div className="flex flex-wrap gap-1">
                     {pendingStops.map((s) => (
-                      <Badge key={s} variant="secondary" className="gap-1 pr-1 text-violet-700 bg-violet-50 dark:bg-violet-900/20">
-                        📍 {s}
-                        <button type="button" onClick={() => setPendingStops((p) => p.filter((x) => x !== s))} className="hover:text-destructive">
+                      <Badge key={s.name} variant="secondary"
+                        className="gap-1 pr-1 text-violet-700 bg-violet-50 dark:bg-violet-900/20"
+                      >
+                        📍 {s.name}
+                        {s.latitude === 0 && s.longitude === 0 && (
+                          <span className="text-[10px] text-amber-500 ml-0.5">no location</span>
+                        )}
+                        <button type="button"
+                          onClick={() => setPendingStops((p) => p.filter((x) => x.name !== s.name))}
+                          className="hover:text-destructive ml-0.5"
+                        >
                           <X className="h-3 w-3" />
                         </button>
                       </Badge>
