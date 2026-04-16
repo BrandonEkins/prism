@@ -4,10 +4,21 @@ All notable changes to Prism are documented in this file.
 
 ## [Unreleased]
 
+## [1.3.0] – 2026-04-16
+
 ### Features
-- **Travel Map**: Interactive globe (MapLibre GL + OpenFreeMap tiles, globe projection) for tracking family travel — visited places, want-to-go list, and bucket list destinations. Pins support trip dates, labels, tags, stops, national parks, and parent/child sub-location model. Full CRUD with Nominatim geocode search. Accessible at `/travel` via the side nav.
+- **Travel Map — Phase 1**: Interactive globe (MapLibre GL + OpenFreeMap tiles, globe projection) for tracking family travel. Pins use a drop-pin SVG marker anchored at the coordinate tip; root locations use colored drop pins (green checkmark = visited, white dot = want-to-go, amber star badge = bucket list, green tree badge = has national parks); child stops use purple circles, national parks use green circles.
+- **Travel Map — pin management**: Full inline editing in the detail panel — name, trip label, status toggle (auto-saves), bucket list star (auto-saves), visit dates, description, and tags. No separate edit modal.
+- **Travel Map — stops & parks**: Add stops via Nominatim geocode search or add national parks from a curated NPS list; sub-locations displayed as a combined drag-to-reorder list; connecting lines drawn from parent pin to selected children on the globe.
+- **Travel Map — Places tab**: Sortable list with stats bar, text search, filter pills (All / Been There / Want to Go / Bucket List / Has NP), and group-by (Year / Country / None) with country flag emoji. Selecting a place switches to the globe and opens its detail panel.
+- **Travel Map — dark map mode**: Moon/sun toggle button on the globe applies a CSS filter (`brightness · saturate · contrast · hue-rotate`) only to the map canvas — tiles darken while all markers stay at full brightness, and no tile reload is required.
+- **Travel Map — geocoding**: Nominatim proxy at `/api/travel/geocode` with Hawaiian island aliases, special-character normalization, and national park search scoring (boundary/park results ranked above natural features like volcano summits).
 
 ### Bug Fixes
+- **Auth cookie secure flag**: Login route now detects HTTPS per-request via `X-Forwarded-Proto` header instead of a global `isSecure` flag derived from `APP_URL` — fixes "Log in to make changes" errors when accessing via `http://localhost:3000` while `APP_URL` pointed at the HTTPS public domain.
+- **Travel Map — pin creation validation**: Zod schema now accepts `null` (not just `undefined`) for all optional fields — fixes "Something went wrong" when creating a new place.
+- **Hawaii Volcanoes location**: Nominatim search for national parks now prefers boundary/park-type results over natural features — fixes Hawaii Volcanoes appearing at the volcano summit rather than the park centroid.
+- **Bucket list unstar persistence**: Star and status toggles now auto-save immediately on click rather than requiring the Save button — fixes unstar/status changes being lost on navigation.
 - **Microsoft OAuth callback**: Removed `requireAuth` requirement on the callback route — Microsoft redirects without a Prism session cookie, causing the connection flow to fail silently. Success/error toasts now display in Settings → Connected Accounts.
 - **Performance mode**: Removed animation stripping (transitions run on the compositor thread and don't cause CPU overhead); caps transitions at 150ms so the UI remains responsive without looking broken. Fixes washed-out surfaces when backdrop-blur is disabled.
 

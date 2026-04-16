@@ -33,6 +33,11 @@ export function AgendaView({
 
   const filteredEvents = events
     .filter(e => {
+      if (e.allDay) {
+        // All-day events are stored as UTC midnight; compare as range overlap
+        // so timezone-shifted dates aren't accidentally excluded.
+        return e.startTime < endDate && e.endTime > startDate;
+      }
       const ed = startOfDay(e.startTime);
       return ed >= startDate && ed < endDate;
     })

@@ -4,9 +4,9 @@ export const APP_DESCRIPTION = "Your family's digital home";
 
 /** Session duration in seconds, keyed by uppercase role */
 export const SESSION_DURATION = {
-  PARENT: 30 * 60,
-  CHILD: 15 * 60,
-  GUEST: 10 * 60,
+  PARENT: 7 * 24 * 60 * 60, // 7 days — family dashboard stays logged in
+  CHILD: 24 * 60 * 60,      // 1 day
+  GUEST: 10 * 60,           // 10 minutes
 } as const;
 
 export const MIN_PIN_LENGTH = 4;

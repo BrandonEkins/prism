@@ -93,6 +93,7 @@ Widgets are resizable and rearrangeable on a 48-column CSS Grid. Multiple dashbo
 Beyond the dashboard, Prism includes dedicated pages for:
 
 - **Calendar** - Full calendar with multiple view modes (day, week, multi-week, month, 3-month), event creation, and configurable hidden hours
+- **Travel Map** - Interactive globe for tracking family travel: visited places, want-to-go destinations, and bucket list trips. Each location can include stops, national parks, trip dates, and notes. Filter and search via the Places tab. Dark map mode available.
 - **Recipes** - Recipe library with URL import (schema.org), Paprika import, and favorites
 - **Shopping** - Multiple lists with drag-to-reorder categories, shopping mode, and barcode scanning
 - **Chores** - Chore management with group-by-person view and approval workflow
@@ -207,6 +208,7 @@ Rather than reviewing code myself - which I’m not well-positioned to do - I us
 
 Some features exist because I needed them:
 
+- **Travel globe** - An interactive 3D globe for tracking trips as a family. Drop pins for places you've visited or want to visit, add the stops and national parks within each trip, and browse everything in the Places tab with filters for status, bucket list, and whether a trip includes a national park. Uses OpenFreeMap tiles — no API key required.
 - **Barcode scanner** - Point your phone camera at a grocery item and it appears on your shopping list. Warns you if the item is already on a list, lets you pick which list to add it to, and suggests a category. USB barcode scanners work on desktop too — plug in and scan, no configuration needed. Product lookup via Open Food Facts, no API key required.
 - **Recipe viewer** - Not another recipe app, but a way to view recipes on a large kitchen screen without repeatedly unlocking my phone
 - **Calendar parsing** - Handles the integrations that matter most to families (school calendars, work calendars, shared family events)

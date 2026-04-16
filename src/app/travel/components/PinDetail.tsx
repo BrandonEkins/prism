@@ -1,14 +1,26 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { format, parseISO } from 'date-fns';
-import { Edit2, Trash2, X, Image as ImageIcon, MapPin, Star, TreePine, Plus } from 'lucide-react';
+import { Trash2, X, Image as ImageIcon, MapPin, Star, TreePine, GripVertical, Check } from 'lucide-react';
+import {
+  DndContext, closestCenter, KeyboardSensor, PointerSensor,
+  useSensor, useSensors, type DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy,
+  useSortable, arrayMove,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import type { TravelPin, PinType } from '../types';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { cn } from '@/lib/utils';
+import type { TravelPin, PinType, PinStatus } from '../types';
 import { STATUS_CONFIG, NPS_COLOR } from '../types';
-import { PinForm } from './PinForm';
 import type { PinPendingChildren } from './PinForm';
+import { InlineChildAdd } from './InlineChildAdd';
 
 interface PinDetailProps {
   pin: TravelPin;
@@ -18,67 +30,163 @@ interface PinDetailProps {
   onDelete: () => void;
   onDeleteChild: (id: string) => void;
   onClose: () => void;
-  onAddChild: (parentId: string, pinType: PinType) => void;
+  onAddChildDirect: (name: string, lat: number, lng: number, placeName: string | null, pinType: PinType) => Promise<void>;
   onSelectChild: (child: TravelPin) => void;
+  onReorderChildren: (childIds: string[]) => Promise<void>;
 }
 
-export function PinDetail({ pin, childPins, photoCount, onUpdate, onDelete, onDeleteChild, onClose, onAddChild, onSelectChild }: PinDetailProps) {
-  const [editing, setEditing] = useState(false);
+function SortableChildItem({ child, idx, onSelect, onDelete }: {
+  child: TravelPin; idx: number; onSelect: () => void; onDelete: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: child.id });
+  return (
+    <div
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 }}
+      className="flex items-center gap-1.5 rounded-md border border-border bg-muted/30 px-2 py-1.5"
+    >
+      <button {...attributes} {...listeners} className="cursor-grab shrink-0 text-muted-foreground/40 hover:text-muted-foreground touch-none">
+        <GripVertical className="h-3.5 w-3.5" />
+      </button>
+      <span className="text-[10px] font-bold text-muted-foreground/50 w-4 shrink-0 text-right">{idx + 1}</span>
+      {child.pinType === 'national_park'
+        ? <TreePine className="h-3.5 w-3.5 shrink-0" style={{ color: NPS_COLOR }} />
+        : <MapPin className="h-3.5 w-3.5 text-violet-500 shrink-0" />}
+      <button onClick={onSelect} className="flex-1 text-left text-xs font-medium hover:underline truncate">
+        {child.name}
+        {!child.latitude && !child.longitude && <span className="text-[10px] text-amber-500 ml-1.5">no location</span>}
+      </button>
+      <button onClick={onDelete} className="shrink-0 text-muted-foreground/40 hover:text-red-500 transition-colors" title="Remove">
+        <X className="h-3 w-3" />
+      </button>
+    </div>
+  );
+}
+
+export function PinDetail({ pin, childPins, photoCount, onUpdate, onDelete, onDeleteChild, onClose, onAddChildDirect, onSelectChild, onReorderChildren }: PinDetailProps) {
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  // Editable field state — reset when pin changes
+  const [name, setName] = useState(pin.name);
+  const [tripLabel, setTripLabel] = useState(pin.tripLabel ?? '');
+  const [status, setStatus] = useState<PinStatus>(pin.status);
+  const [isBucketList, setIsBucketList] = useState(pin.isBucketList);
+  const [visitedDate, setVisitedDate] = useState(pin.visitedDate ?? '');
+  const [visitedEndDate, setVisitedEndDate] = useState(pin.visitedEndDate ?? '');
+  const [description, setDescription] = useState(pin.description ?? '');
+  const [tagInput, setTagInput] = useState((pin.tags ?? []).join(', '));
+
+  useEffect(() => {
+    setName(pin.name);
+    setTripLabel(pin.tripLabel ?? '');
+    setStatus(pin.status);
+    setIsBucketList(pin.isBucketList);
+    setVisitedDate(pin.visitedDate ?? '');
+    setVisitedEndDate(pin.visitedEndDate ?? '');
+    setDescription(pin.description ?? '');
+    setTagInput((pin.tags ?? []).join(', '));
+  }, [pin.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const isDirty =
+    name !== pin.name ||
+    tripLabel !== (pin.tripLabel ?? '') ||
+    visitedDate !== (pin.visitedDate ?? '') ||
+    visitedEndDate !== (pin.visitedEndDate ?? '') ||
+    description !== (pin.description ?? '') ||
+    tagInput !== (pin.tags ?? []).join(', ');
+
+  const handleSave = async () => {
+    if (!name.trim() || saving) return;
+    setSaving(true);
+    try {
+      const tags = tagInput.split(',').map(t => t.trim()).filter(Boolean);
+      await onUpdate({
+        name: name.trim(),
+        tripLabel: tripLabel.trim() || null,
+        status,
+        isBucketList,
+        visitedDate: visitedDate || null,
+        visitedEndDate: visitedEndDate || null,
+        year: visitedDate ? new Date(visitedDate).getFullYear() : null,
+        description: description.trim() || null,
+        tags,
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Toggle-style fields auto-save immediately
+  const handleToggleBucketList = async () => {
+    const next = !isBucketList;
+    setIsBucketList(next);
+    await onUpdate({ isBucketList: next });
+  };
+
+  const handleToggleStatus = async (next: PinStatus) => {
+    setStatus(next);
+    await onUpdate({ status: next });
+  };
+
+  // Children reorder
+  const [localChildren, setLocalChildren] = useState<TravelPin[]>([]);
+  useEffect(() => {
+    setLocalChildren([...childPins].sort((a, b) => a.sortOrder - b.sortOrder));
+  }, [childPins]);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIdx = localChildren.findIndex(c => c.id === active.id);
+    const newIdx = localChildren.findIndex(c => c.id === over.id);
+    const newOrder = arrayMove(localChildren, oldIdx, newIdx);
+    setLocalChildren(newOrder);
+    try {
+      await onReorderChildren(newOrder.map(c => c.id));
+    } catch {
+      setLocalChildren([...childPins].sort((a, b) => a.sortOrder - b.sortOrder));
+    }
+  };
 
   const config = STATUS_CONFIG[pin.status];
-  const stops = childPins.filter((c) => c.pinType === 'stop');
-  const parks = childPins.filter((c) => c.pinType === 'national_park');
   const isChildPin = !!pin.parentId;
-
-  if (editing) {
-    return (
-      <PinForm
-        pin={pin}
-        pinType={pin.pinType}
-        parentId={pin.parentId ?? undefined}
-        childPins={childPins}
-        onSave={async (data, pendingChildren) => {
-          await onUpdate(data, pendingChildren); // throws on auth/error — form stays open
-          setEditing(false);
-        }}
-        onCancel={() => setEditing(false)}
-      />
-    );
-  }
 
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="flex items-start gap-3 p-4 border-b border-border shrink-0">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            {pin.pinType === 'national_park' && <TreePine className="h-4 w-4 shrink-0" style={{ color: NPS_COLOR }} />}
-            {pin.pinType === 'stop' && <MapPin className="h-4 w-4 text-violet-500 shrink-0" />}
-            <h3 className="font-semibold text-base leading-tight truncate">{pin.name}</h3>
-            {pin.isBucketList && <Star className="h-4 w-4 fill-amber-500 text-amber-500 shrink-0" />}
-          </div>
-          {pin.tripLabel && <p className="text-sm text-muted-foreground mt-0.5">{pin.tripLabel}</p>}
-          {!pin.tripLabel && pin.placeName && pin.placeName !== pin.name && (
-            <p className="text-sm text-muted-foreground mt-0.5 truncate">{pin.placeName}</p>
-          )}
-          <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+      <div className="flex items-start gap-2 px-4 pt-4 pb-3 border-b border-border shrink-0">
+        <div className="flex-1 min-w-0 space-y-1.5">
+          <div className="flex items-center gap-1.5">
+            {pin.pinType === 'national_park' && <TreePine className="h-4 w-4 shrink-0 mt-0.5" style={{ color: NPS_COLOR }} />}
+            {pin.pinType === 'stop' && <MapPin className="h-4 w-4 text-violet-500 shrink-0 mt-0.5" />}
+            <Input
+              value={name}
+              onChange={e => setName(e.target.value)}
+              className="h-7 text-base font-semibold border-transparent bg-transparent px-1 hover:border-border focus:border-border focus:bg-background transition-colors"
+              placeholder="Name"
+            />
             {!isChildPin && (
-              <Badge variant="outline" className="text-xs"
-                style={{ borderColor: pin.color || config.color, color: pin.color || config.color }}>
-                {config.label}
-              </Badge>
-            )}
-            {pin.visitedDate && (
-              <span className="text-xs text-muted-foreground">
-                {pin.visitedEndDate
-                  ? `${format(parseISO(pin.visitedDate), 'MMM d')} – ${format(parseISO(pin.visitedEndDate), 'MMM d, yyyy')}`
-                  : format(parseISO(pin.visitedDate), 'MMMM yyyy')}
-              </span>
+              <button onClick={handleToggleBucketList} title={isBucketList ? 'Remove from bucket list' : 'Add to bucket list'} className="shrink-0">
+                <Star className={cn('h-4 w-4', isBucketList ? 'fill-amber-500 text-amber-500' : 'text-muted-foreground/40 hover:text-amber-400')} />
+              </button>
             )}
           </div>
+          {!isChildPin && (
+            <Input
+              value={tripLabel}
+              onChange={e => setTripLabel(e.target.value)}
+              placeholder="Trip label (optional)"
+              className="h-6 text-xs border-transparent bg-transparent px-1 text-muted-foreground hover:border-border focus:border-border focus:bg-background transition-colors"
+            />
+          )}
         </div>
-        <Button variant="ghost" size="icon" className="shrink-0 h-7 w-7" onClick={onClose}>
+        <Button variant="ghost" size="icon" className="shrink-0 h-7 w-7 mt-0.5" onClick={onClose}>
           <X className="h-4 w-4" />
         </Button>
       </div>
@@ -86,115 +194,95 @@ export function PinDetail({ pin, childPins, photoCount, onUpdate, onDelete, onDe
       {/* Body */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0">
 
-        {/* ── Stops & Parks (root pins only, shown first) ── */}
+        {/* Status + dates */}
+        {!isChildPin && (
+          <div className="space-y-2">
+            <div className="flex gap-1.5">
+              {(Object.entries(STATUS_CONFIG) as [PinStatus, typeof STATUS_CONFIG[PinStatus]][]).map(([key, cfg]) => (
+                <button key={key} onClick={() => handleToggleStatus(key)}
+                  className={cn(
+                    'flex-1 flex items-center justify-center gap-1.5 px-2 py-1 rounded-md border text-xs font-medium transition-colors',
+                    status === key
+                      ? 'border-transparent text-white'
+                      : 'border-border text-muted-foreground hover:text-foreground hover:bg-muted'
+                  )}
+                  style={status === key ? { backgroundColor: pin.color || cfg.color, borderColor: pin.color || cfg.color } : {}}
+                >
+                  <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ backgroundColor: status === key ? 'rgba(255,255,255,0.7)' : cfg.color }} />
+                  {cfg.label}
+                </button>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <div className="flex-1 space-y-0.5">
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wide">{status === 'been_there' ? 'From' : 'Planned'}</p>
+                <Input type="date" value={visitedDate} onChange={e => setVisitedDate(e.target.value)} className="h-7 text-xs" />
+              </div>
+              {status === 'been_there' && (
+                <div className="flex-1 space-y-0.5">
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wide">To</p>
+                  <Input type="date" value={visitedEndDate} onChange={e => setVisitedEndDate(e.target.value)} min={visitedDate} className="h-7 text-xs" />
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Stops & Parks combined */}
         {!isChildPin && (
           <>
-            {/* Stops */}
             <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5">
-                  <MapPin className="h-3.5 w-3.5 text-violet-500" />
-                  <p className="text-xs font-semibold text-foreground uppercase tracking-wide">
-                    Stops{stops.length > 0 ? ` (${stops.length})` : ''}
-                  </p>
-                </div>
-                <button
-                  onClick={() => onAddChild(pin.id, 'stop')}
-                  className="flex items-center gap-0.5 text-xs text-primary hover:underline font-medium"
-                >
-                  <Plus className="h-3 w-3" />Add stop
-                </button>
-              </div>
-              {stops.length > 0 ? (
-                <div className="flex flex-wrap gap-1.5">
-                  {stops.map((s) => (
-                    <div key={s.id} className="flex items-center gap-0 rounded-full border border-violet-300 dark:border-violet-700 overflow-hidden">
-                      <button onClick={() => onSelectChild(s)}
-                        className="flex items-center gap-1 pl-2.5 pr-2 py-1 text-violet-700 dark:text-violet-400 text-xs hover:bg-violet-50 dark:hover:bg-violet-900/20 transition-colors"
-                      >
-                        📍 {s.name}
-                        {!s.latitude && !s.longitude && <span className="text-[10px] text-amber-500 ml-0.5">no location</span>}
-                      </button>
-                      <button onClick={() => onDeleteChild(s.id)}
-                        className="pr-2 py-1 text-violet-400 hover:text-red-500 transition-colors"
-                        title="Remove stop"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
+              <p className="text-xs font-semibold text-foreground uppercase tracking-wide">
+                Stops & Parks{localChildren.length > 0 ? ` (${localChildren.length})` : ''}
+              </p>
+              {localChildren.length > 0 ? (
+                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                  <SortableContext items={localChildren.map(c => c.id)} strategy={verticalListSortingStrategy}>
+                    <div className="space-y-1">
+                      {localChildren.map((child, idx) => (
+                        <SortableChildItem key={child.id} child={child} idx={idx}
+                          onSelect={() => onSelectChild(child)} onDelete={() => onDeleteChild(child.id)} />
+                      ))}
                     </div>
-                  ))}
-                </div>
+                  </SortableContext>
+                </DndContext>
               ) : (
-                <p className="text-xs text-muted-foreground italic">No stops yet — add cities or specific spots within this trip</p>
+                <p className="text-xs text-muted-foreground italic">No stops or parks yet</p>
               )}
-            </div>
-
-            {/* National Parks */}
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5">
-                  <TreePine className="h-3.5 w-3.5" style={{ color: NPS_COLOR }} />
-                  <p className="text-xs font-semibold text-foreground uppercase tracking-wide">
-                    National Parks{parks.length > 0 ? ` (${parks.length})` : ''}
-                  </p>
-                </div>
-                <button
-                  onClick={() => onAddChild(pin.id, 'national_park')}
-                  className="flex items-center gap-0.5 text-xs text-primary hover:underline font-medium"
-                >
-                  <Plus className="h-3 w-3" />Add park
-                </button>
+              {/* Add buttons below list — avoids overlapping content above */}
+              <div className="flex gap-3 pt-0.5">
+                <InlineChildAdd childType="stop" onAdd={(n, lat, lng, p) => onAddChildDirect(n, lat, lng, p, 'stop')} />
+                <InlineChildAdd childType="national_park" onAdd={(n, lat, lng, p) => onAddChildDirect(n, lat, lng, p, 'national_park')} />
               </div>
-              {parks.length > 0 ? (
-                <div className="flex flex-wrap gap-1.5">
-                  {parks.map((p) => (
-                    <div key={p.id} className="flex items-center gap-0 rounded-full overflow-hidden" style={{ backgroundColor: NPS_COLOR }}>
-                      <button onClick={() => onSelectChild(p)}
-                        className="flex items-center gap-1 pl-2.5 pr-2 py-1 text-xs text-white hover:opacity-90 transition-opacity"
-                      >
-                        🌲 {p.name}
-                        {!p.latitude && !p.longitude && <span className="text-[10px] text-emerald-200 ml-0.5">no location</span>}
-                      </button>
-                      <button onClick={() => onDeleteChild(p.id)}
-                        className="pr-2 py-1 text-emerald-200 hover:text-white transition-colors"
-                        title="Remove park"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-xs text-muted-foreground italic">No parks linked yet</p>
-              )}
             </div>
-
             <div className="border-t border-border" />
           </>
         )}
 
         {/* Description */}
-        {pin.description && <p className="text-sm text-muted-foreground">{pin.description}</p>}
-
-        {/* Photos placeholder */}
-        <div className="rounded-lg border-2 border-dashed border-border p-4 text-center">
-          <ImageIcon className="h-6 w-6 mx-auto mb-1.5 text-muted-foreground/50" />
-          {photoCount > 0 ? (
-            <p className="text-sm font-medium">{photoCount} photo{photoCount !== 1 ? 's' : ''}</p>
-          ) : (
-            <p className="text-sm text-muted-foreground">No photos linked</p>
-          )}
-          <p className="text-xs text-muted-foreground mt-0.5">Photo linking via GPS coming in Phase 2</p>
-        </div>
+        <Textarea
+          value={description}
+          onChange={e => setDescription(e.target.value)}
+          placeholder="Notes, memories, tips…"
+          rows={3}
+          className="text-sm resize-none"
+        />
 
         {/* Tags */}
-        {pin.tags?.length > 0 && (
-          <div className="flex flex-wrap gap-1">
-            {pin.tags.map((tag) => (
-              <Badge key={tag} variant="secondary" className="text-xs">{tag}</Badge>
-            ))}
-          </div>
-        )}
+        <Input
+          value={tagInput}
+          onChange={e => setTagInput(e.target.value)}
+          placeholder="Tags: beach, hiking, food — comma-separated"
+          className="text-sm"
+        />
+
+        {/* Photos placeholder */}
+        <div className="rounded-lg border-2 border-dashed border-border p-3 text-center">
+          <ImageIcon className="h-5 w-5 mx-auto mb-1 text-muted-foreground/50" />
+          {photoCount > 0
+            ? <p className="text-sm font-medium">{photoCount} photo{photoCount !== 1 ? 's' : ''}</p>
+            : <p className="text-xs text-muted-foreground">No photos linked · GPS linking in Phase 2</p>}
+        </div>
 
         {/* Coordinates */}
         {(pin.latitude !== 0 || pin.longitude !== 0) && (
@@ -205,23 +293,24 @@ export function PinDetail({ pin, childPins, photoCount, onUpdate, onDelete, onDe
         )}
       </div>
 
-      {/* Actions */}
+      {/* Footer */}
       <div className="p-3 border-t border-border flex gap-2 shrink-0">
         {confirmDelete ? (
           <>
             <span className="text-xs text-muted-foreground flex-1 flex items-center">
-              {isChildPin ? 'Delete this stop?' : `Delete${childPins.length > 0 ? ` + ${childPins.length} sub-pin${childPins.length !== 1 ? 's' : ''}` : ''}?`}
+              {isChildPin ? 'Delete this stop?' : `Delete${childPins.length > 0 ? ` + ${childPins.length} sub-location${childPins.length !== 1 ? 's' : ''}` : ''}?`}
             </span>
             <Button variant="outline" size="sm" onClick={() => setConfirmDelete(false)}>No</Button>
             <Button variant="destructive" size="sm" onClick={onDelete}>Delete</Button>
           </>
         ) : (
           <>
-            <Button variant="outline" size="sm" className="flex-1" onClick={() => setEditing(true)}>
-              <Edit2 className="h-3.5 w-3.5 mr-1.5" />Edit
-            </Button>
-            <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => setConfirmDelete(true)}>
+            <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive shrink-0" onClick={() => setConfirmDelete(true)}>
               <Trash2 className="h-3.5 w-3.5" />
+            </Button>
+            <Button size="sm" className="flex-1" onClick={handleSave} disabled={!isDirty || saving || !name.trim()}>
+              <Check className="h-3.5 w-3.5 mr-1.5" />
+              {saving ? 'Saving…' : isDirty ? 'Save changes' : 'No changes'}
             </Button>
           </>
         )}

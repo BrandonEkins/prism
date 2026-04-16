@@ -1,12 +1,12 @@
 'use client';
 
 import { format, parseISO } from 'date-fns';
-import { Plus, MapPin, Star, Search, Globe as GlobeIcon, Calendar } from 'lucide-react';
+import { Plus, MapPin, Star, Search, Globe as GlobeIcon, Calendar, TreePine } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import type { TravelPin } from '../types';
-import { STATUS_CONFIG } from '../types';
+import { STATUS_CONFIG, NPS_COLOR } from '../types';
 import { usePinListFilter, type FilterTab, type GroupBy } from '../utils/usePinListFilter';
 
 const FILTER_TABS: { key: FilterTab; label: string; icon?: React.ReactNode }[] = [
@@ -14,6 +14,7 @@ const FILTER_TABS: { key: FilterTab; label: string; icon?: React.ReactNode }[] =
   { key: 'been_there', label: 'Been There' },
   { key: 'want_to_go', label: 'Want to Go' },
   { key: 'bucket_list', label: 'Bucket List', icon: <Star className="h-3 w-3" /> },
+  { key: 'has_national_park', label: 'Has NP', icon: <TreePine className="h-3 w-3" style={{ color: NPS_COLOR }} /> },
 ];
 
 const GROUP_OPTIONS: { key: GroupBy; label: string }[] = [
@@ -24,15 +25,16 @@ const GROUP_OPTIONS: { key: GroupBy; label: string }[] = [
 
 interface PinListProps {
   pins: TravelPin[];
+  pinsWithNpIds: Set<string>;
   selectedPinId: string | null;
   photoCounts: Record<string, number>;
   onSelectPin: (pin: TravelPin) => void;
   onAddPin: () => void;
 }
 
-export function PinList({ pins, selectedPinId, photoCounts, onSelectPin, onAddPin }: PinListProps) {
+export function PinList({ pins, pinsWithNpIds, selectedPinId, photoCounts, onSelectPin, onAddPin }: PinListProps) {
   const { filter, setFilter, search, setSearch, groupBy, setGroupBy, stats, groups } =
-    usePinListFilter(pins);
+    usePinListFilter(pins, pinsWithNpIds);
 
   return (
     <div className="flex flex-col h-full">

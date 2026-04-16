@@ -38,9 +38,17 @@ import {
 } from '@/lib/auth/session';
 import { logActivity } from '@/lib/services/auditLog';
 
-// Determine if cookies should be secure based on APP_URL/BASE_URL scheme
-const appUrl = process.env.APP_URL || process.env.BASE_URL;
-const isSecure = appUrl ? appUrl.startsWith('https://') : process.env.NODE_ENV === 'production';
+// Determine whether a specific request arrived over HTTPS.
+// Use X-Forwarded-Proto (set by Nginx when proxying from TLS) if present;
+// fall back to the request URL scheme for direct access.
+// Do NOT use APP_URL or NODE_ENV — the same container is accessed via both
+// http://localhost:3000 (plain HTTP, no secure cookie) and
+// https://prism.example.com (HTTPS via Cloudflare, secure cookie).
+function requestIsSecure(req: NextRequest): boolean {
+  const proto = req.headers.get('x-forwarded-proto');
+  if (proto) return proto === 'https';
+  return req.url.startsWith('https://');
+}
 
 
 /**
@@ -185,7 +193,7 @@ export async function POST(request: NextRequest) {
 
       cookieStore.set('prism_session', session.token, {
         httpOnly: true,
-        secure: isSecure,
+        secure: requestIsSecure(request),
         sameSite: 'lax',
         expires: session.expiresAt,
         path: '/',
@@ -193,7 +201,7 @@ export async function POST(request: NextRequest) {
 
       cookieStore.set('prism_user', user.id, {
         httpOnly: true,
-        secure: isSecure,
+        secure: requestIsSecure(request),
         sameSite: 'lax',
         expires: session.expiresAt,
         path: '/',
@@ -264,7 +272,7 @@ export async function POST(request: NextRequest) {
     // Session token - httpOnly for security
     cookieStore.set('prism_session', session.token, {
       httpOnly: true,
-      secure: isSecure,
+      secure: requestIsSecure(request),
       sameSite: 'lax',
       expires: session.expiresAt,
       path: '/',
@@ -273,7 +281,7 @@ export async function POST(request: NextRequest) {
     // User ID - accessible to JavaScript for UI purposes
     cookieStore.set('prism_user', user.id, {
       httpOnly: false,
-      secure: isSecure,
+      secure: requestIsSecure(request),
       sameSite: 'lax',
       expires: session.expiresAt,
       path: '/',

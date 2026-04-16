@@ -17,23 +17,24 @@ import { z } from 'zod';
 
 const createPinSchema = z.object({
   name: z.string().min(1).max(255),
-  description: z.string().optional(),
+  description: z.string().nullable().optional(),
   latitude: z.number().min(-90).max(90),
   longitude: z.number().min(-180).max(180),
-  placeName: z.string().max(255).optional(),
+  placeName: z.string().max(255).nullable().optional(),
   status: z.enum(['want_to_go', 'been_there']).default('want_to_go'),
   isBucketList: z.boolean().default(false),
-  tripLabel: z.string().max(255).optional(),
-  color: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
-  visitedDate: z.string().optional(),
-  visitedEndDate: z.string().optional(),
-  year: z.number().int().optional(),
+  tripLabel: z.string().max(255).nullable().optional(),
+  color: z.string().regex(/^#[0-9A-Fa-f]{6}$/).nullable().optional(),
+  visitedDate: z.string().nullable().optional(),
+  visitedEndDate: z.string().nullable().optional(),
+  year: z.number().int().nullable().optional(),
   tags: z.array(z.string()).optional(),
   stops: z.array(z.string()).optional(),
   nationalParks: z.array(z.string()).optional(),
   parentId: z.string().uuid().nullable().optional(),
   pinType: z.enum(['location', 'stop', 'national_park']).default('location'),
-  photoRadiusKm: z.number().min(0).max(500).optional(),
+  photoRadiusKm: z.number().min(0).max(500).nullable().optional(),
+  sortOrder: z.number().int().optional(),
 });
 
 function formatPin(row: typeof travelPins.$inferSelect & {
@@ -131,6 +132,7 @@ export async function POST(request: NextRequest) {
         parentId: d.parentId || null,
         pinType: d.pinType,
         photoRadiusKm: d.photoRadiusKm?.toString() || '50',
+        sortOrder: d.sortOrder ?? 0,
         createdBy: auth.userId,
       })
       .returning();

@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import dynamic from 'next/dynamic';
-import { Globe, List, Loader2 } from 'lucide-react';
+import { Globe, List, Loader2, Moon, Sun } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { PageWrapper } from '@/components/layout/PageWrapper';
 import { useTravelData, TravelAuthError } from './useTravelData';
@@ -47,6 +47,7 @@ export function TravelView() {
   const [selectedPinId, setSelectedPinId] = useState<string | null>(null);
   const [overlay, setOverlay] = useState<Overlay>({ mode: 'none' });
   const [showAllChildren, setShowAllChildren] = useState(false);
+  const [globeDarkMode, setGlobeDarkMode] = useState(false);
 
   // Photo counts — Phase 2
   const photoCounts: Record<string, number> = {};
@@ -77,10 +78,24 @@ export function TravelView() {
     setActiveTab('globe');
   }, []);
 
-  // Open form to add a child pin (stop or national park) under a parent
-  const handleAddChild = useCallback((parentId: string, pinType: PinType) => {
-    setOverlay({ mode: 'add', parentId, pinType });
-  }, []);
+  // Add a child pin (stop or park) directly without opening a separate form
+  const handleAddChildDirect = useCallback(async (
+    parentId: string, name: string, lat: number, lng: number, placeName: string | null, pinType: PinType
+  ) => {
+    const siblings = pins.filter((p) => p.parentId === parentId && p.pinType === pinType);
+    const sortOrder = siblings.length;
+    try {
+      await addPin({
+        name, latitude: lat, longitude: lng, placeName,
+        pinType, parentId,
+        status: 'want_to_go', isBucketList: false, tags: [], stops: [], nationalParks: [],
+        sortOrder, photoRadiusKm: 50,
+      } as Omit<TravelPin, 'id' | 'createdAt' | 'updatedAt' | 'createdBy'>);
+    } catch (err) {
+      handleMutationError(err);
+      throw err;
+    }
+  }, [addPin, pins, handleMutationError]);
 
   const handleSaveNew = useCallback(async (data: Partial<TravelPin>, pendingChildren?: PinPendingChildren) => {
     let newPin: TravelPin;
@@ -165,6 +180,10 @@ export function TravelView() {
     }
   }, [deletePin, handleMutationError]);
 
+  const handleReorderChildren = useCallback(async (childIds: string[]) => {
+    await Promise.all(childIds.map((id, idx) => updatePin(id, { sortOrder: idx })));
+  }, [updatePin]);
+
   const closeOverlay = useCallback(() => {
     setOverlay({ mode: 'none' });
     setSelectedPinId(null);
@@ -194,6 +213,18 @@ export function TravelView() {
 
   // Root pins (no parent) for the Places list
   const rootPins = pins.filter((p) => !p.parentId);
+
+  // Set of root pin IDs that have at least one national park child (or legacy nationalParks array)
+  const pinsWithNpIds = useMemo(() => {
+    const s = new Set<string>();
+    pins.forEach((p) => {
+      if (p.pinType === 'national_park' && p.parentId) s.add(p.parentId);
+    });
+    rootPins.forEach((p) => {
+      if (p.nationalParks && p.nationalParks.length > 0) s.add(p.id);
+    });
+    return s;
+  }, [pins, rootPins]);
 
   return (
     <PageWrapper>
@@ -239,23 +270,33 @@ export function TravelView() {
               <TravelGlobe
                 pins={visiblePins}
                 selectedPinId={selectedPinId}
+                darkMode={globeDarkMode}
                 onPinClick={handlePinClick}
                 onMapClick={handleMapClick}
               />
-              {/* Sub-locations toggle — overlaid on globe via parent's relative context */}
-              <button
-                onClick={() => setShowAllChildren((v) => !v)}
-                title={showAllChildren ? 'Hide all sub-locations' : 'Show all sub-locations on map'}
-                className={cn(
-                  'absolute top-7 left-7 z-10 flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium shadow transition-colors',
-                  showAllChildren
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-background/90 text-foreground border border-border hover:bg-muted'
-                )}
-              >
-                <Globe className="h-3.5 w-3.5" />
-                Sub-locations
-              </button>
+              {/* Globe controls — overlaid on globe */}
+              <div className="absolute top-7 left-7 z-10 flex items-center gap-1.5">
+                <button
+                  onClick={() => setShowAllChildren((v) => !v)}
+                  title={showAllChildren ? 'Hide all sub-locations' : 'Show all sub-locations on map'}
+                  className={cn(
+                    'flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium shadow transition-colors',
+                    showAllChildren
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-background/90 text-foreground border border-border hover:bg-muted'
+                  )}
+                >
+                  <Globe className="h-3.5 w-3.5" />
+                  Sub-locations
+                </button>
+                <button
+                  onClick={() => setGlobeDarkMode((v) => !v)}
+                  title={globeDarkMode ? 'Switch to light map' : 'Switch to dark map'}
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium shadow transition-colors bg-background/90 text-foreground border border-border hover:bg-muted"
+                >
+                  {globeDarkMode ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
+                </button>
+              </div>
             </div>
 
             {/* Overlay panel */}
@@ -291,7 +332,10 @@ export function TravelView() {
                   onDelete={() => handleDelete(overlay.pin.id)}
                   onDeleteChild={handleDeleteChild}
                   onClose={closeOverlay}
-                  onAddChild={handleAddChild}
+                  onAddChildDirect={(name, lat, lng, placeName, pinType) =>
+                    handleAddChildDirect(overlay.pin.id, name, lat, lng, placeName, pinType)
+                  }
+                  onReorderChildren={(childIds) => handleReorderChildren(childIds)}
                   onSelectChild={(child) => {
                     setSelectedPinId(child.id);
                     setOverlay({ mode: 'detail', pin: child });
@@ -310,6 +354,7 @@ export function TravelView() {
             ) : (
               <PinList
                 pins={rootPins}
+                pinsWithNpIds={pinsWithNpIds}
                 selectedPinId={selectedPinId}
                 photoCounts={photoCounts}
                 onSelectPin={handleListSelectPin}

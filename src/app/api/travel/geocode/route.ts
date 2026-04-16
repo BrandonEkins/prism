@@ -27,6 +27,7 @@ interface NominatimResult {
     country?: string;
     country_code?: string;
   };
+  class?: string;
   type?: string;
   importance?: number;
 }
@@ -92,6 +93,19 @@ export async function GET(request: NextRequest) {
     }
 
     const data = (await response.json()) as NominatimResult[];
+
+    // When searching for a national park/monument, prefer boundary results over
+    // natural features (peaks, volcanoes) which often have wrong centroids.
+    const isNationalParkSearch = /national (park|monument|recreation area)/i.test(q);
+    if (isNationalParkSearch) {
+      data.sort((a, b) => {
+        const score = (r: NominatimResult) =>
+          r.type === 'national_park' ? 0 :
+          r.class === 'boundary' ? 1 :
+          r.class === 'leisure' ? 2 : 3;
+        return score(a) - score(b) || (b.importance ?? 0) - (a.importance ?? 0);
+      });
+    }
 
     const results = data.map((item) => ({
       placeId: item.place_id,
