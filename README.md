@@ -5,7 +5,7 @@
 
 **A subscription-free, self-hosted family dashboard that integrates with the tools you already use without becoming yet another system of record.**
 
-[![License](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](LICENSE)
+[![License](https://img.shields.io/badge/license-PolyForm%20NC%201.0-blue.svg)](LICENSE)
 [![Test Install](https://github.com/sandydargoport/prism/actions/workflows/test-install.yml/badge.svg)](https://github.com/sandydargoport/prism/actions/workflows/test-install.yml)
 [![Docker](https://img.shields.io/badge/docker-ghcr.io-blue?logo=docker)](https://github.com/sandydargoport/prism/pkgs/container/prism)
 ![Platforms](https://img.shields.io/badge/platforms-amd64%20%7C%20arm64-green)
@@ -240,7 +240,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
 
 ## License
 
-Prism is free and open-source under the AGPL-3.0 license. It works as a PWA, so the same interface runs on wall-mounted displays, tablets, and mobile devices.
+Prism is open-source under the [PolyForm Noncommercial 1.0.0](LICENSE) license — free for personal and non-commercial use. It works as a PWA, so the same interface runs on wall-mounted displays, tablets, and mobile devices.
 
 See [LICENSE](LICENSE) for details.
 
