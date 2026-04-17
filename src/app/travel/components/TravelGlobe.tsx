@@ -4,8 +4,8 @@ import { useEffect, useRef, useState } from 'react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { format, parseISO } from 'date-fns';
-import type { TravelPin } from '../types';
-import { STATUS_CONFIG, BUCKET_LIST_COLOR, NPS_COLOR } from '../types';
+import type { TravelPin, TravelTrip } from '../types';
+import { STATUS_CONFIG, TRIP_STYLE_CONFIG, BUCKET_LIST_COLOR, NPS_COLOR } from '../types';
 
 const STYLE_LIGHT = 'https://tiles.openfreemap.org/styles/liberty';
 
@@ -31,7 +31,6 @@ function createDropPin(color: string, selected: boolean, size: number, icon?: st
   svg.setAttribute('viewBox', '0 0 24 34');
   svg.style.cssText = `display: block; filter: drop-shadow(0 2px 4px rgba(0,0,0,${selected ? '0.45' : '0.3'}));`;
 
-  // Pin body path: circle top, pointed bottom
   const body = document.createElementNS('http://www.w3.org/2000/svg', 'path');
   body.setAttribute('d', 'M12 1C6.2 1 1.5 5.7 1.5 11.5c0 8.2 10.5 21 10.5 21s10.5-12.8 10.5-21C22.5 5.7 17.8 1 12 1z');
   body.setAttribute('fill', color);
@@ -39,7 +38,6 @@ function createDropPin(color: string, selected: boolean, size: number, icon?: st
   body.setAttribute('stroke-width', selected ? '2' : '1.5');
   svg.appendChild(body);
 
-  // Ring glow when selected
   if (selected) {
     const glow = document.createElementNS('http://www.w3.org/2000/svg', 'path');
     glow.setAttribute('d', 'M12 1C6.2 1 1.5 5.7 1.5 11.5c0 8.2 10.5 21 10.5 21s10.5-12.8 10.5-21C22.5 5.7 17.8 1 12 1z');
@@ -51,7 +49,6 @@ function createDropPin(color: string, selected: boolean, size: number, icon?: st
     svg.insertBefore(glow, body);
   }
 
-  // Icon inside circle (centered around y=11.5)
   if (icon) {
     const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
     text.setAttribute('x', '12');
@@ -64,7 +61,6 @@ function createDropPin(color: string, selected: boolean, size: number, icon?: st
     text.textContent = icon;
     svg.appendChild(text);
   } else {
-    // White dot for "want to go"
     const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
     dot.setAttribute('cx', '12');
     dot.setAttribute('cy', '11');
@@ -77,13 +73,66 @@ function createDropPin(color: string, selected: boolean, size: number, icon?: st
   return wrapper;
 }
 
-function createPinElement(pin: TravelPin, selected: boolean, zoom: number): { el: HTMLElement; anchor: maplibregl.PositionAnchor } {
+// Numbered badge circle for route/loop stops
+function createNumberedStop(color: string, selected: boolean, size: number, stopNumber: number): HTMLElement {
+  const wrapper = document.createElement('div');
+  const fontSize = Math.max(8, Math.round(size * 0.48));
+  wrapper.style.cssText = `
+    cursor: pointer; width: ${size}px; height: ${size}px; border-radius: 50%;
+    background: ${color}; border: ${selected ? '2.5px solid white' : '2px solid rgba(255,255,255,0.9)'};
+    box-shadow: 0 2px 8px rgba(0,0,0,${selected ? '0.4' : '0.25'});
+    display: flex; align-items: center; justify-content: center;
+    font-family: system-ui, sans-serif; font-weight: 700;
+    font-size: ${fontSize}px; color: white; user-select: none;
+    ${selected ? 'outline: 3px solid ' + color + '55; outline-offset: 2px;' : ''}
+  `.replace(/\n\s+/g, ' ');
+  wrapper.textContent = String(stopNumber);
+  return wrapper;
+}
+
+// Hub star marker (⭐ or home base indicator)
+function createHubStop(color: string, selected: boolean, size: number): HTMLElement {
+  const wrapper = document.createElement('div');
+  const fontSize = Math.max(9, Math.round(size * 0.5));
+  wrapper.style.cssText = `
+    cursor: pointer; width: ${size}px; height: ${size}px; border-radius: 50%;
+    background: ${color}; border: ${selected ? '2.5px solid white' : '2px solid rgba(255,255,255,0.9)'};
+    box-shadow: 0 2px 8px rgba(0,0,0,${selected ? '0.4' : '0.25'});
+    display: flex; align-items: center; justify-content: center;
+    font-size: ${fontSize}px; user-select: none;
+    ${selected ? 'outline: 3px solid ' + color + '55; outline-offset: 2px;' : ''}
+  `.replace(/\n\s+/g, ' ');
+  wrapper.textContent = '⌂';
+  return wrapper;
+}
+
+// Bullet dot for hub spokes
+function createSpokeStop(color: string, selected: boolean, size: number): HTMLElement {
+  const inner = Math.round(size * 0.38);
+  const wrapper = document.createElement('div');
+  wrapper.style.cssText = `
+    cursor: pointer; width: ${size}px; height: ${size}px; border-radius: 50%;
+    background: rgba(255,255,255,0.92); border: ${selected ? '2.5px solid ' + color : '2px solid ' + color};
+    box-shadow: 0 2px 6px rgba(0,0,0,0.22);
+    display: flex; align-items: center; justify-content: center; user-select: none;
+  `.replace(/\n\s+/g, ' ');
+  const dot = document.createElement('div');
+  dot.style.cssText = `width: ${inner}px; height: ${inner}px; border-radius: 50%; background: ${color};`;
+  wrapper.appendChild(dot);
+  return wrapper;
+}
+
+function createPinElement(
+  pin: TravelPin,
+  selected: boolean,
+  zoom: number,
+  tripContext?: { style: 'route' | 'loop' | 'hub'; stopNumber?: number; color: string }
+): { el: HTMLElement; anchor: maplibregl.PositionAnchor } {
   const isChild = !!pin.parentId;
   const isNP = pin.pinType === 'national_park';
-  const isStop = pin.pinType === 'stop';
-  const size = pinSize(zoom, selected, isChild);
+  const size = pinSize(zoom, selected, isChild || !!pin.tripId);
 
-  // National park child pin: green circle with tree
+  // National park sub-pin
   if (isNP) {
     const wrapper = document.createElement('div');
     wrapper.style.cssText = `cursor: pointer; width: ${size}px; height: ${size}px; border-radius: 50%; background: ${NPS_COLOR}; border: ${selected ? '2px solid white' : '1.5px solid rgba(255,255,255,0.85)'}; box-shadow: 0 2px 6px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; font-size: ${Math.max(8, Math.round(size * 0.55))}px; user-select: none;`;
@@ -92,8 +141,32 @@ function createPinElement(pin: TravelPin, selected: boolean, zoom: number): { el
     return { el: wrapper, anchor: 'center' };
   }
 
-  // Stop child pin: purple circle
-  if (isStop) {
+  // Trip stop markers
+  if (tripContext) {
+    const { style, stopNumber, color } = tripContext;
+
+    if (style === 'hub' && pin.isHub) {
+      const el = createHubStop(color, selected, size);
+      el.title = pin.name;
+      return { el, anchor: 'center' };
+    }
+
+    if (style === 'hub') {
+      const el = createSpokeStop(color, selected, size);
+      el.title = pin.name;
+      return { el, anchor: 'center' };
+    }
+
+    // route or loop — numbered
+    if (stopNumber !== undefined) {
+      const el = createNumberedStop(color, selected, size, stopNumber);
+      el.title = pin.name;
+      return { el, anchor: 'center' };
+    }
+  }
+
+  // Parent-child stop pin (purple circle, existing behavior)
+  if (pin.pinType === 'stop' && pin.parentId) {
     const stopColor = pin.color || '#8B5CF6';
     const wrapper = document.createElement('div');
     wrapper.style.cssText = `cursor: pointer; width: ${size}px; height: ${size}px; border-radius: 50%; background: ${stopColor}; border: ${selected ? '2px solid white' : '1.5px solid rgba(255,255,255,0.85)'}; box-shadow: 0 2px 6px rgba(0,0,0,0.25); display: flex; align-items: center; justify-content: center; user-select: none;`;
@@ -101,7 +174,7 @@ function createPinElement(pin: TravelPin, selected: boolean, zoom: number): { el
     return { el: wrapper, anchor: 'center' };
   }
 
-  // Root location pin: drop pin shape
+  // Root / standalone location pin — drop pin shape
   const color = pin.color || (pin.isBucketList ? BUCKET_LIST_COLOR : STATUS_CONFIG[pin.status].color);
   const icon = pin.status === 'been_there' ? '✓' : undefined;
   const wrapper = createDropPin(color, selected, size, icon);
@@ -110,7 +183,6 @@ function createPinElement(pin: TravelPin, selected: boolean, zoom: number): { el
   const h = Math.round(size * 1.4);
   const badgeSize = Math.max(10, Math.round(size * 0.42));
 
-  // Star badge (bucket list) — top-right of pin
   if (pin.isBucketList) {
     const star = document.createElement('div');
     star.style.cssText = `position: absolute; top: ${-badgeSize / 3}px; right: ${-badgeSize / 3}px; width: ${badgeSize}px; height: ${badgeSize}px; background: #F59E0B; border-radius: 50%; border: 1.5px solid white; display: flex; align-items: center; justify-content: center; font-size: ${Math.max(6, badgeSize - 5)}px; line-height: 1; box-shadow: 0 1px 3px rgba(0,0,0,0.3); z-index: 1;`;
@@ -118,7 +190,6 @@ function createPinElement(pin: TravelPin, selected: boolean, zoom: number): { el
     wrapper.appendChild(star);
   }
 
-  // NPS badge (legacy tags) — top-left of pin
   if (pin.nationalParks && pin.nationalParks.length > 0) {
     const offset = pin.isBucketList ? badgeSize * 0.6 : 0;
     const tree = document.createElement('div');
@@ -127,16 +198,11 @@ function createPinElement(pin: TravelPin, selected: boolean, zoom: number): { el
     wrapper.appendChild(tree);
   }
 
-  // Offset wrapper so tip anchors at coordinate (anchor: 'bottom' aligns bottom-center)
-  // Pin tip is at bottom-center of the SVG; we want that to be the anchor point.
-  // MapLibre 'bottom' anchor aligns element bottom-center to the coordinate.
-  wrapper.style.marginBottom = `0px`; // tip is already at element bottom
-
-  void h; // used for future badge positioning reference
+  void h;
   return { el: wrapper, anchor: 'bottom' };
 }
 
-function buildTooltipHTML(pin: TravelPin): string {
+function buildTooltipHTML(pin: TravelPin, tripContext?: { style: 'route' | 'loop' | 'hub'; stopNumber?: number }): string {
   const statusLabel = pin.isBucketList ? '⭐ Bucket List' : STATUS_CONFIG[pin.status].label;
   let dateStr = '';
   if (pin.visitedDate) {
@@ -151,9 +217,20 @@ function buildTooltipHTML(pin: TravelPin): string {
   if (pin.pinType === 'national_park') {
     return `<div style="font-family:system-ui,sans-serif;min-width:120px;max-width:200px"><div style="font-weight:600;font-size:13px;margin-bottom:3px">🌲 ${pin.name}</div>${dateStr ? `<div style="font-size:11px;color:#6B7280">🗓 ${dateStr}</div>` : ''}<div style="font-size:11px;color:#2D6A4F">National Park</div></div>`;
   }
+
+  if (tripContext) {
+    const stopLabel = tripContext.style === 'hub' && pin.isHub
+      ? '⌂ Home Base'
+      : tripContext.stopNumber !== undefined
+        ? `Stop ${tripContext.stopNumber}`
+        : 'Stop';
+    return `<div style="font-family:system-ui,sans-serif;min-width:120px;max-width:220px"><div style="font-weight:600;font-size:13px;margin-bottom:3px">${pin.name}</div>${dateStr ? `<div style="font-size:11px;color:#6B7280;margin-bottom:2px">🗓 ${dateStr}</div>` : ''}<div style="font-size:11px;color:#9CA3AF">${stopLabel}</div></div>`;
+  }
+
   if (pin.pinType === 'stop') {
     return `<div style="font-family:system-ui,sans-serif;min-width:120px;max-width:200px"><div style="font-weight:600;font-size:13px;margin-bottom:3px">📍 ${pin.name}</div>${dateStr ? `<div style="font-size:11px;color:#6B7280">🗓 ${dateStr}</div>` : ''}</div>`;
   }
+
   return `<div style="font-family:system-ui,sans-serif;min-width:160px;max-width:240px"><div style="font-weight:600;font-size:14px;margin-bottom:4px">${pin.name}</div>${pin.tripLabel ? `<div style="font-size:12px;color:#6B7280;margin-bottom:3px">📅 ${pin.tripLabel}</div>` : ''}${stops ? `<div style="font-size:12px;color:#6B7280;margin-bottom:3px">📍 ${stops}</div>` : ''}${dateStr ? `<div style="font-size:12px;color:#6B7280;margin-bottom:3px">🗓 ${dateStr}</div>` : ''}${parks ? `<div style="font-size:12px;color:#2D6A4F;margin-bottom:3px">🌲 ${parks}</div>` : ''}<div style="font-size:11px;color:#9CA3AF">${statusLabel}${tags ? ` · ${tags}` : ''}</div></div>`;
 }
 
@@ -163,35 +240,103 @@ function addTripLinesLayer(map: maplibregl.Map) {
   map.addLayer({
     id: 'trip-lines', type: 'line', source: 'trip-lines',
     layout: { 'line-join': 'round', 'line-cap': 'round' },
-    paint: { 'line-color': ['get', 'color'], 'line-width': 1.5, 'line-opacity': 0.55, 'line-dasharray': [3, 2] },
+    paint: { 'line-color': ['get', 'color'], 'line-width': 2, 'line-opacity': 0.65, 'line-dasharray': [3, 2] },
   });
+}
+
+function buildTripFeatures(
+  tripStops: TravelPin[],
+  tripStyle: 'route' | 'loop' | 'hub',
+  color: string
+): GeoJSON.Feature[] {
+  const validStops = tripStops.filter((p) => p.latitude !== 0 || p.longitude !== 0);
+  if (validStops.length < 2) return [];
+
+  if (tripStyle === 'hub') {
+    const hub = validStops.find((p) => p.isHub) ?? validStops[0];
+    if (!hub) return [];
+    return validStops
+      .filter((p) => p.id !== hub.id)
+      .map((spoke) => ({
+        type: 'Feature' as const,
+        properties: { color },
+        geometry: {
+          type: 'LineString' as const,
+          coordinates: [[hub.longitude, hub.latitude], [spoke.longitude, spoke.latitude]],
+        },
+      }));
+  }
+
+  // route or loop — single polyline through stops in order
+  const sorted = [...validStops].sort((a, b) => a.sortOrder - b.sortOrder);
+  const first = sorted[0];
+  const coords: [number, number][] = sorted.map((p) => [p.longitude, p.latitude]);
+  if (tripStyle === 'loop' && sorted.length > 2 && first) {
+    coords.push([first.longitude, first.latitude]);
+  }
+  return [{
+    type: 'Feature' as const,
+    properties: { color },
+    geometry: { type: 'LineString' as const, coordinates: coords },
+  }];
 }
 
 interface TravelGlobeProps {
   pins: TravelPin[];
+  trips: TravelTrip[];
   selectedPinId: string | null;
+  selectedTripId: string | null;
   darkMode: boolean;
   onPinClick: (pin: TravelPin) => void;
+  onTripStopClick: (pin: TravelPin, trip: TravelTrip) => void;
   onMapClick: (lat: number, lng: number) => void;
 }
 
-export function TravelGlobe({ pins, selectedPinId, darkMode, onPinClick, onMapClick }: TravelGlobeProps) {
+export function TravelGlobe({
+  pins, trips, selectedPinId, selectedTripId, darkMode,
+  onPinClick, onTripStopClick, onMapClick,
+}: TravelGlobeProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const markersRef = useRef<Map<string, maplibregl.Marker>>(new Map());
   const popupRef = useRef<maplibregl.Popup | null>(null);
   const onPinClickRef = useRef(onPinClick);
+  const onTripStopClickRef = useRef(onTripStopClick);
   const onMapClickRef = useRef(onMapClick);
   const pinsRef = useRef(pins);
+  const tripsRef = useRef(trips);
   const [zoomTier, setZoomTier] = useState(0);
 
   useEffect(() => { onPinClickRef.current = onPinClick; }, [onPinClick]);
+  useEffect(() => { onTripStopClickRef.current = onTripStopClick; }, [onTripStopClick]);
   useEffect(() => { onMapClickRef.current = onMapClick; }, [onMapClick]);
   useEffect(() => { pinsRef.current = pins; }, [pins]);
+  useEffect(() => { tripsRef.current = trips; }, [trips]);
 
   function getZoomTier(zoom: number): number {
     if (zoom < 3) return 0; if (zoom < 5) return 1;
     if (zoom < 7) return 2; if (zoom < 9) return 3; return 4;
+  }
+
+  // Build a lookup: pinId → { style, stopNumber, color } for trip stops
+  function buildTripContextMap(currentPins: TravelPin[], currentTrips: TravelTrip[]) {
+    const ctx = new Map<string, { style: 'route' | 'loop' | 'hub'; stopNumber?: number; color: string }>();
+    for (const trip of currentTrips) {
+      const tripColor = trip.color || STATUS_CONFIG[trip.status].color;
+      const tripStyle = trip.tripStyle;
+      const stops = currentPins
+        .filter((p) => p.tripId === trip.id)
+        .sort((a, b) => a.sortOrder - b.sortOrder);
+
+      stops.forEach((stop, idx) => {
+        ctx.set(stop.id, {
+          style: tripStyle,
+          stopNumber: (tripStyle === 'route' || tripStyle === 'loop') ? idx + 1 : undefined,
+          color: tripColor,
+        });
+      });
+    }
+    return ctx;
   }
 
   // Initialize map once
@@ -205,7 +350,6 @@ export function TravelGlobe({ pins, selectedPinId, darkMode, onPinClick, onMapCl
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'bottom-right');
     map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-left');
 
-    // Re-add trip lines layer on every style load (initial + dark/light switch)
     map.on('style.load', () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (map as any).setProjection({ type: 'globe' });
@@ -230,32 +374,44 @@ export function TravelGlobe({ pins, selectedPinId, darkMode, onPinClick, onMapCl
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-
   // Sync markers
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
     const zoom = map.getZoom();
+    const tripCtx = buildTripContextMap(pins, trips);
     const currentIds = new Set(pins.map((p) => p.id));
+
     for (const [id, marker] of markersRef.current) {
       if (!currentIds.has(id)) { marker.remove(); markersRef.current.delete(id); }
     }
+
     for (const pin of pins) {
       if (pin.latitude === 0 && pin.longitude === 0) continue;
       const isSelected = pin.id === selectedPinId;
-      const existing = markersRef.current.get(pin.id);
+      const ctx = tripCtx.get(pin.id);
 
       const buildMarker = () => {
-        const { el, anchor } = createPinElement(pin, isSelected, zoom);
-        el.addEventListener('click', (e) => { e.stopPropagation(); popupRef.current?.remove(); onPinClickRef.current(pin); });
+        const { el, anchor } = createPinElement(pin, isSelected, zoom, ctx);
+
+        el.addEventListener('click', (e) => {
+          e.stopPropagation();
+          popupRef.current?.remove();
+          if (pin.tripId) {
+            const trip = tripsRef.current.find((t) => t.id === pin.tripId);
+            if (trip) { onTripStopClickRef.current(pin, trip); return; }
+          }
+          onPinClickRef.current(pin);
+        });
         el.addEventListener('mouseenter', () => {
           if (!map) return;
-          popupRef.current?.setLngLat([pin.longitude, pin.latitude]).setHTML(buildTooltipHTML(pin)).addTo(map);
+          popupRef.current?.setLngLat([pin.longitude, pin.latitude]).setHTML(buildTooltipHTML(pin, ctx)).addTo(map);
         });
         el.addEventListener('mouseleave', () => { popupRef.current?.remove(); });
         return { el, anchor };
       };
 
+      const existing = markersRef.current.get(pin.id);
       if (existing) { existing.remove(); markersRef.current.delete(pin.id); }
       const { el, anchor } = buildMarker();
       const marker = new maplibregl.Marker({ element: el, anchor })
@@ -263,7 +419,7 @@ export function TravelGlobe({ pins, selectedPinId, darkMode, onPinClick, onMapCl
         .addTo(map);
       markersRef.current.set(pin.id, marker);
     }
-  }, [pins, selectedPinId, zoomTier]);
+  }, [pins, trips, selectedPinId, zoomTier]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Trip lines
   useEffect(() => {
@@ -271,29 +427,68 @@ export function TravelGlobe({ pins, selectedPinId, darkMode, onPinClick, onMapCl
     if (!map || !map.isStyleLoaded()) return;
     const source = map.getSource('trip-lines') as maplibregl.GeoJSONSource | undefined;
     if (!source) return;
-    const parent = selectedPinId ? pins.find((p) => p.id === selectedPinId) : null;
-    if (!parent || (parent.latitude === 0 && parent.longitude === 0)) {
-      source.setData({ type: 'FeatureCollection', features: [] }); return;
-    }
-    const children = pins.filter((p) => p.parentId === selectedPinId && (p.latitude !== 0 || p.longitude !== 0));
-    source.setData({
-      type: 'FeatureCollection',
-      features: children.map((c) => ({
-        type: 'Feature' as const,
-        properties: { color: c.pinType === 'national_park' ? NPS_COLOR : '#8B5CF6' },
-        geometry: { type: 'LineString' as const, coordinates: [[parent.longitude, parent.latitude], [c.longitude, c.latitude]] },
-      })),
-    });
-  }, [pins, selectedPinId]);
 
-  // Fly to selected pin
+    // If a trip is selected, draw its lines
+    if (selectedTripId) {
+      const trip = trips.find((t) => t.id === selectedTripId);
+      if (trip) {
+        const tripStops = pins.filter((p) => p.tripId === selectedTripId && (p.latitude !== 0 || p.longitude !== 0));
+        const color = trip.color || STATUS_CONFIG[trip.status].color;
+        const features = buildTripFeatures(tripStops, trip.tripStyle, color);
+        source.setData({ type: 'FeatureCollection', features });
+        return;
+      }
+    }
+
+    // If a standalone pin with children is selected, draw spokes (existing behavior)
+    if (selectedPinId) {
+      const parent = pins.find((p) => p.id === selectedPinId);
+      if (parent && !parent.tripId && (parent.latitude !== 0 || parent.longitude !== 0)) {
+        const children = pins.filter((p) => p.parentId === selectedPinId && (p.latitude !== 0 || p.longitude !== 0));
+        if (children.length > 0) {
+          source.setData({
+            type: 'FeatureCollection',
+            features: children.map((c) => ({
+              type: 'Feature' as const,
+              properties: { color: c.pinType === 'national_park' ? NPS_COLOR : '#8B5CF6' },
+              geometry: { type: 'LineString' as const, coordinates: [[parent.longitude, parent.latitude], [c.longitude, c.latitude]] },
+            })),
+          });
+          return;
+        }
+      }
+    }
+
+    source.setData({ type: 'FeatureCollection', features: [] });
+  }, [pins, trips, selectedPinId, selectedTripId]);
+
+  // Fly to selected trip (center on its stops) or selected pin
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !selectedPinId) return;
-    const pin = pins.find((p) => p.id === selectedPinId);
-    if (!pin || (pin.latitude === 0 && pin.longitude === 0)) return;
-    map.flyTo({ center: [pin.longitude, pin.latitude], zoom: Math.max(map.getZoom(), 4), duration: 800, essential: true });
-  }, [selectedPinId, pins]);
+    if (!map) return;
+
+    if (selectedTripId) {
+      const tripStops = pins.filter((p) => p.tripId === selectedTripId && (p.latitude !== 0 || p.longitude !== 0));
+      if (tripStops.length === 0) return;
+      const firstStop = tripStops[0]!;
+      if (tripStops.length === 1) {
+        map.flyTo({ center: [firstStop.longitude, firstStop.latitude], zoom: Math.max(map.getZoom(), 4), duration: 800, essential: true });
+        return;
+      }
+      const bounds = tripStops.reduce(
+        (b, p) => b.extend([p.longitude, p.latitude]),
+        new maplibregl.LngLatBounds([firstStop.longitude, firstStop.latitude], [firstStop.longitude, firstStop.latitude])
+      );
+      map.fitBounds(bounds, { padding: 80, duration: 800, essential: true, maxZoom: 10 });
+      return;
+    }
+
+    if (selectedPinId) {
+      const pin = pins.find((p) => p.id === selectedPinId);
+      if (!pin || (pin.latitude === 0 && pin.longitude === 0)) return;
+      map.flyTo({ center: [pin.longitude, pin.latitude], zoom: Math.max(map.getZoom(), 4), duration: 800, essential: true });
+    }
+  }, [selectedPinId, selectedTripId, pins]);
 
   return (
     <>
