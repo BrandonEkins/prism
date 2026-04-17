@@ -1065,6 +1065,11 @@ export const photos = pgTable('photos', {
   latitude: decimal('latitude', { precision: 9, scale: 6 }),
   longitude: decimal('longitude', { precision: 10, scale: 6 }),
 
+  // When true: no local file — served by proxying through OneDrive on demand.
+  // filename stores the OneDrive item ID. Used for camera-roll sources where we
+  // record GPS metadata without downloading every photo.
+  isExternal: boolean('is_external').default(false).notNull(),
+
   createdAt: timestamp('created_at').defaultNow().notNull(),
 }, (table) => ({
   sourceIdIdx: index('photos_source_id_idx').on(table.sourceId),

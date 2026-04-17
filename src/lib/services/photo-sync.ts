@@ -6,8 +6,22 @@ import {
   downloadPhoto,
   refreshAccessToken,
 } from '@/lib/integrations/onedrive';
-import { savePhoto, deletePhoto } from './photo-storage';
+import { savePhoto, deletePhoto, getPhotoPath } from './photo-storage';
+import { promises as fs } from 'fs';
 import { decrypt, encrypt } from '@/lib/utils/crypto';
+import exifr from 'exifr';
+
+async function extractGps(buffer: Buffer): Promise<{ latitude: string; longitude: string } | null> {
+  try {
+    const gps = await exifr.gps(buffer);
+    if (gps?.latitude != null && gps?.longitude != null) {
+      return { latitude: gps.latitude.toString(), longitude: gps.longitude.toString() };
+    }
+  } catch {
+    // No EXIF or no GPS — not an error
+  }
+  return null;
+}
 
 function generateFilename(originalName: string): string {
   const ext = originalName.split('.').pop() || 'jpg';
@@ -57,52 +71,91 @@ export async function syncOneDriveSource(sourceId: string) {
   const existingExternalIds = new Set(existingPhotos.map((p) => p.externalId));
   const remoteIds = new Set(remotePhotos.map((p) => p.id));
 
-  // Download new photos
+  // Download new photos (or record metadata-only if OneDrive already has GPS)
   for (const remotePhoto of remotePhotos) {
     if (existingExternalIds.has(remotePhoto.id)) continue;
 
     try {
-      const buffer = await downloadPhoto(accessToken, remotePhoto.id);
-      const filename = generateFilename(remotePhoto.name);
-      const result = await savePhoto(buffer, filename);
-
+      const facetLat = remotePhoto.location?.latitude;
+      const facetLng = remotePhoto.location?.longitude;
+      const hasFacetGps = facetLat != null && facetLng != null;
       const mimeType = remotePhoto.file?.mimeType || 'image/jpeg';
+      const takenAt = remotePhoto.photo?.takenDateTime
+        ? new Date(remotePhoto.photo.takenDateTime)
+        : null;
 
-      await db.insert(photos).values({
-        sourceId,
-        filename,
-        originalFilename: remotePhoto.name,
-        mimeType,
-        width: result.width,
-        height: result.height,
-        sizeBytes: result.sizeBytes,
-        takenAt: remotePhoto.photo?.takenDateTime
-          ? new Date(remotePhoto.photo.takenDateTime)
-          : null,
-        externalId: remotePhoto.id,
-        thumbnailPath: result.thumbnailPath,
-        latitude: remotePhoto.location?.latitude?.toString() ?? null,
-        longitude: remotePhoto.location?.longitude?.toString() ?? null,
-      });
+      if (hasFacetGps) {
+        // Metadata-only: GPS known from OneDrive facet — no download needed.
+        // filename stores the item ID so the file endpoint can proxy on demand.
+        // usage='' keeps these out of screensaver/wallpaper rotation.
+        await db.insert(photos).values({
+          sourceId,
+          filename: remotePhoto.id,
+          originalFilename: remotePhoto.name,
+          mimeType,
+          width: remotePhoto.image?.width ?? null,
+          height: remotePhoto.image?.height ?? null,
+          sizeBytes: remotePhoto.size ?? null,
+          takenAt,
+          externalId: remotePhoto.id,
+          thumbnailPath: null,
+          latitude: facetLat.toString(),
+          longitude: facetLng.toString(),
+          isExternal: true,
+          usage: '',
+        });
+      } else {
+        // No facet GPS — download the file and try EXIF extraction
+        const buffer = await downloadPhoto(accessToken, remotePhoto.id);
+        const filename = generateFilename(remotePhoto.name);
+        const result = await savePhoto(buffer, filename);
+        const gps = await extractGps(buffer);
+
+        await db.insert(photos).values({
+          sourceId,
+          filename,
+          originalFilename: remotePhoto.name,
+          mimeType,
+          width: result.width,
+          height: result.height,
+          sizeBytes: result.sizeBytes,
+          takenAt,
+          externalId: remotePhoto.id,
+          thumbnailPath: result.thumbnailPath,
+          latitude: gps?.latitude ?? null,
+          longitude: gps?.longitude ?? null,
+          isExternal: false,
+        });
+      }
     } catch (err) {
       console.error(`Failed to sync photo ${remotePhoto.name}:`, err);
     }
   }
 
-  // Backfill GPS for existing photos that have location in OneDrive but not yet in DB
+  // Backfill GPS for existing photos that don't yet have coordinates
   const photosWithoutGps = existingPhotos.filter(
-    (p) => p.latitude === null && p.longitude === null && p.externalId
+    (p) => p.latitude === null && p.longitude === null
   );
   for (const existing of photosWithoutGps) {
-    const remote = remotePhotos.find((r) => r.id === existing.externalId);
-    if (remote?.location?.latitude != null && remote?.location?.longitude != null) {
-      await db
-        .update(photos)
-        .set({
-          latitude: remote.location.latitude.toString(),
-          longitude: remote.location.longitude.toString(),
-        })
-        .where(eq(photos.id, existing.id));
+    try {
+      // Try reading EXIF from the already-downloaded file on disk
+      const filePath = getPhotoPath(existing.filename);
+      const buffer = await fs.readFile(filePath).catch(() => null);
+      const gps = buffer ? await extractGps(buffer) : null;
+
+      // Fall back to OneDrive location facet if EXIF had nothing
+      const remote = remotePhotos.find((r) => r.id === existing.externalId);
+      const lat = gps?.latitude ?? remote?.location?.latitude?.toString() ?? null;
+      const lng = gps?.longitude ?? remote?.location?.longitude?.toString() ?? null;
+
+      if (lat && lng) {
+        await db
+          .update(photos)
+          .set({ latitude: lat, longitude: lng })
+          .where(eq(photos.id, existing.id));
+      }
+    } catch {
+      // Skip — don't fail the whole sync for one photo
     }
   }
 

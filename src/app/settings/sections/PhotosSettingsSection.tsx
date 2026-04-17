@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Plus, RefreshCw, Trash2, Cloud, HardDrive, Pin, X } from 'lucide-react';
+import { Plus, RefreshCw, Trash2, Cloud, HardDrive, Pin, X, FolderOpen, MapPin, ChevronRight } from 'lucide-react';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useConfirmDialog } from '@/lib/hooks/useConfirmDialog';
 import { cn } from '@/lib/utils';
@@ -11,6 +11,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { useDisplayContextFilters, useTargetResolution } from '../SettingsView';
 import { usePinnedPhoto } from '@/components/layout/WallpaperBackground';
 import { usePhotos } from '@/lib/hooks/usePhotos';
+import { toast } from '@/components/ui/use-toast';
 
 interface PhotoSource {
   id: string;
@@ -22,11 +23,22 @@ interface PhotoSource {
   photoCount: number;
 }
 
+interface OneDriveFolder {
+  id: string;
+  name: string;
+  folder?: { childCount: number };
+}
+
 export function PhotosSettingsSection() {
   const { confirm, dialogProps: confirmDialogProps } = useConfirmDialog();
   const [sources, setSources] = React.useState<PhotoSource[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [syncing, setSyncing] = React.useState<string | null>(null);
+  const [backfillingGps, setBackfillingGps] = React.useState(false);
+  const [pickingFolder, setPickingFolder] = React.useState<string | null>(null);
+  const [folderStack, setFolderStack] = React.useState<{ id: string; name: string }[]>([]);
+  const [folders, setFolders] = React.useState<OneDriveFolder[]>([]);
+  const [foldersLoading, setFoldersLoading] = React.useState(false);
 
   const fetchSources = React.useCallback(async () => {
     try {
@@ -44,6 +56,47 @@ export function PhotosSettingsSection() {
     fetchSources();
   }, [fetchSources]);
 
+  // Auto-open folder picker after OAuth redirect
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const success = params.get('success');
+    const sourceId = params.get('sourceId');
+    if (success === 'onedrive_connected' && sourceId) {
+      // Clean URL then open picker
+      window.history.replaceState({}, '', '/settings?section=photos');
+      setPickingFolder(sourceId);
+      setFolderStack([]);
+    }
+  }, []);
+
+  // Load folders whenever picker opens or stack changes
+  React.useEffect(() => {
+    if (!pickingFolder) return;
+    const parentId = folderStack.at(-1)?.id;
+    setFoldersLoading(true);
+    const url = parentId
+      ? `/api/photo-sources/${pickingFolder}/folders?parentId=${parentId}`
+      : `/api/photo-sources/${pickingFolder}/folders`;
+    fetch(url)
+      .then((r) => r.ok ? r.json() : { folders: [] })
+      .then((d) => setFolders(d.folders || []))
+      .catch(() => setFolders([]))
+      .finally(() => setFoldersLoading(false));
+  }, [pickingFolder, folderStack]);
+
+  const openFolderPicker = (sourceId: string) => {
+    setPickingFolder(sourceId);
+    setFolderStack([]);
+    setFolders([]);
+  };
+
+  const closeFolderPicker = () => {
+    setPickingFolder(null);
+    setFolderStack([]);
+    setFolders([]);
+  };
+
   const handleSync = async (sourceId: string) => {
     setSyncing(sourceId);
     try {
@@ -56,6 +109,42 @@ export function PhotosSettingsSection() {
     }
   };
 
+  const handleBackfillGps = async () => {
+    setBackfillingGps(true);
+    try {
+      const res = await fetch('/api/photos/backfill-gps', { method: 'POST' });
+      const data = await res.json();
+      if (res.ok) {
+        toast({
+          title: 'GPS backfill complete',
+          description: `Updated ${data.updated} photo${data.updated !== 1 ? 's' : ''} (${data.skipped} had no GPS data)`,
+          variant: 'success',
+        });
+      } else {
+        toast({ title: 'GPS backfill failed', variant: 'destructive' });
+      }
+    } catch {
+      toast({ title: 'GPS backfill failed', variant: 'destructive' });
+    } finally {
+      setBackfillingGps(false);
+    }
+  };
+
+  const handleSelectFolder = async (sourceId: string, folderId: string, folderName: string) => {
+    try {
+      await fetch(`/api/photo-sources/${sourceId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ onedriveFolderId: folderId, name: `OneDrive – ${folderName}` }),
+      });
+      closeFolderPicker();
+      await fetchSources();
+      handleSync(sourceId);
+    } catch (err) {
+      console.error('Error setting folder:', err);
+    }
+  };
+
   const handleDelete = async (sourceId: string) => {
     if (!await confirm('Delete this source?', 'This will delete the source and all its photos.')) return;
     try {
@@ -64,10 +153,6 @@ export function PhotosSettingsSection() {
     } catch (err) {
       console.error('Delete error:', err);
     }
-  };
-
-  const connectOneDrive = () => {
-    window.location.href = '/api/auth/microsoft';
   };
 
   const { filters, setFilters } = useDisplayContextFilters();
@@ -168,72 +253,183 @@ export function PhotosSettingsSection() {
           <div className="flex items-center justify-between">
             <div>
               <CardTitle>Photo Sources</CardTitle>
-              <CardDescription>
-                Manage where your photos come from
-              </CardDescription>
+              <CardDescription>Manage where your photos come from</CardDescription>
             </div>
-            <Button onClick={connectOneDrive} size="sm" variant="outline" className="gap-1.5">
-              <Plus className="h-4 w-4" />
-              Add Source
+            <Button
+              onClick={handleBackfillGps}
+              disabled={backfillingGps}
+              size="sm"
+              variant="outline"
+              className="gap-1.5"
+              title="Extract GPS from EXIF on photos that are missing coordinates"
+            >
+              <MapPin className={cn('h-4 w-4', backfillingGps && 'animate-pulse')} />
+              {backfillingGps ? 'Scanning…' : 'Backfill GPS'}
             </Button>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
           {loading ? (
             <div className="space-y-3">
-              <div className="h-12 bg-muted animate-pulse rounded" />
-              <div className="h-12 bg-muted animate-pulse rounded" />
+              <div className="h-14 bg-muted animate-pulse rounded-lg" />
+              <div className="h-14 bg-muted animate-pulse rounded-lg" />
             </div>
-          ) : sources.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-4 text-center">
-              No photo sources configured yet. Click &quot;Add Source&quot; to connect OneDrive.
-            </p>
           ) : (
-            <div className="space-y-3">
+            <>
               {sources.map((source) => (
-                <div key={source.id} className="flex items-center justify-between p-3 rounded-lg border">
-                  <div className="flex items-center gap-3">
-                    {source.type === 'onedrive' ? (
-                      <Cloud className="h-5 w-5 text-blue-500" />
-                    ) : (
-                      <HardDrive className="h-5 w-5 text-muted-foreground" />
-                    )}
-                    <div>
-                      <p className="font-medium text-sm">{source.name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {source.photoCount} photos
-                        {source.lastSynced && (
-                          <> &middot; Synced {new Date(source.lastSynced).toLocaleDateString()}</>
-                        )}
-                      </p>
+                <div key={source.id} className="space-y-0">
+                  <div className="flex items-center justify-between p-3 rounded-lg border">
+                    <div className="flex items-center gap-3 min-w-0">
+                      {source.type === 'onedrive'
+                        ? <Cloud className="h-5 w-5 text-blue-500 shrink-0" />
+                        : <HardDrive className="h-5 w-5 text-muted-foreground shrink-0" />}
+                      <div className="min-w-0">
+                        <p className="font-medium text-sm truncate">{source.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {source.photoCount} photos
+                          {source.lastSynced && <> · Synced {new Date(source.lastSynced).toLocaleDateString()}</>}
+                          {source.type === 'onedrive' && !source.onedriveFolderId && (
+                            <span className="text-amber-600 dark:text-amber-400"> · No folder selected</span>
+                          )}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    {source.type === 'onedrive' && source.onedriveFolderId && (
+                    <div className="flex items-center gap-1 shrink-0 ml-2">
+                      {source.type === 'onedrive' && (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openFolderPicker(source.id)}
+                            className="gap-1.5 text-xs h-8"
+                          >
+                            <FolderOpen className="h-3.5 w-3.5" />
+                            {source.onedriveFolderId ? 'Change' : 'Select folder'}
+                          </Button>
+                          {source.onedriveFolderId && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => handleSync(source.id)}
+                              disabled={syncing === source.id}
+                              title="Sync now"
+                            >
+                              <RefreshCw className={cn('h-4 w-4', syncing === source.id && 'animate-spin')} />
+                            </Button>
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => { window.location.href = '/api/auth/microsoft'; }}
+                            className="text-xs h-8 text-muted-foreground"
+                            title="Re-authenticate with Microsoft"
+                          >
+                            Reconnect
+                          </Button>
+                        </>
+                      )}
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => handleSync(source.id)}
-                        disabled={syncing === source.id}
-                        title="Sync now"
-                        aria-label="Sync photos"
+                        className="h-8 w-8"
+                        onClick={() => handleDelete(source.id)}
+                        title="Delete source"
                       >
-                        <RefreshCw className={cn('h-4 w-4', syncing === source.id && 'animate-spin')} />
+                        <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
-                    )}
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleDelete(source.id)}
-                      title="Delete source"
-                      aria-label="Delete source"
-                    >
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
+                    </div>
                   </div>
+
+                  {/* Inline folder browser */}
+                  {pickingFolder === source.id && (
+                    <div className="border border-t-0 rounded-b-lg bg-muted/20">
+                      {/* Breadcrumb bar */}
+                      <div className="flex items-center gap-1 px-3 py-2 border-b text-xs text-muted-foreground flex-wrap">
+                        <button
+                          onClick={() => { setFolderStack([]); }}
+                          className="hover:text-foreground font-medium transition-colors"
+                        >
+                          OneDrive
+                        </button>
+                        {folderStack.map((f, i) => (
+                          <React.Fragment key={f.id}>
+                            <ChevronRight className="h-3 w-3 shrink-0" />
+                            <button
+                              className="hover:text-foreground font-medium transition-colors"
+                              onClick={() => setFolderStack(folderStack.slice(0, i + 1))}
+                            >
+                              {f.name}
+                            </button>
+                          </React.Fragment>
+                        ))}
+                      </div>
+
+                      {/* "Use this folder" row — selects the current level */}
+                      <div className="px-3 py-2 border-b flex items-center justify-between">
+                        <span className="text-xs text-muted-foreground italic">
+                          {folderStack.length === 0 ? 'OneDrive root' : folderStack.at(-1)!.name}
+                        </span>
+                        <Button
+                          size="sm"
+                          className="h-7 text-xs gap-1"
+                          onClick={() => {
+                            const current = folderStack.at(-1);
+                            if (current) {
+                              handleSelectFolder(source.id, current.id, current.name);
+                            }
+                          }}
+                          disabled={folderStack.length === 0}
+                          title={folderStack.length === 0 ? 'Navigate into a folder first' : 'Use this folder'}
+                        >
+                          Use this folder
+                        </Button>
+                      </div>
+
+                      {/* Subfolder list — click to navigate in */}
+                      <div className="max-h-56 overflow-y-auto">
+                        {foldersLoading ? (
+                          <p className="text-xs text-muted-foreground p-3">Loading…</p>
+                        ) : folders.length === 0 ? (
+                          <p className="text-xs text-muted-foreground p-3">No subfolders</p>
+                        ) : (
+                          folders.map((f) => (
+                            <button
+                              key={f.id}
+                              onClick={() => setFolderStack((prev) => [...prev, { id: f.id, name: f.name }])}
+                              className="flex items-center justify-between w-full px-3 py-2 text-sm hover:bg-muted transition-colors text-left"
+                            >
+                              <span className="flex items-center gap-2">
+                                <FolderOpen className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                                {f.name}
+                              </span>
+                              <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+                            </button>
+                          ))
+                        )}
+                      </div>
+
+                      <div className="px-3 py-2 border-t">
+                        <button onClick={closeFolderPicker} className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
-            </div>
+
+              {/* Connect OneDrive CTA if no OneDrive source exists */}
+              {!sources.some((s) => s.type === 'onedrive') && (
+                <button
+                  onClick={() => { window.location.href = '/api/auth/microsoft'; }}
+                  className="flex items-center gap-3 w-full p-3 rounded-lg border border-dashed hover:bg-muted/50 transition-colors text-sm text-muted-foreground hover:text-foreground"
+                >
+                  <Cloud className="h-5 w-5 text-blue-500" />
+                  Connect OneDrive to sync photos
+                </button>
+              )}
+            </>
           )}
         </CardContent>
       </Card>

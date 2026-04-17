@@ -43,13 +43,24 @@ export async function GET(
 
     if (!pin) return NextResponse.json({ error: 'Pin not found' }, { status: 404 });
 
-    const pinLat = parseFloat(pin.latitude as unknown as string);
-    const pinLng = parseFloat(pin.longitude as unknown as string);
     const radiusKm = pin.photoRadiusKm
       ? parseFloat(pin.photoRadiusKm as unknown as string)
       : 50;
 
-    if (!pinLat && !pinLng) return NextResponse.json({ photos: [] });
+    // Collect anchor points: parent pin + all child pins (stops, national parks)
+    const childPins = await db
+      .select({ latitude: travelPins.latitude, longitude: travelPins.longitude })
+      .from(travelPins)
+      .where(eq(travelPins.parentId, id));
+
+    const anchorPoints = [
+      { lat: parseFloat(pin.latitude as unknown as string), lng: parseFloat(pin.longitude as unknown as string) },
+      ...childPins
+        .map((c) => ({ lat: parseFloat(c.latitude as unknown as string), lng: parseFloat(c.longitude as unknown as string) }))
+        .filter((c) => c.lat || c.lng),
+    ].filter((a) => a.lat || a.lng);
+
+    if (anchorPoints.length === 0) return NextResponse.json({ photos: [] });
 
     // Fetch all geotagged photos — Haversine filter in JS (fine for home-scale libraries)
     const geoPhotos = await db
@@ -70,7 +81,8 @@ export async function GET(
       .filter((p) => {
         const pLat = parseFloat(p.latitude as unknown as string);
         const pLng = parseFloat(p.longitude as unknown as string);
-        return haversineKm(pinLat, pinLng, pLat, pLng) <= radiusKm;
+        // Match if within radius of ANY anchor point (parent or child pin)
+        return anchorPoints.some((a) => haversineKm(a.lat, a.lng, pLat, pLng) <= radiusKm);
       })
       .sort((a, b) => {
         // Most recent first
@@ -89,7 +101,7 @@ export async function GET(
         height: p.height,
       }));
 
-    return NextResponse.json({ photos: nearby, total: nearby.length, radiusKm });
+    return NextResponse.json({ photos: nearby, total: nearby.length, radiusKm, anchors: anchorPoints.length });
   } catch (error) {
     logError('Error fetching nearby photos:', error);
     return NextResponse.json({ error: 'Failed to fetch nearby photos' }, { status: 500 });

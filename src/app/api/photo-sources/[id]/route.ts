@@ -20,6 +20,7 @@ export async function PATCH(
     const updates: Record<string, unknown> = { updatedAt: new Date() };
     if (typeof body.name === 'string') updates.name = body.name;
     if (typeof body.enabled === 'boolean') updates.enabled = body.enabled;
+    if (typeof body.onedriveFolderId === 'string') updates.onedriveFolderId = body.onedriveFolderId;
 
     const [updated] = await db
       .update(photoSources)
