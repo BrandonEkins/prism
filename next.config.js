@@ -29,6 +29,7 @@ const withPWA = require('next-pwa')({
 const nextConfig = {
   output: 'standalone',
   reactStrictMode: true,
+  serverExternalPackages: ['undici'],
 
   images: {
     remotePatterns: [
@@ -62,6 +63,9 @@ const nextConfig = {
   },
 
   webpack: (config, { isServer }) => {
+    if (isServer) {
+      config.externals = [...(Array.isArray(config.externals) ? config.externals : [config.externals].filter(Boolean)), 'undici'];
+    }
     return config;
   },
 

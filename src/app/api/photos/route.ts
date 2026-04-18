@@ -6,6 +6,19 @@ import { eq, desc, sql, and, like } from 'drizzle-orm';
 import { savePhoto } from '@/lib/services/photo-storage';
 import { PHOTO_MAX_SIZE_MB, PHOTO_ALLOWED_TYPES } from '@/lib/constants';
 import { validateMagicBytes } from '@/lib/utils/validateFileType';
+import exifr from 'exifr';
+
+async function extractGps(buffer: Buffer): Promise<{ latitude: string; longitude: string } | null> {
+  try {
+    const gps = await exifr.gps(buffer);
+    if (gps?.latitude != null && gps?.longitude != null) {
+      return { latitude: gps.latitude.toString(), longitude: gps.longitude.toString() };
+    }
+  } catch {
+    // No EXIF or no GPS — not an error
+  }
+  return null;
+}
 import { getCached } from '@/lib/cache/redis';
 import { invalidateEntity } from '@/lib/cache/cacheKeys';
 import { rateLimitGuard } from '@/lib/cache/rateLimit';
@@ -121,6 +134,7 @@ export async function POST(request: NextRequest) {
     const filename = `${crypto.randomUUID()}.${ext}`;
 
     const result = await savePhoto(buffer, filename);
+    const gps = await extractGps(buffer);
 
     // Auto-detect orientation from dimensions
     let orientation: 'landscape' | 'portrait' | 'square' | undefined;
@@ -142,6 +156,8 @@ export async function POST(request: NextRequest) {
         sizeBytes: result.sizeBytes,
         thumbnailPath: result.thumbnailPath,
         orientation,
+        latitude: gps?.latitude ?? null,
+        longitude: gps?.longitude ?? null,
       })
       .returning();
 

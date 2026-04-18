@@ -37,6 +37,8 @@ function formatPin(row: typeof travelPins.$inferSelect & {
     stops: (row.stops as string[]) || [],
     nationalParks: (row.nationalParks as string[]) || [],
     parentId: row.parentId,
+    tripId: row.tripId,
+    isHub: row.isHub,
     pinType: row.pinType,
     photoRadiusKm: row.photoRadiusKm ? parseFloat(row.photoRadiusKm as unknown as string) : 50,
     createdBy: row.createdBy ? { id: row.createdBy, name: row.createdByName, color: row.createdByColor } : null,
@@ -64,6 +66,8 @@ const updatePinSchema = z.object({
   nationalParks: z.array(z.string()).optional(),
   pinType: z.enum(['location', 'stop', 'national_park']).optional(),
   photoRadiusKm: z.number().min(0).max(500).optional(),
+  tripId: z.string().uuid().nullable().optional(),
+  isHub: z.boolean().optional(),
   sortOrder: z.number().int().optional(),
 });
 
@@ -106,6 +110,8 @@ export async function PATCH(
     if (d.nationalParks !== undefined) updates.nationalParks = d.nationalParks;
     if (d.pinType !== undefined) updates.pinType = d.pinType;
     if (d.photoRadiusKm !== undefined) updates.photoRadiusKm = d.photoRadiusKm.toString();
+    if (d.tripId !== undefined) updates.tripId = d.tripId;
+    if (d.isHub !== undefined) updates.isHub = d.isHub;
     if (d.sortOrder !== undefined) updates.sortOrder = d.sortOrder;
     updates.updatedAt = new Date();
 

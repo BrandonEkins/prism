@@ -23,6 +23,7 @@ export interface OneDriveItem {
   image?: { width: number; height: number };
   size: number;
   photo?: { takenDateTime?: string };
+  location?: { latitude?: number; longitude?: number; altitude?: number };
   folder?: { childCount: number };
   '@microsoft.graph.downloadUrl'?: string;
 }
@@ -110,9 +111,10 @@ export async function listFolders(
     ? `/me/drive/items/${parentId}/children`
     : '/me/drive/root/children';
 
-  const response = await fetch(`${GRAPH_API}${itemPath}?$filter=folder ne null`, {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  });
+  const response = await fetch(
+    `${GRAPH_API}${itemPath}?$select=id,name,folder&$top=100`,
+    { headers: { Authorization: `Bearer ${accessToken}` } }
+  );
 
   if (!response.ok) {
     const error = await response.text();
@@ -120,7 +122,8 @@ export async function listFolders(
   }
 
   const data = await response.json();
-  return data.value || [];
+  // Filter client-side — server-side $filter on folder facet causes a full index scan
+  return (data.value || []).filter((item: OneDriveItem) => item.folder != null);
 }
 
 export async function listPhotosInFolder(
@@ -129,7 +132,7 @@ export async function listPhotosInFolder(
 ): Promise<OneDriveItem[]> {
   const allPhotos: OneDriveItem[] = [];
   let nextLink: string | null =
-    `${GRAPH_API}/me/drive/items/${folderId}/children?$filter=file ne null&$top=200`;
+    `${GRAPH_API}/me/drive/items/${folderId}/children?$filter=file ne null&$top=200&$select=id,name,file,image,size,photo,location,@microsoft.graph.downloadUrl`;
 
   while (nextLink) {
     const url: string = nextLink;

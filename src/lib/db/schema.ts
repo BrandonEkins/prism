@@ -1065,6 +1065,11 @@ export const photos = pgTable('photos', {
   latitude: decimal('latitude', { precision: 9, scale: 6 }),
   longitude: decimal('longitude', { precision: 10, scale: 6 }),
 
+  // When true: no local file — served by proxying through OneDrive on demand.
+  // filename stores the OneDrive item ID. Used for camera-roll sources where we
+  // record GPS metadata without downloading every photo.
+  isExternal: boolean('is_external').default(false).notNull(),
+
   createdAt: timestamp('created_at').defaultNow().notNull(),
 }, (table) => ({
   sourceIdIdx: index('photos_source_id_idx').on(table.sourceId),
@@ -1382,6 +1387,44 @@ export const wishItemSourcesRelations = relations(wishItemSources, ({ one, many 
 
 // ─── TRAVEL MAP ────────────────────────────────────────────────────────────────
 
+// A trip groups multiple pin stops into a single journey.
+// Hub/spoke trips designate one stop as the home base (isHub=true on the pin).
+// Route/loop trips draw a polyline through stops in sortOrder order.
+export const travelTrips = pgTable('travel_trips', {
+  id: uuid('id').defaultRandom().primaryKey(),
+
+  name: varchar('name', { length: 255 }).notNull(),
+  description: text('description'),
+
+  // How stops are connected on the map
+  tripStyle: varchar('trip_style', { length: 20 }).notNull()
+    .$type<'route' | 'loop' | 'hub'>(),
+
+  status: varchar('status', { length: 20 }).notNull().default('want_to_go')
+    .$type<'want_to_go' | 'been_there'>(),
+
+  isBucketList: boolean('is_bucket_list').default(false).notNull(),
+
+  color: varchar('color', { length: 7 }),
+  emoji: varchar('emoji', { length: 10 }),
+
+  visitedDate: date('visited_date'),
+  visitedEndDate: date('visited_end_date'),
+  year: integer('year'),
+
+  memberIds: jsonb('member_ids').default([]).notNull().$type<string[]>(),
+  tags: jsonb('tags').default([]).notNull().$type<string[]>(),
+
+  sortOrder: integer('sort_order').default(0).notNull(),
+
+  createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => ({
+  yearIdx: index('travel_trips_year_idx').on(table.year),
+}));
+
+
 export const travelPins = pgTable('travel_pins', {
   id: uuid('id').defaultRandom().primaryKey(),
 
@@ -1425,10 +1468,16 @@ export const travelPins = pgTable('travel_pins', {
   // National Parks / Monuments visited at this location
   nationalParks: jsonb('national_parks').$type<string[]>().default([]).notNull(),
 
-  // Parent pin (for stops and national park sub-pins); FK enforced in migration
+  // Parent pin (for NP/attraction sub-pins only); FK enforced in migration
   parentId: uuid('parent_id'),
 
-  // Pin kind: 'location' (root), 'stop' (stop/city within a trip), 'national_park'
+  // Trip this stop belongs to (route/loop/hub trips); null = standalone pin
+  tripId: uuid('trip_id').references(() => travelTrips.id, { onDelete: 'cascade' }),
+
+  // True on the home-base stop in a hub-style trip
+  isHub: boolean('is_hub').default(false).notNull(),
+
+  // Pin kind: 'location' (root), 'stop' (child of parent or trip stop), 'national_park'
   pinType: varchar('pin_type', { length: 20 }).notNull().default('location')
     .$type<'location' | 'stop' | 'national_park'>(),
 
@@ -1444,6 +1493,7 @@ export const travelPins = pgTable('travel_pins', {
 }, (table) => ({
   yearIdx: index('travel_pins_year_idx').on(table.year),
   parentIdIdx: index('travel_pins_parent_id_idx').on(table.parentId),
+  tripIdIdx: index('travel_pins_trip_id_idx').on(table.tripId),
 }));
 
 
@@ -1471,6 +1521,14 @@ export const travelPinPhotos = pgTable('travel_pin_photos', {
 
 
 
+export const travelTripsRelations = relations(travelTrips, ({ one, many }) => ({
+  createdByUser: one(users, {
+    fields: [travelTrips.createdBy],
+    references: [users.id],
+  }),
+  stops: many(travelPins),
+}));
+
 export const travelPinsRelations = relations(travelPins, ({ one, many }) => ({
   createdByUser: one(users, {
     fields: [travelPins.createdBy],
@@ -1482,6 +1540,10 @@ export const travelPinsRelations = relations(travelPins, ({ one, many }) => ({
     relationName: 'childPins',
   }),
   children: many(travelPins, { relationName: 'childPins' }),
+  trip: one(travelTrips, {
+    fields: [travelPins.tripId],
+    references: [travelTrips.id],
+  }),
   pinPhotos: many(travelPinPhotos),
 }));
 

@@ -45,23 +45,26 @@ export async function GET(request: Request) {
     const encryptedRefreshToken = tokens.refresh_token ? encrypt(tokens.refresh_token) : null;
 
     const [existing] = await db.select().from(photoSources).where(eq(photoSources.type, 'onedrive')).limit(1);
+    let sourceId: string;
     if (existing) {
       await db.update(photoSources).set({
         accessToken: encryptedAccessToken,
         refreshToken: encryptedRefreshToken || existing.refreshToken,
         tokenExpiresAt,
       }).where(eq(photoSources.id, existing.id));
+      sourceId = existing.id;
     } else {
-      await db.insert(photoSources).values({
+      const [created] = await db.insert(photoSources).values({
         type: 'onedrive',
         name: sourceName,
         accessToken: encryptedAccessToken,
         refreshToken: encryptedRefreshToken,
         tokenExpiresAt,
-      });
+      }).returning();
+      sourceId = created?.id ?? '';
     }
 
-    return NextResponse.redirect(`${BASE_URL}/settings?section=connections&success=onedrive_connected`);
+    return NextResponse.redirect(`${BASE_URL}/settings?section=photos&success=onedrive_connected&sourceId=${sourceId}`);
   } catch (error) {
     logError('Microsoft OAuth callback error:', error);
     return NextResponse.redirect(`${BASE_URL}/settings?section=connections&error=microsoft_auth_failed`);
