@@ -2,7 +2,7 @@ import {
   Home,
   Calendar,
   CheckSquare,
-  ClipboardList,
+  ListChecks,
   Trophy,
   ShoppingCart,
   UtensilsCrossed,
@@ -12,7 +12,7 @@ import {
   Gift,
   Baby,
   Globe,
-  Backpack,
+  Trees,
   Settings,
 } from 'lucide-react';
 
@@ -27,7 +27,7 @@ export const ALL_NAV_ITEMS: NavItem[] = [
   { label: 'Dashboard', href: '/', icon: Home },
   { label: 'Calendar', href: '/calendar', icon: Calendar },
   { label: 'Tasks', href: '/tasks', icon: CheckSquare },
-  { label: 'Chores', href: '/chores', icon: ClipboardList },
+  { label: 'Chores', href: '/chores', icon: ListChecks },
   { label: 'Goals', href: '/goals', icon: Trophy },
   { label: 'Shopping', href: '/shopping', icon: ShoppingCart },
   { label: 'Meals', href: '/meals', icon: UtensilsCrossed },
@@ -37,7 +37,7 @@ export const ALL_NAV_ITEMS: NavItem[] = [
   { label: 'Wishes', href: '/wishes', icon: Gift },
   { label: 'Babysitter', href: '/babysitter', icon: Baby },
   { label: 'Travel', href: '/travel', icon: Globe },
-  { label: 'Weekend', href: '/weekend', icon: Backpack },
+  { label: 'Weekend', href: '/weekend', icon: Trees },
   { label: 'Settings', href: '/settings', icon: Settings },
 ];
 
