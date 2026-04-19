@@ -9,6 +9,7 @@ import { useAuth } from '@/components/providers';
 import { toast } from '@/components/ui/use-toast';
 import { useConfirmDialog } from '@/lib/hooks/useConfirmDialog';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { PageWrapper } from '@/components/layout/PageWrapper';
 import { useWeekendData, WeekendAuthError } from './useWeekendData';
 import { WeekendPlaceGrid } from './components/WeekendPlaceGrid';
 import { WeekendPlaceDetail } from './components/WeekendPlaceDetail';
@@ -126,6 +127,7 @@ export function WeekendView() {
   const panelOpen = overlayMode !== 'none';
 
   return (
+    <PageWrapper>
     <div className="h-screen flex flex-col">
       {/* Toolbar */}
       <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border bg-background/80 backdrop-blur shrink-0 flex-wrap">
@@ -245,5 +247,6 @@ export function WeekendView() {
 
       <ConfirmDialog {...dialogProps} />
     </div>
+    </PageWrapper>
   );
 }
