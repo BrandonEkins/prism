@@ -8,6 +8,18 @@ All notable changes to Prism are documented in this file.
 
 ### Features
 - **Weekend Ideas**: New `/weekend` page — a family activity board for local places to visit. Add places to a backlog, mark them visited with a 1–5 star rating, flag favorites, and tag them (outdoor, nature, hike, food, museum, farm, etc.). Visit frequency shown as pip dots grouped in 5s. Filters for status, favorites, tags, and search. Side-panel detail view with edit, mark-visited, and favorite actions. Phase 2 (POI search + map) coming next.
+- **Weekend Ideas — group by tag**: Place cards are grouped into tag-category sections (emoji header + count) so you can scan by activity type at a glance. Untagged items fall into an "Other" bucket.
+- **Travel Map — GPS photo linking**: Geotagged OneDrive photos are automatically matched to nearby travel pins. The pin detail panel shows a photo strip of matching shots within a configurable radius (default 50 km). Photos can be browsed via a lightbox.
+- **Travel Map — re-locate pin**: Pencil icon next to a pin's coordinates opens an inline geocode search — search for a new location and pick a result to update the pin's lat/lng and place name in place (fixes pins dropped in the wrong location).
+
+### Bug Fixes
+- **Travel Map — globe longitude drift**: Rotation formula now normalizes center longitude to −180..180 — fixes pins appearing in wrong ocean locations (e.g., Gulf of Mexico instead of Sanibel Island) due to accumulated coordinate drift.
+- **Travel Map — far-side pin culling**: Hidden pins now use a CSS class with `!important` flags so MapLibre styles can't override visibility — fixes pins remaining visible behind the Earth.
+- **Weekend — side nav missing**: WeekendView was missing its `<PageWrapper>` wrapper, causing the side nav to disappear when navigating to the Weekend page.
+
+### Improved
+- **Nav icons**: Chores icon changed to `ListChecks` (multi-check) to better differentiate from Tasks (`CheckSquare`); Weekend icon changed to `Trees`.
+- **Travel Map — globe initial zoom**: Default zoom adjusted so the Earth nearly fills the screen on load.
 
 ## [1.4.0] – 2026-04-18
 
