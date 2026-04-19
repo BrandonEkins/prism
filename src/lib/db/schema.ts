@@ -1558,3 +1558,78 @@ export const travelPinPhotosRelations = relations(travelPinPhotos, ({ one }) => 
   }),
 }));
 
+// ── Weekend Ideas ─────────────────────────────────────────────────────────────
+
+export const weekendPlaces = pgTable('weekend_places', {
+  id: uuid('id').defaultRandom().primaryKey(),
+
+  name: varchar('name', { length: 255 }).notNull(),
+  description: text('description'),
+
+  latitude: decimal('latitude', { precision: 9, scale: 6 }),
+  longitude: decimal('longitude', { precision: 10, scale: 6 }),
+  placeName: varchar('place_name', { length: 255 }),
+  address: varchar('address', { length: 500 }),
+  url: varchar('url', { length: 1000 }),
+
+  status: varchar('status', { length: 20 }).notNull().default('backlog')
+    .$type<'backlog' | 'visited'>(),
+  isFavorite: boolean('is_favorite').default(false).notNull(),
+  rating: integer('rating'),
+
+  notes: text('notes'),
+  tags: jsonb('tags').default([]).notNull().$type<string[]>(),
+
+  sourceProvider: varchar('source_provider', { length: 20 })
+    .$type<'mapbox' | 'nominatim' | 'manual'>(),
+  sourceId: varchar('source_id', { length: 100 }),
+
+  // Denormalized from weekend_visits for fast sorting/display
+  lastVisitedDate: varchar('last_visited_date', { length: 10 }),
+  visitCount: integer('visit_count').default(0).notNull(),
+
+  createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => ({
+  statusIdx: index('weekend_places_status_idx').on(table.status),
+  favoriteIdx: index('weekend_places_favorite_idx').on(table.isFavorite),
+  lastVisitedIdx: index('weekend_places_last_visited_idx').on(table.lastVisitedDate),
+}));
+
+export const weekendVisits = pgTable('weekend_visits', {
+  id: uuid('id').defaultRandom().primaryKey(),
+
+  placeId: uuid('place_id')
+    .references(() => weekendPlaces.id, { onDelete: 'cascade' })
+    .notNull(),
+  visitedBy: uuid('visited_by').references(() => users.id, { onDelete: 'set null' }),
+
+  visitedOn: varchar('visited_on', { length: 10 }).notNull(),
+  rating: integer('rating'),
+  notes: text('notes'),
+
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (table) => ({
+  placeVisitIdx: index('weekend_visits_place_id_idx').on(table.placeId, table.visitedOn),
+}));
+
+export const weekendPlacesRelations = relations(weekendPlaces, ({ one, many }) => ({
+  createdByUser: one(users, {
+    fields: [weekendPlaces.createdBy],
+    references: [users.id],
+  }),
+  visits: many(weekendVisits),
+}));
+
+export const weekendVisitsRelations = relations(weekendVisits, ({ one }) => ({
+  place: one(weekendPlaces, {
+    fields: [weekendVisits.placeId],
+    references: [weekendPlaces.id],
+  }),
+  visitedByUser: one(users, {
+    fields: [weekendVisits.visitedBy],
+    references: [users.id],
+  }),
+}));
+
