@@ -4,6 +4,11 @@ All notable changes to Prism are documented in this file.
 
 ## [Unreleased]
 
+## [1.5.0] – 2026-04-19
+
+### Features
+- **Weekend Ideas**: New `/weekend` page — a family activity board for local places to visit. Add places to a backlog, mark them visited with a 1–5 star rating, flag favorites, and tag them (outdoor, nature, hike, food, museum, farm, etc.). Visit frequency shown as pip dots grouped in 5s. Filters for status, favorites, tags, and search. Side-panel detail view with edit, mark-visited, and favorite actions. Phase 2 (POI search + map) coming next.
+
 ## [1.4.0] – 2026-04-18
 
 ### Features
