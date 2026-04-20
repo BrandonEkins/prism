@@ -197,9 +197,6 @@ export function ShoppingView() {
                       </Button>
                     );
                   })}
-                  <Button variant="outline" size="sm" className="border-dashed" onClick={handleNewList}>
-                    <Plus className="h-3 w-3 mr-1" />New List
-                  </Button>
                 </div>
               </div>
             </div>
