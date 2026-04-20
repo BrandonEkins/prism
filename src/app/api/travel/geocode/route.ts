@@ -8,6 +8,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getDisplayAuth } from '@/lib/auth';
+import { rateLimitGuard } from '@/lib/cache/rateLimit';
 import { logError } from '@/lib/utils/logError';
 
 interface NominatimResult {
@@ -47,6 +48,9 @@ function shortDisplayName(result: NominatimResult): string {
 export async function GET(request: NextRequest) {
   const auth = await getDisplayAuth();
   if (!auth) return NextResponse.json({ results: [] });
+
+  const limited = await rateLimitGuard(auth.userId, 'geocode', 10, 60);
+  if (limited) return limited;
 
   const { searchParams } = new URL(request.url);
   const rawQ = searchParams.get('q');
@@ -107,13 +111,17 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    const results = data.map((item) => ({
-      placeId: item.place_id,
-      displayName: shortDisplayName(item),
-      fullName: item.display_name,
-      latitude: parseFloat(item.lat),
-      longitude: parseFloat(item.lon),
-    }));
+    const results = data
+      .map((item) => ({
+        placeId: item.place_id,
+        displayName: shortDisplayName(item),
+        fullName: item.display_name,
+        latitude: parseFloat(item.lat),
+        longitude: parseFloat(item.lon),
+      }))
+      .filter(r => isFinite(r.latitude) && isFinite(r.longitude) &&
+        r.latitude >= -90 && r.latitude <= 90 &&
+        r.longitude >= -180 && r.longitude <= 180);
 
     return NextResponse.json({ results });
   } catch (error) {

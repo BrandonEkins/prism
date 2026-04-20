@@ -35,10 +35,16 @@ export function useShoppingCategories() {
         const data = await response.json();
         const saved = data.settings?.shoppingCategories;
         if (Array.isArray(saved) && saved.length > 0) {
-          // Ensure default presets are always present; saved list may have customizations or extra categories
-          const savedIds = new Set(saved.map((c: ShoppingCategoryDef) => c.id));
+          // Filter to well-formed objects only, then backfill any missing defaults
+          const valid = saved.filter(
+            (c: unknown): c is ShoppingCategoryDef =>
+              typeof c === 'object' && c !== null &&
+              typeof (c as ShoppingCategoryDef).id === 'string' &&
+              typeof (c as ShoppingCategoryDef).name === 'string'
+          );
+          const savedIds = new Set(valid.map(c => c.id));
           const missingDefaults = ALL_DEFAULT_CATEGORIES.filter(c => !savedIds.has(c.id));
-          setCategories([...missingDefaults, ...saved]);
+          setCategories([...missingDefaults, ...valid]);
         }
       }
     } catch {
