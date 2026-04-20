@@ -1,0 +1,73 @@
+name: Track Traffic Stats
+
+on:
+  schedule:
+    - cron: '0 2 * * *'   # 2am UTC daily
+  workflow_dispatch:        # allow manual trigger
+
+jobs:
+  traffic:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch traffic data from GitHub API
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api repos/${{ github.repository }}/traffic/views    > /tmp/views.json
+          gh api repos/${{ github.repository }}/traffic/clones   > /tmp/clones.json
+          gh api repos/${{ github.repository }}/traffic/referrers > /tmp/referrers.json
+
+      - name: Merge into history
+        run: |
+          python3 << 'PYEOF'
+          import json, os
+          from datetime import datetime, timezone
+
+          def load(path, default):
+              if os.path.exists(path):
+                  with open(path) as f:
+                      return json.load(f)
+              return default
+
+          history = load('traffic/history.json', {
+              'views': {},
+              'clones': {},
+              'referrers': [],
+              'updated_at': None,
+          })
+
+          # Merge views — keyed by YYYY-MM-DD, newer run wins
+          for day in json.load(open('/tmp/views.json')).get('views', []):
+              date = day['timestamp'][:10]
+              history['views'][date] = {'count': day['count'], 'uniques': day['uniques']}
+
+          # Merge clones
+          for day in json.load(open('/tmp/clones.json')).get('clones', []):
+              date = day['timestamp'][:10]
+              history['clones'][date] = {'count': day['count'], 'uniques': day['uniques']}
+
+          # Referrers — always replace with latest (they're a rolling 14-day window)
+          history['referrers'] = json.load(open('/tmp/referrers.json'))
+          history['updated_at'] = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+
+          os.makedirs('traffic', exist_ok=True)
+          with open('traffic/history.json', 'w') as f:
+              json.dump(history, f, indent=2, sort_keys=True)
+
+          total_views   = sum(d['count']   for d in history['views'].values())
+          total_uniques = sum(d['uniques'] for d in history['views'].values())
+          print(f"Days tracked: {len(history['views'])}  |  Total views: {total_views}  |  Total unique: {total_uniques}")
+          PYEOF
+
+      - name: Commit if changed
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add traffic/
+          git diff --staged --quiet || git commit -m "chore: traffic stats $(date -u +%Y-%m-%d)"
+          git push
