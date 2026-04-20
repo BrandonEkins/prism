@@ -4,6 +4,13 @@ All notable changes to Prism are documented in this file.
 
 ## [Unreleased]
 
+## [1.5.1] – 2026-04-19
+
+### Bug Fixes
+- **Shopping — category colors missing**: Grocery categories (produce, bakery, meat, dairy, frozen, pantry) were silently stripped from saved settings, causing list cards to render grey with no color and no Add Item button. Restored full category list in DB and made the hook backfill any missing defaults on load so this can't recur.
+- **Shopping — category validation**: API rejected items added to general lists (Target, etc.) with non-grocery categories (clothes, housewares, etc.) because the Zod schema used a closed enum. Changed to `z.string()` to match the open-ended category system.
+- **Shopping — duplicate New List button**: Removed the redundant New List button from the list tabs toolbar; the one in the top-right header is sufficient.
+
 ## [1.5.0] – 2026-04-19
 
 ### Features
