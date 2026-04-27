@@ -275,15 +275,14 @@
     transition-duration: 150ms !important;
   }
 
-  /* When backdrop-blur is disabled, semi-transparent surfaces look washed out.
-   * Force full opacity on UI chrome so text/icons remain visible. */
-  html.performance-mode .bg-card\/95,
-  html.performance-mode .bg-card\/85,
-  html.performance-mode .bg-background\/95,
-  html.performance-mode .bg-background\/80 {
-    background-color: hsl(var(--card)) !important;
-    opacity: 1 !important;
-  }
+  /* Note: an earlier version of this stylesheet forced semi-transparent
+   * surfaces to opaque hsl(var(--card)) "to keep text/icons visible" once
+   * backdrop-blur was disabled. In light mode that resolves to solid white
+   * and made data text (charts, muted secondary copy) blend into the
+   * background while chrome (titles, icons) stayed visible — i.e., the
+   * widget bodies looked white-blanked. Dropped: translucent surfaces are
+   * fine without blur, they just show a faint wallpaper bleed-through,
+   * which is the original design. */
 }
 
 @keyframes cart-ride {
