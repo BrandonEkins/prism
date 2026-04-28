@@ -60,9 +60,13 @@ A Playwright suite that boots nginx in front of the app with a self-signed cert,
 
 Scaffolding pattern: extend `playwright.config.ts` with a project that uses the nginx fixture; provide an nginx config in `tests/fixtures/nginx/`; spin up via Docker before tests, tear down after.
 
-### 2. `tests/e2e/visual-regression.spec.ts`
+### 2. `e2e/visual-regression.spec.ts` (scaffold landed; baselines TODO)
 
-Playwright screenshot diff over: dashboard (default + perf-mode), calendar (light + dark), settings sections, screensaver, and key modals (PIN entry, AddEventModal). Snapshot-as-baseline pattern; failures require explicit re-baseline. Catches dark-mode contrast, stacking-context bugs, and accidental layout regressions.
+Spec exists. Covers dashboard (default + perf-mode), calendar, settings, login landing, and the PIN modal — all in light + dark themes. **No baselines committed yet** because of a hard PII constraint: visual baselines from a live deployment capture real names, calendar events, photos, weather city, and other personal data — `CLAUDE.md` PII policy forbids committing those.
+
+**Hard requirement to enable**: a **synthetic-seed test database** with anonymized fixtures (`Alice/Bob/Carol/Dan` family members, fixture wallpaper, fictional events, fictional weather location). Capture baselines only against that. Until that synthetic seed exists, the entire spec auto-skips when run without the `E2E_HAS_TEST_DB=1` env flag.
+
+Subtask: `e2e/seeds/synthetic.sql` (or similar) — fully anonymized DB seed for visual-regression baseline capture. Pairs with this spec.
 
 ### 3. `scripts/test-migration-replay.sh`
 
