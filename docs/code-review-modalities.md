@@ -24,6 +24,7 @@ Real Prism bugs in this class that survived adversarial review and were caught b
 | Toolbar icons invisible under wallpaper z-index in perf mode | Render |
 | `/api/family` POST blocked initial setup wizard | User-flow |
 | Auto-hide UI making toolbar appear "broken" | User-flow |
+| Real first names ("Alex"/"Jamie") in `formatters.test.ts` fixtures | Cross-artifact (PII) |
 
 The fix is **not "more adversarial review."** A 50-LLM panel and a 5-LLM panel are reading the same input. Making reviewers stricter doesn't add modalities; it sharpens the one modality already in use. The structural blind spot remains.
 
@@ -41,6 +42,7 @@ For any non-trivial change, the relevant modalities below must sign off before t
 | Reverse-proxy deployment | HTTPS detection, secure cookie handling, `x-forwarded-proto`-dependent code | `tests/e2e/reverse-proxy.spec.ts` *(to be added — see below)* |
 | Migration replay | Idempotency, recovery from partial failure | `scripts/test-migration-replay.sh` *(to be added — see below)* |
 | Visual regression | Color contrast, layout regressions across themes, accidental rendering changes | `tests/e2e/visual-regression.spec.ts` *(to be added — see below)* |
+| PII denylist scan | Real names / addresses / phones in fixtures that look fictional but aren't | `scripts/scan-pii.sh` *(to be added — see below)* |
 
 ## Operational rules
 
@@ -74,7 +76,27 @@ Boot a fresh DB container, apply all migrations, apply them a second time, asser
 
 ### 4. CI integration
 
-Wire `scripts/test-fresh-install.sh`, `scripts/test-migration-replay.sh`, the reverse-proxy spec, and the visual-regression spec into `.github/workflows/` on every PR. Currently only `jest` and `playwright test` defaults run; the modality-specific suites need explicit invocations.
+Wire `scripts/test-fresh-install.sh`, `scripts/test-migration-replay.sh`, the reverse-proxy spec, the visual-regression spec, and the PII scan (#5 below) into `.github/workflows/` on every PR. Currently only `jest` and `playwright test` defaults run; the modality-specific suites need explicit invocations.
+
+### 5. `scripts/scan-pii.sh` (cross-artifact-shape)
+
+A pre-commit / pre-push grep that fails if any tracked file contains items from a known-personal denylist. Catches the class of leak that surfaced in `formatters.test.ts` (fictional-looking test fixture that actually used real first names from the maintainer's family).
+
+The denylist itself is private — committed values would defeat the purpose. Approach:
+
+- The script reads the denylist from a path outside the repo (e.g. `~/.config/prism-pii-denylist.txt`, one entry per line, gitignored even if accidentally placed in the repo).
+- Each entry is matched as a whole word (`grep -w`) against tracked files only (`git ls-files | xargs ...`).
+- Exits non-zero on any match, prints offending file:line.
+- Wired as a Husky `pre-push` hook so it runs before publication, not on every save.
+
+Categories to populate the denylist with (each maintainer customizes):
+- Real first/last names of household members
+- Real street addresses, school names, employer names
+- Real phone numbers (anything not in the `555-01xx` reserved-for-fiction range)
+- Real email addresses other than the maintainer's public commit identity
+- Real GPS coordinates the maintainer has personally visited (for the travel feature)
+
+Why this catches what LLM review misses: an LLM has no way of knowing whether `'Alex'` is fictional or refers to the maintainer's spouse. A maintainer-curated denylist closes that gap with one grep. Cheap, deterministic, and survives changes to who's reviewing.
 
 ## Background
 
