@@ -72,7 +72,7 @@ describe('formatMessageRow', () => {
     expiresAt: new Date('2026-03-01T00:00:00Z'),
     createdAt: new Date('2026-02-20T12:00:00Z'),
     authorId: 'user-1',
-    authorName: 'Jamie',
+    authorName: 'Jordan',
     authorColor: '#EC4899',
     authorAvatar: null,
   };
@@ -81,7 +81,7 @@ describe('formatMessageRow', () => {
     const result = formatMessageRow(baseRow);
     expect(result.author).toEqual({
       id: 'user-1',
-      name: 'Jamie',
+      name: 'Jordan',
       color: '#EC4899',
       avatarUrl: null,
     });
@@ -151,12 +151,12 @@ describe('formatMealRow', () => {
     const result = formatMealRow({
       ...baseRow,
       cookedByUserId: 'user-2',
-      cookedByUserName: 'Jamie',
+      cookedByUserName: 'Jordan',
       cookedByUserColor: '#EC4899',
     });
     expect(result.cookedBy).toEqual({
       id: 'user-2',
-      name: 'Jamie',
+      name: 'Jordan',
       color: '#EC4899',
     });
   });
