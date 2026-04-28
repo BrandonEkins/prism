@@ -1,21 +1,20 @@
 'use client';
 
-import Link from 'next/link';
 import { Zap } from 'lucide-react';
 import { usePerformanceMode } from '@/lib/hooks/usePerformanceMode';
 
 export function PerformanceModeBadge() {
-  const { enabled } = usePerformanceMode();
+  const { enabled, setEnabled } = usePerformanceMode();
   if (!enabled) return null;
 
   return (
-    <Link
-      href="/settings"
+    <button
+      onClick={() => setEnabled(false)}
       className="p-2 rounded-md hover:bg-accent transition-colors text-muted-foreground"
-      aria-label="Performance Mode active — open Settings to change"
-      title="Performance Mode active"
+      aria-label="Performance Mode active — click to turn off"
+      title="Performance Mode active — click to turn off"
     >
       <Zap className="h-4 w-4" />
-    </Link>
+    </button>
   );
 }
