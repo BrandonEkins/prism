@@ -42,6 +42,17 @@ export function useCalendarViewData() {
     localStorage.setItem('prism-calendar-bordered', String(weeksBordered));
   }, [weeksBordered]);
 
+  const [displayMode, setDisplayMode] = useState<'inline' | 'cards'>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('prism-calendar-display-mode') === 'cards' ? 'cards' : 'inline';
+    }
+    return 'inline';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('prism-calendar-display-mode', displayMode);
+  }, [displayMode]);
+
   const { selectedCalendarIds, toggleCalendar, filterEvents, calendarGroups } = useCalendarFilter();
   const { events: apiEvents, loading, error, refresh: refreshEvents } = useCalendarEvents({ daysToShow: 60 });
 
@@ -125,6 +136,7 @@ export function useCalendarViewData() {
     toggleCalendar,
     mergedView, setMergedView,
     weeksBordered, setWeeksBordered,
+    displayMode, setDisplayMode,
     events, loading, error, refreshEvents,
     goToToday, goToPrevious, goToNext, getDateRangeTitle,
   };

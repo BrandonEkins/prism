@@ -19,6 +19,7 @@ import {
   Loader2,
   Grid3X3,
   StickyNote,
+  LayoutPanelTop,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { contrastText } from '@/lib/utils/color';
@@ -48,6 +49,7 @@ export function CalendarView() {
     viewType, setViewType,
     weekCount, setWeekCount,
     weeksBordered, setWeeksBordered,
+    displayMode, setDisplayMode,
     selectedEvent, setSelectedEvent,
     showAddEvent, setShowAddEvent,
     editingEvent, setEditingEvent,
@@ -225,6 +227,17 @@ export function CalendarView() {
               >
                 <Grid3X3 className={cn('h-4 w-4', weeksBordered && 'text-primary')} />
               </Button>
+              {viewType === 'week' && (
+                <Button
+                  variant={displayMode === 'cards' ? 'secondary' : 'ghost'}
+                  size="sm"
+                  onClick={() => setDisplayMode(displayMode === 'cards' ? 'inline' : 'cards')}
+                  title={displayMode === 'cards' ? 'Switch to inline blocks' : 'Switch to cards'}
+                  aria-label="Toggle card display"
+                >
+                  <LayoutPanelTop className={cn('h-4 w-4', displayMode === 'cards' && 'text-primary')} />
+                </Button>
+              )}
             </div>
             {!isMobile && (
               <Button size="sm" onClick={handleAddWithAuth}>
@@ -298,7 +311,7 @@ export function CalendarView() {
                   onDateClick={(date) => { setCurrentDate(date); setViewType('day'); }} bordered={weeksBordered} />
               )}
               {viewType === 'week' && (
-                <WeekView currentDate={currentDate} events={events} onEventClick={setSelectedEvent} bordered={weeksBordered} />
+                <WeekView currentDate={currentDate} events={events} onEventClick={setSelectedEvent} bordered={weeksBordered} displayMode={displayMode} />
               )}
               {viewType === 'weekVertical' && (
                 <WeekVerticalView
