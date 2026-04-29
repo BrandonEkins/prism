@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { DayColumn } from './DayColumn';
+import { DayColumn } from '@/components/calendar/cells';
 import type { DayBucket } from '@/lib/hooks/useWeekViewData';
 
 interface WeekViewGridProps {
