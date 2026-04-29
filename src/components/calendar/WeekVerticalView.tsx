@@ -28,6 +28,7 @@ export interface WeekVerticalViewProps {
   showNotes?: boolean;
   notesByDate?: Map<string, CalendarNote>;
   onNoteChange?: (date: string, content: string) => void;
+  displayMode?: 'inline' | 'cards';
 }
 
 export function WeekVerticalView({
@@ -41,6 +42,7 @@ export function WeekVerticalView({
   showNotes = false,
   notesByDate,
   onNoteChange,
+  displayMode = 'inline',
 }: WeekVerticalViewProps) {
   const { weekStartsOn } = useWeekStartsOn();
   const bgOverride = useWidgetBgOverride();
@@ -167,6 +169,7 @@ export function WeekVerticalView({
                         isPastDay={isPast && !isCurrentDay}
                         isCurrentDay={isCurrentDay}
                         currentHour={currentHour}
+                        cards={displayMode === 'cards'}
                       />
                     </div>
                   );
@@ -181,6 +184,7 @@ export function WeekVerticalView({
                   isPastDay={isPast && !isCurrentDay}
                   isCurrentDay={isCurrentDay}
                   currentHour={currentHour}
+                  cards={displayMode === 'cards'}
                 />
               </div>
             )}
@@ -211,6 +215,7 @@ function DayEventList({
   isPastDay = false,
   isCurrentDay = false,
   currentHour = 0,
+  cards = false,
 }: {
   allDayEvents: CalendarEvent[];
   timedEvents: CalendarEvent[];
@@ -218,6 +223,7 @@ function DayEventList({
   isPastDay?: boolean;
   isCurrentDay?: boolean;
   currentHour?: number;
+  cards?: boolean;
 }) {
   if (allDayEvents.length === 0 && timedEvents.length === 0) {
     return null;
@@ -229,10 +235,17 @@ function DayEventList({
         <button
           key={event.id}
           onClick={() => onEventClick(event)}
-          className="w-full text-left text-xs px-1.5 py-1 rounded hover:opacity-80 transition-opacity truncate block"
-          style={{ backgroundColor: event.color, borderLeft: `3px solid ${event.color}` }}
+          className={cn(
+            'w-full text-left text-xs px-1.5 py-1 rounded hover:opacity-80 transition-opacity truncate block',
+            cards && 'bg-card/85 backdrop-blur-sm border border-border/40 shadow-sm',
+          )}
+          style={
+            cards
+              ? { borderLeft: `3px solid ${event.color}` }
+              : { backgroundColor: event.color, borderLeft: `3px solid ${event.color}` }
+          }
         >
-          <span className="font-medium text-white">{event.title}</span>
+          <span className={cn('font-medium', cards ? 'text-foreground' : 'text-white')}>{event.title}</span>
         </button>
       ))}
       {timedEvents.map((event) => {
@@ -241,10 +254,20 @@ function DayEventList({
           <button
             key={event.id}
             onClick={() => onEventClick(event)}
-            className={cn('w-full text-left text-xs px-1.5 py-1 rounded hover:opacity-90 transition-opacity truncate block text-white', isPastEvent && 'opacity-70')}
-            style={{ backgroundColor: event.color, borderLeft: `3px solid ${event.color}` }}
+            className={cn(
+              'w-full text-left text-xs px-1.5 py-1 rounded hover:opacity-90 transition-opacity truncate block',
+              cards
+                ? 'bg-card/85 backdrop-blur-sm border border-border/40 shadow-sm text-foreground'
+                : 'text-white',
+              isPastEvent && 'opacity-70',
+            )}
+            style={
+              cards
+                ? { borderLeft: `3px solid ${event.color}` }
+                : { backgroundColor: event.color, borderLeft: `3px solid ${event.color}` }
+            }
           >
-            <span className="opacity-80 mr-1">{format(new Date(event.startTime), 'h:mm a')}</span>
+            <span className={cn('mr-1', cards ? 'text-muted-foreground' : 'opacity-80')}>{format(new Date(event.startTime), 'h:mm a')}</span>
             <span className="font-medium">{event.title}</span>
           </button>
         );

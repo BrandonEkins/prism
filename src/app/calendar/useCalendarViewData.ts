@@ -25,7 +25,18 @@ export type { CalendarGroup } from '@/lib/hooks';
 export function useCalendarViewData() {
   const { weekStartsOn } = useWeekStartsOn();
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [viewType, setViewType] = useState<CalendarViewType>('month');
+  const [viewType, setViewType] = useState<CalendarViewType>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('prism-calendar-view-type') as CalendarViewType | null;
+      const valid: CalendarViewType[] = ['agenda', 'day', 'week', 'weekVertical', 'multiWeek', 'month', 'threeMonth'];
+      if (saved && valid.includes(saved)) return saved;
+    }
+    return 'month';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('prism-calendar-view-type', viewType);
+  }, [viewType]);
   const [weekCount, setWeekCount] = useState<MultiWeekCount>(2);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [showAddEvent, setShowAddEvent] = useState(false);

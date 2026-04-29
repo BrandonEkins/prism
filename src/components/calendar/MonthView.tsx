@@ -21,6 +21,7 @@ import { useWeekStartsOn } from '@/lib/hooks/useWeekStartsOn';
 import { DAYS_SHORT_ARRAY } from '@/lib/constants/days';
 import type { CalendarEvent } from '@/types/calendar';
 import { seasonalPalettes } from '@/lib/themes/seasonalThemes';
+import { DayOverflowPopover } from './cells';
 
 // Get the accent color for a month (1-12)
 function getMonthColor(month: Date): string {
@@ -35,7 +36,10 @@ export interface MonthViewProps {
   onEventClick: (event: CalendarEvent) => void;
   onDateClick: (date: Date) => void;
   bordered?: boolean;
+  displayMode?: 'inline' | 'cards';
 }
+
+const MAX_VISIBLE_CARDS = 3;
 
 export function MonthView({
   currentDate,
@@ -43,7 +47,9 @@ export function MonthView({
   onEventClick,
   onDateClick,
   bordered = true,
+  displayMode = 'inline',
 }: MonthViewProps) {
+  const cards = displayMode === 'cards';
   const { weekStartsOn } = useWeekStartsOn();
   const bgOverride = useWidgetBgOverride();
   const transparentMode = bgOverride?.hasCustomBg === true;
@@ -132,27 +138,54 @@ export function MonthView({
                 </div>
               )}
 
-              <ul className="flex-1 overflow-y-auto space-y-0.5 list-none m-0 px-1 pb-1 pt-0">
-                {dayEvents.map((event) => (
-                  <li
-                    key={event.id}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onEventClick(event);
-                    }}
-                    className={cn(
-                      'text-xs px-1 rounded truncate cursor-pointer hover:opacity-80 hover:ring-2 hover:ring-seasonal-accent/50 transition-all',
-                      event.allDay ? 'py-px' : 'py-0.5'
-                    )}
-                    style={event.allDay
-                      ? { backgroundColor: event.color, color: '#fff', borderLeft: `2px solid ${event.color}` }
-                      : { color: event.color }
-                    }
-                  >
-                    {event.allDay ? event.title : `• ${format(event.startTime, 'h:mm a')} ${event.title}`}
-                  </li>
-                ))}
-              </ul>
+              {cards ? (
+                <div className="flex-1 min-h-0 flex flex-col gap-0.5 px-1 pb-1">
+                  {dayEvents.slice(0, MAX_VISIBLE_CARDS).map((event) => (
+                    <button
+                      key={event.id}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onEventClick(event);
+                      }}
+                      className="w-full text-left text-[10px] px-1 py-0.5 rounded bg-card/85 backdrop-blur-sm border border-border/40 shadow-sm truncate hover:bg-card transition-colors leading-tight"
+                      style={{ borderLeft: `3px solid ${event.color}` }}
+                    >
+                      <span className="font-medium text-foreground">{event.title}</span>
+                    </button>
+                  ))}
+                  {dayEvents.length > MAX_VISIBLE_CARDS && (
+                    <div onClick={(e) => e.stopPropagation()}>
+                      <DayOverflowPopover
+                        date={date}
+                        hiddenEvents={dayEvents.slice(MAX_VISIBLE_CARDS)}
+                        onEventClick={onEventClick}
+                      />
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <ul className="flex-1 overflow-y-auto space-y-0.5 list-none m-0 px-1 pb-1 pt-0">
+                  {dayEvents.map((event) => (
+                    <li
+                      key={event.id}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onEventClick(event);
+                      }}
+                      className={cn(
+                        'text-xs px-1 rounded truncate cursor-pointer hover:opacity-80 hover:ring-2 hover:ring-seasonal-accent/50 transition-all',
+                        event.allDay ? 'py-px' : 'py-0.5'
+                      )}
+                      style={event.allDay
+                        ? { backgroundColor: event.color, color: '#fff', borderLeft: `2px solid ${event.color}` }
+                        : { color: event.color }
+                      }
+                    >
+                      {event.allDay ? event.title : `• ${format(event.startTime, 'h:mm a')} ${event.title}`}
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           );
         })}

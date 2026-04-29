@@ -227,7 +227,7 @@ export function CalendarView() {
               >
                 <Grid3X3 className={cn('h-4 w-4', weeksBordered && 'text-primary')} />
               </Button>
-              {viewType === 'week' && (
+              {viewType !== 'threeMonth' && (
                 <Button
                   variant={displayMode === 'cards' ? 'secondary' : 'ghost'}
                   size="sm"
@@ -304,11 +304,11 @@ export function CalendarView() {
             <div className="h-full">
             <Suspense fallback={<div className="h-full flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>}>
               {viewType === 'agenda' && (
-                <AgendaView events={events} days={30} onEventClick={setSelectedEvent} />
+                <AgendaView events={events} days={30} onEventClick={setSelectedEvent} displayMode={displayMode} />
               )}
               {viewType === 'month' && (
                 <MonthView currentDate={currentDate} events={events} onEventClick={setSelectedEvent}
-                  onDateClick={(date) => { setCurrentDate(date); setViewType('day'); }} bordered={weeksBordered} />
+                  onDateClick={(date) => { setCurrentDate(date); setViewType('day'); }} bordered={weeksBordered} displayMode={displayMode} />
               )}
               {viewType === 'week' && (
                 <WeekView currentDate={currentDate} events={events} onEventClick={setSelectedEvent} bordered={weeksBordered} displayMode={displayMode} />
@@ -325,10 +325,11 @@ export function CalendarView() {
                   showNotes={showNotes}
                   notesByDate={notesByDate}
                   onNoteChange={activeUser ? upsertNote : undefined}
+                  displayMode={displayMode}
                 />
               )}
               {viewType === 'multiWeek' && (
-                <MultiWeekView currentDate={currentDate} events={events} onEventClick={setSelectedEvent} weekCount={weekCount} bordered={weeksBordered} />
+                <MultiWeekView currentDate={currentDate} events={events} onEventClick={setSelectedEvent} weekCount={weekCount} bordered={weeksBordered} displayMode={displayMode} />
               )}
               {viewType === 'threeMonth' && (
                 <ThreeMonthView currentDate={currentDate} events={events} onEventClick={setSelectedEvent}
@@ -346,6 +347,7 @@ export function CalendarView() {
                   showNotes={showNotes}
                   notesByDate={notesByDate}
                   onNoteChange={activeUser ? upsertNote : undefined}
+                  displayMode={displayMode}
                 />
               )}
             </Suspense>

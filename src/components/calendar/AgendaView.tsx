@@ -19,6 +19,7 @@ export interface AgendaViewProps {
   maxEventsPerDay?: number;
   onEventClick?: (event: CalendarEvent) => void;
   emptyMessage?: string;
+  displayMode?: 'inline' | 'cards';
 }
 
 export function AgendaView({
@@ -27,7 +28,9 @@ export function AgendaView({
   maxEventsPerDay = 0,
   onEventClick,
   emptyMessage = 'No upcoming events',
+  displayMode = 'inline',
 }: AgendaViewProps) {
+  const cards = displayMode === 'cards';
   const startDate = startOfDay(new Date());
   const endDate = addDays(startDate, days);
 
@@ -80,6 +83,7 @@ export function AgendaView({
             events={dayEvts}
             maxEvents={maxEventsPerDay}
             onEventClick={onEventClick}
+            cards={cards}
           />
         ))}
       </div>
@@ -92,11 +96,13 @@ function AgendaDaySection({
   events,
   maxEvents,
   onEventClick,
+  cards = false,
 }: {
   date: Date;
   events: CalendarEvent[];
   maxEvents: number;
   onEventClick?: (event: CalendarEvent) => void;
+  cards?: boolean;
 }) {
   const displayEvents = maxEvents > 0 ? events.slice(0, maxEvents) : events;
   const remainingCount = maxEvents > 0 ? events.length - maxEvents : 0;
@@ -125,6 +131,7 @@ function AgendaDaySection({
             key={event.id}
             event={event}
             onClick={() => onEventClick?.(event)}
+            cards={cards}
           />
         ))}
         {remainingCount > 0 && (
@@ -140,28 +147,36 @@ function AgendaDaySection({
 function AgendaEventRow({
   event,
   onClick,
+  cards = false,
 }: {
   event: CalendarEvent;
   onClick?: () => void;
+  cards?: boolean;
 }) {
   return (
     <button
       onClick={onClick}
       className={cn(
         'w-full text-left flex items-start gap-2 p-1.5 rounded',
-        'hover:bg-accent/50 transition-colors',
-        'touch-action-manipulation'
+        cards
+          ? 'bg-card/85 backdrop-blur-sm border border-border/40 shadow-sm hover:bg-card'
+          : 'hover:bg-accent/50',
+        'transition-colors',
+        'touch-action-manipulation',
       )}
+      style={cards ? { borderLeft: `3px solid ${event.color}` } : undefined}
     >
-      <div
-        className="w-1 h-full min-h-[24px] rounded-full flex-shrink-0"
-        style={{ backgroundColor: event.color }}
-      />
+      {!cards && (
+        <div
+          className="w-1 h-full min-h-[24px] rounded-full flex-shrink-0"
+          style={{ backgroundColor: event.color }}
+        />
+      )}
       <div className="flex-1 min-w-0">
         <div className="text-xs text-muted-foreground">
           {event.allDay ? 'All day' : format(event.startTime, 'h:mm a')}
         </div>
-        <div className="text-sm font-medium truncate">
+        <div className="text-sm font-medium truncate text-foreground">
           {event.title}
         </div>
         {event.location && (

@@ -15,6 +15,7 @@ import { hexToRgba } from '@/lib/utils/color';
 import { useWeekStartsOn } from '@/lib/hooks/useWeekStartsOn';
 import { DAYS_SHORT_ARRAY } from '@/lib/constants/days';
 import type { CalendarEvent } from '@/types/calendar';
+import { DayOverflowPopover } from './cells';
 
 export interface MultiWeekViewProps {
   currentDate: Date;
@@ -22,7 +23,11 @@ export interface MultiWeekViewProps {
   onEventClick: (event: CalendarEvent) => void;
   weekCount?: 1 | 2 | 3 | 4;
   bordered?: boolean;
+  displayMode?: 'inline' | 'cards';
 }
+
+const MAX_VISIBLE_CARDS_COMPACT = 2;
+const MAX_VISIBLE_CARDS = 4;
 
 export function MultiWeekView({
   currentDate,
@@ -30,6 +35,7 @@ export function MultiWeekView({
   onEventClick,
   weekCount = 2,
   bordered = false,
+  displayMode = 'inline',
 }: MultiWeekViewProps) {
   const { weekStartsOn } = useWeekStartsOn();
   const bgOverride = useWidgetBgOverride();
@@ -80,6 +86,7 @@ export function MultiWeekView({
                 compact={compact}
                 bordered={bordered}
                 cellBgStyle={cellBgStyle}
+                displayMode={displayMode}
               />
             ))}
           </div>
@@ -96,6 +103,7 @@ function DayCell({
   compact,
   bordered,
   cellBgStyle,
+  displayMode,
 }: {
   date: Date;
   events: CalendarEvent[];
@@ -103,7 +111,10 @@ function DayCell({
   compact: boolean;
   bordered: boolean;
   cellBgStyle?: React.CSSProperties;
+  displayMode: 'inline' | 'cards';
 }) {
+  const cards = displayMode === 'cards';
+  const maxVisible = compact ? MAX_VISIBLE_CARDS_COMPACT : MAX_VISIBLE_CARDS;
   const dayStart = startOfDay(date);
   const dayEvents = events.filter((event) =>
     event.allDay
@@ -160,22 +171,37 @@ function DayCell({
 
       {/* Events */}
       <div className={cn('space-y-0.5', compact ? 'px-0.5 pb-0.5' : 'px-1 pb-1')}>
-        {sorted.map((event) => (
+        {(cards ? sorted.slice(0, maxVisible) : sorted).map((event) => (
           <button
             key={event.id}
             onClick={(e) => { e.stopPropagation(); onEventClick(event); }}
             className={cn(
               'w-full text-left rounded truncate hover:opacity-80 hover:ring-1 hover:ring-seasonal-accent/50 transition-all',
-              compact ? 'text-xs px-0.5 py-px' : 'text-xs px-1 py-0.5'
+              compact ? 'text-xs px-0.5 py-px' : 'text-xs px-1 py-0.5',
+              cards && 'bg-card/85 backdrop-blur-sm border border-border/40 shadow-sm text-foreground',
             )}
-            style={event.allDay
-              ? { backgroundColor: event.color, color: '#fff', borderLeft: `2px solid ${event.color}` }
-              : { color: event.color }
+            style={
+              cards
+                ? { borderLeft: `3px solid ${event.color}` }
+                : event.allDay
+                  ? { backgroundColor: event.color, color: '#fff', borderLeft: `2px solid ${event.color}` }
+                  : { color: event.color }
             }
           >
-            {event.allDay ? event.title : `${format(event.startTime, 'h:mm')} ${event.title}`}
+            {cards
+              ? (event.allDay
+                  ? <span className="font-medium">{event.title}</span>
+                  : <><span className="text-muted-foreground mr-1">{format(event.startTime, 'h:mm')}</span><span className="font-medium">{event.title}</span></>)
+              : (event.allDay ? event.title : `${format(event.startTime, 'h:mm')} ${event.title}`)}
           </button>
         ))}
+        {cards && sorted.length > maxVisible && (
+          <DayOverflowPopover
+            date={date}
+            hiddenEvents={sorted.slice(maxVisible)}
+            onEventClick={onEventClick}
+          />
+        )}
       </div>
     </div>
   );

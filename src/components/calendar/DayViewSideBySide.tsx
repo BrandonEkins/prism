@@ -27,6 +27,7 @@ export interface DayViewSideBySideProps {
   showNotes?: boolean;
   notesByDate?: Map<string, CalendarNote>;
   onNoteChange?: (date: string, content: string) => void;
+  displayMode?: 'inline' | 'cards';
 }
 
 export function DayViewSideBySide({
@@ -40,7 +41,9 @@ export function DayViewSideBySide({
   showNotes = false,
   notesByDate,
   onNoteChange,
+  displayMode = 'inline',
 }: DayViewSideBySideProps) {
+  const cards = displayMode === 'cards';
   const bgOverride = useWidgetBgOverride();
   const transparentMode = bgOverride?.hasCustomBg === true;
   const cellBg = bgOverride?.cellBackgroundColor;
@@ -137,8 +140,15 @@ export function DayViewSideBySide({
                         <button
                           key={event.id}
                           onClick={() => onEventClick(event)}
-                          className="w-full text-left text-xs px-1 py-0.5 rounded truncate hover:opacity-80 hover:ring-2 hover:ring-seasonal-accent/50 transition-all"
-                          style={{ backgroundColor: event.color, color: '#fff', borderLeft: `2px solid ${event.color}` }}
+                          className={cn(
+                            'w-full text-left text-xs px-1 py-0.5 rounded truncate hover:opacity-80 hover:ring-2 hover:ring-seasonal-accent/50 transition-all',
+                            cards && 'bg-card/85 backdrop-blur-sm border border-border/40 shadow-sm text-foreground',
+                          )}
+                          style={
+                            cards
+                              ? { borderLeft: `3px solid ${event.color}` }
+                              : { backgroundColor: event.color, color: '#fff', borderLeft: `2px solid ${event.color}` }
+                          }
                         >
                           {event.title}
                         </button>
@@ -185,6 +195,7 @@ export function DayViewSideBySide({
             {/* Group columns */}
             {displayGroups.map((group) => {
               const calEvents = getEventsForGroup(group.id);
+              const groupPositions = calculateEventPositions(calEvents);
               return (
                 <div
                   key={group.id}
@@ -193,7 +204,6 @@ export function DayViewSideBySide({
                 >
                   {hours.map((hour) => {
                     const hourEvents = calEvents.filter((event) => event.startTime.getHours() === hour);
-                    const positions = calculateEventPositions(hourEvents);
                     const isPastHour = isPastDay || (isCurrentDay && hour < currentHour);
                     const isNowHour = isCurrentDay && hour === currentHour;
                     return (
@@ -206,7 +216,7 @@ export function DayViewSideBySide({
                           <div className="absolute left-0 right-0 border-t-2 border-t-primary z-20 pointer-events-none" style={{ top: `${currentMinuteSnapped}%` }} />
                         )}
                         {hourEvents.map((event) => {
-                          const pos = positions.get(event.id);
+                          const pos = groupPositions.get(event.id);
                           if (!pos) return null;
                           const css = positionToCSS(pos);
                           const durationMin = ((event.endTime?.getTime() ?? (event.startTime.getTime() + 3600000)) - event.startTime.getTime()) / 60000;
@@ -215,19 +225,32 @@ export function DayViewSideBySide({
                             <button
                               key={event.id}
                               onClick={() => onEventClick(event)}
-                              className="absolute p-0.5 rounded text-left text-xs z-10 overflow-hidden hover:opacity-90 hover:ring-2 hover:ring-seasonal-accent/50 transition-all flex flex-col items-start"
-                              style={{
-                                backgroundColor: event.color,
-                                color: '#fff',
-                                borderLeft: `2px solid ${event.color}`,
-                                top: `${(event.startTime.getMinutes() / 60) * 100}%`,
-                                height: `${heightPct}%`,
-                                left: css.left,
-                                width: css.width,
-                              }}
+                              className={cn(
+                                'absolute p-0.5 rounded text-left text-xs z-10 overflow-hidden hover:opacity-90 hover:ring-2 hover:ring-seasonal-accent/50 transition-all flex flex-col items-start',
+                                cards && 'bg-card/85 backdrop-blur-sm border border-border/40 shadow-sm',
+                              )}
+                              style={
+                                cards
+                                  ? {
+                                      borderLeft: `3px solid ${event.color}`,
+                                      top: `calc(${(event.startTime.getMinutes() / 60) * 100}% + 2px)`,
+                                      height: `calc(${heightPct}% - 4px)`,
+                                      left: css.left,
+                                      width: css.width,
+                                    }
+                                  : {
+                                      backgroundColor: event.color,
+                                      color: '#fff',
+                                      borderLeft: `2px solid ${event.color}`,
+                                      top: `${(event.startTime.getMinutes() / 60) * 100}%`,
+                                      height: `${heightPct}%`,
+                                      left: css.left,
+                                      width: css.width,
+                                    }
+                              }
                             >
-                              <div className="font-medium truncate w-full text-[11px] leading-tight">{event.title}</div>
-                              <div className="text-[9px] opacity-70 leading-tight">
+                              <div className={cn('font-medium truncate w-full text-[11px] leading-tight', cards && 'text-foreground')}>{event.title}</div>
+                              <div className={cn('text-[9px] leading-tight', cards ? 'text-muted-foreground' : 'opacity-70')}>
                                 {format(event.startTime, 'h:mm')}&ndash;{format(event.endTime ?? new Date(event.startTime.getTime() + 3600000), 'h:mm a')}
                               </div>
                             </button>
