@@ -2,7 +2,8 @@
 
 import * as React from 'react';
 import { format, isSameDay, isToday, isTomorrow } from 'date-fns';
-import { Cloud, CloudRain, CloudSnow, Sun, CloudSun, Utensils } from 'lucide-react';
+import { useDroppable } from '@dnd-kit/core';
+import { Cloud, CloudRain, CloudSnow, Sun, CloudSun } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { WeekItemCard } from './WeekItemCard';
 import type { DayBucket } from '@/lib/hooks/useWeekViewData';
@@ -46,7 +47,6 @@ function dayLabel(date: Date): string {
 function timeLabel(start: Date, end: Date, allDay: boolean): string | undefined {
   if (allDay) return 'All day';
   const startStr = format(start, 'h:mm a');
-  // Hide end time if same day and already shown by start; show range only if useful
   if (!isSameDay(start, end)) return startStr;
   return startStr;
 }
@@ -69,14 +69,19 @@ interface DayColumnProps {
 
 export function DayColumn({ bucket, className }: DayColumnProps) {
   const today = isToday(bucket.date);
+  const droppableId = format(bucket.date, 'yyyy-MM-dd');
+  const droppable = useDroppable({ id: droppableId });
 
   return (
     <div
+      ref={droppable.setNodeRef}
+      data-droppable-day={droppableId}
       className={cn(
         'flex min-h-[180px] flex-col gap-1.5 rounded-lg p-2',
         'bg-card/60 backdrop-blur-sm',
         'border border-border/30',
         today && 'ring-2 ring-seasonal-accent/60',
+        droppable.isOver && 'ring-2 ring-seasonal-accent shadow-lg bg-card/80',
         className,
       )}
     >
@@ -111,20 +116,21 @@ export function DayColumn({ bucket, className }: DayColumnProps) {
       {bucket.meals.length > 0 && (
         <div className="flex flex-col gap-0.5">
           {bucket.meals.map((meal) => (
-            <div
-              key={meal.id}
-              className="flex items-center gap-1.5 rounded bg-emerald-500/15 px-1.5 py-0.5 text-[10px] text-emerald-200"
-              style={{ borderLeft: `2px solid ${MEAL_COLOR}` }}
-              title={`${meal.mealType}: ${meal.name}`}
-            >
-              <Utensils className="h-3 w-3 shrink-0" aria-hidden />
-              <span className="truncate font-medium">{meal.name}</span>
-            </div>
+            <WeekItemCard
+              key={`meal-${meal.id}`}
+              variant="meal"
+              stripeColor={MEAL_COLOR}
+              title={meal.name}
+              timeLabel={meal.mealType}
+              subtitle={meal.cookedBy?.name ? `Cooked by ${meal.cookedBy.name}` : undefined}
+              muted={Boolean(meal.cookedAt)}
+              dragId={`meal:${meal.id}`}
+            />
           ))}
         </div>
       )}
 
-      {/* ALL-DAY EVENTS */}
+      {/* ALL-DAY EVENTS — read-only */}
       {bucket.allDayEvents.map((event) => (
         <WeekItemCard
           key={`evt-allday-${event.id}`}
@@ -136,7 +142,7 @@ export function DayColumn({ bucket, className }: DayColumnProps) {
         />
       ))}
 
-      {/* TIMED EVENTS */}
+      {/* TIMED EVENTS — read-only */}
       {bucket.timedEvents.map((event) => (
         <WeekItemCard
           key={`evt-${event.id}`}
@@ -148,7 +154,7 @@ export function DayColumn({ bucket, className }: DayColumnProps) {
         />
       ))}
 
-      {/* CHORES */}
+      {/* CHORES — draggable */}
       {bucket.chores.map((chore) => (
         <WeekItemCard
           key={`chore-${chore.id}`}
@@ -157,10 +163,11 @@ export function DayColumn({ bucket, className }: DayColumnProps) {
           title={chore.title}
           subtitle={chore.assignedTo?.name}
           muted={Boolean(chore.pendingApproval)}
+          dragId={`chore:${chore.id}`}
         />
       ))}
 
-      {/* TASKS */}
+      {/* TASKS — draggable */}
       {bucket.tasks.map((task) => (
         <WeekItemCard
           key={`task-${task.id}`}
@@ -169,6 +176,7 @@ export function DayColumn({ bucket, className }: DayColumnProps) {
           title={task.title}
           subtitle={task.assignedTo?.name}
           muted={task.completed}
+          dragId={`task:${task.id}`}
         />
       ))}
 

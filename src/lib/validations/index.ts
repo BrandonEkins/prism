@@ -73,6 +73,10 @@ export const createChoreSchema = z.object({
 
 export const updateChoreSchema = createChoreSchema.partial().extend({
   enabled: z.boolean().optional(),
+  // Manually re-schedule next-due (e.g. drag-and-drop in week planner).
+  // Server normally recomputes nextDue from frequency on completion; this
+  // override lets a parent push a chore to a different day.
+  nextDue: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format (YYYY-MM-DD)').nullable().optional(),
 });
 
 export const completeChoreSchema = z.object({

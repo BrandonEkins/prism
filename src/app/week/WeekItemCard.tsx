@@ -1,6 +1,8 @@
 'use client';
 
 import * as React from 'react';
+import { useDraggable } from '@dnd-kit/core';
+import { CSS } from '@dnd-kit/utilities';
 import { cn } from '@/lib/utils';
 
 export type WeekItemVariant = 'event' | 'chore' | 'task' | 'meal';
@@ -21,6 +23,11 @@ interface WeekItemCardProps {
   onClick?: () => void;
   /** Accessible label override */
   ariaLabel?: string;
+  /**
+   * Drag identifier in the form `chore:<id>` | `task:<id>` | `meal:<id>`.
+   * Omit for read-only items (calendar events).
+   */
+  dragId?: string;
 }
 
 export function WeekItemCard({
@@ -32,16 +39,34 @@ export function WeekItemCard({
   muted,
   onClick,
   ariaLabel,
+  dragId,
 }: WeekItemCardProps) {
-  const interactive = Boolean(onClick);
+  const draggable = useDraggable({
+    id: dragId ?? `__static__:${variant}:${title}`,
+    disabled: !dragId,
+    data: { dragId },
+  });
+
+  const interactive = Boolean(onClick) && !dragId;
   const Tag = interactive ? 'button' : 'div';
+
+  const style: React.CSSProperties = {
+    transform: CSS.Translate.toString(draggable.transform),
+    touchAction: dragId ? 'none' : undefined,
+    zIndex: draggable.isDragging ? 50 : undefined,
+  };
 
   return (
     <Tag
+      ref={dragId ? draggable.setNodeRef : undefined}
       type={interactive ? 'button' : undefined}
       onClick={onClick}
       aria-label={ariaLabel ?? title}
       data-variant={variant}
+      data-dragging={draggable.isDragging || undefined}
+      style={style}
+      {...(dragId ? draggable.listeners : {})}
+      {...(dragId ? draggable.attributes : {})}
       className={cn(
         'group relative flex w-full items-stretch gap-2',
         'overflow-hidden rounded-md',
@@ -50,6 +75,8 @@ export function WeekItemCard({
         'text-left text-foreground',
         'transition-colors duration-150',
         interactive && 'cursor-pointer hover:bg-black/40 dark:hover:bg-black/50',
+        dragId && 'cursor-grab active:cursor-grabbing',
+        draggable.isDragging && 'opacity-40 ring-2 ring-seasonal-accent shadow-xl',
         muted && 'opacity-60',
       )}
     >
