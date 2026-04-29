@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth, requireRole, optionalAuth } from '@/lib/auth';
 import { db } from '@/lib/db/client';
-import { users } from '@/lib/db/schema';
+import { settings, users } from '@/lib/db/schema';
+import { eq } from 'drizzle-orm';
 
 import bcrypt from 'bcryptjs';
 import { getCached } from '@/lib/cache/redis';
@@ -28,6 +29,15 @@ interface PublicFamilyMemberResponse {
   color: string;
   avatarUrl: string | null;
   hasPin: boolean;
+}
+
+async function setupIsComplete(): Promise<boolean> {
+  try {
+    const [row] = await db.select().from(settings).where(eq(settings.key, 'setupComplete'));
+    return !!row;
+  } catch {
+    return false;
+  }
 }
 
 export async function GET(request: NextRequest) {
@@ -117,11 +127,20 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const auth = await requireAuth();
-  if (auth instanceof NextResponse) return auth;
+  const authResult = await requireAuth();
+  let auth: { userId: string; role: 'parent' | 'child' | 'guest' } | null = null;
 
-  const forbidden = requireRole(auth, 'canManageUsers');
-  if (forbidden) return forbidden;
+  if (authResult instanceof NextResponse) {
+    const allowUnauthedSetup = !(await setupIsComplete());
+    // After setup is complete, normal auth is always required.
+    if (!allowUnauthedSetup) return authResult;
+    // During setup bootstrap we permit member creation without an active session.
+  } else {
+    auth = authResult;
+    // Outside setup, enforce normal parent permission.
+    const forbidden = requireRole(auth, 'canManageUsers');
+    if (forbidden) return forbidden;
+  }
 
   try {
     const body = await request.json();
@@ -201,13 +220,15 @@ export async function POST(request: NextRequest) {
 
     await invalidateEntity('family');
 
-    logActivity({
-      userId: auth.userId,
-      action: 'create',
-      entityType: 'user',
-      entityId: newMember.id,
-      summary: `Added member: ${newMember.name}`,
-    });
+    if (auth) {
+      logActivity({
+        userId: auth.userId,
+        action: 'create',
+        entityType: 'user',
+        entityId: newMember.id,
+        summary: `Added member: ${newMember.name}`,
+      });
+    }
 
     return NextResponse.json(response, { status: 201 });
   } catch (error) {

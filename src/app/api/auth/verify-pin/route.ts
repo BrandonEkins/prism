@@ -9,8 +9,14 @@ import { setSettingsVerified } from '@/lib/auth/settingsAuth';
 import { logActivity } from '@/lib/services/auditLog';
 import { logError } from '@/lib/utils/logError';
 
-const appUrl = process.env.APP_URL || process.env.BASE_URL;
-const isSecure = appUrl ? appUrl.startsWith('https://') : process.env.NODE_ENV === 'production';
+// Determine whether this specific request arrived over HTTPS.
+// Avoid using APP_URL/NODE_ENV here because users may access the same app
+// via either HTTP (LAN) or HTTPS (reverse proxy/tunnel).
+function requestIsSecure(req: NextRequest): boolean {
+  const proto = req.headers.get('x-forwarded-proto');
+  if (proto) return proto === 'https';
+  return req.url.startsWith('https://');
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -95,9 +101,11 @@ export async function POST(request: NextRequest) {
       if (session) {
         sessionToken = session.token;
 
+        const secure = requestIsSecure(request);
+
         cookieStore.set('prism_session', session.token, {
           httpOnly: true,
-          secure: isSecure,
+          secure,
           sameSite: 'lax',
           expires: session.expiresAt,
           path: '/',
@@ -105,7 +113,7 @@ export async function POST(request: NextRequest) {
 
         cookieStore.set('prism_user', user.id, {
           httpOnly: true,
-          secure: isSecure,
+          secure,
           sameSite: 'lax',
           expires: session.expiresAt,
           path: '/',

@@ -56,11 +56,39 @@ See the [full changelog](docs/CHANGELOG.md) for details on every release.
 
 ### Option 1: Clone and build (any platform)
 
+#### HTTPS / Nginx certificate prerequisite (Linux/WSL)
+
+Prism's default Nginx config terminates TLS on port `443` and expects:
+
+- `config/certs/prism.crt`
+- `config/certs/prism.key`
+
+If these files are missing, Nginx fails with `cannot load certificate "/etc/nginx/certs/prism.crt"`.
+
+Generate a local self-signed cert:
+
+```bash
+mkdir -p config/certs
+openssl req -x509 -nodes -days 365 \
+  -newkey rsa:2048 \
+  -keyout config/certs/prism.key \
+  -out config/certs/prism.crt \
+  -subj "/CN=localhost"
+```
+
+If you see `Permission denied` while writing certs:
+
+```bash
+sudo chown -R "$USER:$USER" config/certs
+```
+
 ```bash
 git clone https://github.com/sandydargoport/prism.git
 cd prism
-./scripts/install.sh
+bash scripts/install.sh
 ```
+
+> If you prefer `./scripts/install.sh`, make it executable first: `chmod +x scripts/install.sh`
 
 ### Option 2: Pull pre-built image (includes Raspberry Pi / ARM64)
 
@@ -77,7 +105,7 @@ docker-compose up -d
 
 > **Raspberry Pi**: Tested on Pi 4 (4GB+). Works with the pre-built ARM64 image — no compilation needed.
 
-Open **http://localhost:3000** and log in with PIN `1234` (parent) or `0000` (child).
+Open **<http://localhost:3000>** and log in with PIN `1234` (parent) or `0000` (child).
 
 ## What Prism Does
 
@@ -140,6 +168,7 @@ The goal isn't to replace your existing tools. It's to bring them together in on
 ## Built for Self-Hosters
 
 Prism is designed for people who:
+
 - Want control over their family's data
 - Are comfortable with Docker or basic server setup
 - Prefer one-time effort over ongoing subscriptions
@@ -209,6 +238,7 @@ I used Playwright to systematically crawl DAKboard and Skylight, capturing scree
 Rather than reviewing code myself - which I’m not well-positioned to do - I used adversarial prompting across multiple LLMs to critique each other’s output. It’s an imperfect process, but it’s more rigorous than a single model reviewing its own work.
 
 **Tech stack:**
+
 - Next.js 15 (App Router) + React + TypeScript frontend
 - Node.js backend with PostgreSQL (Drizzle ORM) and Redis caching
 - Docker Compose for deployment

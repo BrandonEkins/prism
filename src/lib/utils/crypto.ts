@@ -5,14 +5,17 @@ const IV_LENGTH = 12;
 const AUTH_TAG_LENGTH = 16;
 
 function getKey(): Buffer {
-  const key = process.env.ENCRYPTION_KEY;
+  // Backward compatibility:
+  // Older installs generated PIN_ENCRYPTION_KEY but not ENCRYPTION_KEY.
+  // Prefer ENCRYPTION_KEY for integrations, fall back to PIN_ENCRYPTION_KEY.
+  const key = process.env.ENCRYPTION_KEY || process.env.PIN_ENCRYPTION_KEY;
   if (!key) {
-    throw new Error('ENCRYPTION_KEY environment variable is required');
+    throw new Error('ENCRYPTION_KEY (or PIN_ENCRYPTION_KEY fallback) environment variable is required');
   }
   // Accept hex-encoded 32-byte key
   const buf = Buffer.from(key, 'hex');
   if (buf.length !== 32) {
-    throw new Error('ENCRYPTION_KEY must be 64 hex characters (32 bytes)');
+    throw new Error('ENCRYPTION_KEY/PIN_ENCRYPTION_KEY must be 64 hex characters (32 bytes)');
   }
   return buf;
 }

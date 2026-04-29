@@ -62,18 +62,6 @@ async function main() {
     await waitForDatabase(sql);
     console.log('[migrate] Connected');
 
-    // Check whether the tracking table already exists before we create it.
-    // This tells us if this is the first time the migration system has run
-    // on this particular database.
-    const [{ exists: trackingExists }] = await sql`
-      SELECT EXISTS (
-        SELECT FROM information_schema.tables
-        WHERE table_schema = 'public'
-          AND table_name = '__prism_migrations'
-      ) AS exists
-    `;
-    const isFirstRun = !trackingExists;
-
     await sql`
       CREATE TABLE IF NOT EXISTS public.__prism_migrations (
         id SERIAL PRIMARY KEY,
@@ -82,28 +70,33 @@ async function main() {
       )
     `;
 
-    if (isFirstRun) {
-      // First time this database has seen the migration system.
-      // Run the catch-up script regardless of whether this is a fresh
-      // install or an existing one — it's safe either way.
+    // Always decide based on recorded migration state (not just table existence).
+    // If a previous run failed midway, __prism_migrations may exist without
+    // having 0000_upgrade recorded yet; in that case we must still run it.
+    let applied = new Set(
+      (await sql`SELECT name FROM public.__prism_migrations`).map(r => r.name)
+    );
+    if (!applied.has('0000_upgrade')) {
       if (!fs.existsSync(UPGRADE_FILE)) {
         throw new Error('drizzle/0000_upgrade.sql not found');
       }
-      console.log('[migrate] First run — applying 0000_upgrade.sql...');
+      console.log('[migrate] Applying 0000_upgrade.sql...');
       const upgradeContent = fs.readFileSync(UPGRADE_FILE, 'utf8');
-      await sql.unsafe(upgradeContent);
-      await sql`
-        INSERT INTO public.__prism_migrations (name)
-        VALUES ('0000_upgrade')
-        ON CONFLICT DO NOTHING
-      `;
+      await sql.begin(async sql => {
+        await sql.unsafe(upgradeContent);
+        await sql`
+          INSERT INTO public.__prism_migrations (name)
+          VALUES ('0000_upgrade')
+          ON CONFLICT DO NOTHING
+        `;
+      });
       console.log('[migrate] 0000_upgrade.sql applied');
-    }
 
-    // Run any pending numbered migration files in alphabetical order.
-    const applied = new Set(
-      (await sql`SELECT name FROM public.__prism_migrations`).map(r => r.name)
-    );
+      // Refresh applied set after recording 0000_upgrade.
+      applied = new Set(
+        (await sql`SELECT name FROM public.__prism_migrations`).map(r => r.name)
+      );
+    }
 
     const pending = fs.readdirSync(MIGRATIONS_DIR)
       .filter(f => f.endsWith('.sql') && f !== '0000_upgrade.sql')
