@@ -144,14 +144,14 @@ export function WeekView({
                       onClick={() => onEventClick(event)}
                       className={cn(
                         'absolute text-left text-xs px-0.5 pt-0.5 rounded overflow-hidden hover:opacity-90 hover:ring-1 hover:ring-seasonal-accent/50 transition-all z-10 flex flex-col items-start',
-                        cards && 'bg-black/30 dark:bg-black/40 backdrop-blur-sm text-white border border-white/5',
+                        cards && 'bg-black/30 dark:bg-black/40 backdrop-blur-sm text-white border border-white/15 shadow-sm',
                       )}
                       style={
                         cards
                           ? {
                               borderLeft: `3px solid ${event.color}`,
-                              top: `calc(${(event.startTime.getMinutes() / 60) * 100}% + 1px)`,
-                              height: `calc(${heightPct}% - 2px)`,
+                              top: `calc(${(event.startTime.getMinutes() / 60) * 100}% + 2px)`,
+                              height: `calc(${heightPct}% - 4px)`,
                               left: css.left,
                               width: css.width,
                             }
@@ -341,14 +341,14 @@ export function WeekView({
                               onClick={() => onEventClick(event)}
                               className={cn(
                                 'absolute p-0.5 rounded text-left text-xs z-10 overflow-hidden hover:opacity-90 hover:ring-2 hover:ring-seasonal-accent/50 transition-all flex flex-col items-start',
-                                cards && 'bg-black/30 dark:bg-black/40 backdrop-blur-sm text-white border border-white/5',
+                                cards && 'bg-black/30 dark:bg-black/40 backdrop-blur-sm text-white border border-white/15 shadow-sm',
                               )}
                               style={
                                 cards
                                   ? {
                                       borderLeft: `3px solid ${event.color}`,
-                                      top: `calc(${(event.startTime.getMinutes() / 60) * 100}% + 1px)`,
-                                      height: `calc(${heightPct}% - 2px)`,
+                                      top: `calc(${(event.startTime.getMinutes() / 60) * 100}% + 2px)`,
+                                      height: `calc(${heightPct}% - 4px)`,
                                       left: css.left,
                                       width: css.width,
                                     }
