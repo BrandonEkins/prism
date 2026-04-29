@@ -17,7 +17,10 @@ jobs:
 
       - name: Fetch traffic data from GitHub API
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Traffic API requires Administration: Read, which the default
+          # GITHUB_TOKEN cannot grant. TRAFFIC_PAT is a fine-grained PAT
+          # scoped to this repo with Administration: Read + Contents: write.
+          GH_TOKEN: ${{ secrets.TRAFFIC_PAT }}
           REPO: ${{ github.repository }}
         run: |
           gh api "repos/${REPO}/traffic/views"     > /tmp/views.json
