@@ -23,17 +23,12 @@ jobs:
           GH_TOKEN: ${{ secrets.TRAFFIC_PAT }}
           REPO: ${{ github.repository }}
         run: |
-          set +e
+          # /traffic/referrers can 404 under fine-grained PATs even when
+          # views and clones succeed; tolerate per-endpoint failure with {}.
           for endpoint in views clones referrers; do
-            echo "--- /repos/$REPO/traffic/$endpoint ---"
-            gh api "/repos/$REPO/traffic/$endpoint" > "/tmp/${endpoint}.json"
-            rc=$?
-            echo "exit=$rc bytes=$(wc -c < "/tmp/${endpoint}.json" 2>/dev/null || echo 0)"
-            if [ $rc -ne 0 ]; then
-              echo "{}" > "/tmp/${endpoint}.json"
-            fi
+            gh api "/repos/$REPO/traffic/$endpoint" > "/tmp/${endpoint}.json" \
+              || echo "{}" > "/tmp/${endpoint}.json"
           done
-          set -e
 
       - name: Merge into history
         run: |
