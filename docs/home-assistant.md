@@ -114,6 +114,7 @@ sensor:
 
 ### Shopping list item count
 
+{% raw %}
 ```yaml
 sensor:
   - platform: rest
@@ -129,9 +130,11 @@ sensor:
       {{ total }}
     scan_interval: 600
 ```
+{% endraw %}
 
 ### Today's meals
 
+{% raw %}
 ```yaml
 sensor:
   - platform: rest
@@ -145,6 +148,7 @@ sensor:
       {{ dinner[0].name if dinner else 'Not planned' }}
     scan_interval: 3600
 ```
+{% endraw %}
 
 ---
 
