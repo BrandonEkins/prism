@@ -150,8 +150,8 @@ export function WeekView({
                         cards
                           ? {
                               borderLeft: `3px solid ${event.color}`,
-                              top: `${(event.startTime.getMinutes() / 60) * 100}%`,
-                              height: `${heightPct}%`,
+                              top: `calc(${(event.startTime.getMinutes() / 60) * 100}% + 1px)`,
+                              height: `calc(${heightPct}% - 2px)`,
                               left: css.left,
                               width: css.width,
                             }
@@ -347,8 +347,8 @@ export function WeekView({
                                 cards
                                   ? {
                                       borderLeft: `3px solid ${event.color}`,
-                                      top: `${(event.startTime.getMinutes() / 60) * 100}%`,
-                                      height: `${heightPct}%`,
+                                      top: `calc(${(event.startTime.getMinutes() / 60) * 100}% + 1px)`,
+                                      height: `calc(${heightPct}% - 2px)`,
                                       left: css.left,
                                       width: css.width,
                                     }
