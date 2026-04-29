@@ -115,7 +115,7 @@ export function WeekView({
                 onClick={() => onEventClick(event)}
                 className={cn(
                   'w-full text-left text-xs px-1 py-px rounded truncate hover:opacity-80 transition-all',
-                  cards && 'bg-black/30 backdrop-blur-sm text-white border border-white/5',
+                  cards && 'bg-card/85 backdrop-blur-sm border border-border/40 shadow-sm',
                 )}
                 style={
                   cards
@@ -150,7 +150,7 @@ export function WeekView({
                       onClick={() => onEventClick(event)}
                       className={cn(
                         'absolute text-left text-xs px-0.5 pt-0.5 rounded overflow-hidden hover:opacity-90 hover:ring-1 hover:ring-seasonal-accent/50 transition-all z-10 flex flex-col items-start',
-                        cards && 'bg-black/30 dark:bg-black/40 backdrop-blur-sm text-white border border-white/15 shadow-sm',
+                        cards && 'bg-card/85 backdrop-blur-sm border border-border/40 shadow-sm',
                       )}
                       style={
                         cards
@@ -172,8 +172,8 @@ export function WeekView({
                             }
                       }
                     >
-                      <span className={cn('truncate w-full text-[10px] font-medium leading-tight', cards && 'text-white')}>{event.title}</span>
-                      <span className={cn('text-[9px] leading-tight', cards ? 'text-white/70' : 'opacity-70')}>
+                      <span className={cn('truncate w-full text-[10px] font-medium leading-tight', cards && 'text-foreground')}>{event.title}</span>
+                      <span className={cn('text-[9px] leading-tight', cards ? 'text-muted-foreground' : 'opacity-70')}>
                         {format(event.startTime, 'h:mm')}&ndash;{format(event.endTime ?? new Date(event.startTime.getTime() + 3600000), 'h:mm a')}
                       </span>
                     </button>
@@ -293,7 +293,7 @@ export function WeekView({
                           onClick={() => onEventClick(event)}
                           className={cn(
                             'w-full text-left text-[10px] font-medium px-1 py-px rounded truncate hover:opacity-80 transition-all leading-tight',
-                            cards && 'bg-black/30 backdrop-blur-sm text-white border border-white/5',
+                            cards && 'bg-card/85 backdrop-blur-sm border border-border/40 shadow-sm',
                           )}
                           style={
                             cards
@@ -347,7 +347,7 @@ export function WeekView({
                               onClick={() => onEventClick(event)}
                               className={cn(
                                 'absolute p-0.5 rounded text-left text-xs z-10 overflow-hidden hover:opacity-90 hover:ring-2 hover:ring-seasonal-accent/50 transition-all flex flex-col items-start',
-                                cards && 'bg-black/30 dark:bg-black/40 backdrop-blur-sm text-white border border-white/15 shadow-sm',
+                                cards && 'bg-card/85 backdrop-blur-sm border border-border/40 shadow-sm',
                               )}
                               style={
                                 cards
@@ -369,8 +369,8 @@ export function WeekView({
                                     }
                               }
                             >
-                              <div className={cn('font-medium truncate w-full text-[10px] leading-tight', cards && 'text-white')}>{event.title}</div>
-                              <div className={cn('text-[9px] leading-tight', cards ? 'text-white/70' : 'opacity-70')}>
+                              <div className={cn('font-medium truncate w-full text-[10px] leading-tight', cards && 'text-foreground')}>{event.title}</div>
+                              <div className={cn('text-[9px] leading-tight', cards ? 'text-muted-foreground' : 'opacity-70')}>
                                 {format(event.startTime, 'h:mm')}&ndash;{format(event.endTime ?? new Date(event.startTime.getTime() + 3600000), 'h:mm a')}
                               </div>
                             </button>

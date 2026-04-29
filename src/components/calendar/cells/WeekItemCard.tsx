@@ -127,28 +127,28 @@ export function WeekItemCard({
         className={cn(
           'group relative flex w-full items-center gap-2',
           'overflow-hidden rounded-md',
-          'bg-black/30 dark:bg-black/40 backdrop-blur-sm',
-          'border border-white/5',
+          'bg-card/85 backdrop-blur-sm',
+          'border border-border/40 shadow-sm',
           'text-left text-foreground',
           'transition-colors duration-150',
-          interactive && 'cursor-pointer hover:bg-black/40 dark:hover:bg-black/50',
+          interactive && 'cursor-pointer hover:bg-card',
           dragId && 'cursor-grab active:cursor-grabbing',
-          draggable.isDragging && 'opacity-40 ring-2 ring-seasonal-accent shadow-xl',
+          draggable.isDragging && 'opacity-60 ring-2 ring-seasonal-accent shadow-xl',
           muted && 'opacity-60',
           styles.padding,
         )}
       >
         <span aria-hidden className={cn('shrink-0 self-stretch rounded-full', styles.stripeWidth)} style={{ backgroundColor: stripeColor }} />
         {styles.showTime && timeLabel && (
-          <span className={cn('shrink-0 font-medium tabular-nums text-white/70', styles.metaText)}>
+          <span className={cn('shrink-0 font-medium tabular-nums text-muted-foreground', styles.metaText)}>
             {timeLabel}
           </span>
         )}
-        <span className={cn('flex-1 truncate font-semibold text-white', styles.titleText, muted && 'line-through')}>
+        <span className={cn('flex-1 truncate font-semibold text-foreground', styles.titleText, muted && 'line-through')}>
           {title}
         </span>
         {styles.showSubtitle && subtitle && (
-          <span className={cn('shrink-0 truncate text-white/60', styles.metaText)}>
+          <span className={cn('shrink-0 truncate text-muted-foreground', styles.metaText)}>
             {subtitle}
           </span>
         )}
@@ -171,13 +171,13 @@ export function WeekItemCard({
       className={cn(
         'group relative flex w-full items-stretch gap-2',
         'overflow-hidden rounded-md',
-        'bg-black/30 dark:bg-black/40 backdrop-blur-sm',
-        'border border-white/5',
+        'bg-card/85 backdrop-blur-sm',
+        'border border-border/40 shadow-sm',
         'text-left text-foreground',
         'transition-colors duration-150',
-        interactive && 'cursor-pointer hover:bg-black/40 dark:hover:bg-black/50',
+        interactive && 'cursor-pointer hover:bg-card',
         dragId && 'cursor-grab active:cursor-grabbing',
-        draggable.isDragging && 'opacity-40 ring-2 ring-seasonal-accent shadow-xl',
+        draggable.isDragging && 'opacity-60 ring-2 ring-seasonal-accent shadow-xl',
         muted && 'opacity-60',
       )}
     >
@@ -185,15 +185,15 @@ export function WeekItemCard({
 
       <div className={cn('flex min-w-0 flex-1 flex-col', styles.padding)}>
         {styles.showTime && timeLabel && (
-          <span className={cn('truncate font-medium text-white/70', styles.metaText)}>
+          <span className={cn('truncate font-medium text-muted-foreground', styles.metaText)}>
             {timeLabel}
           </span>
         )}
-        <span className={cn('truncate font-semibold text-white', styles.titleText, muted && 'line-through')}>
+        <span className={cn('truncate font-semibold text-foreground', styles.titleText, muted && 'line-through')}>
           {title}
         </span>
         {styles.showSubtitle && subtitle && (
-          <span className={cn('truncate text-white/60', styles.metaText)}>
+          <span className={cn('truncate text-muted-foreground', styles.metaText)}>
             {subtitle}
           </span>
         )}
