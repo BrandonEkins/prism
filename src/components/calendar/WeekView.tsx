@@ -63,6 +63,12 @@ export function WeekView({
     );
   };
 
+  // Get all timed events for a day (used to compute side-by-side positions
+  // across the entire day, so events that overlap but start in different
+  // hours still split the column horizontally).
+  const getDayTimedEvents = (date: Date) =>
+    events.filter((e) => isSameDay(e.startTime, date) && !e.allDay);
+
   // Get timed events for a specific day and hour
   const getHourEvents = (date: Date, hour: number) =>
     events.filter(
@@ -80,6 +86,7 @@ export function WeekView({
   const renderDayColumn = (date: Date, compact: boolean = false) => {
     const isPast = isBefore(date, startOfDay(new Date())) && !isToday(date);
     const allDayEvents = getAllDayEvents(date);
+    const dayPositions = calculateEventPositions(getDayTimedEvents(date));
 
     return (
       <div key={date.toISOString()} className="flex flex-col min-w-0 flex-1">
@@ -129,11 +136,10 @@ export function WeekView({
         >
           {hours.map((hour) => {
             const hourEvents = getHourEvents(date, hour);
-            const positions = calculateEventPositions(hourEvents);
             return (
               <div key={hour} className={cn('relative min-h-0 overflow-visible', bordered && 'border-t border-border/50')} style={cellBgStyle}>
                 {hourEvents.map((event) => {
-                  const pos = positions.get(event.id);
+                  const pos = dayPositions.get(event.id);
                   if (!pos) return null;
                   const css = positionToCSS(pos);
                   const durationMin = ((event.endTime?.getTime() ?? (event.startTime.getTime() + 3600000)) - event.startTime.getTime()) / 60000;
@@ -318,6 +324,7 @@ export function WeekView({
             {/* Day columns */}
             {days.map((date) => {
               const isPast = isBefore(date, startOfDay(new Date())) && !isToday(date);
+              const dayPositions = calculateEventPositions(getDayTimedEvents(date));
               return (
                 <div
                   key={date.toISOString()}
@@ -326,11 +333,10 @@ export function WeekView({
                 >
                   {hours.map((hour) => {
                     const hourEvents = getHourEvents(date, hour);
-                    const positions = calculateEventPositions(hourEvents);
                     return (
                       <div key={hour} className={cn('relative min-h-0 overflow-visible', bordered && 'border-t border-border')} style={cellBgStyle}>
                         {hourEvents.map((event) => {
-                          const pos = positions.get(event.id);
+                          const pos = dayPositions.get(event.id);
                           if (!pos) return null;
                           const css = positionToCSS(pos);
                           const durationMin = ((event.endTime?.getTime() ?? (event.startTime.getTime() + 3600000)) - event.startTime.getTime()) / 60000;
