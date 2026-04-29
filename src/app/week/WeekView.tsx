@@ -12,6 +12,7 @@ import {
 } from '@dnd-kit/core';
 import { useWeekStartsOn } from '@/lib/hooks/useWeekStartsOn';
 import { useWeekViewData } from '@/lib/hooks/useWeekViewData';
+import { PageWrapper } from '@/components/layout';
 import { WeekViewHeader } from './WeekViewHeader';
 import { WeekViewGrid } from './WeekViewGrid';
 import { useWeekMutations } from './useWeekMutations';
@@ -75,8 +76,9 @@ export function WeekView() {
   };
 
   return (
-    <div className="p-2 sm:p-4">
-      <WeekViewHeader
+    <PageWrapper>
+      <div className="p-2 sm:p-4">
+        <WeekViewHeader
         weekStart={weekStart}
         weekStartsOn={weekStartsOn}
         onPrev={goPrev}
@@ -92,9 +94,10 @@ export function WeekView() {
         </div>
       )}
 
-      <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
-        <WeekViewGrid days={days} />
-      </DndContext>
-    </div>
+        <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+          <WeekViewGrid days={days} />
+        </DndContext>
+      </div>
+    </PageWrapper>
   );
 }

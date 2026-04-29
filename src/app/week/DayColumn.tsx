@@ -19,7 +19,15 @@ const CHORE_PENDING_COLOR = '#f59e0b';
 const CHORE_OVERDUE_COLOR = '#ef4444';
 const CHORE_PENDING_APPROVAL_COLOR = '#a855f7';
 
-const MEAL_COLOR = '#10b981';
+/** Fallback for meals without a cookedBy/createdBy member color. */
+const MEAL_FALLBACK_COLOR = '#10b981';
+
+function mealStripeColor(meal: {
+  cookedBy?: { color: string } | null;
+  createdBy?: { color: string } | null;
+}): string {
+  return meal.cookedBy?.color || meal.createdBy?.color || MEAL_FALLBACK_COLOR;
+}
 
 function weatherIcon(cond: WeatherCondition | undefined): React.ReactNode {
   switch (cond) {
@@ -119,7 +127,7 @@ export function DayColumn({ bucket, className }: DayColumnProps) {
             <WeekItemCard
               key={`meal-${meal.id}`}
               variant="meal"
-              stripeColor={MEAL_COLOR}
+              stripeColor={mealStripeColor(meal)}
               title={meal.name}
               timeLabel={meal.mealType}
               subtitle={meal.cookedBy?.name ? `Cooked by ${meal.cookedBy.name}` : undefined}
