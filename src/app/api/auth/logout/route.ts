@@ -13,15 +13,21 @@
  *
  */
 
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { invalidateSession } from '@/lib/auth/session';
 import { logActivity } from '@/lib/services/auditLog';
 import { logError } from '@/lib/utils/logError';
 
-// Determine if cookies should be secure based on APP_URL/BASE_URL scheme
-const appUrl = process.env.APP_URL || process.env.BASE_URL;
-const isSecure = appUrl ? appUrl.startsWith('https://') : process.env.NODE_ENV === 'production';
+// Determine whether this specific request arrived over HTTPS.
+// Reading from x-forwarded-proto so the cleared cookies still carry the
+// Secure flag when the user is behind a TLS-terminating reverse proxy —
+// the same fix pattern login and verify-pin use.
+function requestIsSecure(req: NextRequest): boolean {
+  const proto = req.headers.get('x-forwarded-proto');
+  if (proto) return proto === 'https';
+  return req.url.startsWith('https://');
+}
 
 
 /**
@@ -39,7 +45,7 @@ const isSecure = appUrl ? appUrl.startsWith('https://') : process.env.NODE_ENV =
  * This endpoint invalidates the session in Redis and clears cookies.
  * The session cannot be used again after logout.
  */
-export async function POST() {
+export async function POST(request: NextRequest) {
   try {
     const cookieStore = await cookies();
 
@@ -59,11 +65,13 @@ export async function POST() {
       summary: 'Logged out',
     });
 
+    const secure = requestIsSecure(request);
+
     // Clear the session cookie
     // Setting maxAge: 0 immediately expires the cookie
     cookieStore.set('prism_session', '', {
       httpOnly: true,
-      secure: isSecure,
+      secure,
       sameSite: 'lax',
       maxAge: 0, // Expire immediately
       path: '/',
@@ -72,7 +80,7 @@ export async function POST() {
     // Clear the user ID cookie
     cookieStore.set('prism_user', '', {
       httpOnly: true,
-      secure: isSecure,
+      secure,
       sameSite: 'lax',
       maxAge: 0,
       path: '/',
