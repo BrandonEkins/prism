@@ -16,7 +16,7 @@ import { hexToRgba } from '@/lib/utils/color';
 import { useWeekStartsOn } from '@/lib/hooks/useWeekStartsOn';
 import { DAYS_SHORT_ARRAY } from '@/lib/constants/days';
 import type { CalendarEvent } from '@/types/calendar';
-import { CardHeightProbe, DayOverflowPopover, DroppableOverlayCell } from './cells';
+import { CardHeightProbe, DayOverflowPopover, DroppableOverlayCell, WeekItemCard } from './cells';
 import { useCardCapacity } from '@/lib/hooks/useCardCapacity';
 import type { DayBucket } from '@/lib/hooks/useWeekViewData';
 
@@ -225,30 +225,36 @@ function DayCell({
           compact ? 'px-0.5 pb-0.5' : 'px-1 pb-1',
         )}
       >
-        {visibleEvents.map((event) => (
-          <button
-            key={event.id}
-            onClick={(e) => { e.stopPropagation(); onEventClick(event); }}
-            className={cn(
-              'w-full text-left rounded truncate hover:opacity-80 hover:ring-1 hover:ring-seasonal-accent/50 transition-all',
-              compact ? 'text-xs px-0.5 py-px' : 'text-xs px-1 py-0.5',
-              cards && 'bg-card/85 backdrop-blur-sm border border-border/40 shadow-sm text-foreground',
-            )}
-            style={
-              cards
-                ? { borderLeft: `3px solid ${event.color}` }
-                : event.allDay
+        {cards
+          ? visibleEvents.map((event) => (
+              <WeekItemCard
+                key={event.id}
+                variant="event"
+                size={compact ? 'sm' : 'md'}
+                layout="column"
+                stripeColor={event.color}
+                title={event.title}
+                timeLabel={event.allDay ? 'All day' : format(event.startTime, 'h:mm a')}
+                subtitle={event.location || event.calendarName}
+                onClick={() => onEventClick(event)}
+              />
+            ))
+          : visibleEvents.map((event) => (
+              <button
+                key={event.id}
+                onClick={(e) => { e.stopPropagation(); onEventClick(event); }}
+                className={cn(
+                  'w-full text-left rounded truncate hover:opacity-80 hover:ring-1 hover:ring-seasonal-accent/50 transition-all',
+                  compact ? 'text-xs px-0.5 py-px' : 'text-xs px-1 py-0.5',
+                )}
+                style={event.allDay
                   ? { backgroundColor: event.color, color: '#fff', borderLeft: `2px solid ${event.color}` }
                   : { color: event.color }
-            }
-          >
-            {cards
-              ? (event.allDay
-                  ? <span className="font-medium">{event.title}</span>
-                  : <><span className="text-muted-foreground mr-1">{format(event.startTime, 'h:mm')}</span><span className="font-medium">{event.title}</span></>)
-              : (event.allDay ? event.title : `${format(event.startTime, 'h:mm')} ${event.title}`)}
-          </button>
-        ))}
+                }
+              >
+                {event.allDay ? event.title : `${format(event.startTime, 'h:mm')} ${event.title}`}
+              </button>
+            ))}
         {cards && hiddenEvents.length > 0 && (
           <DayOverflowPopover
             date={date}

@@ -178,10 +178,22 @@ export function WeekView({
                             }
                       }
                     >
+                      {cards && (
+                        <span className={cn('text-[9px] leading-tight text-muted-foreground truncate w-full')}>
+                          {format(event.startTime, 'h:mm')}&ndash;{format(event.endTime ?? new Date(event.startTime.getTime() + 3600000), 'h:mm a')}
+                        </span>
+                      )}
                       <span className={cn('truncate w-full text-[10px] font-medium leading-tight', cards && 'text-foreground')}>{event.title}</span>
-                      <span className={cn('text-[9px] leading-tight', cards ? 'text-muted-foreground' : 'opacity-70')}>
-                        {format(event.startTime, 'h:mm')}&ndash;{format(event.endTime ?? new Date(event.startTime.getTime() + 3600000), 'h:mm a')}
-                      </span>
+                      {cards && (event.location || event.calendarName) && (
+                        <span className="text-[9px] leading-tight text-muted-foreground truncate w-full">
+                          {event.location || event.calendarName}
+                        </span>
+                      )}
+                      {!cards && (
+                        <span className="text-[9px] leading-tight opacity-70">
+                          {format(event.startTime, 'h:mm')}&ndash;{format(event.endTime ?? new Date(event.startTime.getTime() + 3600000), 'h:mm a')}
+                        </span>
+                      )}
                     </button>
                   );
                 })}
@@ -409,10 +421,22 @@ export function WeekView({
                                     }
                               }
                             >
+                              {cards && (
+                                <div className="text-[9px] leading-tight text-muted-foreground truncate w-full">
+                                  {format(event.startTime, 'h:mm')}&ndash;{format(event.endTime ?? new Date(event.startTime.getTime() + 3600000), 'h:mm a')}
+                                </div>
+                              )}
                               <div className={cn('font-medium truncate w-full text-[10px] leading-tight', cards && 'text-foreground')}>{event.title}</div>
-                              <div className={cn('text-[9px] leading-tight', cards ? 'text-muted-foreground' : 'opacity-70')}>
-                                {format(event.startTime, 'h:mm')}&ndash;{format(event.endTime ?? new Date(event.startTime.getTime() + 3600000), 'h:mm a')}
-                              </div>
+                              {cards && (event.location || event.calendarName) && (
+                                <div className="text-[9px] leading-tight text-muted-foreground truncate w-full">
+                                  {event.location || event.calendarName}
+                                </div>
+                              )}
+                              {!cards && (
+                                <div className="text-[9px] leading-tight opacity-70">
+                                  {format(event.startTime, 'h:mm')}&ndash;{format(event.endTime ?? new Date(event.startTime.getTime() + 3600000), 'h:mm a')}
+                                </div>
+                              )}
                             </button>
                           );
                         })}
