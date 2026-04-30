@@ -19,7 +19,7 @@ import { calculateEventPositions, positionToCSS } from '@/lib/utils/eventLayout'
 import { hexToRgba } from '@/lib/utils/color';
 import type { CalendarEvent } from '@/types/calendar';
 import type { DayBucket } from '@/lib/hooks/useWeekViewData';
-import { DroppableOverlayCell } from './cells';
+import { DroppableOverlayCell, weatherIcon } from './cells';
 
 export type CalendarDisplayMode = 'inline' | 'cards';
 
@@ -112,9 +112,9 @@ export function WeekView({
           </div>
         </div>
 
-        {/* All-day events - scrollable */}
+        {/* All-day events */}
         {allDayEvents.length > 0 && (
-          <div className={cn('shrink-0 p-0.5 max-h-16 overflow-y-auto', !transparentMode && 'bg-card/50')}>
+          <div className={cn('shrink-0 p-0.5 flex flex-col gap-px', !transparentMode && 'bg-card/50')}>
             {allDayEvents.map((event, idx) => (
               <button
                 key={event.id}
@@ -279,17 +279,40 @@ export function WeekView({
             {days.map((date) => {
               const isPast = isBefore(date, startOfDay(new Date())) && !isToday(date);
               const allDayEvents = getAllDayEvents(date);
+              const dayBucket = bucketsByDate?.get(format(date, 'yyyy-MM-dd'));
+              const dayWeather = dayBucket?.weather;
               return (
-                <div key={date.toISOString()} className="flex-1 min-w-0 border-l border-border">
+                <div
+                  key={date.toISOString()}
+                  className={cn(
+                    'flex-1 min-w-0 border-l border-border',
+                    isToday(date) && cards && 'rounded ring-2 ring-seasonal-accent/60',
+                  )}
+                >
                   <div
                     className={cn(
-                      'text-center py-2',
+                      'flex items-baseline justify-between gap-1 px-2 py-1.5',
                       !transparentMode && isPast && 'bg-muted/50 text-muted-foreground',
-                      isToday(date) && 'bg-primary text-primary-foreground'
+                      isToday(date) && !cards && 'bg-primary text-primary-foreground',
                     )}
                   >
-                    <div className="text-sm font-bold uppercase">{format(date, 'EEE')}</div>
-                    <div className="text-2xl font-bold">{format(date, 'd')}</div>
+                    <div className="flex items-baseline gap-1.5 min-w-0">
+                      <span className="text-2xl font-bold leading-none">{format(date, 'd')}</span>
+                      <span className={cn(
+                        'text-xs font-medium uppercase tracking-wide truncate leading-none',
+                        isToday(date) && cards ? 'text-seasonal-accent font-semibold' : undefined,
+                      )}>
+                        {isToday(date) ? 'Today' : format(date, 'EEE')}
+                      </span>
+                    </div>
+                    {dayWeather && (
+                      <div className="flex shrink-0 items-center gap-1 text-[11px] text-muted-foreground">
+                        {weatherIcon(dayWeather.condition)}
+                        <span className="tabular-nums">
+                          {Math.round(dayWeather.high)}°/{Math.round(dayWeather.low)}°
+                        </span>
+                      </div>
+                    )}
                   </div>
                   {allDayEvents.length > 0 && (
                     <div className={cn('px-0.5 pb-0.5 flex flex-col gap-px', !transparentMode && 'bg-card/50')}>

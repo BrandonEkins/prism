@@ -3,11 +3,10 @@
 import * as React from 'react';
 import { format, isSameDay, isToday, isTomorrow } from 'date-fns';
 import { useDroppable } from '@dnd-kit/core';
-import { Cloud, CloudRain, CloudSnow, Sun, CloudSun } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { WeekItemCard, type WeekItemSize, type WeekItemLayout } from './WeekItemCard';
+import { weatherIcon } from './weatherIcon';
 import type { DayBucket } from '@/lib/hooks/useWeekViewData';
-import type { WeatherCondition } from '@/components/widgets/WeatherWidget';
 
 const PRIORITY_COLORS = {
   high: '#ef4444',
@@ -39,29 +38,6 @@ function mealStripeColor(meal: {
   createdBy?: { color: string } | null;
 }): string {
   return meal.cookedBy?.color || meal.createdBy?.color || MEAL_FALLBACK_COLOR;
-}
-
-/**
- * Tinted Lucide icon per condition. Upstream ships colored raster PNGs;
- * we tint Lucide instead to keep things theme-aware. Color choices match
- * the upstream PNG palette: yellow sun, blue rain, gray cloud, etc.
- */
-function weatherIcon(cond: WeatherCondition | undefined, size: 'sm' | 'lg' = 'sm'): React.ReactNode {
-  const cls = size === 'lg' ? 'h-5 w-5' : 'h-4 w-4';
-  switch (cond) {
-    case 'sunny':
-      return <Sun className={cn(cls, 'text-amber-400')} aria-hidden />;
-    case 'partly-cloudy':
-      return <CloudSun className={cn(cls, 'text-amber-300')} aria-hidden />;
-    case 'cloudy':
-      return <Cloud className={cn(cls, 'text-slate-400 dark:text-white/70')} aria-hidden />;
-    case 'rainy':
-      return <CloudRain className={cn(cls, 'text-blue-400')} aria-hidden />;
-    case 'snowy':
-      return <CloudSnow className={cn(cls, 'text-blue-200')} aria-hidden />;
-    default:
-      return null;
-  }
 }
 
 function dayLabel(date: Date): string {

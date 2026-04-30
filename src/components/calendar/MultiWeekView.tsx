@@ -92,7 +92,7 @@ export function MultiWeekView({
         style={{ gridTemplateRows: `repeat(${weekCount}, ${rowSizing})` }}
       >
         {weeks.map((week, wIdx) => (
-          <div key={wIdx} className={cn('grid grid-cols-7 gap-0.5', cards && 'min-h-0')}>
+          <div key={wIdx} className={cn('grid grid-cols-7 gap-0.5', cards && 'min-h-0 h-full')}>
             {week.map((date, dIdx) => (
               <DayCell
                 key={dIdx}
