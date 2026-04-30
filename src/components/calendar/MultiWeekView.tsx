@@ -16,7 +16,7 @@ import { hexToRgba } from '@/lib/utils/color';
 import { useWeekStartsOn } from '@/lib/hooks/useWeekStartsOn';
 import { DAYS_SHORT_ARRAY } from '@/lib/constants/days';
 import type { CalendarEvent } from '@/types/calendar';
-import { CardHeightProbe, DayOverflowPopover, DroppableOverlayCell, WeekItemCard } from './cells';
+import { CardHeightProbe, DayOverflowPopover, DroppableOverlayCell, WeekItemCard, useDayDroppable } from './cells';
 import { useCardCapacity } from '@/lib/hooks/useCardCapacity';
 import type { DayBucket } from '@/lib/hooks/useWeekViewData';
 
@@ -166,16 +166,22 @@ function DayCell({
   } else {
     const noOverflowFit = fitWithoutOverflow ?? fallback;
     const overflowFit = fitWithOverflow ?? fallback;
+    // If every event fits without a popover, show all. Otherwise reserve the
+    // last visible slot for the popover trigger so overflow is always
+    // explicit, never clipped.
     if (sorted.length <= noOverflowFit) visibleCount = sorted.length;
-    else if (sorted.length - overflowFit <= 1) visibleCount = sorted.length;
     else visibleCount = overflowFit;
   }
+
+  const droppable = useDayDroppable({ date, enabled: cards && enableDnd });
 
   const visibleEvents = cards ? sorted.slice(0, Math.max(0, visibleCount)) : sorted;
   const hiddenEvents = cards ? sorted.slice(visibleEvents.length) : [];
 
   return (
     <div
+      ref={cards && enableDnd ? droppable.setNodeRef : undefined}
+      data-droppable-day={cards && enableDnd ? droppable.droppableId : undefined}
       className={cn(
         'flex flex-col',
         cards && 'min-h-0 h-full',
@@ -183,6 +189,7 @@ function DayCell({
         bordered && !cellBgStyle && 'border border-border rounded-md bg-card/85',
         bordered && cellBgStyle && 'border border-border rounded-md',
         bordered && isPast && !cellBgStyle && 'bg-muted/65',
+        cards && enableDnd && droppable.isOver && 'ring-2 ring-seasonal-accent shadow-lg',
       )}
       style={cellBgStyle}
     >

@@ -22,7 +22,7 @@ import { useWeekStartsOn } from '@/lib/hooks/useWeekStartsOn';
 import { DAYS_SHORT_ARRAY } from '@/lib/constants/days';
 import type { CalendarEvent } from '@/types/calendar';
 import { seasonalPalettes } from '@/lib/themes/seasonalThemes';
-import { CardHeightProbe, DayOverflowPopover, DroppableOverlayCell } from './cells';
+import { CardHeightProbe, DayOverflowPopover, DroppableOverlayCell, useDayDroppable } from './cells';
 import { useCardCapacity } from '@/lib/hooks/useCardCapacity';
 import type { DayBucket } from '@/lib/hooks/useWeekViewData';
 
@@ -124,66 +124,124 @@ export function MonthView({
           const isPast = isBefore(date, startOfDay(new Date())) && !isToday(date);
 
           return (
-            <div
+            <MonthDayCell
               key={index}
-              onClick={() => onDateClick(date)}
-              className={cn(
-                bordered && 'border border-border rounded-md',
-                'cursor-pointer overflow-hidden',
-                !transparentMode && !cellBgStyle && 'bg-card/85 backdrop-blur-sm',
-                'flex flex-col min-h-0',
-                !isSameMonth(date, currentDate) && 'opacity-50 text-muted-foreground',
-                !transparentMode && !cellBgStyle && isPast && isSameMonth(date, currentDate) && 'bg-muted/65 text-muted-foreground',
-              )}
-              style={cellBgStyle}
-            >
-              {/* Today gets a blue bar; other days just show the date */}
-              {isToday(date) ? (
-                <div className="bg-primary px-1 py-0.5 mb-0.5 rounded-t-[3px]">
-                  <span className="text-sm font-bold text-primary-foreground">{format(date, 'd')}</span>
-                </div>
-              ) : (
-                <div className="text-sm font-medium px-1 pt-1 mb-0.5">
-                  {format(date, 'd')}
-                </div>
-              )}
-
-              {cards ? (
-                <DayCardsCell
-                  date={date}
-                  events={dayEvents}
-                  bucket={bucketsByDate?.get(format(date, 'yyyy-MM-dd'))}
-                  enableDnd={enableDnd}
-                  cardHeight={cardHeight}
-                  onEventClick={onEventClick}
-                />
-              ) : (
-                <ul className="flex-1 overflow-y-auto space-y-0.5 list-none m-0 px-1 pb-1 pt-0">
-                  {dayEvents.map((event) => (
-                    <li
-                      key={event.id}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onEventClick(event);
-                      }}
-                      className={cn(
-                        'text-xs px-1 rounded truncate cursor-pointer hover:opacity-80 hover:ring-2 hover:ring-seasonal-accent/50 transition-all',
-                        event.allDay ? 'py-px' : 'py-0.5'
-                      )}
-                      style={event.allDay
-                        ? { backgroundColor: event.color, color: '#fff', borderLeft: `2px solid ${event.color}` }
-                        : { color: event.color }
-                      }
-                    >
-                      {event.allDay ? event.title : `• ${format(event.startTime, 'h:mm a')} ${event.title}`}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
+              date={date}
+              dayEvents={dayEvents}
+              bucket={bucketsByDate?.get(format(date, 'yyyy-MM-dd'))}
+              cards={cards}
+              enableDnd={enableDnd}
+              cardHeight={cardHeight}
+              currentDate={currentDate}
+              isPast={isPast}
+              bordered={bordered}
+              transparentMode={transparentMode}
+              cellBgStyle={cellBgStyle}
+              onDateClick={onDateClick}
+              onEventClick={onEventClick}
+            />
           );
         })}
       </div>
+    </div>
+  );
+}
+
+/**
+ * One day cell in the month grid. Lifted out of the parent map so it can
+ * register a useDayDroppable target and show the purple drop-hover ring on
+ * its outer wrapper (matching /week's DayColumn).
+ */
+function MonthDayCell({
+  date,
+  dayEvents,
+  bucket,
+  cards,
+  enableDnd,
+  cardHeight,
+  currentDate,
+  isPast,
+  bordered,
+  transparentMode,
+  cellBgStyle,
+  onDateClick,
+  onEventClick,
+}: {
+  date: Date;
+  dayEvents: CalendarEvent[];
+  bucket: DayBucket | undefined;
+  cards: boolean;
+  enableDnd: boolean;
+  cardHeight: number | undefined;
+  currentDate: Date;
+  isPast: boolean;
+  bordered: boolean;
+  transparentMode: boolean;
+  cellBgStyle: React.CSSProperties | undefined;
+  onDateClick: (date: Date) => void;
+  onEventClick: (event: CalendarEvent) => void;
+}) {
+  const droppable = useDayDroppable({ date, enabled: cards && enableDnd });
+
+  return (
+    <div
+      ref={cards && enableDnd ? droppable.setNodeRef : undefined}
+      data-droppable-day={cards && enableDnd ? droppable.droppableId : undefined}
+      onClick={() => onDateClick(date)}
+      className={cn(
+        bordered && 'border border-border rounded-md',
+        'cursor-pointer overflow-hidden',
+        !transparentMode && !cellBgStyle && 'bg-card/85 backdrop-blur-sm',
+        'flex flex-col min-h-0',
+        !isSameMonth(date, currentDate) && 'opacity-50 text-muted-foreground',
+        !transparentMode && !cellBgStyle && isPast && isSameMonth(date, currentDate) && 'bg-muted/65 text-muted-foreground',
+        cards && enableDnd && droppable.isOver && 'ring-2 ring-seasonal-accent shadow-lg',
+      )}
+      style={cellBgStyle}
+    >
+      {/* Today gets a blue bar; other days just show the date */}
+      {isToday(date) ? (
+        <div className="bg-primary px-1 py-0.5 mb-0.5 rounded-t-[3px]">
+          <span className="text-sm font-bold text-primary-foreground">{format(date, 'd')}</span>
+        </div>
+      ) : (
+        <div className="text-sm font-medium px-1 pt-1 mb-0.5">
+          {format(date, 'd')}
+        </div>
+      )}
+
+      {cards ? (
+        <DayCardsCell
+          date={date}
+          events={dayEvents}
+          bucket={bucket}
+          enableDnd={enableDnd}
+          cardHeight={cardHeight}
+          onEventClick={onEventClick}
+        />
+      ) : (
+        <ul className="flex-1 overflow-y-auto space-y-0.5 list-none m-0 px-1 pb-1 pt-0">
+          {dayEvents.map((event) => (
+            <li
+              key={event.id}
+              onClick={(e) => {
+                e.stopPropagation();
+                onEventClick(event);
+              }}
+              className={cn(
+                'text-xs px-1 rounded truncate cursor-pointer hover:opacity-80 hover:ring-2 hover:ring-seasonal-accent/50 transition-all',
+                event.allDay ? 'py-px' : 'py-0.5'
+              )}
+              style={event.allDay
+                ? { backgroundColor: event.color, color: '#fff', borderLeft: `2px solid ${event.color}` }
+                : { color: event.color }
+              }
+            >
+              {event.allDay ? event.title : `• ${format(event.startTime, 'h:mm a')} ${event.title}`}
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
@@ -222,13 +280,11 @@ function DayCardsCell({
   const noOverflowFit = fitWithoutOverflow ?? fallback;
   const overflowFit = fitWithOverflow ?? fallback;
 
-  // Decide which cap to use. Show all events if they fit without a popover.
-  // Otherwise reserve space for the popover and show `overflowFit`. As an
-  // additional courtesy, if hiding only 1 event would be silly, show them all.
+  // If every event fits without a popover, show all. Otherwise reserve the
+  // last visible slot for the popover trigger so overflow is always explicit
+  // and never clipped by the cell's overflow:hidden.
   let visibleCount: number;
   if (events.length <= noOverflowFit) {
-    visibleCount = events.length;
-  } else if (events.length - overflowFit <= 1) {
     visibleCount = events.length;
   } else {
     visibleCount = overflowFit;

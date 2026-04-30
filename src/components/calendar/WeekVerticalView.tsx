@@ -17,7 +17,7 @@ import type { CalendarEvent } from '@/types/calendar';
 import { useWeekStartsOn } from '@/lib/hooks/useWeekStartsOn';
 import type { CalendarNote } from '@/lib/hooks/useCalendarNotes';
 import type { DayBucket } from '@/lib/hooks/useWeekViewData';
-import { DroppableOverlayCell } from './cells';
+import { DroppableOverlayCell, useDayDroppable } from './cells';
 
 export interface WeekVerticalViewProps {
   currentDate: Date;
@@ -106,120 +106,174 @@ export function WeekVerticalView({
         </div>
       )}
 
-      {days.map((day) => {
-        const dayStart = startOfDay(day);
-        const isCurrentDay = isToday(day);
-        const isPast = isBefore(dayStart, today);
+      {days.map((day) => (
+        <WeekListDayRow
+          key={day.toISOString()}
+          day={day}
+          today={today}
+          events={events}
+          displayGroups={displayGroups}
+          getEventsForGroup={getEventsForGroup}
+          bordered={bordered}
+          cellBgStyle={cellBgStyle}
+          currentHour={currentHour}
+          onEventClick={onEventClick}
+          showNotes={showNotes}
+          notesByDate={notesByDate}
+          onNoteChange={onNoteChange}
+          displayMode={displayMode}
+          bucketsByDate={bucketsByDate}
+          enableDnd={enableDnd}
+        />
+      ))}
+    </div>
+  );
+}
 
-        // All events for this day
-        const dayEvents = events.filter((event) => {
-          const eventStart = new Date(event.startTime);
-          const eventEnd = new Date(event.endTime);
-          return eventStart < addDays(dayStart, 1) && eventEnd > dayStart;
-        });
+function WeekListDayRow({
+  day,
+  today,
+  events,
+  displayGroups,
+  getEventsForGroup,
+  bordered,
+  cellBgStyle,
+  currentHour,
+  onEventClick,
+  showNotes,
+  notesByDate,
+  onNoteChange,
+  displayMode,
+  bucketsByDate,
+  enableDnd,
+}: {
+  day: Date;
+  today: Date;
+  events: CalendarEvent[];
+  displayGroups: Array<{ id: string; name: string; color: string }>;
+  getEventsForGroup: (dayEvents: CalendarEvent[], gid: string) => CalendarEvent[];
+  bordered: boolean;
+  cellBgStyle: React.CSSProperties | undefined;
+  currentHour: number;
+  onEventClick: (event: CalendarEvent) => void;
+  showNotes: boolean;
+  notesByDate: Map<string, CalendarNote> | undefined;
+  onNoteChange: ((date: string, content: string) => void) | undefined;
+  displayMode: 'inline' | 'cards';
+  bucketsByDate: Map<string, DayBucket> | undefined;
+  enableDnd: boolean;
+}) {
+  const cards = displayMode === 'cards';
+  const dayStart = startOfDay(day);
+  const isCurrentDay = isToday(day);
+  const isPast = isBefore(dayStart, today);
 
-        const allDayEvents = dayEvents.filter((e) => e.allDay);
-        const timedEvents = dayEvents.filter((e) => !e.allDay).sort(
-          (a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
-        );
+  const dayEvents = events.filter((event) => {
+    const eventStart = new Date(event.startTime);
+    const eventEnd = new Date(event.endTime);
+    return eventStart < addDays(dayStart, 1) && eventEnd > dayStart;
+  });
 
-        return (
-          <div
-            key={day.toISOString()}
-            className={cn(
-              'flex',
-              bordered && 'border-b border-border',
-              isPast && !isCurrentDay && !cellBgStyle && 'bg-muted/15'
-            )}
-            style={cellBgStyle}
-          >
-            {/* Day label */}
-            <div
-              className={cn(
-                'w-20 md:w-28 shrink-0 p-2 md:p-3 flex flex-col items-center justify-start',
-                bordered && 'border-r border-border',
-                isPast && !isCurrentDay && 'bg-muted/15',
-                isCurrentDay && 'bg-primary text-primary-foreground',
-              )}
-            >
-              <span className={cn(
-                'text-xs font-medium uppercase tracking-wide',
-                isCurrentDay ? 'text-primary-foreground' : 'text-muted-foreground'
-              )}>
-                {format(day, 'EEE')}
-              </span>
-              <span className={cn(
-                'text-2xl font-bold leading-tight',
-                isCurrentDay ? 'text-primary-foreground' : 'text-foreground'
-              )}>
-                {format(day, 'd')}
-              </span>
-              <span className={cn(
-                'text-[10px]',
-                isCurrentDay ? 'text-primary-foreground/80' : 'text-muted-foreground'
-              )}>
-                {format(day, 'MMM')}
-              </span>
-            </div>
+  const allDayEvents = dayEvents.filter((e) => e.allDay);
+  const timedEvents = dayEvents.filter((e) => !e.allDay).sort(
+    (a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
+  );
 
-            {/* Events area — one column per group */}
-            {displayGroups.length > 1 ? (
-              <div className="flex-1 flex min-w-0">
-                {displayGroups.map((group) => {
-                  const groupAllDay = getEventsForGroup(allDayEvents, group.id);
-                  const groupTimed = getEventsForGroup(timedEvents, group.id);
-                  return (
-                    <div key={group.id} className="flex-1 min-w-0 border-l border-border p-1 space-y-0.5">
-                      <DayEventList
-                        allDayEvents={groupAllDay}
-                        timedEvents={groupTimed}
-                        onEventClick={onEventClick}
-                        isPastDay={isPast && !isCurrentDay}
-                        isCurrentDay={isCurrentDay}
-                        currentHour={currentHour}
-                        cards={displayMode === 'cards'}
-                      />
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="flex-1 p-1.5 min-w-0 space-y-1">
+  const droppable = useDayDroppable({ date: day, enabled: cards && enableDnd });
+
+  return (
+    <div
+      ref={cards && enableDnd ? droppable.setNodeRef : undefined}
+      data-droppable-day={cards && enableDnd ? droppable.droppableId : undefined}
+      className={cn(
+        'flex',
+        bordered && 'border-b border-border',
+        isPast && !isCurrentDay && !cellBgStyle && 'bg-muted/15',
+        cards && enableDnd && droppable.isOver && 'ring-2 ring-seasonal-accent shadow-lg',
+      )}
+      style={cellBgStyle}
+    >
+      <div
+        className={cn(
+          'w-20 md:w-28 shrink-0 p-2 md:p-3 flex flex-col items-center justify-start',
+          bordered && 'border-r border-border',
+          isPast && !isCurrentDay && 'bg-muted/15',
+          isCurrentDay && 'bg-primary text-primary-foreground',
+        )}
+      >
+        <span className={cn(
+          'text-xs font-medium uppercase tracking-wide',
+          isCurrentDay ? 'text-primary-foreground' : 'text-muted-foreground'
+        )}>
+          {format(day, 'EEE')}
+        </span>
+        <span className={cn(
+          'text-2xl font-bold leading-tight',
+          isCurrentDay ? 'text-primary-foreground' : 'text-foreground'
+        )}>
+          {format(day, 'd')}
+        </span>
+        <span className={cn(
+          'text-[10px]',
+          isCurrentDay ? 'text-primary-foreground/80' : 'text-muted-foreground'
+        )}>
+          {format(day, 'MMM')}
+        </span>
+      </div>
+
+      {displayGroups.length > 1 ? (
+        <div className="flex-1 flex min-w-0">
+          {displayGroups.map((group) => {
+            const groupAllDay = getEventsForGroup(allDayEvents, group.id);
+            const groupTimed = getEventsForGroup(timedEvents, group.id);
+            return (
+              <div key={group.id} className="flex-1 min-w-0 border-l border-border p-1 space-y-0.5">
                 <DayEventList
-                  allDayEvents={allDayEvents}
-                  timedEvents={timedEvents}
+                  allDayEvents={groupAllDay}
+                  timedEvents={groupTimed}
                   onEventClick={onEventClick}
                   isPastDay={isPast && !isCurrentDay}
                   isCurrentDay={isCurrentDay}
                   currentHour={currentHour}
-                  cards={displayMode === 'cards'}
+                  cards={cards}
                 />
-                {bucketsByDate && (
-                  <DroppableOverlayCell
-                    date={day}
-                    bucket={bucketsByDate.get(format(day, 'yyyy-MM-dd'))}
-                    size="sm"
-                    layout="row"
-                    enableDnd={enableDnd}
-                  />
-                )}
               </div>
-            )}
+            );
+          })}
+        </div>
+      ) : (
+        <div className="flex-1 p-1.5 min-w-0 space-y-1">
+          <DayEventList
+            allDayEvents={allDayEvents}
+            timedEvents={timedEvents}
+            onEventClick={onEventClick}
+            isPastDay={isPast && !isCurrentDay}
+            isCurrentDay={isCurrentDay}
+            currentHour={currentHour}
+            cards={cards}
+          />
+          {bucketsByDate && (
+            <DroppableOverlayCell
+              date={day}
+              bucket={bucketsByDate.get(format(day, 'yyyy-MM-dd'))}
+              size="sm"
+              layout="row"
+              enableDnd={enableDnd}
+            />
+          )}
+        </div>
+      )}
 
-            {/* Notes cell */}
-            {showNotes && (
-              <div className="w-2/5 min-w-[180px] border-l border-border">
-                <NoteEditor
-                  dateKey={format(day, 'yyyy-MM-dd')}
-                  content={notesByDate?.get(format(day, 'yyyy-MM-dd'))?.content || ''}
-                  onNoteChange={onNoteChange}
-                  className="px-3 py-2 min-h-[48px] h-full"
-                />
-              </div>
-            )}
-          </div>
-        );
-      })}
+      {showNotes && (
+        <div className="w-2/5 min-w-[180px] border-l border-border">
+          <NoteEditor
+            dateKey={format(day, 'yyyy-MM-dd')}
+            content={notesByDate?.get(format(day, 'yyyy-MM-dd'))?.content || ''}
+            onNoteChange={onNoteChange}
+            className="px-3 py-2 min-h-[48px] h-full"
+          />
+        </div>
+      )}
     </div>
   );
 }

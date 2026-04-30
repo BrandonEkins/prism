@@ -19,7 +19,7 @@ import { calculateEventPositions, positionToCSS } from '@/lib/utils/eventLayout'
 import { hexToRgba } from '@/lib/utils/color';
 import type { CalendarEvent } from '@/types/calendar';
 import type { DayBucket } from '@/lib/hooks/useWeekViewData';
-import { DroppableOverlayCell, weatherIcon } from './cells';
+import { DroppableOverlayCell, useDayDroppable, weatherIcon } from './cells';
 
 export type CalendarDisplayMode = 'inline' | 'cards';
 
@@ -95,7 +95,12 @@ export function WeekView({
     const dayPositions = calculateEventPositions(getDayTimedEvents(date));
 
     return (
-      <div key={date.toISOString()} className="flex flex-col min-w-0 flex-1">
+      <PortraitDayColumn
+        key={date.toISOString()}
+        date={date}
+        cards={cards}
+        enableDnd={enableDnd}
+      >
         {/* Day header */}
         <div
           className={cn(
@@ -201,7 +206,7 @@ export function WeekView({
             );
           })}
         </div>
-      </div>
+      </PortraitDayColumn>
     );
   };
 
@@ -294,12 +299,13 @@ export function WeekView({
               const dayBucket = bucketsByDate?.get(format(date, 'yyyy-MM-dd'));
               const dayWeather = dayBucket?.weather;
               return (
-                <div
+                <LandscapeDayHeader
                   key={date.toISOString()}
-                  className={cn(
-                    'flex-1 min-w-0 border-l border-border',
-                    isToday(date) && cards && 'rounded ring-2 ring-seasonal-accent/60',
-                  )}
+                  date={date}
+                  isPast={isPast}
+                  cards={cards}
+                  enableDnd={enableDnd}
+                  transparentMode={transparentMode}
                 >
                   <div
                     className={cn(
@@ -358,7 +364,7 @@ export function WeekView({
                       />
                     </div>
                   )}
-                </div>
+                </LandscapeDayHeader>
               );
             })}
           </div>
@@ -449,6 +455,73 @@ export function WeekView({
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+/**
+ * Wraps a portrait-mode day column with a useDayDroppable target so meals,
+ * chores, and tasks can be dropped onto the entire day.
+ */
+function PortraitDayColumn({
+  date,
+  cards,
+  enableDnd,
+  children,
+}: {
+  date: Date;
+  cards: boolean;
+  enableDnd: boolean;
+  children: React.ReactNode;
+}) {
+  const droppable = useDayDroppable({ date, enabled: cards && enableDnd });
+  return (
+    <div
+      ref={cards && enableDnd ? droppable.setNodeRef : undefined}
+      data-droppable-day={cards && enableDnd ? droppable.droppableId : undefined}
+      className={cn(
+        'flex flex-col min-w-0 flex-1',
+        cards && enableDnd && droppable.isOver && 'ring-2 ring-seasonal-accent shadow-lg rounded-md',
+      )}
+    >
+      {children}
+    </div>
+  );
+}
+
+/**
+ * Wraps a landscape-mode day header (per-day column in the sticky header) with
+ * a useDayDroppable target. Drop highlight covers the header column where the
+ * meals/chores/tasks bucket lives.
+ */
+function LandscapeDayHeader({
+  date,
+  isPast,
+  cards,
+  enableDnd,
+  transparentMode,
+  children,
+}: {
+  date: Date;
+  isPast: boolean;
+  cards: boolean;
+  enableDnd: boolean;
+  transparentMode: boolean;
+  children: React.ReactNode;
+}) {
+  const droppable = useDayDroppable({ date, enabled: cards && enableDnd });
+  return (
+    <div
+      ref={cards && enableDnd ? droppable.setNodeRef : undefined}
+      data-droppable-day={cards && enableDnd ? droppable.droppableId : undefined}
+      className={cn(
+        'flex-1 min-w-0 border-l border-border',
+        !transparentMode && isPast && 'bg-muted/20',
+        isToday(date) && cards && 'rounded ring-2 ring-seasonal-accent/60',
+        cards && enableDnd && droppable.isOver && 'ring-2 ring-seasonal-accent shadow-lg',
+      )}
+    >
+      {children}
     </div>
   );
 }

@@ -16,7 +16,7 @@ import { hexToRgba } from '@/lib/utils/color';
 import type { CalendarEvent } from '@/types/calendar';
 import type { CalendarNote } from '@/lib/hooks/useCalendarNotes';
 import type { DayBucket } from '@/lib/hooks/useWeekViewData';
-import { DroppableOverlayCell } from './cells';
+import { DroppableOverlayCell, useDayDroppable } from './cells';
 
 export interface DayViewSideBySideProps {
   currentDate: Date;
@@ -50,6 +50,7 @@ export function DayViewSideBySide({
   enableDnd = false,
 }: DayViewSideBySideProps) {
   const cards = displayMode === 'cards';
+  const droppable = useDayDroppable({ date: currentDate, enabled: cards && enableDnd });
   const bgOverride = useWidgetBgOverride();
   const transparentMode = bgOverride?.hasCustomBg === true;
   const cellBg = bgOverride?.cellBackgroundColor;
@@ -110,7 +111,15 @@ export function DayViewSideBySide({
   // Single scroll container with sticky header — same layout context keeps columns aligned.
   // min-h-full flex-col inner wrapper makes the hourly grid stretch to fill available space.
   return (
-    <div className={cn('h-full rounded-md overflow-hidden', !transparentMode && 'bg-card/85 backdrop-blur-sm')}>
+    <div
+      ref={cards && enableDnd ? droppable.setNodeRef : undefined}
+      data-droppable-day={cards && enableDnd ? droppable.droppableId : undefined}
+      className={cn(
+        'h-full rounded-md overflow-hidden',
+        !transparentMode && 'bg-card/85 backdrop-blur-sm',
+        cards && enableDnd && droppable.isOver && 'ring-2 ring-seasonal-accent shadow-lg',
+      )}
+    >
       <div className="h-full overflow-y-auto">
         <div className="h-full min-h-full flex flex-col">
           {/* Sticky all-day / group-label header */}

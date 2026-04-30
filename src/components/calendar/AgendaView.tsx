@@ -13,7 +13,7 @@ import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui';
 import type { CalendarEvent } from '@/types/calendar';
 import type { DayBucket } from '@/lib/hooks/useWeekViewData';
-import { DroppableOverlayCell } from './cells';
+import { DroppableOverlayCell, useDayDroppable } from './cells';
 import { format as fmt } from 'date-fns';
 
 export interface AgendaViewProps {
@@ -123,9 +123,17 @@ function AgendaDaySection({
 }) {
   const displayEvents = maxEvents > 0 ? events.slice(0, maxEvents) : events;
   const remainingCount = maxEvents > 0 ? events.length - maxEvents : 0;
+  const droppable = useDayDroppable({ date, enabled: cards && enableDnd });
 
   return (
-    <div>
+    <div
+      ref={cards && enableDnd ? droppable.setNodeRef : undefined}
+      data-droppable-day={cards && enableDnd ? droppable.droppableId : undefined}
+      className={cn(
+        'rounded',
+        cards && enableDnd && droppable.isOver && 'ring-2 ring-seasonal-accent shadow-sm bg-card/40 p-1',
+      )}
+    >
       <div className="flex items-center gap-2 mb-2">
         <span
           className={cn(
