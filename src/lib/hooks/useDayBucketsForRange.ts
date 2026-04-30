@@ -62,7 +62,11 @@ function eventOnDay(event: CalendarEvent, day: Date): boolean {
 
 function choreNextDueOnDay(chore: Chore, day: Date): boolean {
   if (!chore.nextDue) return false;
-  const due = new Date(chore.nextDue);
+  // chore.nextDue is a YYYY-MM-DD DATE column; parse as local to avoid the
+  // UTC-shift bug that would otherwise put the chore on the previous day.
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(chore.nextDue);
+  if (!m) return false;
+  const due = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
   if (Number.isNaN(due.getTime())) return false;
   return isSameDay(due, day);
 }
@@ -213,7 +217,12 @@ export function useDayBucketsForRange({
  */
 function isMealForWeek(meal: Meal, date: Date): boolean {
   if (!meal.weekOf) return false;
-  const weekStart = startOfDay(new Date(meal.weekOf));
+  // weekOf is a YYYY-MM-DD DATE column. `new Date('YYYY-MM-DD')` parses as
+  // UTC midnight, which shifts the day backwards in any negative-UTC timezone
+  // and lands the meal in last week. Parse as a LOCAL calendar date instead.
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(meal.weekOf);
+  if (!m) return false;
+  const weekStart = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
   if (Number.isNaN(weekStart.getTime())) return false;
   const weekEnd = addDays(weekStart, 7);
   return date >= weekStart && date < weekEnd;

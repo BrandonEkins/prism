@@ -1,11 +1,13 @@
 'use client';
 
 import * as React from 'react';
-import { WeekItemCard, type WeekItemSize } from './WeekItemCard';
+import { WeekItemCard, type WeekItemSize, type WeekItemLayout } from './WeekItemCard';
 import { useMeasuredHeight } from '@/lib/hooks/useCardCapacity';
 
 interface CardHeightProbeProps {
   size: WeekItemSize;
+  /** Layout to probe — must match what real cells render. Defaults to 'column'. */
+  layout?: WeekItemLayout;
   /** Receives the measured height in px each time it changes. */
   onMeasure: (height: number | undefined) => void;
 }
@@ -19,7 +21,7 @@ interface CardHeightProbeProps {
  * The probe is `aria-hidden`, fixed-position and visually invisible, but is
  * still in the layout tree so its CSS reflects what real cards will render.
  */
-export function CardHeightProbe({ size, onMeasure }: CardHeightProbeProps) {
+export function CardHeightProbe({ size, layout = 'column', onMeasure }: CardHeightProbeProps) {
   const { ref, height } = useMeasuredHeight();
 
   React.useEffect(() => {
@@ -42,7 +44,7 @@ export function CardHeightProbe({ size, onMeasure }: CardHeightProbeProps) {
       <WeekItemCard
         variant="event"
         size={size}
-        layout="row"
+        layout={layout}
         stripeColor="#3B82F6"
         title="Probe Card Title"
         timeLabel="9:00 AM"

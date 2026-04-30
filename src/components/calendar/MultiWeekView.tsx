@@ -7,6 +7,7 @@ import {
   addDays,
   isSameDay,
   isToday,
+  isTomorrow,
   isBefore,
   startOfDay,
 } from 'date-fns';
@@ -14,9 +15,15 @@ import { cn } from '@/lib/utils';
 import { useWidgetBgOverride } from '@/components/widgets/WidgetContainer';
 import { hexToRgba } from '@/lib/utils/color';
 import { useWeekStartsOn } from '@/lib/hooks/useWeekStartsOn';
-import { DAYS_SHORT_ARRAY } from '@/lib/constants/days';
+import { seasonalPalettes } from '@/lib/themes/seasonalThemes';
 import type { CalendarEvent } from '@/types/calendar';
-import { CardHeightProbe, DayOverflowPopover, DroppableOverlayCell, WeekItemCard, useDayDroppable } from './cells';
+import { CardHeightProbe, DayOverflowPopover, DroppableOverlayCell, WeekItemCard, useDayDroppable, weatherIcon } from './cells';
+
+/** HSL color for the seasonal accent of the cell's month. */
+function getMonthAccentColor(date: Date): string {
+  const palette = seasonalPalettes[date.getMonth() + 1];
+  return palette ? `hsl(${palette.light.accent})` : 'hsl(var(--seasonal-accent))';
+}
 import { useCardCapacity } from '@/lib/hooks/useCardCapacity';
 import type { DayBucket } from '@/lib/hooks/useWeekViewData';
 
@@ -29,6 +36,10 @@ export interface MultiWeekViewProps {
   displayMode?: 'inline' | 'cards';
   bucketsByDate?: Map<string, DayBucket>;
   enableDnd?: boolean;
+  /** When true, weekends collapse so the grid only shows Mon-Fri (5 cols). */
+  hideWeekends?: boolean;
+  /** Color used for meal stripes (Family calendar-group color). */
+  mealColor?: string;
 }
 
 /** Fallback while the ResizeObserver hasn't measured yet (~1 frame on mount). */
@@ -44,6 +55,8 @@ export function MultiWeekView({
   displayMode = 'inline',
   bucketsByDate,
   enableDnd = false,
+  hideWeekends = false,
+  mealColor,
 }: MultiWeekViewProps) {
   const { weekStartsOn } = useWeekStartsOn();
   const [cardHeight, setCardHeight] = React.useState<number | undefined>(undefined);
@@ -60,14 +73,15 @@ export function MultiWeekView({
     days.push(addDays(weekStart, i));
   }
 
-  const dayNames = [...DAYS_SHORT_ARRAY.slice(weekStartsOn), ...DAYS_SHORT_ARRAY.slice(0, weekStartsOn)];
   const compact = weekCount > 2;
 
-  // Group days into week rows
+  // Group days into week rows; drop Sat/Sun when hideWeekends is on.
   const weeks: Date[][] = [];
   for (let w = 0; w < weekCount; w++) {
-    weeks.push(days.slice(w * 7, (w + 1) * 7));
+    const row = days.slice(w * 7, (w + 1) * 7);
+    weeks.push(hideWeekends ? row.filter((d) => d.getDay() !== 0 && d.getDay() !== 6) : row);
   }
+  const colCount = hideWeekends ? 5 : 7;
 
   // In inline mode, rows size to content (events list scrolls). In cards mode,
   // rows are equal-height (`1fr`) so dynamic capacity has a meaningful target
@@ -75,24 +89,22 @@ export function MultiWeekView({
   const rowSizing = cards ? '1fr' : 'auto';
 
   return (
-    <div className="h-full flex flex-col overflow-auto">
-      {cards && <CardHeightProbe size="xs" onMeasure={setCardHeight} />}
-      {/* Day headers */}
-      <div className="grid grid-cols-7 gap-0.5 mb-0.5 shrink-0">
-        {dayNames.map((name) => (
-          <div key={name} className="text-center text-sm font-medium text-muted-foreground py-1">
-            {name}
-          </div>
-        ))}
-      </div>
+    <div className="h-full flex flex-col overflow-auto p-0.5">
+      {cards && <CardHeightProbe size={compact ? 'sm' : 'md'} onMeasure={setCardHeight} />}
 
-      {/* Week rows */}
+      {/* Week rows — each cell labels its own day, so no top day-name strip.
+          Outer p-0.5 keeps the seasonal-accent ring on row 1 / col 1 / col 7
+          from being clipped by the parent's overflow-auto. */}
       <div
-        className="flex-1 grid gap-0.5 min-h-0"
+        className="flex-1 grid gap-1 min-h-0"
         style={{ gridTemplateRows: `repeat(${weekCount}, ${rowSizing})` }}
       >
         {weeks.map((week, wIdx) => (
-          <div key={wIdx} className={cn('grid grid-cols-7 gap-0.5', cards && 'min-h-0 h-full')}>
+          <div
+            key={wIdx}
+            className={cn('grid gap-1', cards && 'min-h-0 h-full')}
+            style={{ gridTemplateColumns: `repeat(${colCount}, minmax(0, 1fr))` }}
+          >
             {week.map((date, dIdx) => (
               <DayCell
                 key={dIdx}
@@ -106,6 +118,7 @@ export function MultiWeekView({
                 bucket={bucketsByDate?.get(format(date, 'yyyy-MM-dd'))}
                 enableDnd={enableDnd}
                 cardHeight={cardHeight}
+                mealColor={mealColor}
               />
             ))}
           </div>
@@ -126,6 +139,7 @@ function DayCell({
   bucket,
   enableDnd,
   cardHeight,
+  mealColor,
 }: {
   date: Date;
   events: CalendarEvent[];
@@ -137,6 +151,7 @@ function DayCell({
   bucket?: DayBucket;
   enableDnd: boolean;
   cardHeight: number | undefined;
+  mealColor?: string;
 }) {
   const cards = displayMode === 'cards';
   const fallback = compact ? FALLBACK_VISIBLE_CARDS_COMPACT : FALLBACK_VISIBLE_CARDS;
@@ -153,11 +168,21 @@ function DayCell({
   });
   const isPast = isBefore(date, startOfDay(new Date())) && !isToday(date);
 
+  // Overlay items now render at the same size as event cards (meals at top,
+  // chores+tasks at bottom), so reserve roughly cardHeight per overlay item
+  // plus ~22px for the popover trigger when events overflow.
   const overlayItemCount = bucket ? bucket.meals.length + bucket.chores.length + bucket.tasks.length : 0;
-  const popoverHeight = 22 + overlayItemCount * 20;
+  const overlayRowHeight = cardHeight ?? 56;
+  const cellGap = 4; // matches `gap-1` between cards in the events container
+  const popoverHeight = 22 + overlayItemCount * (overlayRowHeight + cellGap);
   const { cellRef, fitWithOverflow, fitWithoutOverflow } = useCardCapacity({
     cardHeight,
     popoverHeight,
+    gap: cellGap,
+    // When overlays already consume the cell, allow 0 visible events so the
+    // popover trigger absorbs all of them — prevents events from spilling
+    // past the popover and getting half-clipped.
+    minVisible: 0,
   });
 
   let visibleCount: number;
@@ -178,74 +203,119 @@ function DayCell({
   const visibleEvents = cards ? sorted.slice(0, Math.max(0, visibleCount)) : sorted;
   const hiddenEvents = cards ? sorted.slice(visibleEvents.length) : [];
 
+  const today = isToday(date);
+  const tomorrow = isTomorrow(date);
+  const dayLabel = today
+    ? 'Today'
+    : tomorrow
+      ? 'Tomorrow'
+      : compact
+        ? format(date, 'EEE')
+        : format(date, 'EEEE');
+  const dayWeather = bucket?.weather;
+  const cardSize = compact ? 'sm' : 'md';
+  const monthAccent = getMonthAccentColor(date);
+
   return (
     <div
       ref={cards && enableDnd ? droppable.setNodeRef : undefined}
       data-droppable-day={cards && enableDnd ? droppable.droppableId : undefined}
       className={cn(
-        'flex flex-col',
+        'flex flex-col rounded-md',
         cards && 'min-h-0 h-full',
         isPast && !cellBgStyle && 'opacity-50',
-        bordered && !cellBgStyle && 'border border-border rounded-md bg-card/85',
-        bordered && cellBgStyle && 'border border-border rounded-md',
-        bordered && isPast && !cellBgStyle && 'bg-muted/65',
-        cards && enableDnd && droppable.isOver && 'ring-2 ring-seasonal-accent shadow-lg',
+        // Cards mode: every cell gets a subtle border, today gets the month's
+        // seasonal-accent ring (lavender in April, etc.).
+        cards && !cellBgStyle && 'border border-border bg-card/85 backdrop-blur-sm',
+        cards && cellBgStyle && 'border border-border',
+        cards && (today || (enableDnd && droppable.isOver)) && 'border-transparent',
+        cards && enableDnd && droppable.isOver && 'shadow-lg',
+        // Inline mode keeps the legacy bordered look.
+        !cards && bordered && !cellBgStyle && 'border border-border bg-card/85',
+        !cards && bordered && cellBgStyle && 'border border-border',
+        !cards && bordered && isPast && !cellBgStyle && 'bg-muted/65',
       )}
-      style={cellBgStyle}
+      style={{
+        ...cellBgStyle,
+        ...(cards && (today || (enableDnd && droppable.isOver))
+          ? { boxShadow: `0 0 0 2px ${monthAccent}` }
+          : {}),
+      }}
     >
-      {/* Date header */}
+      {/* Date header — large bold day number, relative day label, weather upper-right. */}
       <div
         className={cn(
-          'shrink-0 px-1.5',
-          compact ? 'py-1' : 'py-2',
-          isToday(date) && 'bg-primary',
-          isToday(date) && (bordered ? 'rounded-t-[5px]' : 'rounded-md'),
+          'shrink-0 flex items-start justify-between gap-1',
+          compact ? 'px-1.5 py-1' : 'px-2 py-1.5',
         )}
-        {...(isToday(date) ? { 'data-keep-bg': '' } : {})}
       >
-        <div className={cn(
-          'flex items-baseline gap-1.5',
-          isToday(date) && 'text-primary-foreground'
-        )}>
-          <span className={cn('font-bold leading-none', compact ? 'text-sm' : 'text-base')}>{format(date, 'd')}</span>
-          {!compact && (
-            <span className={cn('text-xs font-medium', isToday(date) ? 'text-primary-foreground/80' : 'text-muted-foreground')}>
-              {format(date, 'EEE')}
-            </span>
-          )}
-          <span className={cn('text-xs', isToday(date) ? 'text-primary-foreground/70' : 'text-muted-foreground/70')}>
-            {format(date, 'MMM')}
+        <div className="flex items-baseline gap-1.5 min-w-0">
+          <span className={cn('font-bold leading-none', compact ? 'text-base' : 'text-xl')}>
+            {format(date, 'd')}
+          </span>
+          <span
+            className={cn(
+              'font-medium leading-none truncate',
+              compact ? 'text-[11px]' : 'text-xs',
+              !today && 'text-muted-foreground',
+            )}
+            style={today ? { color: monthAccent } : undefined}
+          >
+            {dayLabel}
           </span>
         </div>
-        <div className={cn(
-          'mt-1',
-          !bordered && 'border-b border-border',
-        )} />
+        {dayWeather && (
+          <div className={cn(
+            'flex shrink-0 items-center gap-1 text-muted-foreground tabular-nums',
+            compact ? 'text-[10px]' : 'text-[11px]',
+          )}>
+            {weatherIcon(dayWeather.condition)}
+            <span>{Math.round(dayWeather.high)}°/{Math.round(dayWeather.low)}°</span>
+          </div>
+        )}
       </div>
 
-      {/* Events */}
+      {/* Cards / events. In cards mode, meals render at the top of the day's
+          stack (like all-day events); chores + tasks fall to the bottom. */}
       <div
         ref={cards ? cellRef : undefined}
         className={cn(
-          'space-y-0.5',
-          cards && 'flex-1 min-h-0 overflow-hidden',
-          compact ? 'px-0.5 pb-0.5' : 'px-1 pb-1',
+          cards ? 'flex flex-col gap-1 flex-1 min-h-0 overflow-hidden' : 'space-y-0.5',
+          compact ? 'px-1 pb-1' : 'px-1.5 pb-1.5',
         )}
       >
+        {cards && bucket && bucket.meals.length > 0 && (
+          <DroppableOverlayCell
+            date={date}
+            bucket={bucket}
+            size={cardSize}
+            layout="column"
+            enableDnd={enableDnd}
+            include={{ meals: true, chores: false, tasks: false }}
+            mealColor={mealColor}
+          />
+        )}
         {cards
-          ? visibleEvents.map((event) => (
-              <WeekItemCard
-                key={event.id}
-                variant="event"
-                size={compact ? 'sm' : 'md'}
-                layout="column"
-                stripeColor={event.color}
-                title={event.title}
-                timeLabel={event.allDay ? 'All day' : format(event.startTime, 'h:mm a')}
-                subtitle={event.location || event.calendarName}
-                onClick={() => onEventClick(event)}
-              />
-            ))
+          ? visibleEvents.map((event) => {
+              // Only locally-managed events are safe to drag; external (Google,
+              // iCal feed, etc.) events would either round-trip or be reverted
+              // on next sync. `calendarId === 'local'` marks internal events.
+              const draggable = enableDnd && event.calendarId === 'local';
+              return (
+                <WeekItemCard
+                  key={event.id}
+                  variant="event"
+                  size={cardSize}
+                  layout="column"
+                  stripeColor={event.color}
+                  title={event.title}
+                  timeLabel={event.allDay ? 'All day' : format(event.startTime, 'h:mm a')}
+                  subtitle={event.location || event.calendarName}
+                  onClick={() => onEventClick(event)}
+                  dragId={draggable ? `event:${event.id}` : undefined}
+                />
+              );
+            })
           : visibleEvents.map((event) => (
               <button
                 key={event.id}
@@ -269,13 +339,14 @@ function DayCell({
             onEventClick={onEventClick}
           />
         )}
-        {cards && bucket && (
+        {cards && bucket && (bucket.chores.length > 0 || bucket.tasks.length > 0) && (
           <DroppableOverlayCell
             date={date}
             bucket={bucket}
-            size="xs"
-            layout="row"
+            size={cardSize}
+            layout="column"
             enableDnd={enableDnd}
+            include={{ meals: false, chores: true, tasks: true }}
           />
         )}
       </div>

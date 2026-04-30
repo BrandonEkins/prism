@@ -183,13 +183,13 @@ export function WeekView({
                             }
                       }
                     >
-                      {cards && (
-                        <span className={cn('text-[9px] leading-tight text-muted-foreground truncate w-full')}>
+                      <span className={cn('truncate w-full text-[10px] font-medium leading-tight', cards && 'text-foreground')}>{event.title}</span>
+                      {cards && durationMin >= 30 && (
+                        <span className="text-[9px] leading-tight text-muted-foreground truncate w-full">
                           {format(event.startTime, 'h:mm')}&ndash;{format(event.endTime ?? new Date(event.startTime.getTime() + 3600000), 'h:mm a')}
                         </span>
                       )}
-                      <span className={cn('truncate w-full text-[10px] font-medium leading-tight', cards && 'text-foreground')}>{event.title}</span>
-                      {cards && (event.location || event.calendarName) && (
+                      {cards && durationMin >= 60 && (event.location || event.calendarName) && (
                         <span className="text-[9px] leading-tight text-muted-foreground truncate w-full">
                           {event.location || event.calendarName}
                         </span>
@@ -427,13 +427,16 @@ export function WeekView({
                                     }
                               }
                             >
-                              {cards && (
+                              {/* Time-grid rows in priority order: title, then
+                                  time, then subtitle. Drop secondary rows when
+                                  the card is short so we never half-clip. */}
+                              <div className={cn('font-medium truncate w-full text-[10px] leading-tight', cards && 'text-foreground')}>{event.title}</div>
+                              {cards && durationMin >= 30 && (
                                 <div className="text-[9px] leading-tight text-muted-foreground truncate w-full">
                                   {format(event.startTime, 'h:mm')}&ndash;{format(event.endTime ?? new Date(event.startTime.getTime() + 3600000), 'h:mm a')}
                                 </div>
                               )}
-                              <div className={cn('font-medium truncate w-full text-[10px] leading-tight', cards && 'text-foreground')}>{event.title}</div>
-                              {cards && (event.location || event.calendarName) && (
+                              {cards && durationMin >= 60 && (event.location || event.calendarName) && (
                                 <div className="text-[9px] leading-tight text-muted-foreground truncate w-full">
                                   {event.location || event.calendarName}
                                 </div>

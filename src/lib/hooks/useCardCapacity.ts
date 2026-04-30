@@ -9,6 +9,8 @@ interface UseCardCapacityOptions {
   headerHeight?: number;
   /** Pixels reserved for the "+N more" trigger when overflow is shown. */
   popoverHeight?: number;
+  /** Vertical gap (px) between stacked cards. Defaults 0. */
+  gap?: number;
   /** Floor on visible cards even in tiny cells. Defaults 1. */
   minVisible?: number;
 }
@@ -37,6 +39,7 @@ export function useCardCapacity({
   cardHeight,
   headerHeight = 0,
   popoverHeight = 0,
+  gap = 0,
   minVisible = 1,
 }: UseCardCapacityOptions): UseCardCapacityResult {
   const [cellHeight, setCellHeight] = useState<number | null>(null);
@@ -66,10 +69,15 @@ export function useCardCapacity({
     return { cellRef, fitWithOverflow: null, fitWithoutOverflow: null };
   }
 
+  // N stacked cards with gap take N*cardHeight + (N-1)*gap. Solve for N:
+  //   N <= (usable + gap) / (cardHeight + gap)
+  const slot = cardHeight + gap;
   const usable = Math.max(0, cellHeight - headerHeight);
-  const fitWithoutOverflow = Math.max(minVisible, Math.floor(usable / cardHeight));
-  const usableWithPopover = Math.max(0, usable - popoverHeight);
-  const fitWithOverflow = Math.max(minVisible, Math.floor(usableWithPopover / cardHeight));
+  const fitWithoutOverflow = Math.max(minVisible, Math.floor((usable + gap) / slot));
+  // When overflow is shown, the popover trigger consumes its own row (with its
+  // own gap before it). Reserve popoverHeight + gap from the usable budget.
+  const usableWithPopover = Math.max(0, usable - popoverHeight - (popoverHeight > 0 ? gap : 0));
+  const fitWithOverflow = Math.max(minVisible, Math.floor((usableWithPopover + gap) / slot));
 
   return { cellRef, fitWithOverflow, fitWithoutOverflow };
 }

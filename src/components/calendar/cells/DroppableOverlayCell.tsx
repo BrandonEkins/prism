@@ -13,6 +13,10 @@ interface DroppableOverlayCellProps {
   layout?: WeekItemLayout;
   /** When true, overlay items are draggable. Drop targets live on each view's outer day-cell wrapper. */
   enableDnd?: boolean;
+  /** Which item kinds to include. Default: all. */
+  include?: { meals?: boolean; chores?: boolean; tasks?: boolean };
+  /** Override stripe color for every meal in this cell. */
+  mealColor?: string;
   className?: string;
 }
 
@@ -26,6 +30,8 @@ export function DroppableOverlayCell({
   size = 'sm',
   layout = 'column',
   enableDnd = false,
+  include,
+  mealColor,
   className,
 }: DroppableOverlayCellProps) {
   if (!bucket) return null;
@@ -37,6 +43,8 @@ export function DroppableOverlayCell({
         size={size}
         layout={layout}
         enableDrag={enableDnd}
+        include={include}
+        mealColor={mealColor}
       />
     </div>
   );

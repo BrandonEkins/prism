@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { cn } from '@/lib/utils';
 import { WeekItemCard, type WeekItemSize, type WeekItemLayout } from './WeekItemCard';
 import type { DayBucket } from '@/lib/hooks/useWeekViewData';
 
@@ -39,6 +40,11 @@ interface OverlayItemsCellProps {
   layout?: WeekItemLayout;
   /** When true, items are draggable. */
   enableDrag?: boolean;
+  /** Which item kinds to render. Defaults to all three. */
+  include?: { meals?: boolean; chores?: boolean; tasks?: boolean };
+  /** When set, every meal uses this stripe color (e.g. the Family calendar
+   * group color) instead of the cookedBy / createdBy color. */
+  mealColor?: string;
   className?: string;
 }
 
@@ -52,20 +58,28 @@ export function OverlayItemsCell({
   size = 'sm',
   layout = 'column',
   enableDrag = false,
+  include,
+  mealColor,
   className,
 }: OverlayItemsCellProps) {
-  const hasItems = bucket.meals.length + bucket.chores.length + bucket.tasks.length > 0;
+  const showMeals = include?.meals ?? true;
+  const showChores = include?.chores ?? true;
+  const showTasks = include?.tasks ?? true;
+  const meals = showMeals ? bucket.meals : [];
+  const chores = showChores ? bucket.chores : [];
+  const tasks = showTasks ? bucket.tasks : [];
+  const hasItems = meals.length + chores.length + tasks.length > 0;
   if (!hasItems) return null;
 
   return (
-    <div className={className}>
-      {bucket.meals.map((meal) => (
+    <div className={cn('flex flex-col gap-1', className)}>
+      {meals.map((meal) => (
         <WeekItemCard
           key={`meal-${meal.id}`}
           variant="meal"
           size={size}
           layout={layout}
-          stripeColor={mealStripeColor(meal)}
+          stripeColor={mealColor ?? mealStripeColor(meal)}
           title={meal.name}
           timeLabel={meal.mealType}
           subtitle={meal.cookedBy?.name ? `Cooked by ${meal.cookedBy.name}` : undefined}
@@ -73,7 +87,7 @@ export function OverlayItemsCell({
           dragId={enableDrag ? `meal:${meal.id}` : undefined}
         />
       ))}
-      {bucket.chores.map((chore) => (
+      {chores.map((chore) => (
         <WeekItemCard
           key={`chore-${chore.id}`}
           variant="chore"
@@ -86,7 +100,7 @@ export function OverlayItemsCell({
           dragId={enableDrag ? `chore:${chore.id}` : undefined}
         />
       ))}
-      {bucket.tasks.map((task) => (
+      {tasks.map((task) => (
         <WeekItemCard
           key={`task-${task.id}`}
           variant="task"

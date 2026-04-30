@@ -4,11 +4,13 @@ import { useState, useEffect, useMemo, lazy, Suspense } from 'react';
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, addDays, addWeeks } from 'date-fns';
 import {
   DndContext,
+  DragOverlay,
   PointerSensor,
   KeyboardSensor,
   useSensor,
   useSensors,
   type DragEndEvent,
+  type DragStartEvent,
 } from '@dnd-kit/core';
 import { toast } from '@/components/ui/use-toast';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
@@ -28,6 +30,7 @@ import {
   Grid3X3,
   StickyNote,
   LayoutPanelTop,
+  Briefcase,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { contrastText } from '@/lib/utils/color';
@@ -45,11 +48,27 @@ const AgendaView = lazy(() => import('@/components/calendar/AgendaView').then(m 
 import { useCalendarViewData } from './useCalendarViewData';
 import { useCalendarNotes } from '@/lib/hooks/useCalendarNotes';
 import { useDayBucketsForRange } from '@/lib/hooks/useDayBucketsForRange';
+import type { DayBucket } from '@/lib/hooks/useWeekViewData';
+import type { CalendarEvent } from '@/types/calendar';
+import { WeekItemCard } from '@/components/calendar/cells';
 import { useIsMobile, useSwipeNavigation } from '@/lib/hooks';
 import { useAuth } from '@/components/providers';
 import { useWeekStartsOn } from '@/lib/hooks/useWeekStartsOn';
 import { useWeekMutations } from '@/app/week/useWeekMutations';
 import { OverlaysToolbar } from './OverlaysToolbar';
+
+const MEAL_TYPE_ORDER = { breakfast: 0, lunch: 1, snack: 2, dinner: 3 } as const;
+const EMPTY_EVENTS: CalendarEvent[] = [];
+
+/**
+ * Sorts meals by mealType so the day's stack reads breakfast → lunch → dinner →
+ * snack regardless of insertion order. Stable for equal mealType values.
+ */
+function sortMealsByType<T extends { mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack' }>(
+  meals: T[],
+): T[] {
+  return [...meals].sort((a, b) => MEAL_TYPE_ORDER[a.mealType] - MEAL_TYPE_ORDER[b.mealType]);
+}
 
 export function CalendarView() {
   const { activeUser, requireAuth } = useAuth();
@@ -61,6 +80,7 @@ export function CalendarView() {
     weekCount, setWeekCount,
     weeksBordered, setWeeksBordered,
     displayMode, setDisplayMode,
+    hideWeekends, setHideWeekends,
     overlays, setOverlays,
     selectedEvent, setSelectedEvent,
     showAddEvent, setShowAddEvent,
@@ -99,29 +119,57 @@ export function CalendarView() {
     }
   }, [viewType, currentDate, weekCount, weekStartsOn]);
 
-  // Build per-day buckets when cards mode is on AND the user has any non-event
-  // overlay enabled. In cards-mode-without-overlays the events alone are already
-  // available via the `events` array, so the bucket build is wasted work.
+  // Build per-day buckets in cards mode regardless of which overlay checkboxes
+  // are on — the bucket also carries weather, which should always render.
+  // Per-overlay flags below decide whether each stream actually populates.
   const cardsMode = displayMode === 'cards';
-  const overlaysActive = cardsMode && (overlays.meals || overlays.chores || overlays.tasks);
+  const overlaysActive = cardsMode;
 
   const { bucketsByDate, refresh: refreshBuckets } = useDayBucketsForRange({
     from: rangeFrom,
     to: rangeTo,
     overlays: {
       events: false, // events come from CalendarView's filtered list, not the bucket
-      meals: overlaysActive && overlays.meals,
-      chores: overlaysActive && overlays.chores,
-      tasks: overlaysActive && overlays.tasks,
+      meals: cardsMode && overlays.meals,
+      chores: cardsMode && overlays.chores,
+      tasks: cardsMode && overlays.tasks,
     },
     externalEvents: events,
   });
+
+  // Meals are tied to the Family calendar pill: when Family is filtered out,
+  // hide the day's meals from every view. If no Family group exists (single-
+  // user setups), default to showing meals.
+  const familyGroup = useMemo(
+    () => calendarGroups.find((g) => g.name === 'Family'),
+    [calendarGroups],
+  );
+  const familyVisible = useMemo(() => {
+    if (!familyGroup) return true;
+    return selectedCalendarIds.has('all') || selectedCalendarIds.has(familyGroup.id);
+  }, [familyGroup, selectedCalendarIds]);
+  const mealColor = familyGroup?.color ?? '#F59E0B';
+
+  // Honour the Events overlay checkbox: when off, suppress all event cards.
+  // Day buckets keep weather + meals/chores/tasks, so other overlays still work.
+  const visibleEvents = overlays.events ? events : EMPTY_EVENTS;
+
+  // Sorted, family-filtered meals. Breakfast → Lunch → Dinner → Snack within a
+  // day so the visual order is predictable regardless of insertion order.
+  const filteredBucketsByDate = useMemo(() => {
+    const next = new Map<string, typeof bucketsByDate extends Map<string, infer V> ? V : never>();
+    for (const [key, bucket] of bucketsByDate.entries()) {
+      const meals = familyVisible ? sortMealsByType(bucket.meals) : [];
+      next.set(key, { ...bucket, meals });
+    }
+    return next;
+  }, [bucketsByDate, familyVisible]);
 
   const refreshAll = useMemo(() => async () => {
     await Promise.all([refreshEvents(), refreshBuckets()]);
   }, [refreshEvents, refreshBuckets]);
 
-  const { moveChore, moveTask, moveMeal } = useWeekMutations({ refresh: refreshAll });
+  const { moveChore, moveTask, moveMeal, moveEvent } = useWeekMutations({ refresh: refreshAll });
 
   const dndSensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -129,8 +177,16 @@ export function CalendarView() {
   );
 
   const [moveError, setMoveError] = useState<string | null>(null);
+  const [activeDragId, setActiveDragId] = useState<string | null>(null);
+
+  const handleDragStart = (e: DragStartEvent) => {
+    const id = String(e.active.id);
+    if (id.startsWith('__static__:')) return;
+    setActiveDragId(id);
+  };
 
   const handleDragEnd = async (e: DragEndEvent) => {
+    setActiveDragId(null);
     setMoveError(null);
     const { active, over } = e;
     if (!over) return;
@@ -148,6 +204,11 @@ export function CalendarView() {
       if (variant === 'chore') await moveChore(itemId, targetBucket.date);
       else if (variant === 'task') await moveTask(itemId, targetBucket.date);
       else if (variant === 'meal') await moveMeal(itemId, targetBucket.date);
+      else if (variant === 'event') {
+        const ev = events.find((e) => e.id === itemId);
+        if (!ev) return;
+        await moveEvent(itemId, ev.startTime, ev.endTime, targetBucket.date);
+      }
     } catch (err) {
       setMoveError(err instanceof Error ? err.message : 'Failed to move item');
     }
@@ -330,6 +391,17 @@ export function CalendarView() {
                   <LayoutPanelTop className={cn('h-4 w-4', displayMode === 'cards' && 'text-primary')} />
                 </Button>
               )}
+              {(viewType === 'multiWeek' || viewType === 'month' || viewType === 'week' || viewType === 'weekVertical') && (
+                <Button
+                  variant={hideWeekends ? 'secondary' : 'ghost'}
+                  size="sm"
+                  onClick={() => setHideWeekends(!hideWeekends)}
+                  title={hideWeekends ? 'Show weekends' : 'Hide weekends (work week)'}
+                  aria-label="Toggle weekend visibility"
+                >
+                  <Briefcase className={cn('h-4 w-4', hideWeekends && 'text-primary')} />
+                </Button>
+              )}
               <OverlaysToolbar
                 overlays={overlays}
                 onChange={setOverlays}
@@ -405,34 +477,39 @@ export function CalendarView() {
               </div>
             )}
             <Suspense fallback={<div className="h-full flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>}>
-            <DndContext sensors={dndSensors} onDragEnd={handleDragEnd}>
+            <DndContext
+              sensors={dndSensors}
+              onDragStart={handleDragStart}
+              onDragEnd={handleDragEnd}
+              onDragCancel={() => setActiveDragId(null)}
+            >
               {viewType === 'agenda' && (
                 <AgendaView
-                  events={events}
+                  events={visibleEvents}
                   days={30}
                   onEventClick={setSelectedEvent}
                   displayMode={displayMode}
-                  bucketsByDate={overlaysActive ? bucketsByDate : undefined}
+                  bucketsByDate={overlaysActive ? filteredBucketsByDate : undefined}
                   enableDnd={overlaysActive}
                 />
               )}
               {viewType === 'month' && (
-                <MonthView currentDate={currentDate} events={events} onEventClick={setSelectedEvent}
+                <MonthView currentDate={currentDate} events={visibleEvents} onEventClick={setSelectedEvent}
                   onDateClick={(date) => { setCurrentDate(date); setViewType('day'); }} bordered={weeksBordered} displayMode={displayMode}
-                  bucketsByDate={overlaysActive ? bucketsByDate : undefined}
+                  bucketsByDate={overlaysActive ? filteredBucketsByDate : undefined}
                   enableDnd={overlaysActive}
                 />
               )}
               {viewType === 'week' && (
-                <WeekView currentDate={currentDate} events={events} onEventClick={setSelectedEvent} bordered={weeksBordered} displayMode={displayMode}
-                  bucketsByDate={overlaysActive ? bucketsByDate : undefined}
+                <WeekView currentDate={currentDate} events={visibleEvents} onEventClick={setSelectedEvent} bordered={weeksBordered} displayMode={displayMode}
+                  bucketsByDate={overlaysActive ? filteredBucketsByDate : undefined}
                   enableDnd={overlaysActive}
                 />
               )}
               {viewType === 'weekVertical' && (
                 <WeekVerticalView
                   currentDate={currentDate}
-                  events={events}
+                  events={visibleEvents}
                   calendarGroups={calendarGroups}
                   selectedCalendarIds={selectedCalendarIds}
                   mergedView={mergedView}
@@ -442,24 +519,26 @@ export function CalendarView() {
                   notesByDate={notesByDate}
                   onNoteChange={activeUser ? upsertNote : undefined}
                   displayMode={displayMode}
-                  bucketsByDate={overlaysActive ? bucketsByDate : undefined}
+                  bucketsByDate={overlaysActive ? filteredBucketsByDate : undefined}
                   enableDnd={overlaysActive}
                 />
               )}
               {viewType === 'multiWeek' && (
-                <MultiWeekView currentDate={currentDate} events={events} onEventClick={setSelectedEvent} weekCount={weekCount} bordered={weeksBordered} displayMode={displayMode}
-                  bucketsByDate={overlaysActive ? bucketsByDate : undefined}
+                <MultiWeekView currentDate={currentDate} events={visibleEvents} onEventClick={setSelectedEvent} weekCount={weekCount} bordered={weeksBordered} displayMode={displayMode}
+                  bucketsByDate={overlaysActive ? filteredBucketsByDate : undefined}
                   enableDnd={overlaysActive}
+                  hideWeekends={hideWeekends}
+                  mealColor={mealColor}
                 />
               )}
               {viewType === 'threeMonth' && (
-                <ThreeMonthView currentDate={currentDate} events={events} onEventClick={setSelectedEvent}
+                <ThreeMonthView currentDate={currentDate} events={visibleEvents} onEventClick={setSelectedEvent}
                   onDateClick={(date) => { setCurrentDate(date); setViewType('month'); }} bordered={weeksBordered} />
               )}
               {viewType === 'day' && (
                 <DayViewSideBySide
                   currentDate={currentDate}
-                  events={events}
+                  events={visibleEvents}
                   calendarGroups={calendarGroups}
                   selectedCalendarIds={selectedCalendarIds}
                   mergedView={mergedView}
@@ -469,10 +548,15 @@ export function CalendarView() {
                   notesByDate={notesByDate}
                   onNoteChange={activeUser ? upsertNote : undefined}
                   displayMode={displayMode}
-                  bucketsByDate={overlaysActive ? bucketsByDate : undefined}
+                  bucketsByDate={overlaysActive ? filteredBucketsByDate : undefined}
                   enableDnd={overlaysActive}
                 />
               )}
+              <DragOverlay dropAnimation={null}>
+                {activeDragId ? (
+                  <CalendarDragPreview dragId={activeDragId} bucketsByDate={filteredBucketsByDate} events={visibleEvents} mealColor={mealColor} />
+                ) : null}
+              </DragOverlay>
             </DndContext>
             </Suspense>
             </div>
@@ -560,4 +644,117 @@ function EventDetailModal({ event, onClose, onEdit, onDeleted }: {
       <ConfirmDialog {...dialogProps} />
     </div>
   );
+}
+
+const PRIORITY_COLORS = {
+  high: '#ef4444',
+  medium: '#f59e0b',
+  low: '#3b82f6',
+} as const;
+
+const CHORE_PENDING_APPROVAL_COLOR = '#a855f7';
+const CHORE_OVERDUE_COLOR = '#ef4444';
+const CHORE_PENDING_COLOR = '#f59e0b';
+const MEAL_FALLBACK_COLOR = '#10b981';
+
+/**
+ * Renders the dragged item as a portaled DragOverlay so it isn't clipped by
+ * `overflow-hidden` ancestors on the calendar views (every cards-mode view
+ * uses an outer scroll container that would otherwise hide the drag preview).
+ */
+function CalendarDragPreview({
+  dragId,
+  bucketsByDate,
+  events,
+  mealColor,
+}: {
+  dragId: string;
+  bucketsByDate: Map<string, DayBucket>;
+  events: CalendarEvent[];
+  mealColor: string;
+}) {
+  const colon = dragId.indexOf(':');
+  if (colon === -1) return null;
+  const variant = dragId.slice(0, colon) as 'meal' | 'chore' | 'task' | 'event';
+  const itemId = dragId.slice(colon + 1);
+
+  if (variant === 'event') {
+    const ev = events.find((e) => e.id === itemId);
+    if (!ev) return null;
+    return (
+      <div className="w-56 opacity-90">
+        <WeekItemCard
+          variant="event"
+          size="sm"
+          layout="column"
+          stripeColor={ev.color}
+          title={ev.title}
+          timeLabel={ev.allDay ? 'All day' : new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit' }).format(ev.startTime)}
+          subtitle={ev.location || ev.calendarName}
+        />
+      </div>
+    );
+  }
+
+  for (const bucket of bucketsByDate.values()) {
+    if (variant === 'meal') {
+      const meal = bucket.meals.find((m) => String(m.id) === itemId);
+      if (meal) {
+        const stripeColor = mealColor;
+        return (
+          <div className="w-56 opacity-90">
+            <WeekItemCard
+              variant="meal"
+              size="sm"
+              layout="row"
+              stripeColor={stripeColor}
+              title={meal.name}
+              timeLabel={meal.mealType}
+              muted={Boolean(meal.cookedAt)}
+            />
+          </div>
+        );
+      }
+    } else if (variant === 'chore') {
+      const chore = bucket.chores.find((c) => String(c.id) === itemId);
+      if (chore) {
+        const stripeColor = chore.pendingApproval
+          ? CHORE_PENDING_APPROVAL_COLOR
+          : chore.nextDue && new Date(chore.nextDue) < new Date()
+            ? CHORE_OVERDUE_COLOR
+            : CHORE_PENDING_COLOR;
+        return (
+          <div className="w-56 opacity-90">
+            <WeekItemCard
+              variant="chore"
+              size="sm"
+              layout="row"
+              stripeColor={stripeColor}
+              title={chore.title}
+              subtitle={chore.assignedTo?.name}
+              muted={Boolean(chore.pendingApproval)}
+            />
+          </div>
+        );
+      }
+    } else if (variant === 'task') {
+      const task = bucket.tasks.find((t) => String(t.id) === itemId);
+      if (task) {
+        return (
+          <div className="w-56 opacity-90">
+            <WeekItemCard
+              variant="task"
+              size="sm"
+              layout="row"
+              stripeColor={PRIORITY_COLORS[task.priority]}
+              title={task.title}
+              subtitle={task.assignedTo?.name}
+              muted={task.completed}
+            />
+          </div>
+        );
+      }
+    }
+  }
+  return null;
 }

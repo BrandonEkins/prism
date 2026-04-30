@@ -283,10 +283,14 @@ export function DayViewSideBySide({
                                     }
                               }
                             >
+                              {/* Title first; show time row only when there's
+                                  vertical room. Position already encodes time. */}
                               <div className={cn('font-medium truncate w-full text-[11px] leading-tight', cards && 'text-foreground')}>{event.title}</div>
-                              <div className={cn('text-[9px] leading-tight', cards ? 'text-muted-foreground' : 'opacity-70')}>
-                                {format(event.startTime, 'h:mm')}&ndash;{format(event.endTime ?? new Date(event.startTime.getTime() + 3600000), 'h:mm a')}
-                              </div>
+                              {durationMin >= 30 && (
+                                <div className={cn('text-[9px] leading-tight', cards ? 'text-muted-foreground' : 'opacity-70')}>
+                                  {format(event.startTime, 'h:mm')}&ndash;{format(event.endTime ?? new Date(event.startTime.getTime() + 3600000), 'h:mm a')}
+                                </div>
+                              )}
                             </button>
                           );
                         })}

@@ -53,6 +53,17 @@ export function useCalendarViewData() {
     localStorage.setItem('prism-calendar-bordered', String(weeksBordered));
   }, [weeksBordered]);
 
+  const [hideWeekends, setHideWeekends] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('prism-calendar-hide-weekends') === 'true';
+    }
+    return false;
+  });
+
+  useEffect(() => {
+    localStorage.setItem('prism-calendar-hide-weekends', String(hideWeekends));
+  }, [hideWeekends]);
+
   const [displayMode, setDisplayMode] = useState<'inline' | 'cards'>(() => {
     if (typeof window !== 'undefined') {
       return localStorage.getItem('prism-calendar-display-mode') === 'cards' ? 'cards' : 'inline';
@@ -113,8 +124,8 @@ export function useCalendarViewData() {
         case 'day': return subDays(prev, 1);
         case 'week': return subWeeks(prev, 1);
         case 'weekVertical': return subWeeks(prev, 1);
-        case 'multiWeek': return subWeeks(prev, weekCount);
-        case 'month': return subMonths(prev, 1);
+        case 'multiWeek': return subWeeks(prev, 1);
+        case 'month': return subWeeks(prev, 1);
         case 'threeMonth': return subMonths(prev, 1);
       }
     });
@@ -127,8 +138,8 @@ export function useCalendarViewData() {
         case 'day': return addDays(prev, 1);
         case 'week': return addWeeks(prev, 1);
         case 'weekVertical': return addWeeks(prev, 1);
-        case 'multiWeek': return addWeeks(prev, weekCount);
-        case 'month': return addMonths(prev, 1);
+        case 'multiWeek': return addWeeks(prev, 1);
+        case 'month': return addWeeks(prev, 1);
         case 'threeMonth': return addMonths(prev, 1);
       }
     });
@@ -170,6 +181,7 @@ export function useCalendarViewData() {
     mergedView, setMergedView,
     weeksBordered, setWeeksBordered,
     displayMode, setDisplayMode,
+    hideWeekends, setHideWeekends,
     overlays, setOverlays,
     events, loading, error, refreshEvents,
     goToToday, goToPrevious, goToNext, getDateRangeTitle,
