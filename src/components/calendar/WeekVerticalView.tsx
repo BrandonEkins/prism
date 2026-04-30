@@ -35,6 +35,8 @@ export interface WeekVerticalViewProps {
   bucketsByDate?: Map<string, DayBucket>;
   /** When true, overlay items are draggable and cells become drop targets. */
   enableDnd?: boolean;
+  /** Override stripe color used for meals (Family calendar-group color). */
+  mealColor?: string;
 }
 
 export function WeekVerticalView({
@@ -51,6 +53,7 @@ export function WeekVerticalView({
   displayMode = 'inline',
   bucketsByDate,
   enableDnd = false,
+  mealColor,
 }: WeekVerticalViewProps) {
   const { weekStartsOn } = useWeekStartsOn();
   const bgOverride = useWidgetBgOverride();
@@ -124,6 +127,7 @@ export function WeekVerticalView({
           displayMode={displayMode}
           bucketsByDate={bucketsByDate}
           enableDnd={enableDnd}
+          mealColor={mealColor}
         />
       ))}
     </div>
@@ -146,6 +150,7 @@ function WeekListDayRow({
   displayMode,
   bucketsByDate,
   enableDnd,
+  mealColor,
 }: {
   day: Date;
   today: Date;
@@ -162,6 +167,7 @@ function WeekListDayRow({
   displayMode: 'inline' | 'cards';
   bucketsByDate: Map<string, DayBucket> | undefined;
   enableDnd: boolean;
+  mealColor: string | undefined;
 }) {
   const cards = displayMode === 'cards';
   const dayStart = startOfDay(day);
@@ -222,24 +228,41 @@ function WeekListDayRow({
       </div>
 
       {displayGroups.length > 1 ? (
-        <div className="flex-1 flex min-w-0">
-          {displayGroups.map((group) => {
-            const groupAllDay = getEventsForGroup(allDayEvents, group.id);
-            const groupTimed = getEventsForGroup(timedEvents, group.id);
-            return (
-              <div key={group.id} className="flex-1 min-w-0 border-l border-border p-1 space-y-0.5">
-                <DayEventList
-                  allDayEvents={groupAllDay}
-                  timedEvents={groupTimed}
-                  onEventClick={onEventClick}
-                  isPastDay={isPast && !isCurrentDay}
-                  isCurrentDay={isCurrentDay}
-                  currentHour={currentHour}
-                  cards={cards}
-                />
-              </div>
-            );
-          })}
+        <div className="flex-1 flex flex-col min-w-0">
+          <div className="flex min-w-0">
+            {displayGroups.map((group) => {
+              const groupAllDay = getEventsForGroup(allDayEvents, group.id);
+              const groupTimed = getEventsForGroup(timedEvents, group.id);
+              return (
+                <div key={group.id} className="flex-1 min-w-0 border-l border-border p-1 space-y-0.5">
+                  <DayEventList
+                    allDayEvents={groupAllDay}
+                    timedEvents={groupTimed}
+                    onEventClick={onEventClick}
+                    isPastDay={isPast && !isCurrentDay}
+                    isCurrentDay={isCurrentDay}
+                    currentHour={currentHour}
+                    cards={cards}
+                  />
+                </div>
+              );
+            })}
+          </div>
+          {/* Bucket overlay (meals/chores/tasks) is shared across all groups —
+              render it once below the per-group columns so the multi-group
+              branch shows it too. */}
+          {bucketsByDate && (
+            <div className="border-l border-border px-1 pb-1">
+              <DroppableOverlayCell
+                date={day}
+                bucket={bucketsByDate.get(format(day, 'yyyy-MM-dd'))}
+                size="sm"
+                layout="row"
+                enableDnd={enableDnd}
+                mealColor={mealColor}
+              />
+            </div>
+          )}
         </div>
       ) : (
         <div className="flex-1 p-1.5 min-w-0 space-y-1">

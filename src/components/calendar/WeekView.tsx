@@ -705,7 +705,10 @@ function LandscapeDayBody({
       className={cn(
         'relative flex-1 min-w-0 h-full border-l border-border',
         !transparentMode && isPast && 'bg-muted/10',
-        cards && enableDnd && droppable.isOver && 'ring-2 ring-seasonal-accent ring-inset',
+        // Pairs with LandscapeDayHeader's ring-inset so today shows a 4-sided
+        // perimeter spanning the full column (header + time grid).
+        isToday(date) && cards && 'ring-2 ring-inset ring-seasonal-accent/70',
+        cards && enableDnd && droppable.isOver && 'ring-2 ring-inset ring-seasonal-accent shadow-lg',
       )}
     >
       {children}
@@ -741,8 +744,10 @@ function LandscapeDayHeader({
       className={cn(
         'flex-1 min-w-0 border-l border-border',
         !transparentMode && isPast && 'bg-muted/20',
-        isToday(date) && cards && 'rounded ring-2 ring-seasonal-accent/60',
-        cards && enableDnd && droppable.isOver && 'ring-2 ring-seasonal-accent shadow-lg',
+        // ring-inset so the top edge isn't clipped by the parent overflow:hidden;
+        // pairs with LandscapeDayBody to form a 4-sided "today" perimeter.
+        isToday(date) && cards && 'ring-2 ring-inset ring-seasonal-accent/70',
+        cards && enableDnd && droppable.isOver && 'ring-2 ring-inset ring-seasonal-accent shadow-lg',
       )}
     >
       {children}

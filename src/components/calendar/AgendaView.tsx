@@ -9,12 +9,18 @@ import {
   startOfDay,
 } from 'date-fns';
 import { Calendar } from 'lucide-react';
+import { useDraggable } from '@dnd-kit/core';
+import { CSS } from '@dnd-kit/utilities';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui';
 import type { CalendarEvent } from '@/types/calendar';
 import type { DayBucket } from '@/lib/hooks/useWeekViewData';
-import { DroppableOverlayCell, useDayDroppable } from './cells';
+import { useDayDroppable, getMealTime, getChoreTime, getTaskTime, parseTimeOfDay } from './cells';
 import { format as fmt } from 'date-fns';
+
+const MEAL_FALLBACK_COLOR = '#10b981';
+const CHORE_FALLBACK_COLOR = '#f59e0b';
+const TASK_FALLBACK_COLOR = '#3b82f6';
 
 export interface AgendaViewProps {
   events: CalendarEvent[];
@@ -25,7 +31,31 @@ export interface AgendaViewProps {
   displayMode?: 'inline' | 'cards';
   bucketsByDate?: Map<string, DayBucket>;
   enableDnd?: boolean;
+  /** Override stripe color used for meals (Family calendar-group color). */
+  mealColor?: string;
 }
+
+/**
+ * A unified agenda row — events, meals, chores, and tasks rendered with the
+ * same height, padding, and stripe pattern. Meal/chore/task variants carry a
+ * dragId so they can be dragged to other day sections; events stay read-only.
+ */
+type AgendaRow = {
+  key: string;
+  /** Sort key in minutes-since-midnight. Items without a time sort to the top. */
+  sortMinutes: number;
+  /** Whether this row has no time-of-day (renders "All day" / "—"). */
+  floating: boolean;
+  /** Optional drag id (`meal:<id>` etc.). Read-only for events. */
+  dragId?: string;
+  stripeColor: string;
+  timeLabel: string;
+  title: string;
+  subtitle?: string;
+  muted?: boolean;
+  pendingApproval?: boolean;
+  onClick?: () => void;
+};
 
 export function AgendaView({
   events,
@@ -36,6 +66,7 @@ export function AgendaView({
   displayMode = 'inline',
   bucketsByDate,
   enableDnd = false,
+  mealColor,
 }: AgendaViewProps) {
   const cards = displayMode === 'cards';
   const startDate = startOfDay(new Date());
@@ -44,8 +75,6 @@ export function AgendaView({
   const filteredEvents = events
     .filter(e => {
       if (e.allDay) {
-        // All-day events are stored as UTC midnight; compare as range overlap
-        // so timezone-shifted dates aren't accidentally excluded.
         return e.startTime < endDate && e.endTime > startDate;
       }
       const ed = startOfDay(e.startTime);
@@ -92,11 +121,12 @@ export function AgendaView({
             key={date.toISOString()}
             date={date}
             events={dayEvts}
+            bucket={bucket}
             maxEvents={maxEventsPerDay}
             onEventClick={onEventClick}
             cards={cards}
-            bucket={bucket}
             enableDnd={enableDnd}
+            mealColor={mealColor}
           />
         ))}
       </div>
@@ -107,23 +137,26 @@ export function AgendaView({
 function AgendaDaySection({
   date,
   events,
+  bucket,
   maxEvents,
   onEventClick,
   cards = false,
-  bucket,
   enableDnd = false,
+  mealColor,
 }: {
   date: Date;
   events: CalendarEvent[];
+  bucket?: DayBucket;
   maxEvents: number;
   onEventClick?: (event: CalendarEvent) => void;
   cards?: boolean;
-  bucket?: DayBucket;
   enableDnd?: boolean;
+  mealColor?: string;
 }) {
-  const displayEvents = maxEvents > 0 ? events.slice(0, maxEvents) : events;
-  const remainingCount = maxEvents > 0 ? events.length - maxEvents : 0;
   const droppable = useDayDroppable({ date, enabled: cards && enableDnd });
+  const rows = buildAgendaRows({ events, bucket, onEventClick, mealColor });
+  const displayRows = maxEvents > 0 ? rows.slice(0, maxEvents) : rows;
+  const remainingCount = maxEvents > 0 ? rows.length - maxEvents : 0;
 
   return (
     <div
@@ -151,75 +184,173 @@ function AgendaDaySection({
       </div>
 
       <div className="space-y-1.5 pl-2 border-l-2 border-border">
-        {displayEvents.map((event) => (
-          <AgendaEventRow
-            key={event.id}
-            event={event}
-            onClick={() => onEventClick?.(event)}
-            cards={cards}
-          />
+        {displayRows.map((row) => (
+          <AgendaRowItem key={row.key} row={row} cards={cards} />
         ))}
         {remainingCount > 0 && (
           <div className="text-xs text-muted-foreground pl-2">
             +{remainingCount} more events
           </div>
         )}
-        {bucket && (
-          <DroppableOverlayCell
-            date={date}
-            bucket={bucket}
-            size="sm"
-            layout="row"
-            enableDnd={enableDnd}
-          />
-        )}
       </div>
     </div>
   );
 }
 
-function AgendaEventRow({
-  event,
-  onClick,
-  cards = false,
+function buildAgendaRows({
+  events,
+  bucket,
+  onEventClick,
+  mealColor,
 }: {
-  event: CalendarEvent;
-  onClick?: () => void;
-  cards?: boolean;
-}) {
+  events: CalendarEvent[];
+  bucket?: DayBucket;
+  onEventClick?: (event: CalendarEvent) => void;
+  mealColor?: string;
+}): AgendaRow[] {
+  const rows: AgendaRow[] = [];
+
+  for (const event of events) {
+    const allDay = event.allDay;
+    rows.push({
+      key: `event-${event.id}`,
+      sortMinutes: allDay
+        ? -1
+        : event.startTime.getHours() * 60 + event.startTime.getMinutes(),
+      floating: allDay,
+      stripeColor: event.color,
+      timeLabel: allDay ? 'All day' : format(event.startTime, 'h:mm a'),
+      title: event.title,
+      subtitle: event.location,
+      onClick: onEventClick ? () => onEventClick(event) : undefined,
+    });
+  }
+
+  if (bucket) {
+    for (const meal of bucket.meals) {
+      const t = getMealTime(meal);
+      const min = parseTimeOfDay(t);
+      rows.push({
+        key: `meal-${meal.id}`,
+        sortMinutes: min ?? -1,
+        floating: min === null,
+        dragId: `meal:${meal.id}`,
+        stripeColor: mealColor ?? meal.cookedBy?.color ?? meal.createdBy?.color ?? MEAL_FALLBACK_COLOR,
+        timeLabel: min !== null ? formatTimeLabel(t) : meal.mealType,
+        title: meal.name,
+        subtitle: meal.cookedBy?.name ? `Cooked by ${meal.cookedBy.name}` : undefined,
+        muted: Boolean(meal.cookedAt),
+      });
+    }
+    for (const chore of bucket.chores) {
+      const t = getChoreTime(chore);
+      const min = parseTimeOfDay(t);
+      rows.push({
+        key: `chore-${chore.id}`,
+        sortMinutes: min ?? -1,
+        floating: min === null,
+        dragId: `chore:${chore.id}`,
+        stripeColor: chore.assignedTo?.color || CHORE_FALLBACK_COLOR,
+        timeLabel: min !== null ? formatTimeLabel(t!) : 'Chore',
+        title: chore.title,
+        subtitle: chore.assignedTo?.name,
+        pendingApproval: Boolean(chore.pendingApproval),
+      });
+    }
+    for (const task of bucket.tasks) {
+      const t = getTaskTime(task);
+      const min = parseTimeOfDay(t);
+      rows.push({
+        key: `task-${task.id}`,
+        sortMinutes: min ?? -1,
+        floating: min === null,
+        dragId: `task:${task.id}`,
+        stripeColor: task.assignedTo?.color || TASK_FALLBACK_COLOR,
+        timeLabel: min !== null ? formatTimeLabel(t!) : 'Task',
+        title: task.title,
+        subtitle: task.assignedTo?.name,
+        muted: task.completed,
+      });
+    }
+  }
+
+  // Floating items (all-day events, untimed chores/tasks) come first; timed
+  // items follow in chronological order.
+  rows.sort((a, b) => {
+    if (a.floating && !b.floating) return -1;
+    if (!a.floating && b.floating) return 1;
+    return a.sortMinutes - b.sortMinutes;
+  });
+  return rows;
+}
+
+function formatTimeLabel(hhmm: string): string {
+  const m = /^(\d{2}):(\d{2})$/.exec(hhmm);
+  if (!m) return hhmm;
+  const h = Number(m[1]);
+  const min = Number(m[2]);
+  const d = new Date();
+  d.setHours(h, min, 0, 0);
+  return format(d, 'h:mm a');
+}
+
+function AgendaRowItem({ row, cards = false }: { row: AgendaRow; cards?: boolean }) {
+  const draggable = useDraggable({
+    id: row.dragId ?? `__static__:${row.key}`,
+    disabled: !row.dragId,
+    data: { dragId: row.dragId },
+  });
+
+  const transformStyle: React.CSSProperties = {
+    transform: CSS.Translate.toString(draggable.transform),
+    touchAction: row.dragId ? 'none' : undefined,
+    zIndex: draggable.isDragging ? 50 : undefined,
+    borderLeft: `3px solid ${row.stripeColor}`,
+    backgroundColor: cards ? undefined : row.stripeColor,
+  };
+
+  const Tag: 'button' | 'div' = row.onClick ? 'button' : 'div';
+
   return (
-    <button
-      onClick={onClick}
+    <Tag
+      ref={row.dragId ? draggable.setNodeRef : undefined}
+      onClick={row.onClick}
+      type={Tag === 'button' ? 'button' : undefined}
+      style={transformStyle}
+      {...(row.dragId ? draggable.listeners : {})}
+      {...(row.dragId ? draggable.attributes : {})}
       className={cn(
-        'w-full text-left flex items-start gap-2 p-1.5 rounded',
+        'relative w-full text-left flex items-start gap-2 p-1.5 rounded',
         cards
-          ? 'bg-card/85 backdrop-blur-sm border border-border/40 shadow-sm hover:bg-card'
-          : 'hover:bg-accent/50',
-        'transition-colors',
-        'touch-action-manipulation',
+          ? 'bg-card/85 backdrop-blur-sm border border-border/40 shadow-sm hover:bg-card text-foreground'
+          : 'hover:opacity-90 text-white',
+        'transition-colors touch-action-manipulation',
+        row.dragId && 'cursor-grab active:cursor-grabbing',
+        draggable.isDragging && 'opacity-60 ring-2 ring-seasonal-accent shadow-xl',
+        row.muted && 'opacity-60',
       )}
-      style={cards ? { borderLeft: `3px solid ${event.color}` } : undefined}
     >
-      {!cards && (
-        <div
-          className="w-1 h-full min-h-[24px] rounded-full flex-shrink-0"
-          style={{ backgroundColor: event.color }}
+      {row.pendingApproval && (
+        <span
+          aria-hidden
+          className="absolute inset-0 pointer-events-none rounded"
+          style={{ background: 'repeating-linear-gradient(45deg, rgba(168,85,247,0.18) 0 6px, rgba(168,85,247,0) 6px 12px)' }}
         />
       )}
       <div className="flex-1 min-w-0">
-        <div className="text-xs text-muted-foreground">
-          {event.allDay ? 'All day' : format(event.startTime, 'h:mm a')}
+        <div className={cn('text-xs', cards ? 'text-muted-foreground' : 'opacity-80')}>
+          {row.timeLabel}
         </div>
-        <div className="text-sm font-medium truncate text-foreground">
-          {event.title}
+        <div className={cn('text-sm font-medium truncate', cards ? 'text-foreground' : 'text-white', row.muted && 'line-through')}>
+          {row.title}
         </div>
-        {event.location && (
-          <div className="text-xs text-muted-foreground truncate">
-            {event.location}
+        {row.subtitle && (
+          <div className={cn('text-xs truncate', cards ? 'text-muted-foreground' : 'opacity-80')}>
+            {row.subtitle}
           </div>
         )}
       </div>
-    </button>
+    </Tag>
   );
 }
 

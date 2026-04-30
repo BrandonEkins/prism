@@ -16,7 +16,8 @@ import { hexToRgba } from '@/lib/utils/color';
 import type { CalendarEvent } from '@/types/calendar';
 import type { CalendarNote } from '@/lib/hooks/useCalendarNotes';
 import type { DayBucket } from '@/lib/hooks/useWeekViewData';
-import { DroppableOverlayCell, useDayDroppable } from './cells';
+import { DroppableOverlayCell, useDayDroppable, getMealTime, getChoreTime, getTaskTime } from './cells';
+import { WeekItemCard } from './cells/WeekItemCard';
 
 export interface DayViewSideBySideProps {
   currentDate: Date;
@@ -32,6 +33,8 @@ export interface DayViewSideBySideProps {
   displayMode?: 'inline' | 'cards';
   bucketsByDate?: Map<string, DayBucket>;
   enableDnd?: boolean;
+  /** Override stripe color used for meals (Family calendar-group color). */
+  mealColor?: string;
 }
 
 export function DayViewSideBySide({
@@ -48,6 +51,7 @@ export function DayViewSideBySide({
   displayMode = 'inline',
   bucketsByDate,
   enableDnd = false,
+  mealColor,
 }: DayViewSideBySideProps) {
   const cards = displayMode === 'cards';
   const droppable = useDayDroppable({ date: currentDate, enabled: cards && enableDnd });
@@ -185,25 +189,29 @@ export function DayViewSideBySide({
             )}
           </div>
 
-          {/* Overlays row — meals/chores/tasks for the day, shown above the
-              hourly grid. The left spacer matches the time-column width so the
-              overlay aligns with the group columns instead of bleeding into
-              the time gutter. */}
+          {/* Untimed overlay items (chores/tasks without a time) — shown
+              above the hourly grid like all-day events. Items WITH a time
+              render inside the grid via DayTimedBucketLayer below. */}
           {bucketsByDate && (() => {
             const bucket = bucketsByDate.get(format(currentDate, 'yyyy-MM-dd'));
-            if (!bucket || (bucket.meals.length + bucket.chores.length + bucket.tasks.length) === 0) {
-              return null;
-            }
+            if (!bucket) return null;
+            const untimed = {
+              meals: [] as typeof bucket.meals, // meals always have a time-of-day default
+              chores: bucket.chores.filter((c) => !getChoreTime(c)),
+              tasks: bucket.tasks.filter((t) => !getTaskTime(t)),
+            };
+            if (untimed.chores.length + untimed.tasks.length === 0) return null;
             return (
               <div className="shrink-0 flex border-b border-border bg-card/40">
                 <div className="w-16 flex-shrink-0" aria-hidden />
                 <div className="flex-1 min-w-0 px-2 py-1.5">
                   <DroppableOverlayCell
                     date={currentDate}
-                    bucket={bucket}
+                    bucket={untimed}
                     size="sm"
                     layout="row"
                     enableDnd={enableDnd}
+                    mealColor={mealColor}
                   />
                 </div>
               </div>
@@ -232,7 +240,10 @@ export function DayViewSideBySide({
                 );
               })}
             </div>
-            {/* Group columns */}
+            {/* Group columns wrapped in a relative container so the timed
+                bucket layer (meals/chores/tasks) can absolute-position items
+                spanning all groups. */}
+            <div className="relative flex-1 min-w-0 flex">
             {displayGroups.map((group) => {
               const calEvents = getEventsForGroup(group.id);
               const groupPositions = calculateEventPositions(calEvents);
@@ -307,6 +318,21 @@ export function DayViewSideBySide({
                 </div>
               );
             })}
+            {/* Timed-overlay layer: meals/chores/tasks placed by time-of-day,
+                spanning all group columns. */}
+            {cards && bucketsByDate && (() => {
+              const bucket = bucketsByDate.get(format(currentDate, 'yyyy-MM-dd'));
+              if (!bucket) return null;
+              return (
+                <DayTimedBucketLayer
+                  bucket={bucket}
+                  hours={hours}
+                  mealColor={mealColor}
+                  enableDnd={enableDnd}
+                />
+              );
+            })()}
+            </div>
             {/* Notes column */}
             {showNotes && (
               <div className="w-2/5 min-w-[180px] h-full border-l border-border flex flex-col">
@@ -324,6 +350,134 @@ export function DayViewSideBySide({
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+/**
+ * Renders a day's bucket items (meals, chores, tasks WITH a time-of-day) at
+ * their time over the hour grid, spanning all calendar-group columns. Items
+ * without a time render in the untimed-overlay row above the grid.
+ */
+function DayTimedBucketLayer({
+  bucket,
+  hours,
+  mealColor,
+  enableDnd,
+}: {
+  bucket: DayBucket;
+  hours: number[];
+  mealColor: string | undefined;
+  enableDnd: boolean;
+}) {
+  const slotPct = 100 / hours.length;
+  const visibleSet = new Set(hours);
+
+  type Placed = {
+    key: string;
+    dragId: string;
+    variant: 'meal' | 'chore' | 'task';
+    title: string;
+    timeLabel: string;
+    subtitle?: string;
+    stripeColor: string;
+    muted?: boolean;
+    pendingApproval?: boolean;
+    rowIndex: number;
+    minute: number;
+    durationMin: number;
+  };
+
+  const placed: Placed[] = [];
+
+  for (const meal of bucket.meals) {
+    const t = getMealTime(meal);
+    const hh = Number(t.slice(0, 2));
+    if (!visibleSet.has(hh)) continue;
+    const mm = Number(t.slice(3, 5));
+    placed.push({
+      key: `meal-${meal.id}`,
+      dragId: `meal:${meal.id}`,
+      variant: 'meal',
+      title: meal.name,
+      timeLabel: t,
+      subtitle: meal.cookedBy?.name ? `Cooked by ${meal.cookedBy.name}` : undefined,
+      stripeColor: mealColor ?? '#10b981',
+      muted: Boolean(meal.cookedAt),
+      rowIndex: hours.indexOf(hh),
+      minute: mm,
+      durationMin: meal.mealType === 'dinner' ? 60 : 30,
+    });
+  }
+  for (const chore of bucket.chores) {
+    const t = getChoreTime(chore);
+    if (!t) continue;
+    const hh = Number(t.slice(0, 2));
+    if (!visibleSet.has(hh)) continue;
+    const mm = Number(t.slice(3, 5));
+    placed.push({
+      key: `chore-${chore.id}`,
+      dragId: `chore:${chore.id}`,
+      variant: 'chore',
+      title: chore.title,
+      timeLabel: t,
+      subtitle: chore.assignedTo?.name,
+      stripeColor: chore.assignedTo?.color || '#f59e0b',
+      pendingApproval: Boolean(chore.pendingApproval),
+      rowIndex: hours.indexOf(hh),
+      minute: mm,
+      durationMin: 30,
+    });
+  }
+  for (const task of bucket.tasks) {
+    const t = getTaskTime(task);
+    if (!t) continue;
+    const hh = Number(t.slice(0, 2));
+    if (!visibleSet.has(hh)) continue;
+    const mm = Number(t.slice(3, 5));
+    placed.push({
+      key: `task-${task.id}`,
+      dragId: `task:${task.id}`,
+      variant: 'task',
+      title: task.title,
+      timeLabel: t,
+      subtitle: task.assignedTo?.name,
+      stripeColor: task.assignedTo?.color || '#3b82f6',
+      muted: task.completed,
+      rowIndex: hours.indexOf(hh),
+      minute: mm,
+      durationMin: 30,
+    });
+  }
+
+  if (placed.length === 0) return null;
+
+  return (
+    <div className="absolute inset-0 pointer-events-none">
+      {placed.map((p) => {
+        const topPct = (p.rowIndex + p.minute / 60) * slotPct;
+        const heightPct = (p.durationMin / 60) * slotPct;
+        return (
+          <div
+            key={p.key}
+            className="absolute pointer-events-auto px-1"
+            style={{ top: `${topPct}%`, height: `${heightPct}%`, left: 0, right: 0, zIndex: 5 }}
+          >
+            <WeekItemCard
+              variant={p.variant}
+              size="sm"
+              layout="row"
+              stripeColor={p.stripeColor}
+              title={p.title}
+              timeLabel={p.timeLabel}
+              subtitle={p.subtitle}
+              muted={p.muted}
+              pendingApproval={p.pendingApproval}
+              dragId={enableDnd ? p.dragId : undefined}
+            />
+          </div>
+        );
+      })}
     </div>
   );
 }

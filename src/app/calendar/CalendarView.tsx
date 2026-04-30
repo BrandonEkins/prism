@@ -431,6 +431,7 @@ export function CalendarView() {
                   displayMode={displayMode}
                   bucketsByDate={overlaysActive ? filteredBucketsByDate : undefined}
                   enableDnd={overlaysActive}
+                  mealColor={mealColor}
                 />
               )}
               {viewType === 'month' && (
@@ -462,6 +463,7 @@ export function CalendarView() {
                   displayMode={displayMode}
                   bucketsByDate={overlaysActive ? filteredBucketsByDate : undefined}
                   enableDnd={overlaysActive}
+                  mealColor={mealColor}
                 />
               )}
               {viewType === 'multiWeek' && (
