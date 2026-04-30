@@ -41,18 +41,24 @@ function mealStripeColor(meal: {
   return meal.cookedBy?.color || meal.createdBy?.color || MEAL_FALLBACK_COLOR;
 }
 
-function weatherIcon(cond: WeatherCondition | undefined): React.ReactNode {
+/**
+ * Tinted Lucide icon per condition. Upstream ships colored raster PNGs;
+ * we tint Lucide instead to keep things theme-aware. Color choices match
+ * the upstream PNG palette: yellow sun, blue rain, gray cloud, etc.
+ */
+function weatherIcon(cond: WeatherCondition | undefined, size: 'sm' | 'lg' = 'sm'): React.ReactNode {
+  const cls = size === 'lg' ? 'h-5 w-5' : 'h-4 w-4';
   switch (cond) {
     case 'sunny':
-      return <Sun className="h-4 w-4 text-amber-300" aria-hidden />;
+      return <Sun className={cn(cls, 'text-amber-400')} aria-hidden />;
     case 'partly-cloudy':
-      return <CloudSun className="h-4 w-4 text-amber-200" aria-hidden />;
+      return <CloudSun className={cn(cls, 'text-amber-300')} aria-hidden />;
     case 'cloudy':
-      return <Cloud className="h-4 w-4 text-white/70" aria-hidden />;
+      return <Cloud className={cn(cls, 'text-slate-400 dark:text-white/70')} aria-hidden />;
     case 'rainy':
-      return <CloudRain className="h-4 w-4 text-blue-300" aria-hidden />;
+      return <CloudRain className={cn(cls, 'text-blue-400')} aria-hidden />;
     case 'snowy':
-      return <CloudSnow className="h-4 w-4 text-blue-200" aria-hidden />;
+      return <CloudSnow className={cn(cls, 'text-blue-200')} aria-hidden />;
     default:
       return null;
   }
@@ -93,11 +99,17 @@ interface SizeProfile {
   gap: string;
 }
 
+/**
+ * Size profiles aligned with docs/calendar-cards-design.md. Upstream's day
+ * number is 3.5em (≈56px) — we go text-3xl/text-4xl which approximates that
+ * on Prism's root font size. Larger headers + larger weather icons are the
+ * "neatness" the user observed in the upstream screenshot.
+ */
 const SIZE_PROFILES: Record<WeekItemSize, SizeProfile> = {
   xs: {
     itemSize: 'xs',
     minHeight: 'min-h-[40px]',
-    headerDateText: 'text-xs font-semibold',
+    headerDateText: 'text-xs font-bold',
     headerLabelText: 'text-[9px]',
     showWeather: false,
     showEmptyState: false,
@@ -107,7 +119,7 @@ const SIZE_PROFILES: Record<WeekItemSize, SizeProfile> = {
   sm: {
     itemSize: 'sm',
     minHeight: 'min-h-[70px]',
-    headerDateText: 'text-sm font-semibold',
+    headerDateText: 'text-base font-bold',
     headerLabelText: 'text-[10px]',
     showWeather: false,
     showEmptyState: false,
@@ -116,19 +128,19 @@ const SIZE_PROFILES: Record<WeekItemSize, SizeProfile> = {
   },
   md: {
     itemSize: 'md',
-    minHeight: 'min-h-[180px]',
-    headerDateText: 'text-2xl font-semibold',
-    headerLabelText: 'text-xs',
+    minHeight: 'min-h-[200px]',
+    headerDateText: 'text-3xl font-bold',
+    headerLabelText: 'text-xs font-medium',
     showWeather: true,
     showEmptyState: true,
-    containerPadding: 'p-2',
+    containerPadding: 'p-2.5',
     gap: 'gap-1.5',
   },
   lg: {
     itemSize: 'lg',
-    minHeight: 'min-h-[300px]',
-    headerDateText: 'text-3xl font-semibold',
-    headerLabelText: 'text-sm',
+    minHeight: 'min-h-[320px]',
+    headerDateText: 'text-4xl font-bold',
+    headerLabelText: 'text-sm font-medium',
     showWeather: true,
     showEmptyState: true,
     containerPadding: 'p-3',
@@ -206,8 +218,8 @@ export function DayColumn({
           </span>
         </div>
         {profile.showWeather && bucket.weather && (
-          <div className="flex shrink-0 items-center gap-1 text-[10px] text-muted-foreground">
-            {weatherIcon(bucket.weather.condition)}
+          <div className="flex shrink-0 items-center gap-1 text-[11px] text-muted-foreground">
+            {weatherIcon(bucket.weather.condition, size === 'lg' ? 'lg' : 'sm')}
             <span className="tabular-nums">
               {Math.round(bucket.weather.high)}°/{Math.round(bucket.weather.low)}°
             </span>

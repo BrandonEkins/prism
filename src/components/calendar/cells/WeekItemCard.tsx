@@ -40,9 +40,16 @@ interface WeekItemCardProps {
  * Tailwind class fragments per size — kept as static strings (not template-built)
  * so Tailwind's JIT can detect them.
  */
+/**
+ * Size profiles tuned to the FamousWolf/week-planner-card visual recon
+ * (see docs/calendar-cards-design.md). Upstream uses 10px internal padding,
+ * 5px left stripe, and 1em title — we map those onto Tailwind tokens that
+ * remain theme-aware.
+ */
 const SIZE_STYLES: Record<WeekItemSize, {
   padding: string;
   titleText: string;
+  titleWeight: string;
   metaText: string;
   stripeWidth: string;
   showSubtitle: boolean;
@@ -51,32 +58,36 @@ const SIZE_STYLES: Record<WeekItemSize, {
   xs: {
     padding: 'py-0.5 pr-1',
     titleText: 'text-[10px] leading-tight',
+    titleWeight: 'font-semibold',
     metaText: 'text-[9px] leading-tight',
     stripeWidth: 'w-0.5',
     showSubtitle: false,
     showTime: false,
   },
   sm: {
-    padding: 'py-0.5 pr-1.5',
+    padding: 'py-1 pr-1.5',
     titleText: 'text-[11px] leading-tight',
+    titleWeight: 'font-semibold',
     metaText: 'text-[9px] leading-tight',
-    stripeWidth: 'w-0.5',
+    stripeWidth: 'w-[3px]',
     showSubtitle: false,
     showTime: true,
   },
   md: {
-    padding: 'py-1 pr-2',
+    padding: 'py-1.5 pr-2',
     titleText: 'text-xs leading-tight',
+    titleWeight: 'font-semibold',
     metaText: 'text-[10px] leading-tight',
-    stripeWidth: 'w-1',
+    stripeWidth: 'w-[5px]',
     showSubtitle: true,
     showTime: true,
   },
   lg: {
-    padding: 'py-1.5 pr-2.5',
+    padding: 'py-2 pr-2.5',
     titleText: 'text-sm leading-snug',
+    titleWeight: 'font-bold',
     metaText: 'text-xs leading-tight',
-    stripeWidth: 'w-1',
+    stripeWidth: 'w-[5px]',
     showSubtitle: true,
     showTime: true,
   },
@@ -144,7 +155,7 @@ export function WeekItemCard({
             {timeLabel}
           </span>
         )}
-        <span className={cn('flex-1 truncate font-semibold text-foreground', styles.titleText, muted && 'line-through')}>
+        <span className={cn('flex-1 truncate text-foreground', styles.titleText, styles.titleWeight, muted && 'line-through')}>
           {title}
         </span>
         {styles.showSubtitle && subtitle && (
@@ -189,7 +200,7 @@ export function WeekItemCard({
             {timeLabel}
           </span>
         )}
-        <span className={cn('truncate font-semibold text-foreground', styles.titleText, muted && 'line-through')}>
+        <span className={cn('truncate text-foreground', styles.titleText, styles.titleWeight, muted && 'line-through')}>
           {title}
         </span>
         {styles.showSubtitle && subtitle && (
