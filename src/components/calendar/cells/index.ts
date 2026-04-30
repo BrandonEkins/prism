@@ -8,3 +8,4 @@ export { DroppableOverlayCell } from './DroppableOverlayCell';
 export { CardHeightProbe } from './CardHeightProbe';
 export { weatherIcon } from './weatherIcon';
 export { useDayDroppable } from './useDayDroppable';
+export { getMealTime, getChoreTime, getTaskTime, parseTimeOfDay, MEAL_TIME_DEFAULTS } from './itemTime';

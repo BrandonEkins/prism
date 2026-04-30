@@ -91,6 +91,7 @@ export async function GET(request: NextRequest) {
           startDay: chores.startDay,
           lastCompleted: chores.lastCompleted,
           nextDue: chores.nextDue,
+          nextDueTime: chores.nextDueTime,
           pointValue: chores.pointValue,
           requiresApproval: chores.requiresApproval,
           enabled: chores.enabled,

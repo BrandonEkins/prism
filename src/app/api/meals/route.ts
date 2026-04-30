@@ -57,6 +57,7 @@ export async function GET(request: NextRequest) {
           ingredients: meals.ingredients,
           dayOfWeek: meals.dayOfWeek,
           mealType: meals.mealType,
+          mealTime: meals.mealTime,
           cookedAt: meals.cookedAt,
           cookedById: meals.cookedBy,
           weekOf: meals.weekOf,

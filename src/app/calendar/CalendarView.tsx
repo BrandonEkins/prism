@@ -504,6 +504,7 @@ export function CalendarView() {
                 <WeekView currentDate={currentDate} events={visibleEvents} onEventClick={setSelectedEvent} bordered={weeksBordered} displayMode={displayMode}
                   bucketsByDate={overlaysActive ? filteredBucketsByDate : undefined}
                   enableDnd={overlaysActive}
+                  mealColor={mealColor}
                 />
               )}
               {viewType === 'weekVertical' && (

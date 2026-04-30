@@ -77,6 +77,9 @@ export const updateChoreSchema = createChoreSchema.partial().extend({
   // Server normally recomputes nextDue from frequency on completion; this
   // override lets a parent push a chore to a different day.
   nextDue: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format (YYYY-MM-DD)').nullable().optional(),
+  // Optional time-of-day (HH:mm) for time-grid placement. Null = floats
+  // above the hour grid like an all-day item.
+  nextDueTime: z.string().regex(/^\d{2}:\d{2}$/, 'Invalid time format (HH:mm)').nullable().optional(),
 });
 
 export const completeChoreSchema = z.object({
@@ -132,6 +135,8 @@ export const createMealSchema = z.object({
   weekOf: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format (YYYY-MM-DD)'),
   dayOfWeek: z.enum(DAYS_OF_WEEK),
   mealType: z.enum(['breakfast', 'lunch', 'dinner', 'snack']),
+  // HH:mm time-of-day for time-grid placement; nullable to allow clearing.
+  mealTime: z.string().regex(/^\d{2}:\d{2}$/, 'Invalid time format (HH:mm)').nullable().optional(),
   source: z.enum(['internal', 'external']).optional().default('internal'),
   sourceId: z.string().max(255).optional(),
   createdBy: uuidSchema.optional(),

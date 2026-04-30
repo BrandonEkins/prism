@@ -19,7 +19,8 @@ import { calculateEventPositions, positionToCSS } from '@/lib/utils/eventLayout'
 import { hexToRgba } from '@/lib/utils/color';
 import type { CalendarEvent } from '@/types/calendar';
 import type { DayBucket } from '@/lib/hooks/useWeekViewData';
-import { DroppableOverlayCell, useDayDroppable, weatherIcon } from './cells';
+import { DroppableOverlayCell, useDayDroppable, weatherIcon, getMealTime, getChoreTime, getTaskTime, parseTimeOfDay } from './cells';
+import { WeekItemCard } from './cells/WeekItemCard';
 
 export type CalendarDisplayMode = 'inline' | 'cards';
 
@@ -32,6 +33,8 @@ export interface WeekViewProps {
   displayMode?: CalendarDisplayMode;
   bucketsByDate?: Map<string, DayBucket>;
   enableDnd?: boolean;
+  /** Color used for meal stripes (Family calendar-group color). */
+  mealColor?: string;
 }
 
 export function WeekView({
@@ -42,6 +45,7 @@ export function WeekView({
   displayMode = 'inline',
   bucketsByDate,
   enableDnd = false,
+  mealColor,
 }: WeekViewProps) {
   const cards = displayMode === 'cards';
   const { weekStartsOn } = useWeekStartsOn();
@@ -298,6 +302,24 @@ export function WeekView({
               const allDayEvents = getAllDayEvents(date);
               const dayBucket = bucketsByDate?.get(format(date, 'yyyy-MM-dd'));
               const dayWeather = dayBucket?.weather;
+              // Header bucket: items WITHOUT a time-of-day OR with a time
+              // that falls inside the hidden-hours block (so they don't
+              // disappear when the user collapses morning/evening). Everything
+              // else renders in the hour grid via TimedBucketLayer.
+              const headerBucket = dayBucket
+                ? {
+                    ...dayBucket,
+                    meals: dayBucket.meals.filter((m) => !isTimeInVisibleHours(getMealTime(m), hours)),
+                    chores: dayBucket.chores.filter((c) => {
+                      const t = getChoreTime(c);
+                      return !t || !isTimeInVisibleHours(t, hours);
+                    }),
+                    tasks: dayBucket.tasks.filter((t) => {
+                      const tt = getTaskTime(t);
+                      return !tt || !isTimeInVisibleHours(tt, hours);
+                    }),
+                  }
+                : undefined;
               return (
                 <LandscapeDayHeader
                   key={date.toISOString()}
@@ -353,14 +375,15 @@ export function WeekView({
                       ))}
                     </div>
                   )}
-                  {bucketsByDate && (
+                  {headerBucket && (
                     <div className="px-0.5 pb-0.5">
                       <DroppableOverlayCell
                         date={date}
-                        bucket={bucketsByDate.get(format(date, 'yyyy-MM-dd'))}
+                        bucket={headerBucket}
                         size="xs"
                         layout="row"
                         enableDnd={enableDnd}
+                        mealColor={mealColor}
                       />
                     </div>
                   )}
@@ -383,10 +406,14 @@ export function WeekView({
             {days.map((date) => {
               const isPast = isBefore(date, startOfDay(new Date())) && !isToday(date);
               const dayPositions = calculateEventPositions(getDayTimedEvents(date));
+              const dayBucket = bucketsByDate?.get(format(date, 'yyyy-MM-dd'));
               return (
                 <div
                   key={date.toISOString()}
-                  className={cn('flex-1 min-w-0 h-full border-l border-border grid', !transparentMode && isPast && 'bg-muted/10')}
+                  className={cn('relative flex-1 min-w-0 h-full border-l border-border', !transparentMode && isPast && 'bg-muted/10')}
+                >
+                <div
+                  className="grid h-full"
                   style={{ gridTemplateRows: `repeat(${hours.length}, 1fr)` }}
                 >
                   {hours.map((hour) => {
@@ -453,11 +480,160 @@ export function WeekView({
                     );
                   })}
                 </div>
+                {/* Timed-overlay layer: meals/chores/tasks placed by time-of-day. */}
+                {cards && dayBucket && (
+                  <TimedBucketLayer
+                    bucket={dayBucket}
+                    hours={hours}
+                    mealColor={mealColor}
+                    enableDnd={enableDnd}
+                  />
+                )}
+                </div>
               );
             })}
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+/**
+ * Returns true when the HH:mm value falls inside one of the visible hour
+ * slots. Used to decide whether a timed bucket item lands in the grid or
+ * spills back to the header row when the user has hidden hours.
+ */
+function isTimeInVisibleHours(hhmm: string | null, hours: number[]): boolean {
+  if (!hhmm) return false;
+  const m = /^(\d{2}):/.exec(hhmm);
+  if (!m) return false;
+  return hours.includes(Number(m[1]));
+}
+
+/**
+ * Renders a day's bucket items (meals, chores, tasks) at their time-of-day
+ * over the hour grid. Items at hidden hours are filtered out by the caller
+ * and rendered in the header row instead.
+ */
+function TimedBucketLayer({
+  bucket,
+  hours,
+  mealColor,
+  enableDnd,
+}: {
+  bucket: DayBucket;
+  hours: number[];
+  mealColor: string | undefined;
+  enableDnd: boolean;
+}) {
+  const slotPct = 100 / hours.length;
+  const visibleSet = new Set(hours);
+
+  type Placed = {
+    key: string;
+    dragId: string;
+    variant: 'meal' | 'chore' | 'task';
+    title: string;
+    timeLabel: string;
+    subtitle?: string;
+    stripeColor: string;
+    muted?: boolean;
+    /** Visible hour index (0-based within `hours` array). */
+    rowIndex: number;
+    minute: number;
+    durationMin: number;
+  };
+
+  const placed: Placed[] = [];
+
+  for (const meal of bucket.meals) {
+    const t = getMealTime(meal);
+    const hh = Number(t.slice(0, 2));
+    if (!visibleSet.has(hh)) continue;
+    const mm = Number(t.slice(3, 5));
+    placed.push({
+      key: `meal-${meal.id}`,
+      dragId: `meal:${meal.id}`,
+      variant: 'meal',
+      title: meal.name,
+      timeLabel: t,
+      subtitle: meal.cookedBy?.name ? `Cooked by ${meal.cookedBy.name}` : undefined,
+      stripeColor: mealColor ?? '#10b981',
+      muted: Boolean(meal.cookedAt),
+      rowIndex: hours.indexOf(hh),
+      minute: mm,
+      durationMin: meal.mealType === 'dinner' ? 60 : 30,
+    });
+  }
+  for (const chore of bucket.chores) {
+    const t = getChoreTime(chore);
+    if (!t) continue;
+    const hh = Number(t.slice(0, 2));
+    if (!visibleSet.has(hh)) continue;
+    const mm = Number(t.slice(3, 5));
+    placed.push({
+      key: `chore-${chore.id}`,
+      dragId: `chore:${chore.id}`,
+      variant: 'chore',
+      title: chore.title,
+      timeLabel: t,
+      subtitle: chore.assignedTo?.name,
+      stripeColor: chore.pendingApproval ? '#a855f7' : '#f59e0b',
+      muted: Boolean(chore.pendingApproval),
+      rowIndex: hours.indexOf(hh),
+      minute: mm,
+      durationMin: 30,
+    });
+  }
+  for (const task of bucket.tasks) {
+    const t = getTaskTime(task);
+    if (!t) continue;
+    const hh = Number(t.slice(0, 2));
+    if (!visibleSet.has(hh)) continue;
+    const mm = Number(t.slice(3, 5));
+    placed.push({
+      key: `task-${task.id}`,
+      dragId: `task:${task.id}`,
+      variant: 'task',
+      title: task.title,
+      timeLabel: t,
+      subtitle: task.assignedTo?.name,
+      stripeColor: task.priority === 'high' ? '#ef4444' : task.priority === 'medium' ? '#f59e0b' : '#3b82f6',
+      muted: task.completed,
+      rowIndex: hours.indexOf(hh),
+      minute: mm,
+      durationMin: 30,
+    });
+  }
+
+  if (placed.length === 0) return null;
+
+  return (
+    <div className="absolute inset-0 pointer-events-none">
+      {placed.map((p) => {
+        const topPct = (p.rowIndex + p.minute / 60) * slotPct;
+        const heightPct = (p.durationMin / 60) * slotPct;
+        return (
+          <div
+            key={p.key}
+            className="absolute pointer-events-auto px-0.5"
+            style={{ top: `${topPct}%`, height: `${heightPct}%`, left: 0, right: 0, zIndex: 5 }}
+          >
+            <WeekItemCard
+              variant={p.variant}
+              size="sm"
+              layout="row"
+              stripeColor={p.stripeColor}
+              title={p.title}
+              timeLabel={p.timeLabel}
+              subtitle={p.subtitle}
+              muted={p.muted}
+              dragId={enableDnd ? p.dragId : undefined}
+            />
+          </div>
+        );
+      })}
     </div>
   );
 }
