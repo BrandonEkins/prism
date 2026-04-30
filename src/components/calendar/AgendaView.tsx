@@ -12,6 +12,9 @@ import { Calendar } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui';
 import type { CalendarEvent } from '@/types/calendar';
+import type { DayBucket } from '@/lib/hooks/useWeekViewData';
+import { DroppableOverlayCell } from './cells';
+import { format as fmt } from 'date-fns';
 
 export interface AgendaViewProps {
   events: CalendarEvent[];
@@ -20,6 +23,8 @@ export interface AgendaViewProps {
   onEventClick?: (event: CalendarEvent) => void;
   emptyMessage?: string;
   displayMode?: 'inline' | 'cards';
+  bucketsByDate?: Map<string, DayBucket>;
+  enableDnd?: boolean;
 }
 
 export function AgendaView({
@@ -29,6 +34,8 @@ export function AgendaView({
   onEventClick,
   emptyMessage = 'No upcoming events',
   displayMode = 'inline',
+  bucketsByDate,
+  enableDnd = false,
 }: AgendaViewProps) {
   const cards = displayMode === 'cards';
   const startDate = startOfDay(new Date());
@@ -52,7 +59,7 @@ export function AgendaView({
       return a.startTime.getTime() - b.startTime.getTime();
     });
 
-  const eventsByDay: Array<{ date: Date; events: CalendarEvent[] }> = [];
+  const eventsByDay: Array<{ date: Date; events: CalendarEvent[]; bucket?: DayBucket }> = [];
   for (let i = 0; i < days; i++) {
     const date = addDays(startDate, i);
     const dayStart = startOfDay(date);
@@ -61,10 +68,14 @@ export function AgendaView({
         ? e.startTime <= dayStart && e.endTime > dayStart
         : isSameDay(e.startTime, date)
     );
-    if (dayEvents.length > 0) eventsByDay.push({ date, events: dayEvents });
+    const bucket = bucketsByDate?.get(fmt(date, 'yyyy-MM-dd'));
+    const hasOverlay = bucket && (bucket.meals.length + bucket.chores.length + bucket.tasks.length > 0);
+    if (dayEvents.length > 0 || hasOverlay) {
+      eventsByDay.push({ date, events: dayEvents, bucket });
+    }
   }
 
-  if (filteredEvents.length === 0) {
+  if (eventsByDay.length === 0) {
     return (
       <div className="h-full flex flex-col items-center justify-center text-muted-foreground gap-2">
         <Calendar className="h-8 w-8" />
@@ -76,7 +87,7 @@ export function AgendaView({
   return (
     <div className="overflow-auto h-full -mr-2 pr-2">
       <div className="space-y-4">
-        {eventsByDay.map(({ date, events: dayEvts }) => (
+        {eventsByDay.map(({ date, events: dayEvts, bucket }) => (
           <AgendaDaySection
             key={date.toISOString()}
             date={date}
@@ -84,6 +95,8 @@ export function AgendaView({
             maxEvents={maxEventsPerDay}
             onEventClick={onEventClick}
             cards={cards}
+            bucket={bucket}
+            enableDnd={enableDnd}
           />
         ))}
       </div>
@@ -97,12 +110,16 @@ function AgendaDaySection({
   maxEvents,
   onEventClick,
   cards = false,
+  bucket,
+  enableDnd = false,
 }: {
   date: Date;
   events: CalendarEvent[];
   maxEvents: number;
   onEventClick?: (event: CalendarEvent) => void;
   cards?: boolean;
+  bucket?: DayBucket;
+  enableDnd?: boolean;
 }) {
   const displayEvents = maxEvents > 0 ? events.slice(0, maxEvents) : events;
   const remainingCount = maxEvents > 0 ? events.length - maxEvents : 0;
@@ -138,6 +155,15 @@ function AgendaDaySection({
           <div className="text-xs text-muted-foreground pl-2">
             +{remainingCount} more events
           </div>
+        )}
+        {bucket && (
+          <DroppableOverlayCell
+            date={date}
+            bucket={bucket}
+            size="sm"
+            layout="row"
+            enableDnd={enableDnd}
+          />
         )}
       </div>
     </div>

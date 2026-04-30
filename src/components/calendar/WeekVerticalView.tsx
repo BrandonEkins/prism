@@ -16,6 +16,8 @@ import { hexToRgba } from '@/lib/utils/color';
 import type { CalendarEvent } from '@/types/calendar';
 import { useWeekStartsOn } from '@/lib/hooks/useWeekStartsOn';
 import type { CalendarNote } from '@/lib/hooks/useCalendarNotes';
+import type { DayBucket } from '@/lib/hooks/useWeekViewData';
+import { DroppableOverlayCell } from './cells';
 
 export interface WeekVerticalViewProps {
   currentDate: Date;
@@ -29,6 +31,10 @@ export interface WeekVerticalViewProps {
   notesByDate?: Map<string, CalendarNote>;
   onNoteChange?: (date: string, content: string) => void;
   displayMode?: 'inline' | 'cards';
+  /** Per-day meals/chores/tasks. Provided when cards-mode + overlays are active. */
+  bucketsByDate?: Map<string, DayBucket>;
+  /** When true, overlay items are draggable and cells become drop targets. */
+  enableDnd?: boolean;
 }
 
 export function WeekVerticalView({
@@ -43,6 +49,8 @@ export function WeekVerticalView({
   notesByDate,
   onNoteChange,
   displayMode = 'inline',
+  bucketsByDate,
+  enableDnd = false,
 }: WeekVerticalViewProps) {
   const { weekStartsOn } = useWeekStartsOn();
   const bgOverride = useWidgetBgOverride();
@@ -176,7 +184,7 @@ export function WeekVerticalView({
                 })}
               </div>
             ) : (
-              <div className="flex-1 p-1.5 min-w-0">
+              <div className="flex-1 p-1.5 min-w-0 space-y-1">
                 <DayEventList
                   allDayEvents={allDayEvents}
                   timedEvents={timedEvents}
@@ -186,6 +194,15 @@ export function WeekVerticalView({
                   currentHour={currentHour}
                   cards={displayMode === 'cards'}
                 />
+                {bucketsByDate && (
+                  <DroppableOverlayCell
+                    date={day}
+                    bucket={bucketsByDate.get(format(day, 'yyyy-MM-dd'))}
+                    size="sm"
+                    layout="row"
+                    enableDnd={enableDnd}
+                  />
+                )}
               </div>
             )}
 

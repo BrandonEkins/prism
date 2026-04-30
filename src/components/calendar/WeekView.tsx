@@ -18,6 +18,8 @@ import { useWeekStartsOn } from '@/lib/hooks/useWeekStartsOn';
 import { calculateEventPositions, positionToCSS } from '@/lib/utils/eventLayout';
 import { hexToRgba } from '@/lib/utils/color';
 import type { CalendarEvent } from '@/types/calendar';
+import type { DayBucket } from '@/lib/hooks/useWeekViewData';
+import { DroppableOverlayCell } from './cells';
 
 export type CalendarDisplayMode = 'inline' | 'cards';
 
@@ -28,6 +30,8 @@ export interface WeekViewProps {
   bordered?: boolean;
   /** 'inline' = colored block (default); 'cards' = dark translucent card with left stripe. */
   displayMode?: CalendarDisplayMode;
+  bucketsByDate?: Map<string, DayBucket>;
+  enableDnd?: boolean;
 }
 
 export function WeekView({
@@ -36,6 +40,8 @@ export function WeekView({
   onEventClick,
   bordered = true,
   displayMode = 'inline',
+  bucketsByDate,
+  enableDnd = false,
 }: WeekViewProps) {
   const cards = displayMode === 'cards';
   const { weekStartsOn } = useWeekStartsOn();
@@ -304,6 +310,17 @@ export function WeekView({
                           {event.title}
                         </button>
                       ))}
+                    </div>
+                  )}
+                  {bucketsByDate && (
+                    <div className="px-0.5 pb-0.5">
+                      <DroppableOverlayCell
+                        date={date}
+                        bucket={bucketsByDate.get(format(date, 'yyyy-MM-dd'))}
+                        size="xs"
+                        layout="row"
+                        enableDnd={enableDnd}
+                      />
                     </div>
                   )}
                 </div>

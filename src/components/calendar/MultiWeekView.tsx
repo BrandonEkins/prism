@@ -15,7 +15,8 @@ import { hexToRgba } from '@/lib/utils/color';
 import { useWeekStartsOn } from '@/lib/hooks/useWeekStartsOn';
 import { DAYS_SHORT_ARRAY } from '@/lib/constants/days';
 import type { CalendarEvent } from '@/types/calendar';
-import { DayOverflowPopover } from './cells';
+import { DayOverflowPopover, DroppableOverlayCell } from './cells';
+import type { DayBucket } from '@/lib/hooks/useWeekViewData';
 
 export interface MultiWeekViewProps {
   currentDate: Date;
@@ -24,6 +25,8 @@ export interface MultiWeekViewProps {
   weekCount?: 1 | 2 | 3 | 4;
   bordered?: boolean;
   displayMode?: 'inline' | 'cards';
+  bucketsByDate?: Map<string, DayBucket>;
+  enableDnd?: boolean;
 }
 
 const MAX_VISIBLE_CARDS_COMPACT = 2;
@@ -36,6 +39,8 @@ export function MultiWeekView({
   weekCount = 2,
   bordered = false,
   displayMode = 'inline',
+  bucketsByDate,
+  enableDnd = false,
 }: MultiWeekViewProps) {
   const { weekStartsOn } = useWeekStartsOn();
   const bgOverride = useWidgetBgOverride();
@@ -87,6 +92,8 @@ export function MultiWeekView({
                 bordered={bordered}
                 cellBgStyle={cellBgStyle}
                 displayMode={displayMode}
+                bucket={bucketsByDate?.get(format(date, 'yyyy-MM-dd'))}
+                enableDnd={enableDnd}
               />
             ))}
           </div>
@@ -104,6 +111,8 @@ function DayCell({
   bordered,
   cellBgStyle,
   displayMode,
+  bucket,
+  enableDnd,
 }: {
   date: Date;
   events: CalendarEvent[];
@@ -112,6 +121,8 @@ function DayCell({
   bordered: boolean;
   cellBgStyle?: React.CSSProperties;
   displayMode: 'inline' | 'cards';
+  bucket?: DayBucket;
+  enableDnd: boolean;
 }) {
   const cards = displayMode === 'cards';
   const maxVisible = compact ? MAX_VISIBLE_CARDS_COMPACT : MAX_VISIBLE_CARDS;
@@ -200,6 +211,15 @@ function DayCell({
             date={date}
             hiddenEvents={sorted.slice(maxVisible)}
             onEventClick={onEventClick}
+          />
+        )}
+        {cards && bucket && (
+          <DroppableOverlayCell
+            date={date}
+            bucket={bucket}
+            size="xs"
+            layout="row"
+            enableDnd={enableDnd}
           />
         )}
       </div>

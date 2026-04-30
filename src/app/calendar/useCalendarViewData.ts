@@ -64,6 +64,28 @@ export function useCalendarViewData() {
     localStorage.setItem('prism-calendar-display-mode', displayMode);
   }, [displayMode]);
 
+  const [overlays, setOverlays] = useState<{ events: boolean; meals: boolean; chores: boolean; tasks: boolean }>(() => {
+    if (typeof window !== 'undefined') {
+      const raw = localStorage.getItem('prism-calendar-overlays');
+      if (raw) {
+        try {
+          const parsed = JSON.parse(raw);
+          return {
+            events: parsed.events !== false,
+            meals: parsed.meals !== false,
+            chores: parsed.chores !== false,
+            tasks: parsed.tasks !== false,
+          };
+        } catch { /* fall through */ }
+      }
+    }
+    return { events: true, meals: true, chores: true, tasks: true };
+  });
+
+  useEffect(() => {
+    localStorage.setItem('prism-calendar-overlays', JSON.stringify(overlays));
+  }, [overlays]);
+
   const { selectedCalendarIds, toggleCalendar, filterEvents, calendarGroups } = useCalendarFilter();
   const { events: apiEvents, loading, error, refresh: refreshEvents } = useCalendarEvents({ daysToShow: 60 });
 
@@ -148,6 +170,7 @@ export function useCalendarViewData() {
     mergedView, setMergedView,
     weeksBordered, setWeeksBordered,
     displayMode, setDisplayMode,
+    overlays, setOverlays,
     events, loading, error, refreshEvents,
     goToToday, goToPrevious, goToNext, getDateRangeTitle,
   };

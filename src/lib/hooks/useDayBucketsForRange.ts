@@ -1,0 +1,220 @@
+'use client';
+
+import { useMemo } from 'react';
+import { addDays, format, isSameDay, startOfDay } from 'date-fns';
+import { useCalendarEvents } from './useCalendarEvents';
+import { useMeals } from './useMeals';
+import { useChores } from './useChores';
+import { useTasks } from './useTasks';
+import { useWeather } from './useWeather';
+import { DAYS_OF_WEEK, type DayOfWeek } from '@/lib/constants/days';
+import type { CalendarEvent } from '@/types/calendar';
+import type { Chore, Meal } from '@/types';
+import type { Task } from '@/components/widgets/TasksWidget';
+import type { DayBucket } from './useWeekViewData';
+
+export interface OverlayFlags {
+  events: boolean;
+  meals: boolean;
+  chores: boolean;
+  tasks: boolean;
+}
+
+interface UseDayBucketsForRangeOptions {
+  /** Inclusive start date (date-only; time ignored) */
+  from: Date;
+  /** Inclusive end date (date-only; time ignored) */
+  to: Date;
+  /** Streams to fetch. Disabled streams are skipped to save polling overhead. */
+  overlays: OverlayFlags;
+  /** Pre-fetched events from the parent — when provided, skip the events fetch and use these. */
+  externalEvents?: CalendarEvent[];
+}
+
+interface UseDayBucketsForRangeResult {
+  bucketsByDate: Map<string, DayBucket>;
+  loading: boolean;
+  error: string | null;
+  refresh: () => Promise<void>;
+}
+
+const MEAL_TYPE_ORDER: Record<Meal['mealType'], number> = {
+  breakfast: 0,
+  lunch: 1,
+  dinner: 2,
+  snack: 3,
+};
+
+const EMPTY_EVENTS: CalendarEvent[] = [];
+const EMPTY_MEALS: Meal[] = [];
+const EMPTY_CHORES: Chore[] = [];
+const EMPTY_TASKS: Task[] = [];
+
+function dateKey(d: Date): string {
+  return format(d, 'yyyy-MM-dd');
+}
+
+function eventOnDay(event: CalendarEvent, day: Date): boolean {
+  const dayStart = startOfDay(day);
+  const dayEnd = addDays(dayStart, 1);
+  return event.startTime < dayEnd && event.endTime > dayStart;
+}
+
+function choreNextDueOnDay(chore: Chore, day: Date): boolean {
+  if (!chore.nextDue) return false;
+  const due = new Date(chore.nextDue);
+  if (Number.isNaN(due.getTime())) return false;
+  return isSameDay(due, day);
+}
+
+/**
+ * Returns a Map keyed by `yyyy-MM-dd` of DayBucket objects covering the range
+ * [from, to] inclusive. Streams disabled in `overlays` are not fetched.
+ *
+ * Meals are loaded without a weekOf filter (the API caches the full set), so
+ * cross-week ranges (month / multi-week / agenda) all see meals correctly.
+ */
+export function useDayBucketsForRange({
+  from,
+  to,
+  overlays,
+  externalEvents,
+}: UseDayBucketsForRangeOptions): UseDayBucketsForRangeResult {
+  const fromKey = useMemo(() => dateKey(from), [from]);
+  const toKey = useMemo(() => dateKey(to), [to]);
+
+  // Use external events when provided (CalendarView already fetches events
+  // with its own filter set). Otherwise fetch internally.
+  const fetchEvents = externalEvents === undefined && overlays.events;
+  const {
+    events: ownEvents,
+    loading: eventsLoading,
+    error: eventsError,
+    refresh: refreshEvents,
+  } = useCalendarEvents({ daysToShow: 60, enabled: fetchEvents });
+
+  const events = externalEvents ?? (fetchEvents ? ownEvents : EMPTY_EVENTS);
+
+  const {
+    meals,
+    loading: mealsLoading,
+    error: mealsError,
+    refresh: refreshMeals,
+  } = useMeals({ enabled: overlays.meals });
+
+  const {
+    chores,
+    loading: choresLoading,
+    error: choresError,
+    refresh: refreshChores,
+  } = useChores({ enabled: overlays.chores });
+
+  const {
+    tasks,
+    loading: tasksLoading,
+    error: tasksError,
+    refresh: refreshTasks,
+  } = useTasks({ showCompleted: false, enabled: overlays.tasks });
+
+  const { data: weather } = useWeather();
+
+  const bucketsByDate = useMemo<Map<string, DayBucket>>(() => {
+    const map = new Map<string, DayBucket>();
+    const start = startOfDay(from);
+    const end = startOfDay(to);
+
+    const safeMeals = overlays.meals ? meals ?? EMPTY_MEALS : EMPTY_MEALS;
+    const safeChores = overlays.chores ? chores ?? EMPTY_CHORES : EMPTY_CHORES;
+    const safeTasks = overlays.tasks ? tasks ?? EMPTY_TASKS : EMPTY_TASKS;
+
+    let cursor = start;
+    let safety = 0;
+    while (cursor <= end && safety < 366) {
+      const date = cursor;
+      const dayOfWeek = DAYS_OF_WEEK[date.getDay()] as DayOfWeek;
+      const key = dateKey(date);
+
+      const dayEvents = overlays.events
+        ? events.filter((e) => eventOnDay(e, date))
+        : EMPTY_EVENTS;
+      const allDayEvents = dayEvents
+        .filter((e) => e.allDay)
+        .sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
+      const timedEvents = dayEvents
+        .filter((e) => !e.allDay)
+        .sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
+
+      const dayMeals = safeMeals
+        .filter((m) => m.dayOfWeek === dayOfWeek)
+        .filter((m) => isMealForWeek(m, date))
+        .sort((a, b) => MEAL_TYPE_ORDER[a.mealType] - MEAL_TYPE_ORDER[b.mealType]);
+
+      const dayChores = safeChores
+        .filter((c) => choreNextDueOnDay(c, date))
+        .sort((a, b) => a.title.localeCompare(b.title));
+
+      const dayTasks = safeTasks
+        .filter((t) => t.dueDate && isSameDay(t.dueDate, date))
+        .sort((a, b) => {
+          const order = { high: 0, medium: 1, low: 2 } as const;
+          return order[a.priority] - order[b.priority];
+        });
+
+      const dayWeather = weather?.forecast.find((f) => isSameDay(f.date, date));
+
+      map.set(key, {
+        date,
+        dayOfWeek,
+        allDayEvents,
+        timedEvents,
+        meals: dayMeals,
+        chores: dayChores,
+        tasks: dayTasks,
+        weather: dayWeather,
+      });
+
+      cursor = addDays(cursor, 1);
+      safety += 1;
+    }
+
+    return map;
+    // fromKey/toKey trigger recompute on actual date changes, not Date identity.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fromKey, toKey, events, meals, chores, tasks, weather, overlays.events, overlays.meals, overlays.chores, overlays.tasks]);
+
+  const loading =
+    (overlays.events && fetchEvents && eventsLoading) ||
+    (overlays.meals && mealsLoading) ||
+    (overlays.chores && choresLoading) ||
+    (overlays.tasks && tasksLoading);
+
+  const error =
+    (overlays.events && fetchEvents ? eventsError : null) ||
+    (overlays.meals ? mealsError : null) ||
+    (overlays.chores ? choresError : null) ||
+    (overlays.tasks ? tasksError : null);
+
+  const refresh = async () => {
+    const promises: Promise<unknown>[] = [];
+    if (fetchEvents && overlays.events) promises.push(refreshEvents());
+    if (overlays.meals) promises.push(refreshMeals());
+    if (overlays.chores) promises.push(refreshChores());
+    if (overlays.tasks) promises.push(refreshTasks());
+    await Promise.all(promises);
+  };
+
+  return { bucketsByDate, loading: Boolean(loading), error: error ?? null, refresh };
+}
+
+/**
+ * A meal's `weekOf` is the YYYY-MM-DD of the week start (Sun or Mon, depending
+ * on settings). For a given target date we accept the meal if the date falls
+ * within the 7-day window starting at `weekOf`.
+ */
+function isMealForWeek(meal: Meal, date: Date): boolean {
+  if (!meal.weekOf) return false;
+  const weekStart = startOfDay(new Date(meal.weekOf));
+  if (Number.isNaN(weekStart.getTime())) return false;
+  const weekEnd = addDays(weekStart, 7);
+  return date >= weekStart && date < weekEnd;
+}

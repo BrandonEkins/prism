@@ -15,6 +15,8 @@ import { calculateEventPositions, positionToCSS } from '@/lib/utils/eventLayout'
 import { hexToRgba } from '@/lib/utils/color';
 import type { CalendarEvent } from '@/types/calendar';
 import type { CalendarNote } from '@/lib/hooks/useCalendarNotes';
+import type { DayBucket } from '@/lib/hooks/useWeekViewData';
+import { DroppableOverlayCell } from './cells';
 
 export interface DayViewSideBySideProps {
   currentDate: Date;
@@ -28,6 +30,8 @@ export interface DayViewSideBySideProps {
   notesByDate?: Map<string, CalendarNote>;
   onNoteChange?: (date: string, content: string) => void;
   displayMode?: 'inline' | 'cards';
+  bucketsByDate?: Map<string, DayBucket>;
+  enableDnd?: boolean;
 }
 
 export function DayViewSideBySide({
@@ -42,6 +46,8 @@ export function DayViewSideBySide({
   notesByDate,
   onNoteChange,
   displayMode = 'inline',
+  bucketsByDate,
+  enableDnd = false,
 }: DayViewSideBySideProps) {
   const cards = displayMode === 'cards';
   const bgOverride = useWidgetBgOverride();
@@ -169,6 +175,25 @@ export function DayViewSideBySide({
               </div>
             )}
           </div>
+
+          {/* Overlays row — meals/chores/tasks for the day, shown above the hourly grid */}
+          {bucketsByDate && (() => {
+            const bucket = bucketsByDate.get(format(currentDate, 'yyyy-MM-dd'));
+            if (!bucket || (bucket.meals.length + bucket.chores.length + bucket.tasks.length) === 0) {
+              return null;
+            }
+            return (
+              <div className="shrink-0 border-b border-border bg-card/40 px-2 py-1.5">
+                <DroppableOverlayCell
+                  date={currentDate}
+                  bucket={bucket}
+                  size="sm"
+                  layout="row"
+                  enableDnd={enableDnd}
+                />
+              </div>
+            );
+          })()}
 
           {/* Hourly grid — flex-1 fills remaining space; 1fr rows stretch when hours are hidden */}
           <div className="flex-1 flex">

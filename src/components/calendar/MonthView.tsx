@@ -21,7 +21,8 @@ import { useWeekStartsOn } from '@/lib/hooks/useWeekStartsOn';
 import { DAYS_SHORT_ARRAY } from '@/lib/constants/days';
 import type { CalendarEvent } from '@/types/calendar';
 import { seasonalPalettes } from '@/lib/themes/seasonalThemes';
-import { DayOverflowPopover } from './cells';
+import { DayOverflowPopover, DroppableOverlayCell } from './cells';
+import type { DayBucket } from '@/lib/hooks/useWeekViewData';
 
 // Get the accent color for a month (1-12)
 function getMonthColor(month: Date): string {
@@ -37,6 +38,8 @@ export interface MonthViewProps {
   onDateClick: (date: Date) => void;
   bordered?: boolean;
   displayMode?: 'inline' | 'cards';
+  bucketsByDate?: Map<string, DayBucket>;
+  enableDnd?: boolean;
 }
 
 const MAX_VISIBLE_CARDS = 3;
@@ -48,6 +51,8 @@ export function MonthView({
   onDateClick,
   bordered = true,
   displayMode = 'inline',
+  bucketsByDate,
+  enableDnd = false,
 }: MonthViewProps) {
   const cards = displayMode === 'cards';
   const { weekStartsOn } = useWeekStartsOn();
@@ -159,6 +164,17 @@ export function MonthView({
                         date={date}
                         hiddenEvents={dayEvents.slice(MAX_VISIBLE_CARDS)}
                         onEventClick={onEventClick}
+                      />
+                    </div>
+                  )}
+                  {bucketsByDate && (
+                    <div onClick={(e) => e.stopPropagation()}>
+                      <DroppableOverlayCell
+                        date={date}
+                        bucket={bucketsByDate.get(format(date, 'yyyy-MM-dd'))}
+                        size="xs"
+                        layout="row"
+                        enableDnd={enableDnd}
                       />
                     </div>
                   )}

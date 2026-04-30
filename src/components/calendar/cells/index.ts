@@ -3,3 +3,5 @@ export type { WeekItemVariant, WeekItemSize, WeekItemLayout } from './WeekItemCa
 export { DayColumn } from './DayColumn';
 export type { OverlayFlags } from './DayColumn';
 export { DayOverflowPopover } from './DayOverflowPopover';
+export { OverlayItemsCell } from './OverlayItemsCell';
+export { DroppableOverlayCell } from './DroppableOverlayCell';

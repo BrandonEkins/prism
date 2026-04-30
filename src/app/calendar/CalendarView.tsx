@@ -1,7 +1,15 @@
 'use client';
 
 import { useState, useEffect, useMemo, lazy, Suspense } from 'react';
-import { format, startOfWeek, addDays } from 'date-fns';
+import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, addDays, addWeeks } from 'date-fns';
+import {
+  DndContext,
+  PointerSensor,
+  KeyboardSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core';
 import { toast } from '@/components/ui/use-toast';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useConfirmDialog } from '@/lib/hooks/useConfirmDialog';
@@ -36,9 +44,12 @@ const WeekVerticalView = lazy(() => import('@/components/calendar/WeekVerticalVi
 const AgendaView = lazy(() => import('@/components/calendar/AgendaView').then(m => ({ default: m.AgendaView })));
 import { useCalendarViewData } from './useCalendarViewData';
 import { useCalendarNotes } from '@/lib/hooks/useCalendarNotes';
+import { useDayBucketsForRange } from '@/lib/hooks/useDayBucketsForRange';
 import { useIsMobile, useSwipeNavigation } from '@/lib/hooks';
 import { useAuth } from '@/components/providers';
 import { useWeekStartsOn } from '@/lib/hooks/useWeekStartsOn';
+import { useWeekMutations } from '@/app/week/useWeekMutations';
+import { OverlaysToolbar } from './OverlaysToolbar';
 
 export function CalendarView() {
   const { activeUser, requireAuth } = useAuth();
@@ -50,6 +61,7 @@ export function CalendarView() {
     weekCount, setWeekCount,
     weeksBordered, setWeeksBordered,
     displayMode, setDisplayMode,
+    overlays, setOverlays,
     selectedEvent, setSelectedEvent,
     showAddEvent, setShowAddEvent,
     editingEvent, setEditingEvent,
@@ -60,6 +72,86 @@ export function CalendarView() {
     events, loading, error, refreshEvents,
     goToToday, goToPrevious, goToNext, getDateRangeTitle,
   } = useCalendarViewData();
+
+  // Date range covered by the active view — used by useDayBucketsForRange to
+  // know which days need meal/chore/task buckets prepared.
+  const { rangeFrom, rangeTo } = useMemo(() => {
+    switch (viewType) {
+      case 'agenda':
+        return { rangeFrom: new Date(), rangeTo: addDays(new Date(), 30) };
+      case 'day':
+        return { rangeFrom: currentDate, rangeTo: currentDate };
+      case 'week':
+      case 'weekVertical': {
+        const ws = startOfWeek(currentDate, { weekStartsOn });
+        return { rangeFrom: ws, rangeTo: addDays(ws, 6) };
+      }
+      case 'multiWeek': {
+        const ws = startOfWeek(currentDate, { weekStartsOn });
+        return { rangeFrom: ws, rangeTo: endOfWeek(addWeeks(ws, weekCount - 1), { weekStartsOn }) };
+      }
+      case 'month':
+      case 'threeMonth': {
+        const ms = startOfWeek(startOfMonth(currentDate), { weekStartsOn });
+        const me = endOfWeek(endOfMonth(currentDate), { weekStartsOn });
+        return { rangeFrom: ms, rangeTo: me };
+      }
+    }
+  }, [viewType, currentDate, weekCount, weekStartsOn]);
+
+  // Build per-day buckets when cards mode is on AND the user has any non-event
+  // overlay enabled. In cards-mode-without-overlays the events alone are already
+  // available via the `events` array, so the bucket build is wasted work.
+  const cardsMode = displayMode === 'cards';
+  const overlaysActive = cardsMode && (overlays.meals || overlays.chores || overlays.tasks);
+
+  const { bucketsByDate, refresh: refreshBuckets } = useDayBucketsForRange({
+    from: rangeFrom,
+    to: rangeTo,
+    overlays: {
+      events: false, // events come from CalendarView's filtered list, not the bucket
+      meals: overlaysActive && overlays.meals,
+      chores: overlaysActive && overlays.chores,
+      tasks: overlaysActive && overlays.tasks,
+    },
+    externalEvents: events,
+  });
+
+  const refreshAll = useMemo(() => async () => {
+    await Promise.all([refreshEvents(), refreshBuckets()]);
+  }, [refreshEvents, refreshBuckets]);
+
+  const { moveChore, moveTask, moveMeal } = useWeekMutations({ refresh: refreshAll });
+
+  const dndSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor),
+  );
+
+  const [moveError, setMoveError] = useState<string | null>(null);
+
+  const handleDragEnd = async (e: DragEndEvent) => {
+    setMoveError(null);
+    const { active, over } = e;
+    if (!over) return;
+    const dragId = String(active.id);
+    const targetIso = String(over.id);
+    const colon = dragId.indexOf(':');
+    if (colon === -1) return;
+    const variant = dragId.slice(0, colon);
+    const itemId = dragId.slice(colon + 1);
+
+    const targetBucket = bucketsByDate.get(targetIso);
+    if (!targetBucket) return;
+
+    try {
+      if (variant === 'chore') await moveChore(itemId, targetBucket.date);
+      else if (variant === 'task') await moveTask(itemId, targetBucket.date);
+      else if (variant === 'meal') await moveMeal(itemId, targetBucket.date);
+    } catch (err) {
+      setMoveError(err instanceof Error ? err.message : 'Failed to move item');
+    }
+  };
 
   const isMobile = useIsMobile();
 
@@ -238,6 +330,11 @@ export function CalendarView() {
                   <LayoutPanelTop className={cn('h-4 w-4', displayMode === 'cards' && 'text-primary')} />
                 </Button>
               )}
+              <OverlaysToolbar
+                overlays={overlays}
+                onChange={setOverlays}
+                showOverlayRows={cardsMode}
+              />
             </div>
             {!isMobile && (
               <Button size="sm" onClick={handleAddWithAuth}>
@@ -302,16 +399,35 @@ export function CalendarView() {
           )}
           {!loading && !error && (
             <div className="h-full">
+            {moveError && (
+              <div className="mb-2 rounded border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                {moveError}
+              </div>
+            )}
             <Suspense fallback={<div className="h-full flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>}>
+            <DndContext sensors={dndSensors} onDragEnd={handleDragEnd}>
               {viewType === 'agenda' && (
-                <AgendaView events={events} days={30} onEventClick={setSelectedEvent} displayMode={displayMode} />
+                <AgendaView
+                  events={events}
+                  days={30}
+                  onEventClick={setSelectedEvent}
+                  displayMode={displayMode}
+                  bucketsByDate={overlaysActive ? bucketsByDate : undefined}
+                  enableDnd={overlaysActive}
+                />
               )}
               {viewType === 'month' && (
                 <MonthView currentDate={currentDate} events={events} onEventClick={setSelectedEvent}
-                  onDateClick={(date) => { setCurrentDate(date); setViewType('day'); }} bordered={weeksBordered} displayMode={displayMode} />
+                  onDateClick={(date) => { setCurrentDate(date); setViewType('day'); }} bordered={weeksBordered} displayMode={displayMode}
+                  bucketsByDate={overlaysActive ? bucketsByDate : undefined}
+                  enableDnd={overlaysActive}
+                />
               )}
               {viewType === 'week' && (
-                <WeekView currentDate={currentDate} events={events} onEventClick={setSelectedEvent} bordered={weeksBordered} displayMode={displayMode} />
+                <WeekView currentDate={currentDate} events={events} onEventClick={setSelectedEvent} bordered={weeksBordered} displayMode={displayMode}
+                  bucketsByDate={overlaysActive ? bucketsByDate : undefined}
+                  enableDnd={overlaysActive}
+                />
               )}
               {viewType === 'weekVertical' && (
                 <WeekVerticalView
@@ -326,10 +442,15 @@ export function CalendarView() {
                   notesByDate={notesByDate}
                   onNoteChange={activeUser ? upsertNote : undefined}
                   displayMode={displayMode}
+                  bucketsByDate={overlaysActive ? bucketsByDate : undefined}
+                  enableDnd={overlaysActive}
                 />
               )}
               {viewType === 'multiWeek' && (
-                <MultiWeekView currentDate={currentDate} events={events} onEventClick={setSelectedEvent} weekCount={weekCount} bordered={weeksBordered} displayMode={displayMode} />
+                <MultiWeekView currentDate={currentDate} events={events} onEventClick={setSelectedEvent} weekCount={weekCount} bordered={weeksBordered} displayMode={displayMode}
+                  bucketsByDate={overlaysActive ? bucketsByDate : undefined}
+                  enableDnd={overlaysActive}
+                />
               )}
               {viewType === 'threeMonth' && (
                 <ThreeMonthView currentDate={currentDate} events={events} onEventClick={setSelectedEvent}
@@ -348,8 +469,11 @@ export function CalendarView() {
                   notesByDate={notesByDate}
                   onNoteChange={activeUser ? upsertNote : undefined}
                   displayMode={displayMode}
+                  bucketsByDate={overlaysActive ? bucketsByDate : undefined}
+                  enableDnd={overlaysActive}
                 />
               )}
+            </DndContext>
             </Suspense>
             </div>
           )}
