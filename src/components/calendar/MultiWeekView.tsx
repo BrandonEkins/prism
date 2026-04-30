@@ -1,5 +1,6 @@
 'use client';
 
+import * as React from 'react';
 import {
   format,
   startOfWeek,
@@ -15,7 +16,8 @@ import { hexToRgba } from '@/lib/utils/color';
 import { useWeekStartsOn } from '@/lib/hooks/useWeekStartsOn';
 import { DAYS_SHORT_ARRAY } from '@/lib/constants/days';
 import type { CalendarEvent } from '@/types/calendar';
-import { DayOverflowPopover, DroppableOverlayCell } from './cells';
+import { CardHeightProbe, DayOverflowPopover, DroppableOverlayCell } from './cells';
+import { useCardCapacity } from '@/lib/hooks/useCardCapacity';
 import type { DayBucket } from '@/lib/hooks/useWeekViewData';
 
 export interface MultiWeekViewProps {
@@ -29,8 +31,9 @@ export interface MultiWeekViewProps {
   enableDnd?: boolean;
 }
 
-const MAX_VISIBLE_CARDS_COMPACT = 2;
-const MAX_VISIBLE_CARDS = 4;
+/** Fallback while the ResizeObserver hasn't measured yet (~1 frame on mount). */
+const FALLBACK_VISIBLE_CARDS_COMPACT = 2;
+const FALLBACK_VISIBLE_CARDS = 4;
 
 export function MultiWeekView({
   currentDate,
@@ -43,6 +46,8 @@ export function MultiWeekView({
   enableDnd = false,
 }: MultiWeekViewProps) {
   const { weekStartsOn } = useWeekStartsOn();
+  const [cardHeight, setCardHeight] = React.useState<number | undefined>(undefined);
+  const cards = displayMode === 'cards';
   const bgOverride = useWidgetBgOverride();
   const cellBg = bgOverride?.cellBackgroundColor;
   const cellBgOpacity = bgOverride?.cellBackgroundOpacity ?? 1;
@@ -64,8 +69,14 @@ export function MultiWeekView({
     weeks.push(days.slice(w * 7, (w + 1) * 7));
   }
 
+  // In inline mode, rows size to content (events list scrolls). In cards mode,
+  // rows are equal-height (`1fr`) so dynamic capacity has a meaningful target
+  // height to measure.
+  const rowSizing = cards ? '1fr' : 'auto';
+
   return (
     <div className="h-full flex flex-col overflow-auto">
+      {cards && <CardHeightProbe size="xs" onMeasure={setCardHeight} />}
       {/* Day headers */}
       <div className="grid grid-cols-7 gap-0.5 mb-0.5 shrink-0">
         {dayNames.map((name) => (
@@ -75,13 +86,13 @@ export function MultiWeekView({
         ))}
       </div>
 
-      {/* Week rows — auto-sized to content */}
+      {/* Week rows */}
       <div
         className="flex-1 grid gap-0.5 min-h-0"
-        style={{ gridTemplateRows: `repeat(${weekCount}, auto)` }}
+        style={{ gridTemplateRows: `repeat(${weekCount}, ${rowSizing})` }}
       >
         {weeks.map((week, wIdx) => (
-          <div key={wIdx} className="grid grid-cols-7 gap-0.5">
+          <div key={wIdx} className={cn('grid grid-cols-7 gap-0.5', cards && 'min-h-0')}>
             {week.map((date, dIdx) => (
               <DayCell
                 key={dIdx}
@@ -94,6 +105,7 @@ export function MultiWeekView({
                 displayMode={displayMode}
                 bucket={bucketsByDate?.get(format(date, 'yyyy-MM-dd'))}
                 enableDnd={enableDnd}
+                cardHeight={cardHeight}
               />
             ))}
           </div>
@@ -113,6 +125,7 @@ function DayCell({
   displayMode,
   bucket,
   enableDnd,
+  cardHeight,
 }: {
   date: Date;
   events: CalendarEvent[];
@@ -123,9 +136,10 @@ function DayCell({
   displayMode: 'inline' | 'cards';
   bucket?: DayBucket;
   enableDnd: boolean;
+  cardHeight: number | undefined;
 }) {
   const cards = displayMode === 'cards';
-  const maxVisible = compact ? MAX_VISIBLE_CARDS_COMPACT : MAX_VISIBLE_CARDS;
+  const fallback = compact ? FALLBACK_VISIBLE_CARDS_COMPACT : FALLBACK_VISIBLE_CARDS;
   const dayStart = startOfDay(date);
   const dayEvents = events.filter((event) =>
     event.allDay
@@ -139,10 +153,32 @@ function DayCell({
   });
   const isPast = isBefore(date, startOfDay(new Date())) && !isToday(date);
 
+  const overlayItemCount = bucket ? bucket.meals.length + bucket.chores.length + bucket.tasks.length : 0;
+  const popoverHeight = 22 + overlayItemCount * 20;
+  const { cellRef, fitWithOverflow, fitWithoutOverflow } = useCardCapacity({
+    cardHeight,
+    popoverHeight,
+  });
+
+  let visibleCount: number;
+  if (!cards) {
+    visibleCount = sorted.length;
+  } else {
+    const noOverflowFit = fitWithoutOverflow ?? fallback;
+    const overflowFit = fitWithOverflow ?? fallback;
+    if (sorted.length <= noOverflowFit) visibleCount = sorted.length;
+    else if (sorted.length - overflowFit <= 1) visibleCount = sorted.length;
+    else visibleCount = overflowFit;
+  }
+
+  const visibleEvents = cards ? sorted.slice(0, Math.max(0, visibleCount)) : sorted;
+  const hiddenEvents = cards ? sorted.slice(visibleEvents.length) : [];
+
   return (
     <div
       className={cn(
         'flex flex-col',
+        cards && 'min-h-0 h-full',
         isPast && !cellBgStyle && 'opacity-50',
         bordered && !cellBgStyle && 'border border-border rounded-md bg-card/85',
         bordered && cellBgStyle && 'border border-border rounded-md',
@@ -181,8 +217,15 @@ function DayCell({
       </div>
 
       {/* Events */}
-      <div className={cn('space-y-0.5', compact ? 'px-0.5 pb-0.5' : 'px-1 pb-1')}>
-        {(cards ? sorted.slice(0, maxVisible) : sorted).map((event) => (
+      <div
+        ref={cards ? cellRef : undefined}
+        className={cn(
+          'space-y-0.5',
+          cards && 'flex-1 min-h-0 overflow-hidden',
+          compact ? 'px-0.5 pb-0.5' : 'px-1 pb-1',
+        )}
+      >
+        {visibleEvents.map((event) => (
           <button
             key={event.id}
             onClick={(e) => { e.stopPropagation(); onEventClick(event); }}
@@ -206,10 +249,10 @@ function DayCell({
               : (event.allDay ? event.title : `${format(event.startTime, 'h:mm')} ${event.title}`)}
           </button>
         ))}
-        {cards && sorted.length > maxVisible && (
+        {cards && hiddenEvents.length > 0 && (
           <DayOverflowPopover
             date={date}
-            hiddenEvents={sorted.slice(maxVisible)}
+            hiddenEvents={hiddenEvents}
             onEventClick={onEventClick}
           />
         )}

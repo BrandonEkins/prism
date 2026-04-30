@@ -1,5 +1,6 @@
 'use client';
 
+import * as React from 'react';
 import {
   format,
   startOfMonth,
@@ -21,7 +22,8 @@ import { useWeekStartsOn } from '@/lib/hooks/useWeekStartsOn';
 import { DAYS_SHORT_ARRAY } from '@/lib/constants/days';
 import type { CalendarEvent } from '@/types/calendar';
 import { seasonalPalettes } from '@/lib/themes/seasonalThemes';
-import { DayOverflowPopover, DroppableOverlayCell } from './cells';
+import { CardHeightProbe, DayOverflowPopover, DroppableOverlayCell } from './cells';
+import { useCardCapacity } from '@/lib/hooks/useCardCapacity';
 import type { DayBucket } from '@/lib/hooks/useWeekViewData';
 
 // Get the accent color for a month (1-12)
@@ -42,7 +44,8 @@ export interface MonthViewProps {
   enableDnd?: boolean;
 }
 
-const MAX_VISIBLE_CARDS = 3;
+/** Fallback when ResizeObserver has not yet measured (~1 frame on mount). */
+const FALLBACK_VISIBLE_CARDS = 3;
 
 export function MonthView({
   currentDate,
@@ -56,6 +59,7 @@ export function MonthView({
 }: MonthViewProps) {
   const cards = displayMode === 'cards';
   const { weekStartsOn } = useWeekStartsOn();
+  const [cardHeight, setCardHeight] = React.useState<number | undefined>(undefined);
   const bgOverride = useWidgetBgOverride();
   const transparentMode = bgOverride?.hasCustomBg === true;
   const cellBg = bgOverride?.cellBackgroundColor;
@@ -79,6 +83,7 @@ export function MonthView({
 
   return (
     <div className="h-full flex flex-col overflow-auto">
+      {cards && <CardHeightProbe size="xs" onMeasure={setCardHeight} />}
       {/* Month header with themed color */}
       <div
         className="shrink-0 text-center py-2 font-bold text-base text-white rounded-t-lg mb-2 shadow-sm"
@@ -144,41 +149,14 @@ export function MonthView({
               )}
 
               {cards ? (
-                <div className="flex-1 min-h-0 flex flex-col gap-0.5 px-1 pb-1">
-                  {dayEvents.slice(0, MAX_VISIBLE_CARDS).map((event) => (
-                    <button
-                      key={event.id}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onEventClick(event);
-                      }}
-                      className="w-full text-left text-[10px] px-1 py-0.5 rounded bg-card/85 backdrop-blur-sm border border-border/40 shadow-sm truncate hover:bg-card transition-colors leading-tight"
-                      style={{ borderLeft: `3px solid ${event.color}` }}
-                    >
-                      <span className="font-medium text-foreground">{event.title}</span>
-                    </button>
-                  ))}
-                  {dayEvents.length > MAX_VISIBLE_CARDS && (
-                    <div onClick={(e) => e.stopPropagation()}>
-                      <DayOverflowPopover
-                        date={date}
-                        hiddenEvents={dayEvents.slice(MAX_VISIBLE_CARDS)}
-                        onEventClick={onEventClick}
-                      />
-                    </div>
-                  )}
-                  {bucketsByDate && (
-                    <div onClick={(e) => e.stopPropagation()}>
-                      <DroppableOverlayCell
-                        date={date}
-                        bucket={bucketsByDate.get(format(date, 'yyyy-MM-dd'))}
-                        size="xs"
-                        layout="row"
-                        enableDnd={enableDnd}
-                      />
-                    </div>
-                  )}
-                </div>
+                <DayCardsCell
+                  date={date}
+                  events={dayEvents}
+                  bucket={bucketsByDate?.get(format(date, 'yyyy-MM-dd'))}
+                  enableDnd={enableDnd}
+                  cardHeight={cardHeight}
+                  onEventClick={onEventClick}
+                />
               ) : (
                 <ul className="flex-1 overflow-y-auto space-y-0.5 list-none m-0 px-1 pb-1 pt-0">
                   {dayEvents.map((event) => (
@@ -206,6 +184,93 @@ export function MonthView({
           );
         })}
       </div>
+    </div>
+  );
+}
+
+/**
+ * Renders the events portion of a month-view cell in cards mode. Uses
+ * useCardCapacity to fit as many cards as the available cell height allows,
+ * falling back to {@link FALLBACK_VISIBLE_CARDS} for the first frame before
+ * the ResizeObserver fires.
+ */
+function DayCardsCell({
+  date,
+  events,
+  bucket,
+  enableDnd,
+  cardHeight,
+  onEventClick,
+}: {
+  date: Date;
+  events: CalendarEvent[];
+  bucket: DayBucket | undefined;
+  enableDnd: boolean;
+  cardHeight: number | undefined;
+  onEventClick: (event: CalendarEvent) => void;
+}) {
+  const overlayItemCount = bucket ? bucket.meals.length + bucket.chores.length + bucket.tasks.length : 0;
+  // Reserve ~22px for the popover trigger, ~20px per overlay row.
+  const popoverHeight = 22 + overlayItemCount * 20;
+
+  const { cellRef, fitWithOverflow, fitWithoutOverflow } = useCardCapacity({
+    cardHeight,
+    popoverHeight,
+  });
+
+  const fallback = FALLBACK_VISIBLE_CARDS;
+  const noOverflowFit = fitWithoutOverflow ?? fallback;
+  const overflowFit = fitWithOverflow ?? fallback;
+
+  // Decide which cap to use. Show all events if they fit without a popover.
+  // Otherwise reserve space for the popover and show `overflowFit`. As an
+  // additional courtesy, if hiding only 1 event would be silly, show them all.
+  let visibleCount: number;
+  if (events.length <= noOverflowFit) {
+    visibleCount = events.length;
+  } else if (events.length - overflowFit <= 1) {
+    visibleCount = events.length;
+  } else {
+    visibleCount = overflowFit;
+  }
+
+  const visible = events.slice(0, Math.max(0, visibleCount));
+  const hidden = events.slice(visible.length);
+
+  return (
+    <div
+      ref={cellRef}
+      className="flex-1 min-h-0 flex flex-col gap-0.5 px-1 pb-1"
+    >
+      {visible.map((event) => (
+        <button
+          key={event.id}
+          onClick={(e) => {
+            e.stopPropagation();
+            onEventClick(event);
+          }}
+          className="w-full text-left text-[10px] px-1 py-0.5 rounded bg-card/85 backdrop-blur-sm border border-border/40 shadow-sm truncate hover:bg-card transition-colors leading-tight"
+          style={{ borderLeft: `3px solid ${event.color}` }}
+        >
+          <span className="font-medium text-foreground">{event.title}</span>
+        </button>
+      ))}
+      {hidden.length > 0 && (
+        <div onClick={(e) => e.stopPropagation()}>
+          <DayOverflowPopover date={date} hiddenEvents={hidden} onEventClick={onEventClick} />
+        </div>
+      )}
+      {bucket && (
+        <div onClick={(e) => e.stopPropagation()}>
+          <DroppableOverlayCell
+            date={date}
+            bucket={bucket}
+            size="xs"
+            layout="row"
+            enableDnd={enableDnd}
+          />
+        </div>
+      )}
     </div>
   );
 }
