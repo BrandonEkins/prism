@@ -539,6 +539,7 @@ function TimedBucketLayer({
     subtitle?: string;
     stripeColor: string;
     muted?: boolean;
+    pendingApproval?: boolean;
     /** Visible hour index (0-based within `hours` array). */
     rowIndex: number;
     minute: number;
@@ -579,8 +580,8 @@ function TimedBucketLayer({
       title: chore.title,
       timeLabel: t,
       subtitle: chore.assignedTo?.name,
-      stripeColor: chore.pendingApproval ? '#a855f7' : '#f59e0b',
-      muted: Boolean(chore.pendingApproval),
+      stripeColor: chore.assignedTo?.color || '#f59e0b',
+      pendingApproval: Boolean(chore.pendingApproval),
       rowIndex: hours.indexOf(hh),
       minute: mm,
       durationMin: 30,
@@ -599,7 +600,7 @@ function TimedBucketLayer({
       title: task.title,
       timeLabel: t,
       subtitle: task.assignedTo?.name,
-      stripeColor: task.priority === 'high' ? '#ef4444' : task.priority === 'medium' ? '#f59e0b' : '#3b82f6',
+      stripeColor: task.assignedTo?.color || '#3b82f6',
       muted: task.completed,
       rowIndex: hours.indexOf(hh),
       minute: mm,
@@ -629,6 +630,7 @@ function TimedBucketLayer({
               timeLabel={p.timeLabel}
               subtitle={p.subtitle}
               muted={p.muted}
+              pendingApproval={p.pendingApproval}
               dragId={enableDnd ? p.dragId : undefined}
             />
           </div>

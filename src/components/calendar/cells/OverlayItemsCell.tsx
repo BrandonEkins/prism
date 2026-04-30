@@ -5,16 +5,9 @@ import { cn } from '@/lib/utils';
 import { WeekItemCard, type WeekItemSize, type WeekItemLayout } from './WeekItemCard';
 import type { DayBucket } from '@/lib/hooks/useWeekViewData';
 
-const PRIORITY_COLORS = {
-  high: '#ef4444',
-  medium: '#f59e0b',
-  low: '#3b82f6',
-} as const;
-
-const CHORE_PENDING_COLOR = '#f59e0b';
-const CHORE_OVERDUE_COLOR = '#ef4444';
-const CHORE_PENDING_APPROVAL_COLOR = '#a855f7';
 const MEAL_FALLBACK_COLOR = '#10b981';
+const CHORE_FALLBACK_COLOR = '#f59e0b';
+const TASK_FALLBACK_COLOR = '#3b82f6';
 
 function mealStripeColor(meal: {
   cookedBy?: { color: string } | null;
@@ -23,15 +16,17 @@ function mealStripeColor(meal: {
   return meal.cookedBy?.color || meal.createdBy?.color || MEAL_FALLBACK_COLOR;
 }
 
-function choreStripeColor(chore: { pendingApproval?: unknown; nextDue?: string }): string {
-  if (chore.pendingApproval) return CHORE_PENDING_APPROVAL_COLOR;
-  if (chore.nextDue) {
-    const due = new Date(chore.nextDue);
-    if (!Number.isNaN(due.getTime()) && due < new Date()) {
-      return CHORE_OVERDUE_COLOR;
-    }
-  }
-  return CHORE_PENDING_COLOR;
+/**
+ * Stripe color = assigned user's avatar color so a glance at a card
+ * tells you who owns it. Pending-approval status is conveyed by a
+ * separate diagonal-stripe overlay on the card body.
+ */
+function choreStripeColor(chore: { assignedTo?: { color: string } | null }): string {
+  return chore.assignedTo?.color || CHORE_FALLBACK_COLOR;
+}
+
+function taskStripeColor(task: { assignedTo?: { color: string } | null }): string {
+  return task.assignedTo?.color || TASK_FALLBACK_COLOR;
 }
 
 interface OverlayItemsCellProps {
@@ -96,7 +91,7 @@ export function OverlayItemsCell({
           stripeColor={choreStripeColor(chore)}
           title={chore.title}
           subtitle={chore.assignedTo?.name}
-          muted={Boolean(chore.pendingApproval)}
+          pendingApproval={Boolean(chore.pendingApproval)}
           dragId={enableDrag ? `chore:${chore.id}` : undefined}
         />
       ))}
@@ -106,7 +101,7 @@ export function OverlayItemsCell({
           variant="task"
           size={size}
           layout={layout}
-          stripeColor={PRIORITY_COLORS[task.priority]}
+          stripeColor={taskStripeColor(task)}
           title={task.title}
           subtitle={task.assignedTo?.name}
           muted={task.completed}

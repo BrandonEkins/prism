@@ -21,6 +21,8 @@ interface WeekItemCardProps {
   subtitle?: string;
   /** Strike-through and dim, for completed/cooked items */
   muted?: boolean;
+  /** Diagonal-stripe overlay for items awaiting parent approval. */
+  pendingApproval?: boolean;
   /** Click handler — opens detail modal in caller */
   onClick?: () => void;
   /** Accessible label override */
@@ -35,6 +37,11 @@ interface WeekItemCardProps {
   /** Stacked vertical card ('column') or horizontal row ('row'). Defaults to 'column'. */
   layout?: WeekItemLayout;
 }
+
+// Diagonal-stripes overlay used to mark "pending approval" items. The
+// 4px-on / 4px-off pattern reads as a non-solid surface without overpowering
+// the underlying card content.
+const PENDING_APPROVAL_OVERLAY = 'repeating-linear-gradient(45deg, rgba(168,85,247,0.18) 0 6px, rgba(168,85,247,0) 6px 12px)';
 
 /**
  * Tailwind class fragments per size — kept as static strings (not template-built)
@@ -100,6 +107,7 @@ export function WeekItemCard({
   timeLabel,
   subtitle,
   muted,
+  pendingApproval,
   onClick,
   ariaLabel,
   dragId,
@@ -149,6 +157,9 @@ export function WeekItemCard({
           styles.padding,
         )}
       >
+        {pendingApproval && (
+          <span aria-hidden className="absolute inset-0 pointer-events-none" style={{ background: PENDING_APPROVAL_OVERLAY }} />
+        )}
         <span aria-hidden className={cn('shrink-0 self-stretch rounded-full', styles.stripeWidth)} style={{ backgroundColor: stripeColor }} />
         {styles.showTime && timeLabel && (
           <span className={cn('shrink-0 font-medium tabular-nums text-muted-foreground', styles.metaText)}>
@@ -192,6 +203,9 @@ export function WeekItemCard({
         muted && 'opacity-60',
       )}
     >
+      {pendingApproval && (
+        <span aria-hidden className="absolute inset-0 pointer-events-none" style={{ background: PENDING_APPROVAL_OVERLAY }} />
+      )}
       <span aria-hidden className={cn('shrink-0 rounded-l-md', styles.stripeWidth)} style={{ backgroundColor: stripeColor }} />
 
       <div className={cn('flex min-w-0 flex-1 flex-col', styles.padding)}>
