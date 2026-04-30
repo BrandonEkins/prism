@@ -19,18 +19,9 @@ import {
   ChevronLeft,
   ChevronRight,
   Calendar,
-  CalendarDays,
-  CalendarRange,
-  LayoutGrid,
-  List,
-  ListChecks,
   Merge,
   Plus,
   Loader2,
-  Grid3X3,
-  StickyNote,
-  LayoutPanelTop,
-  Briefcase,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { contrastText } from '@/lib/utils/color';
@@ -55,7 +46,8 @@ import { useIsMobile, useSwipeNavigation } from '@/lib/hooks';
 import { useAuth } from '@/components/providers';
 import { useWeekStartsOn } from '@/lib/hooks/useWeekStartsOn';
 import { useWeekMutations } from '@/app/week/useWeekMutations';
-import { OverlaysToolbar } from './OverlaysToolbar';
+import { ViewMenu } from './ViewMenu';
+import { ViewOptionsMenu } from './ViewOptionsMenu';
 
 const MEAL_TYPE_ORDER = { breakfast: 0, lunch: 1, snack: 2, dinner: 3 } as const;
 const EMPTY_EVENTS: CalendarEvent[] = [];
@@ -311,101 +303,46 @@ export function CalendarView() {
                 </div>
               </>
             )}
-            {/* View switcher - hidden on mobile (mobile always shows day/agenda view) */}
-            <div className="hidden md:flex items-center border rounded-md">
-              <Button variant={viewType === 'agenda' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewType('agenda')} className="rounded-r-none">
-                <ListChecks className="h-4 w-4 mr-1" />Agenda
-              </Button>
-              <Button variant={viewType === 'day' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewType('day')} className="rounded-none border-l">
-                <CalendarDays className="h-4 w-4 mr-1" />Day
-              </Button>
-              <Button variant={viewType === 'week' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewType('week')} className="rounded-none border-x">
-                <CalendarRange className="h-4 w-4 mr-1" />Week
-              </Button>
-              <Button variant={viewType === 'weekVertical' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewType('weekVertical')} className="rounded-none border-r">
-                <List className="h-4 w-4 mr-1" />List
-              </Button>
-              <div className="relative flex items-center border-r">
-                <Button
-                  variant={viewType === 'multiWeek' ? 'secondary' : 'ghost'}
-                  size="sm"
-                  className="rounded-none"
-                  onClick={() => setViewType('multiWeek')}
-                  asChild
-                >
-                  <label className="cursor-pointer">
-                    <CalendarRange className="h-4 w-4 mr-1" />{weekCount}W
-                    {viewType === 'multiWeek' && (
-                      <select
-                        value={weekCount}
-                        onChange={(e) => setWeekCount(Number(e.target.value) as 1 | 2 | 3 | 4)}
-                        className="absolute inset-0 w-full opacity-0 cursor-pointer"
-                        aria-label="Number of weeks"
-                        style={{ colorScheme: 'normal' }}
-                      >
-                        {[1, 2, 3, 4].map(n => (
-                          <option key={n} value={n} className="text-foreground bg-background">{n}W</option>
-                        ))}
-                      </select>
-                    )}
-                  </label>
-                </Button>
-              </div>
-              <Button variant={viewType === 'month' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewType('month')} className="rounded-none border-r">
-                <LayoutGrid className="h-4 w-4 mr-1" />Month
-              </Button>
-              <Button variant={viewType === 'threeMonth' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewType('threeMonth')} className="rounded-l-none">
-                <LayoutGrid className="h-4 w-4 mr-1" />3 Mo
-              </Button>
+            {/* View switcher dropdown — replaces the tab strip. Mobile shows
+                its own Agenda/Day toggle inline (rendered above). */}
+            <div className="hidden md:flex">
+              <ViewMenu
+                viewType={viewType}
+                weekCount={weekCount}
+                onViewChange={setViewType}
+                onWeekCountChange={setWeekCount}
+              />
             </div>
-            {/* Grid lines toggle - works on all applicable views */}
+            {/* Single gear popover replacing Notes/Grid/Cards/Hide-weekends/
+                Overlays toggle buttons. */}
             <div className="hidden md:flex items-center gap-1">
-              {notesSupported && (
-                <Button
-                  variant={showNotes ? 'secondary' : 'ghost'}
-                  size="sm"
-                  onClick={() => setShowNotes(!showNotes)}
-                  title={showNotes ? 'Hide notes' : 'Show notes'}
-                  aria-label="Toggle notes"
-                >
-                  <StickyNote className={cn('h-4 w-4', showNotes && 'text-primary')} />
-                </Button>
-              )}
-              <Button
-                variant={weeksBordered ? 'secondary' : 'ghost'}
-                size="sm"
-                onClick={() => setWeeksBordered(!weeksBordered)}
-                title={weeksBordered ? 'Hide grid lines' : 'Show grid lines'}
-                aria-label="Toggle grid lines"
-              >
-                <Grid3X3 className={cn('h-4 w-4', weeksBordered && 'text-primary')} />
-              </Button>
-              {viewType !== 'threeMonth' && (
-                <Button
-                  variant={displayMode === 'cards' ? 'secondary' : 'ghost'}
-                  size="sm"
-                  onClick={() => setDisplayMode(displayMode === 'cards' ? 'inline' : 'cards')}
-                  title={displayMode === 'cards' ? 'Switch to inline blocks' : 'Switch to cards'}
-                  aria-label="Toggle card display"
-                >
-                  <LayoutPanelTop className={cn('h-4 w-4', displayMode === 'cards' && 'text-primary')} />
-                </Button>
-              )}
-              {(viewType === 'multiWeek' || viewType === 'month' || viewType === 'week' || viewType === 'weekVertical') && (
-                <Button
-                  variant={hideWeekends ? 'secondary' : 'ghost'}
-                  size="sm"
-                  onClick={() => setHideWeekends(!hideWeekends)}
-                  title={hideWeekends ? 'Show weekends' : 'Hide weekends (work week)'}
-                  aria-label="Toggle weekend visibility"
-                >
-                  <Briefcase className={cn('h-4 w-4', hideWeekends && 'text-primary')} />
-                </Button>
-              )}
-              <OverlaysToolbar
+              <ViewOptionsMenu
+                displayMode={displayMode}
+                onDisplayModeChange={setDisplayMode}
+                weeksBordered={weeksBordered}
+                onWeeksBorderedChange={setWeeksBordered}
+                hideWeekends={hideWeekends}
+                onHideWeekendsChange={setHideWeekends}
+                showNotes={showNotes}
+                onShowNotesChange={setShowNotes}
+                weekendsApplicable={
+                  viewType === 'multiWeek' ||
+                  viewType === 'month' ||
+                  viewType === 'week' ||
+                  viewType === 'weekVertical'
+                }
+                notesApplicable={notesSupported}
+                displayApplicable={viewType !== 'threeMonth'}
                 overlays={overlays}
-                onChange={setOverlays}
+                onOverlaysChange={setOverlays}
                 showOverlayRows={cardsMode}
+                onReset={() => {
+                  setDisplayMode('cards');
+                  setWeeksBordered(false);
+                  setHideWeekends(false);
+                  setShowNotes(false);
+                  setOverlays({ events: true, meals: true, chores: true, tasks: true });
+                }}
               />
             </div>
             {!isMobile && (
