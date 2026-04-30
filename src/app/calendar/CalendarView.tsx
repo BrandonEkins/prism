@@ -183,7 +183,10 @@ export function CalendarView() {
     const { active, over } = e;
     if (!over) return;
     const dragId = String(active.id);
-    const targetIso = String(over.id);
+    // Drop targets may carry a region suffix (e.g. `2026-04-30:body`) when
+    // multiple drop zones share a date. Strip it before bucket lookup.
+    const overId = String(over.id);
+    const targetIso = overId.includes(':') ? overId.slice(0, overId.indexOf(':')) : overId;
     const colon = dragId.indexOf(':');
     if (colon === -1) return;
     const variant = dragId.slice(0, colon);

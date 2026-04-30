@@ -408,9 +408,13 @@ export function WeekView({
               const dayPositions = calculateEventPositions(getDayTimedEvents(date));
               const dayBucket = bucketsByDate?.get(format(date, 'yyyy-MM-dd'));
               return (
-                <div
+                <LandscapeDayBody
                   key={date.toISOString()}
-                  className={cn('relative flex-1 min-w-0 h-full border-l border-border', !transparentMode && isPast && 'bg-muted/10')}
+                  date={date}
+                  isPast={isPast}
+                  cards={cards}
+                  enableDnd={enableDnd}
+                  transparentMode={transparentMode}
                 >
                 <div
                   className="grid h-full"
@@ -455,20 +459,22 @@ export function WeekView({
                               }
                             >
                               {/* Time-grid rows in priority order: title, then
-                                  time, then subtitle. Drop secondary rows when
-                                  the card is short so we never half-clip. */}
+                                  time, then subtitle. Thresholds tuned so a
+                                  45-min block stays single-line and a 60-min
+                                  block stays at most two lines (60-min cells
+                                  can't fit 3 lines without clipping). */}
                               <div className={cn('font-medium truncate w-full text-[10px] leading-tight', cards && 'text-foreground')}>{event.title}</div>
-                              {cards && durationMin >= 30 && (
+                              {cards && durationMin >= 60 && (
                                 <div className="text-[9px] leading-tight text-muted-foreground truncate w-full">
                                   {format(event.startTime, 'h:mm')}&ndash;{format(event.endTime ?? new Date(event.startTime.getTime() + 3600000), 'h:mm a')}
                                 </div>
                               )}
-                              {cards && durationMin >= 60 && (event.location || event.calendarName) && (
+                              {cards && durationMin >= 90 && (event.location || event.calendarName) && (
                                 <div className="text-[9px] leading-tight text-muted-foreground truncate w-full">
                                   {event.location || event.calendarName}
                                 </div>
                               )}
-                              {!cards && (
+                              {!cards && durationMin >= 45 && (
                                 <div className="text-[9px] leading-tight opacity-70">
                                   {format(event.startTime, 'h:mm')}&ndash;{format(event.endTime ?? new Date(event.startTime.getTime() + 3600000), 'h:mm a')}
                                 </div>
@@ -489,7 +495,7 @@ export function WeekView({
                     enableDnd={enableDnd}
                   />
                 )}
-                </div>
+                </LandscapeDayBody>
               );
             })}
           </div>
@@ -663,6 +669,43 @@ function PortraitDayColumn({
       className={cn(
         'flex flex-col min-w-0 flex-1',
         cards && enableDnd && droppable.isOver && 'ring-2 ring-seasonal-accent shadow-lg rounded-md',
+      )}
+    >
+      {children}
+    </div>
+  );
+}
+
+/**
+ * Wraps the landscape-mode day BODY (time-grid column under the sticky header)
+ * with a separate useDayDroppable target so meals/chores/tasks can be dropped
+ * directly onto the time grid as well as the header. Uses region='body' so its
+ * id doesn't collide with the header's same-date droppable.
+ */
+function LandscapeDayBody({
+  date,
+  isPast,
+  cards,
+  enableDnd,
+  transparentMode,
+  children,
+}: {
+  date: Date;
+  isPast: boolean;
+  cards: boolean;
+  enableDnd: boolean;
+  transparentMode: boolean;
+  children: React.ReactNode;
+}) {
+  const droppable = useDayDroppable({ date, enabled: cards && enableDnd, region: 'body' });
+  return (
+    <div
+      ref={cards && enableDnd ? droppable.setNodeRef : undefined}
+      data-droppable-day={cards && enableDnd ? droppable.droppableId : undefined}
+      className={cn(
+        'relative flex-1 min-w-0 h-full border-l border-border',
+        !transparentMode && isPast && 'bg-muted/10',
+        cards && enableDnd && droppable.isOver && 'ring-2 ring-seasonal-accent ring-inset',
       )}
     >
       {children}

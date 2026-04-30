@@ -185,21 +185,27 @@ export function DayViewSideBySide({
             )}
           </div>
 
-          {/* Overlays row — meals/chores/tasks for the day, shown above the hourly grid */}
+          {/* Overlays row — meals/chores/tasks for the day, shown above the
+              hourly grid. The left spacer matches the time-column width so the
+              overlay aligns with the group columns instead of bleeding into
+              the time gutter. */}
           {bucketsByDate && (() => {
             const bucket = bucketsByDate.get(format(currentDate, 'yyyy-MM-dd'));
             if (!bucket || (bucket.meals.length + bucket.chores.length + bucket.tasks.length) === 0) {
               return null;
             }
             return (
-              <div className="shrink-0 border-b border-border bg-card/40 px-2 py-1.5">
-                <DroppableOverlayCell
-                  date={currentDate}
-                  bucket={bucket}
-                  size="sm"
-                  layout="row"
-                  enableDnd={enableDnd}
-                />
+              <div className="shrink-0 flex border-b border-border bg-card/40">
+                <div className="w-16 flex-shrink-0" aria-hidden />
+                <div className="flex-1 min-w-0 px-2 py-1.5">
+                  <DroppableOverlayCell
+                    date={currentDate}
+                    bucket={bucket}
+                    size="sm"
+                    layout="row"
+                    enableDnd={enableDnd}
+                  />
+                </div>
               </div>
             );
           })()}
@@ -283,10 +289,11 @@ export function DayViewSideBySide({
                                     }
                               }
                             >
-                              {/* Title first; show time row only when there's
-                                  vertical room. Position already encodes time. */}
+                              {/* Title first; show time row only when the
+                                  block is at least an hour. 45-min and shorter
+                                  blocks fit only one line without clipping. */}
                               <div className={cn('font-medium truncate w-full text-[11px] leading-tight', cards && 'text-foreground')}>{event.title}</div>
-                              {durationMin >= 30 && (
+                              {durationMin >= 60 && (
                                 <div className={cn('text-[9px] leading-tight', cards ? 'text-muted-foreground' : 'opacity-70')}>
                                   {format(event.startTime, 'h:mm')}&ndash;{format(event.endTime ?? new Date(event.startTime.getTime() + 3600000), 'h:mm a')}
                                 </div>
