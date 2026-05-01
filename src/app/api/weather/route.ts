@@ -1,18 +1,18 @@
 /**
- *
- * Provides weather data from OpenWeatherMap API.
+ * Weather API route.
  *
  * ENDPOINT: /api/weather
- * - GET: Fetch current weather and forecast
+ *   GET — fetch current weather and forecast for the resolved location.
+ *
+ * Provider selection is driven by WEATHER_PROVIDER env var (see weather.ts).
  *
  * QUERY PARAMETERS:
- * - location: Location string (e.g., "Chicago,IL,US")
- *
+ *   location — optional override (display string)
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { optionalAuth } from '@/lib/auth';
-import { fetchWeatherData, type LocationParam } from '@/lib/integrations/openweather';
+import { fetchWeatherData, type LocationParam } from '@/lib/integrations/weather';
 import { getCached } from '@/lib/cache/redis';
 import { db } from '@/lib/db/client';
 import { settings } from '@/lib/db/schema';
