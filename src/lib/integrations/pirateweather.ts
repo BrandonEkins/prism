@@ -16,7 +16,6 @@
  *
  */
 
-import { DAYS_SHORT_ARRAY } from '@/lib/constants/days';
 import type {
   WeatherData,
   WeatherCondition,
@@ -26,6 +25,7 @@ import type {
   HourlyForecast,
   MinutelyData,
 } from '@/components/widgets/WeatherWidget';
+import type { LocationParam } from './weather';
 
 // ---------------------------------------------------------------------------
 // Pirate Weather (Dark Sky-compatible) response types
@@ -83,15 +83,22 @@ interface PirateWeatherResponse {
 // Config
 // ---------------------------------------------------------------------------
 
-function getConfig() {
+function getConfig(location?: LocationParam) {
   const apiKey = process.env.PIRATE_WEATHER_API_KEY;
   if (!apiKey) {
     throw new Error('PIRATE_WEATHER_API_KEY is not configured in environment');
   }
 
-  const lat = parseFloat(process.env.WEATHER_LAT || '41.8781'); // Chicago default
-  const lon = parseFloat(process.env.WEATHER_LON || '-87.6298');
-  const locationName = process.env.WEATHER_LOCATION || 'Chicago, IL';
+  let lat = parseFloat(process.env.WEATHER_LAT || '41.8781'); // Chicago default
+  let lon = parseFloat(process.env.WEATHER_LON || '-87.6298');
+  let locationName = process.env.WEATHER_LOCATION || 'Chicago, IL';
+
+  if (typeof location === 'object' && location !== null && 'lat' in location) {
+    lat = location.lat;
+    lon = location.lon;
+  } else if (typeof location === 'string' && location.length > 0) {
+    locationName = location;
+  }
 
   return { apiKey, lat, lon, locationName };
 }
@@ -132,18 +139,26 @@ function mapIcon(icon: string): WeatherCondition {
 /**
  * Fetch complete weather data from Pirate Weather.
  *
- * @param locationNameOverride  Optional display name override (e.g. from DB or
- *                              query param). Coordinates always come from env.
+ * @param location  Optional. `{lat, lon}` overrides env coordinates;
+ *                  a string overrides the display name only (Pirate Weather
+ *                  has no name-based geocoding, so coordinates still come
+ *                  from env in that case).
  */
-export async function fetchWeatherData(_locationNameOverride?: string): Promise<WeatherData> {
-  const config = getConfig();
+export async function fetchWeatherData(location?: LocationParam): Promise<WeatherData> {
+  const config = getConfig(location);
 
   const url =
     `https://api.pirateweather.net/forecast/${config.apiKey}` +
     `/${config.lat},${config.lon}` +
     `?units=us&extend=hourly`;
 
-  const response = await fetch(url, { next: { revalidate: 1800 } }); // cache 30 min
+  let response: Response;
+  try {
+    response = await fetch(url, { next: { revalidate: 1800 } }); // cache 30 min
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    throw new Error(`Pirate Weather network error: ${msg}`);
+  }
 
   if (!response.ok) {
     const error = await response.text();
@@ -151,7 +166,7 @@ export async function fetchWeatherData(_locationNameOverride?: string): Promise<
   }
 
   const data: PirateWeatherResponse = await response.json();
-  const { currently, hourly, daily, minutely } = data;
+  const { currently, hourly, daily, minutely, timezone } = data;
 
   // ── Current conditions ────────────────────────────────────────────────────
   const current: CurrentWeather = {
@@ -169,13 +184,18 @@ export async function fetchWeatherData(_locationNameOverride?: string): Promise<
   const sunset = todayDaily ? new Date(todayDaily.sunsetTime * 1000) : undefined;
 
   // ── 7-day forecast ────────────────────────────────────────────────────────
-  const dayNames = DAYS_SHORT_ARRAY;
+  // Use the response's timezone for day-of-week so the label matches local
+  // calendar at the weather location, not UTC (which can roll past midnight
+  // before the local day ends).
+  const dayNameFmt = new Intl.DateTimeFormat('en-US', {
+    weekday: 'short',
+    timeZone: timezone,
+  });
   const forecast: ForecastDay[] = daily.data.slice(0, 7).map((d) => {
     const date = new Date(d.time * 1000);
-    const dayIndex = date.getUTCDay();
     return {
       date,
-      dayName: dayNames[dayIndex] ?? 'Day',
+      dayName: dayNameFmt.format(date),
       high: Math.round(d.temperatureHigh),
       low: Math.round(d.temperatureLow),
       condition: mapIcon(d.icon),

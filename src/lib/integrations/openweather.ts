@@ -18,6 +18,9 @@ import type {
   ForecastPeriod,
   HourlyForecast,
 } from '@/components/widgets/WeatherWidget';
+import type { LocationParam } from './weather';
+
+export type { LocationParam };
 
 /**
  * OpenWeatherMap API response types
@@ -138,7 +141,6 @@ function buildLocationParam(loc: LocationParam): string {
   return `q=${encodeURIComponent(loc as string)}`;
 }
 
-export type LocationParam = string | { lat: number; lon: number };
 
 /**
  * Fetch current weather data
