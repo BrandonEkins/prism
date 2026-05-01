@@ -148,6 +148,33 @@ export function DayViewSideBySide({
             </div>
             {displayGroups.map((group) => {
               const calAllDay = getAllDayEventsForGroup(group.id);
+              const isFamily = group.name === 'Family' || group.id === 'all';
+              const dayBucketForHeader = bucketsByDate?.get(format(currentDate, 'yyyy-MM-dd'));
+              // Untimed chores/tasks render in the SAME column as the all-day
+              // events for that group, so a profile column that has no all-day
+              // event but does have an untimed chore renders it on the same
+              // row as a sibling column's all-day event (instead of dropping
+              // to a separate row below the header).
+              const untimedBucket = dayBucketForHeader
+                ? {
+                    meals: [] as typeof dayBucketForHeader.meals,
+                    chores: dayBucketForHeader.chores.filter((c) => {
+                      if (getChoreTime(c)) return false;
+                      if (group.id === 'all') return true;
+                      return c.assignedTo?.id === group.userId
+                        || (!c.assignedTo && isFamily);
+                    }),
+                    tasks: dayBucketForHeader.tasks.filter((t) => {
+                      if (getTaskTime(t)) return false;
+                      if (group.id === 'all') return true;
+                      return t.assignedTo?.id === group.userId
+                        || (!t.assignedTo && isFamily);
+                    }),
+                  }
+                : null;
+              const hasUntimed = Boolean(
+                untimedBucket && (untimedBucket.chores.length + untimedBucket.tasks.length > 0)
+              );
               return (
                 <div key={group.id} className="flex-1 min-w-0 border-l border-border p-1">
                   <div
@@ -177,6 +204,19 @@ export function DayViewSideBySide({
                       ))}
                     </div>
                   )}
+                  {hasUntimed && untimedBucket && (
+                    <div className={cn(calAllDay.length > 0 && 'mt-0.5')}>
+                      <DroppableOverlayCell
+                        date={currentDate}
+                        bucket={untimedBucket}
+                        size="sm"
+                        layout="row"
+                        enableDnd={enableDnd}
+                        mealColor={mealColor}
+                        onItemClick={onItemClick}
+                      />
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -192,54 +232,10 @@ export function DayViewSideBySide({
             )}
           </div>
 
-          {/* Untimed overlay items (chores/tasks without a time) — shown above
-              the hourly grid like all-day events, split per group column so
-              an unassigned chore lands in Family and a member-assigned chore
-              lands in that user's column. */}
-          {bucketsByDate && (() => {
-            const bucket = bucketsByDate.get(format(currentDate, 'yyyy-MM-dd'));
-            if (!bucket) return null;
-            const anyUntimed =
-              bucket.chores.some((c) => !getChoreTime(c)) ||
-              bucket.tasks.some((t) => !getTaskTime(t));
-            if (!anyUntimed) return null;
-            return (
-              <div className="shrink-0 flex border-b border-border bg-card/40">
-                <div className="w-16 flex-shrink-0" aria-hidden />
-                {displayGroups.map((group) => {
-                  const isFamily = group.name === 'Family' || group.id === 'all';
-                  const groupBucket = {
-                    meals: [] as typeof bucket.meals,
-                    chores: bucket.chores.filter((c) => {
-                      if (getChoreTime(c)) return false;
-                      if (group.id === 'all') return true;
-                      return c.assignedTo?.id === group.userId
-                        || (!c.assignedTo && isFamily);
-                    }),
-                    tasks: bucket.tasks.filter((t) => {
-                      if (getTaskTime(t)) return false;
-                      if (group.id === 'all') return true;
-                      return t.assignedTo?.id === group.userId
-                        || (!t.assignedTo && isFamily);
-                    }),
-                  };
-                  return (
-                    <div key={group.id} className="flex-1 min-w-0 border-l border-border px-2 py-1.5">
-                      <DroppableOverlayCell
-                        date={currentDate}
-                        bucket={groupBucket}
-                        size="sm"
-                        layout="row"
-                        enableDnd={enableDnd}
-                        mealColor={mealColor}
-                        onItemClick={onItemClick}
-                      />
-                    </div>
-                  );
-                })}
-              </div>
-            );
-          })()}
+          {/* Untimed overlay items (chores/tasks without a time) render
+              alongside each group's all-day events in the sticky header above,
+              not in a separate row, so a column with only an untimed chore
+              shares the row with a sibling column's all-day event. */}
 
           {/* Hourly grid — flex-1 fills remaining space; 1fr rows stretch when hours are hidden */}
           <div className="flex-1 flex">

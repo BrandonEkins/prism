@@ -86,9 +86,11 @@ export function MonthView({
   return (
     <div className="h-full flex flex-col overflow-auto">
       {cards && <CardHeightProbe size="xs" onMeasure={setCardHeight} />}
-      {/* Month header with themed color */}
+      {/* Month header — kept compact (py-1, text-sm) so it doesn't eat into
+          the calendar grid. The toolbar already shows the month name; this
+          band is mostly a colored anchor. */}
       <div
-        className="shrink-0 text-center py-2 font-bold text-base text-white rounded-t-lg mb-2 shadow-sm"
+        className="shrink-0 text-center py-1 font-semibold text-sm text-white rounded-t-md mb-1 shadow-sm"
         style={{ backgroundColor: monthColor }}
       >
         {format(currentDate, 'MMMM yyyy')}
@@ -97,7 +99,7 @@ export function MonthView({
         {dayNames.map((name) => (
           <div
             key={name}
-            className="text-center text-sm font-medium text-muted-foreground py-2"
+            className="text-center text-xs font-medium text-muted-foreground py-1"
           >
             {name}
           </div>

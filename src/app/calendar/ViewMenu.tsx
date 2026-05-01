@@ -6,6 +6,8 @@ import {
   CalendarDays,
   CalendarRange,
   ChevronDown,
+  ChevronsLeft,
+  ChevronsRight,
   Grid3X3,
   LayoutGrid,
   List,
@@ -113,42 +115,76 @@ const OPTIONS: ViewOption[] = [
 
 export function ViewMenu({ viewType, weekCount, onViewChange, onWeekCountChange }: ViewMenuProps) {
   const [open, setOpen] = React.useState(false);
-  const active = OPTIONS.find((o) => o.isActive(viewType, weekCount)) ?? OPTIONS[0]!;
+  const activeIndex = Math.max(
+    0,
+    OPTIONS.findIndex((o) => o.isActive(viewType, weekCount)),
+  );
+  const active = OPTIONS[activeIndex] ?? OPTIONS[0]!;
   const ActiveIcon = active.Icon;
 
+  // Cycle through OPTIONS with wraparound. Uses double-chevron icons
+  // (ChevronsLeft / ChevronsRight) to stay visually distinct from the
+  // single-chevron < > date-range nav buttons in the toolbar.
+  const cycle = (delta: -1 | 1) => {
+    const next = (activeIndex + delta + OPTIONS.length) % OPTIONS.length;
+    OPTIONS[next]!.apply(onViewChange, onWeekCountChange);
+  };
+
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button variant="outline" size="sm" className="gap-1.5">
-          <ActiveIcon className="h-4 w-4" />
-          {active.label}
-          <ChevronDown className="h-3.5 w-3.5 opacity-60" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent align="end" className="w-44 p-1">
-        {OPTIONS.map((opt) => {
-          const Icon = opt.Icon;
-          const isActive = opt.isActive(viewType, weekCount);
-          return (
-            <button
-              key={opt.label}
-              type="button"
-              onClick={() => {
-                opt.apply(onViewChange, onWeekCountChange);
-                setOpen(false);
-              }}
-              className={cn(
-                'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm',
-                'hover:bg-accent hover:text-accent-foreground transition-colors',
-                isActive ? 'bg-accent/60 text-foreground font-medium' : 'text-muted-foreground',
-              )}
-            >
-              <Icon className="h-4 w-4 shrink-0" />
-              <span className="flex-1 text-left">{opt.label}</span>
-            </button>
-          );
-        })}
-      </PopoverContent>
-    </Popover>
+    <div className="inline-flex items-center gap-0.5">
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-8 w-7"
+        aria-label="Previous view"
+        title="Previous view"
+        onClick={() => cycle(-1)}
+      >
+        <ChevronsLeft className="h-4 w-4" />
+      </Button>
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button variant="outline" size="sm" className="gap-1.5">
+            <ActiveIcon className="h-4 w-4" />
+            {active.label}
+            <ChevronDown className="h-3.5 w-3.5 opacity-60" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent align="end" className="w-44 p-1">
+          {OPTIONS.map((opt) => {
+            const Icon = opt.Icon;
+            const isActive = opt.isActive(viewType, weekCount);
+            return (
+              <button
+                key={opt.label}
+                type="button"
+                onClick={() => {
+                  opt.apply(onViewChange, onWeekCountChange);
+                  setOpen(false);
+                }}
+                className={cn(
+                  'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm',
+                  'hover:bg-accent hover:text-accent-foreground transition-colors',
+                  isActive ? 'bg-accent/60 text-foreground font-medium' : 'text-muted-foreground',
+                )}
+              >
+                <Icon className="h-4 w-4 shrink-0" />
+                <span className="flex-1 text-left">{opt.label}</span>
+              </button>
+            );
+          })}
+        </PopoverContent>
+      </Popover>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-8 w-7"
+        aria-label="Next view"
+        title="Next view"
+        onClick={() => cycle(1)}
+      >
+        <ChevronsRight className="h-4 w-4" />
+      </Button>
+    </div>
   );
 }
