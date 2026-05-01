@@ -54,7 +54,6 @@
     "services:logs": "docker-compose -f docker-compose.services.yml logs -f",
     "docker:build": "docker-compose build",
     "docker:up": "docker-compose up -d",
-    "docker:up:https": "docker-compose --profile https up -d",
     "docker:down": "docker-compose down",
     "docker:logs": "docker-compose logs -f",
     "docker:dev": "docker-compose -f docker-compose.yml -f docker-compose.dev.yml up"
