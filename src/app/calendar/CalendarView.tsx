@@ -136,26 +136,50 @@ export function CalendarView() {
     () => calendarGroups.find((g) => g.name === 'Family'),
     [calendarGroups],
   );
+  const showAll = selectedCalendarIds.has('all');
   const familyVisible = useMemo(() => {
     if (!familyGroup) return true;
-    return selectedCalendarIds.has('all') || selectedCalendarIds.has(familyGroup.id);
-  }, [familyGroup, selectedCalendarIds]);
+    return showAll || selectedCalendarIds.has(familyGroup.id);
+  }, [familyGroup, selectedCalendarIds, showAll]);
   const mealColor = familyGroup?.color ?? '#F59E0B';
+
+  // Set of family-member user IDs whose calendar pill is currently selected.
+  // Used to filter chores/tasks by their `assignedTo` so the profile pills
+  // toggle assigned chores/tasks alongside that user's events.
+  const selectedUserIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const g of calendarGroups) {
+      if (!g.userId) continue;
+      if (showAll || selectedCalendarIds.has(g.id)) ids.add(g.userId);
+    }
+    return ids;
+  }, [calendarGroups, selectedCalendarIds, showAll]);
 
   // Honour the Events overlay checkbox: when off, suppress all event cards.
   // Day buckets keep weather + meals/chores/tasks, so other overlays still work.
   const visibleEvents = overlays.events ? events : EMPTY_EVENTS;
 
-  // Sorted, family-filtered meals. Breakfast → Lunch → Dinner → Snack within a
-  // day so the visual order is predictable regardless of insertion order.
+  // Sorted, pill-filtered buckets. Meals follow the Family pill; chores/tasks
+  // follow the assigned user's pill (unassigned items show whenever Family is
+  // visible so they aren't lost when only user pills are selected).
   const filteredBucketsByDate = useMemo(() => {
     const next = new Map<string, typeof bucketsByDate extends Map<string, infer V> ? V : never>();
     for (const [key, bucket] of bucketsByDate.entries()) {
       const meals = familyVisible ? sortMealsByType(bucket.meals) : [];
-      next.set(key, { ...bucket, meals });
+      const chores = bucket.chores.filter((c) => {
+        if (showAll) return true;
+        if (!c.assignedTo) return familyVisible;
+        return selectedUserIds.has(c.assignedTo.id);
+      });
+      const tasks = bucket.tasks.filter((t) => {
+        if (showAll) return true;
+        if (!t.assignedTo) return familyVisible;
+        return selectedUserIds.has(t.assignedTo.id);
+      });
+      next.set(key, { ...bucket, meals, chores, tasks });
     }
     return next;
-  }, [bucketsByDate, familyVisible]);
+  }, [bucketsByDate, familyVisible, selectedUserIds, showAll]);
 
   const refreshAll = useMemo(() => async () => {
     await Promise.all([refreshEvents(), refreshBuckets()]);

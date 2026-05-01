@@ -13,6 +13,8 @@ interface ChoreFormData {
   requiresApproval: boolean;
   assignedTo?: { id: string } | null;
   enabled?: boolean;
+  nextDue?: string | null;
+  nextDueTime?: string | null;
 }
 
 interface UseChoreModalsProps {
@@ -42,6 +44,8 @@ export function useChoreModals({
           pointValue: chore.pointValue,
           requiresApproval: chore.requiresApproval,
           assignedTo: chore.assignedTo?.id,
+          nextDue: chore.nextDue || undefined,
+          nextDueTime: chore.nextDueTime ?? undefined,
         }),
       });
       if (!response.ok) {
@@ -71,6 +75,8 @@ export function useChoreModals({
           requiresApproval: updatedChore.requiresApproval,
           assignedTo: updatedChore.assignedTo?.id,
           enabled: updatedChore.enabled,
+          nextDue: updatedChore.nextDue || undefined,
+          nextDueTime: updatedChore.nextDueTime ?? undefined,
         }),
       });
       if (!response.ok) throw new Error('Failed to update chore');

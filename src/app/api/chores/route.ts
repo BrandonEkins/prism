@@ -197,6 +197,8 @@ export async function POST(request: NextRequest) {
       pointValue,
       requiresApproval,
       createdBy,
+      nextDue,
+      nextDueTime,
     } = validation.data;
 
     // Insert the chore
@@ -213,6 +215,8 @@ export async function POST(request: NextRequest) {
         pointValue: pointValue || 0,
         requiresApproval: requiresApproval || false,
         createdBy: createdBy || null,
+        nextDue: nextDue || undefined,
+        nextDueTime: nextDueTime ?? null,
       })
       .returning();
 

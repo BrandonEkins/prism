@@ -314,6 +314,7 @@ function MealModal({ weekOf, meal, defaultDay, dayOptions, recipes, onClose, onS
   const [description, setDescription] = useState(meal?.description || '');
   const [dayOfWeek, setDayOfWeek] = useState<Meal['dayOfWeek']>(meal?.dayOfWeek || defaultDay || dayOptions[0] || 'sunday');
   const [mealType, setMealType] = useState<Meal['mealType']>(meal?.mealType || 'dinner');
+  const [mealTime, setMealTime] = useState<string>(meal?.mealTime || '');
   const [prepTime, setPrepTime] = useState(meal?.prepTime?.toString() || '');
   const [cookTime, setCookTime] = useState(meal?.cookTime?.toString() || '');
   const [recipeUrl, setRecipeUrl] = useState(meal?.recipeUrl || '');
@@ -347,6 +348,7 @@ function MealModal({ weekOf, meal, defaultDay, dayOptions, recipes, onClose, onS
     if (!name.trim()) return;
     onSave({
       name: name.trim(), description: description.trim() || undefined, weekOf, dayOfWeek, mealType,
+      mealTime: mealTime || null,
       prepTime: prepTime ? parseInt(prepTime) : undefined, cookTime: cookTime ? parseInt(cookTime) : undefined,
       recipeUrl: recipeUrl.trim() || undefined, recipeId: selectedRecipeId || undefined,
     });
@@ -456,6 +458,18 @@ function MealModal({ weekOf, meal, defaultDay, dayOptions, recipes, onClose, onS
                 </Button>
               ))}
             </div>
+          </div>
+          <div>
+            <label className="text-sm font-medium">Time of day (optional)</label>
+            <Input
+              type="time"
+              value={mealTime}
+              onChange={(e) => setMealTime(e.target.value)}
+              className="mt-1"
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              Defaults: breakfast 7am, lunch 12pm, snack 3pm, dinner 6pm.
+            </p>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div><label className="text-sm font-medium">Prep Time (min)</label><Input type="number" value={prepTime} onChange={(e) => setPrepTime(e.target.value)} placeholder="15" min="0" /></div>

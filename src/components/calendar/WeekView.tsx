@@ -19,7 +19,7 @@ import { calculateEventPositions, positionToCSS } from '@/lib/utils/eventLayout'
 import { hexToRgba } from '@/lib/utils/color';
 import type { CalendarEvent } from '@/types/calendar';
 import type { DayBucket } from '@/lib/hooks/useWeekViewData';
-import { DroppableOverlayCell, useDayDroppable, weatherIcon, getMealTime, getChoreTime, getTaskTime, parseTimeOfDay } from './cells';
+import { DroppableOverlayCell, useDayDroppable, weatherIcon, getMealTime, getChoreTime, getTaskTime, formatTimeOfDay } from './cells';
 import { WeekItemCard } from './cells/WeekItemCard';
 
 export type CalendarDisplayMode = 'inline' | 'cards';
@@ -564,7 +564,7 @@ function TimedBucketLayer({
       dragId: `meal:${meal.id}`,
       variant: 'meal',
       title: meal.name,
-      timeLabel: t,
+      timeLabel: formatTimeOfDay(t),
       subtitle: meal.cookedBy?.name ? `Cooked by ${meal.cookedBy.name}` : undefined,
       stripeColor: mealColor ?? '#10b981',
       muted: Boolean(meal.cookedAt),
@@ -584,7 +584,7 @@ function TimedBucketLayer({
       dragId: `chore:${chore.id}`,
       variant: 'chore',
       title: chore.title,
-      timeLabel: t,
+      timeLabel: formatTimeOfDay(t),
       subtitle: chore.assignedTo?.name,
       stripeColor: chore.assignedTo?.color || '#f59e0b',
       pendingApproval: Boolean(chore.pendingApproval),
@@ -604,7 +604,7 @@ function TimedBucketLayer({
       dragId: `task:${task.id}`,
       variant: 'task',
       title: task.title,
-      timeLabel: t,
+      timeLabel: formatTimeOfDay(t),
       subtitle: task.assignedTo?.name,
       stripeColor: task.assignedTo?.color || '#3b82f6',
       muted: task.completed,

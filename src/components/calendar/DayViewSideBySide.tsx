@@ -16,7 +16,7 @@ import { hexToRgba } from '@/lib/utils/color';
 import type { CalendarEvent } from '@/types/calendar';
 import type { CalendarNote } from '@/lib/hooks/useCalendarNotes';
 import type { DayBucket } from '@/lib/hooks/useWeekViewData';
-import { DroppableOverlayCell, useDayDroppable, getMealTime, getChoreTime, getTaskTime } from './cells';
+import { DroppableOverlayCell, useDayDroppable, getMealTime, getChoreTime, getTaskTime, formatTimeOfDay } from './cells';
 import { WeekItemCard } from './cells/WeekItemCard';
 
 export interface DayViewSideBySideProps {
@@ -400,7 +400,7 @@ function DayTimedBucketLayer({
       dragId: `meal:${meal.id}`,
       variant: 'meal',
       title: meal.name,
-      timeLabel: t,
+      timeLabel: formatTimeOfDay(t),
       subtitle: meal.cookedBy?.name ? `Cooked by ${meal.cookedBy.name}` : undefined,
       stripeColor: mealColor ?? '#10b981',
       muted: Boolean(meal.cookedAt),
@@ -420,7 +420,7 @@ function DayTimedBucketLayer({
       dragId: `chore:${chore.id}`,
       variant: 'chore',
       title: chore.title,
-      timeLabel: t,
+      timeLabel: formatTimeOfDay(t),
       subtitle: chore.assignedTo?.name,
       stripeColor: chore.assignedTo?.color || '#f59e0b',
       pendingApproval: Boolean(chore.pendingApproval),
@@ -440,7 +440,7 @@ function DayTimedBucketLayer({
       dragId: `task:${task.id}`,
       variant: 'task',
       title: task.title,
-      timeLabel: t,
+      timeLabel: formatTimeOfDay(t),
       subtitle: task.assignedTo?.name,
       stripeColor: task.assignedTo?.color || '#3b82f6',
       muted: task.completed,

@@ -15,7 +15,7 @@ import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui';
 import type { CalendarEvent } from '@/types/calendar';
 import type { DayBucket } from '@/lib/hooks/useWeekViewData';
-import { useDayDroppable, getMealTime, getChoreTime, getTaskTime, parseTimeOfDay } from './cells';
+import { useDayDroppable, getMealTime, getChoreTime, getTaskTime, parseTimeOfDay, formatTimeOfDay } from './cells';
 import { format as fmt } from 'date-fns';
 
 const MEAL_FALLBACK_COLOR = '#10b981';
@@ -285,13 +285,7 @@ function buildAgendaRows({
 }
 
 function formatTimeLabel(hhmm: string): string {
-  const m = /^(\d{2}):(\d{2})$/.exec(hhmm);
-  if (!m) return hhmm;
-  const h = Number(m[1]);
-  const min = Number(m[2]);
-  const d = new Date();
-  d.setHours(h, min, 0, 0);
-  return format(d, 'h:mm a');
+  return formatTimeOfDay(hhmm);
 }
 
 function AgendaRowItem({ row, cards = false }: { row: AgendaRow; cards?: boolean }) {

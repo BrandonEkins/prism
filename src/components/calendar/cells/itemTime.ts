@@ -51,3 +51,19 @@ export function parseTimeOfDay(hhmm: string | null | undefined): number | null {
   if (Number.isNaN(h) || Number.isNaN(min)) return null;
   return h * 60 + min;
 }
+
+/**
+ * Format "HH:mm" → "6 PM" or "6:30 PM". On-the-hour times drop ":00" so the
+ * label is short enough to fit beside a card title in the time grid.
+ */
+export function formatTimeOfDay(hhmm: string | null | undefined): string {
+  if (!hhmm) return '';
+  const m = /^(\d{2}):(\d{2})$/.exec(hhmm);
+  if (!m) return hhmm;
+  const h = Number(m[1]);
+  const min = Number(m[2]);
+  if (Number.isNaN(h) || Number.isNaN(min)) return hhmm;
+  const period = h >= 12 ? 'PM' : 'AM';
+  const hour12 = ((h + 11) % 12) + 1;
+  return min === 0 ? `${hour12} ${period}` : `${hour12}:${String(min).padStart(2, '0')} ${period}`;
+}

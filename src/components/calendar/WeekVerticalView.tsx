@@ -22,7 +22,7 @@ import { DroppableOverlayCell, useDayDroppable } from './cells';
 export interface WeekVerticalViewProps {
   currentDate: Date;
   events: CalendarEvent[];
-  calendarGroups?: Array<{ id: string; name: string; color: string }>;
+  calendarGroups?: Array<{ id: string; name: string; color: string; userId?: string | null }>;
   selectedCalendarIds?: Set<string>;
   mergedView?: boolean;
   bordered?: boolean;
@@ -155,7 +155,7 @@ function WeekListDayRow({
   day: Date;
   today: Date;
   events: CalendarEvent[];
-  displayGroups: Array<{ id: string; name: string; color: string }>;
+  displayGroups: Array<{ id: string; name: string; color: string; userId?: string | null }>;
   getEventsForGroup: (dayEvents: CalendarEvent[], gid: string) => CalendarEvent[];
   bordered: boolean;
   cellBgStyle: React.CSSProperties | undefined;
@@ -228,41 +228,55 @@ function WeekListDayRow({
       </div>
 
       {displayGroups.length > 1 ? (
-        <div className="flex-1 flex flex-col min-w-0">
-          <div className="flex min-w-0">
-            {displayGroups.map((group) => {
-              const groupAllDay = getEventsForGroup(allDayEvents, group.id);
-              const groupTimed = getEventsForGroup(timedEvents, group.id);
-              return (
-                <div key={group.id} className="flex-1 min-w-0 border-l border-border p-1 space-y-0.5">
-                  <DayEventList
-                    allDayEvents={groupAllDay}
-                    timedEvents={groupTimed}
-                    onEventClick={onEventClick}
-                    isPastDay={isPast && !isCurrentDay}
-                    isCurrentDay={isCurrentDay}
-                    currentHour={currentHour}
-                    cards={cards}
+        <div className="flex-1 flex min-w-0">
+          {displayGroups.map((group) => {
+            const groupAllDay = getEventsForGroup(allDayEvents, group.id);
+            const groupTimed = getEventsForGroup(timedEvents, group.id);
+            // Bucket items belong to specific columns by ownership:
+            //   meals -> the Family group column
+            //   chores/tasks -> the assigned user's group column
+            // Unassigned chores/tasks fall through to the Family column too.
+            const dayBucket = bucketsByDate?.get(format(day, 'yyyy-MM-dd'));
+            const isFamily = group.name === 'Family';
+            const groupBucket = dayBucket
+              ? {
+                  meals: isFamily ? dayBucket.meals : [],
+                  chores: dayBucket.chores.filter((c) =>
+                    c.assignedTo?.id === group.userId
+                      ? true
+                      : !c.assignedTo && isFamily
+                  ),
+                  tasks: dayBucket.tasks.filter((t) =>
+                    t.assignedTo?.id === group.userId
+                      ? true
+                      : !t.assignedTo && isFamily
+                  ),
+                }
+              : undefined;
+            return (
+              <div key={group.id} className="flex-1 min-w-0 border-l border-border p-1 space-y-0.5">
+                <DayEventList
+                  allDayEvents={groupAllDay}
+                  timedEvents={groupTimed}
+                  onEventClick={onEventClick}
+                  isPastDay={isPast && !isCurrentDay}
+                  isCurrentDay={isCurrentDay}
+                  currentHour={currentHour}
+                  cards={cards}
+                />
+                {groupBucket && (
+                  <DroppableOverlayCell
+                    date={day}
+                    bucket={groupBucket}
+                    size="sm"
+                    layout="row"
+                    enableDnd={enableDnd}
+                    mealColor={mealColor}
                   />
-                </div>
-              );
-            })}
-          </div>
-          {/* Bucket overlay (meals/chores/tasks) is shared across all groups —
-              render it once below the per-group columns so the multi-group
-              branch shows it too. */}
-          {bucketsByDate && (
-            <div className="border-l border-border px-1 pb-1">
-              <DroppableOverlayCell
-                date={day}
-                bucket={bucketsByDate.get(format(day, 'yyyy-MM-dd'))}
-                size="sm"
-                layout="row"
-                enableDnd={enableDnd}
-                mealColor={mealColor}
-              />
-            </div>
-          )}
+                )}
+              </div>
+            );
+          })}
         </div>
       ) : (
         <div className="flex-1 p-1.5 min-w-0 space-y-1">

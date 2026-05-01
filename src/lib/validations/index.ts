@@ -69,17 +69,14 @@ export const createChoreSchema = z.object({
   pointValue: z.number().int().min(0).max(1000).optional().default(0),
   requiresApproval: z.boolean().optional().default(false),
   createdBy: uuidSchema.optional(),
+  // Optional initial due date/time. When omitted, server computes nextDue
+  // from frequency.
+  nextDue: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format (YYYY-MM-DD)').nullable().optional(),
+  nextDueTime: z.string().regex(/^\d{2}:\d{2}$/, 'Invalid time format (HH:mm)').nullable().optional(),
 });
 
 export const updateChoreSchema = createChoreSchema.partial().extend({
   enabled: z.boolean().optional(),
-  // Manually re-schedule next-due (e.g. drag-and-drop in week planner).
-  // Server normally recomputes nextDue from frequency on completion; this
-  // override lets a parent push a chore to a different day.
-  nextDue: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format (YYYY-MM-DD)').nullable().optional(),
-  // Optional time-of-day (HH:mm) for time-grid placement. Null = floats
-  // above the hour grid like an all-day item.
-  nextDueTime: z.string().regex(/^\d{2}:\d{2}$/, 'Invalid time format (HH:mm)').nullable().optional(),
 });
 
 export const completeChoreSchema = z.object({
