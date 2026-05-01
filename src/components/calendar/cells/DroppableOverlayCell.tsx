@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { cn } from '@/lib/utils';
-import { OverlayItemsCell } from './OverlayItemsCell';
+import { OverlayItemsCell, type OverlayItemRef } from './OverlayItemsCell';
 import type { WeekItemSize, WeekItemLayout } from './WeekItemCard';
 import type { DayBucket } from '@/lib/hooks/useWeekViewData';
 
@@ -17,6 +17,8 @@ interface DroppableOverlayCellProps {
   include?: { meals?: boolean; chores?: boolean; tasks?: boolean };
   /** Override stripe color for every meal in this cell. */
   mealColor?: string;
+  /** Click handler — opens edit modal for the item. */
+  onItemClick?: (ref: OverlayItemRef) => void;
   className?: string;
 }
 
@@ -32,6 +34,7 @@ export function DroppableOverlayCell({
   enableDnd = false,
   include,
   mealColor,
+  onItemClick,
   className,
 }: DroppableOverlayCellProps) {
   if (!bucket) return null;
@@ -45,6 +48,7 @@ export function DroppableOverlayCell({
         enableDrag={enableDnd}
         include={include}
         mealColor={mealColor}
+        onItemClick={onItemClick}
       />
     </div>
   );

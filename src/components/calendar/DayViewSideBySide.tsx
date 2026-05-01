@@ -16,13 +16,13 @@ import { hexToRgba } from '@/lib/utils/color';
 import type { CalendarEvent } from '@/types/calendar';
 import type { CalendarNote } from '@/lib/hooks/useCalendarNotes';
 import type { DayBucket } from '@/lib/hooks/useWeekViewData';
-import { DroppableOverlayCell, useDayDroppable, getMealTime, getChoreTime, getTaskTime, formatTimeOfDay } from './cells';
+import { DroppableOverlayCell, useDayDroppable, getMealTime, getChoreTime, getTaskTime, formatTimeOfDay, type OverlayItemRef } from './cells';
 import { WeekItemCard } from './cells/WeekItemCard';
 
 export interface DayViewSideBySideProps {
   currentDate: Date;
   events: CalendarEvent[];
-  calendarGroups: Array<{ id: string; name: string; color: string }>;
+  calendarGroups: Array<{ id: string; name: string; color: string; userId?: string | null }>;
   selectedCalendarIds?: Set<string>;
   mergedView?: boolean;
   bordered?: boolean;
@@ -35,6 +35,8 @@ export interface DayViewSideBySideProps {
   enableDnd?: boolean;
   /** Override stripe color used for meals (Family calendar-group color). */
   mealColor?: string;
+  /** Click handler for meal/chore/task overlay cards (opens edit modal). */
+  onItemClick?: (ref: OverlayItemRef) => void;
 }
 
 export function DayViewSideBySide({
@@ -52,6 +54,7 @@ export function DayViewSideBySide({
   bucketsByDate,
   enableDnd = false,
   mealColor,
+  onItemClick,
 }: DayViewSideBySideProps) {
   const cards = displayMode === 'cards';
   const droppable = useDayDroppable({ date: currentDate, enabled: cards && enableDnd });
@@ -189,31 +192,51 @@ export function DayViewSideBySide({
             )}
           </div>
 
-          {/* Untimed overlay items (chores/tasks without a time) — shown
-              above the hourly grid like all-day events. Items WITH a time
-              render inside the grid via DayTimedBucketLayer below. */}
+          {/* Untimed overlay items (chores/tasks without a time) — shown above
+              the hourly grid like all-day events, split per group column so
+              an unassigned chore lands in Family and a member-assigned chore
+              lands in that user's column. */}
           {bucketsByDate && (() => {
             const bucket = bucketsByDate.get(format(currentDate, 'yyyy-MM-dd'));
             if (!bucket) return null;
-            const untimed = {
-              meals: [] as typeof bucket.meals, // meals always have a time-of-day default
-              chores: bucket.chores.filter((c) => !getChoreTime(c)),
-              tasks: bucket.tasks.filter((t) => !getTaskTime(t)),
-            };
-            if (untimed.chores.length + untimed.tasks.length === 0) return null;
+            const anyUntimed =
+              bucket.chores.some((c) => !getChoreTime(c)) ||
+              bucket.tasks.some((t) => !getTaskTime(t));
+            if (!anyUntimed) return null;
             return (
               <div className="shrink-0 flex border-b border-border bg-card/40">
                 <div className="w-16 flex-shrink-0" aria-hidden />
-                <div className="flex-1 min-w-0 px-2 py-1.5">
-                  <DroppableOverlayCell
-                    date={currentDate}
-                    bucket={untimed}
-                    size="sm"
-                    layout="row"
-                    enableDnd={enableDnd}
-                    mealColor={mealColor}
-                  />
-                </div>
+                {displayGroups.map((group) => {
+                  const isFamily = group.name === 'Family' || group.id === 'all';
+                  const groupBucket = {
+                    meals: [] as typeof bucket.meals,
+                    chores: bucket.chores.filter((c) => {
+                      if (getChoreTime(c)) return false;
+                      if (group.id === 'all') return true;
+                      return c.assignedTo?.id === group.userId
+                        || (!c.assignedTo && isFamily);
+                    }),
+                    tasks: bucket.tasks.filter((t) => {
+                      if (getTaskTime(t)) return false;
+                      if (group.id === 'all') return true;
+                      return t.assignedTo?.id === group.userId
+                        || (!t.assignedTo && isFamily);
+                    }),
+                  };
+                  return (
+                    <div key={group.id} className="flex-1 min-w-0 border-l border-border px-2 py-1.5">
+                      <DroppableOverlayCell
+                        date={currentDate}
+                        bucket={groupBucket}
+                        size="sm"
+                        layout="row"
+                        enableDnd={enableDnd}
+                        mealColor={mealColor}
+                        onItemClick={onItemClick}
+                      />
+                    </div>
+                  );
+                })}
               </div>
             );
           })()}
@@ -240,17 +263,37 @@ export function DayViewSideBySide({
                 );
               })}
             </div>
-            {/* Group columns wrapped in a relative container so the timed
-                bucket layer (meals/chores/tasks) can absolute-position items
-                spanning all groups. */}
-            <div className="relative flex-1 min-w-0 flex">
+            {/* Group columns. Each column is its own relative container so a
+                per-group TimedBucketLayer can absolute-position meals (Family
+                only) and chores/tasks for that group's assigned user. */}
             {displayGroups.map((group) => {
               const calEvents = getEventsForGroup(group.id);
               const groupPositions = calculateEventPositions(calEvents);
+              const isFamily = group.name === 'Family' || group.id === 'all';
+              const dayBucket = bucketsByDate?.get(format(currentDate, 'yyyy-MM-dd'));
+              const groupTimedBucket = dayBucket
+                ? {
+                    meals: isFamily ? dayBucket.meals : [],
+                    chores: dayBucket.chores.filter((c) => {
+                      if (!getChoreTime(c)) return false;
+                      if (group.id === 'all') return true;
+                      return c.assignedTo?.id === group.userId
+                        || (!c.assignedTo && isFamily);
+                    }),
+                    tasks: dayBucket.tasks.filter((t) => {
+                      if (!getTaskTime(t)) return false;
+                      if (group.id === 'all') return true;
+                      return t.assignedTo?.id === group.userId
+                        || (!t.assignedTo && isFamily);
+                    }),
+                  }
+                : null;
               return (
                 <div
                   key={group.id}
-                  className="flex-1 min-w-0 h-full border-l border-border grid"
+                  className="relative flex-1 min-w-0 h-full border-l border-border"
+                ><div
+                  className="grid h-full"
                   style={{ gridTemplateRows: `repeat(${hours.length}, 1fr)` }}
                 >
                   {hours.map((hour) => {
@@ -316,23 +359,20 @@ export function DayViewSideBySide({
                     );
                   })}
                 </div>
+                {/* Per-group timed-overlay: meals only in Family column,
+                    chores/tasks in the assignee's column. */}
+                {cards && groupTimedBucket && (
+                  <DayTimedBucketLayer
+                    bucket={groupTimedBucket as DayBucket}
+                    hours={hours}
+                    mealColor={mealColor}
+                    enableDnd={enableDnd}
+                    onItemClick={onItemClick}
+                  />
+                )}
+                </div>
               );
             })}
-            {/* Timed-overlay layer: meals/chores/tasks placed by time-of-day,
-                spanning all group columns. */}
-            {cards && bucketsByDate && (() => {
-              const bucket = bucketsByDate.get(format(currentDate, 'yyyy-MM-dd'));
-              if (!bucket) return null;
-              return (
-                <DayTimedBucketLayer
-                  bucket={bucket}
-                  hours={hours}
-                  mealColor={mealColor}
-                  enableDnd={enableDnd}
-                />
-              );
-            })()}
-            </div>
             {/* Notes column */}
             {showNotes && (
               <div className="w-2/5 min-w-[180px] h-full border-l border-border flex flex-col">
@@ -364,11 +404,13 @@ function DayTimedBucketLayer({
   hours,
   mealColor,
   enableDnd,
+  onItemClick,
 }: {
   bucket: DayBucket;
   hours: number[];
   mealColor: string | undefined;
   enableDnd: boolean;
+  onItemClick?: (ref: OverlayItemRef) => void;
 }) {
   const slotPct = 100 / hours.length;
   const visibleSet = new Set(hours);
@@ -464,6 +506,7 @@ function DayTimedBucketLayer({
             style={{ top: `${topPct}%`, height: `${heightPct}%`, left: 0, right: 0, zIndex: 5 }}
           >
             <WeekItemCard
+              onClick={onItemClick ? () => onItemClick({ kind: p.variant, id: p.dragId.split(':')[1]! }) : undefined}
               variant={p.variant}
               size="sm"
               layout="row"

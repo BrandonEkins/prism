@@ -15,7 +15,7 @@ import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui';
 import type { CalendarEvent } from '@/types/calendar';
 import type { DayBucket } from '@/lib/hooks/useWeekViewData';
-import { useDayDroppable, getMealTime, getChoreTime, getTaskTime, parseTimeOfDay, formatTimeOfDay } from './cells';
+import { useDayDroppable, getMealTime, getChoreTime, getTaskTime, parseTimeOfDay, formatTimeOfDay, type OverlayItemRef } from './cells';
 import { format as fmt } from 'date-fns';
 
 const MEAL_FALLBACK_COLOR = '#10b981';
@@ -33,6 +33,8 @@ export interface AgendaViewProps {
   enableDnd?: boolean;
   /** Override stripe color used for meals (Family calendar-group color). */
   mealColor?: string;
+  /** Click handler for meal/chore/task overlay rows (opens edit modal). */
+  onItemClick?: (ref: OverlayItemRef) => void;
 }
 
 /**
@@ -67,6 +69,7 @@ export function AgendaView({
   bucketsByDate,
   enableDnd = false,
   mealColor,
+  onItemClick,
 }: AgendaViewProps) {
   const cards = displayMode === 'cards';
   const startDate = startOfDay(new Date());
@@ -127,6 +130,7 @@ export function AgendaView({
             cards={cards}
             enableDnd={enableDnd}
             mealColor={mealColor}
+            onItemClick={onItemClick}
           />
         ))}
       </div>
@@ -143,6 +147,7 @@ function AgendaDaySection({
   cards = false,
   enableDnd = false,
   mealColor,
+  onItemClick,
 }: {
   date: Date;
   events: CalendarEvent[];
@@ -152,9 +157,10 @@ function AgendaDaySection({
   cards?: boolean;
   enableDnd?: boolean;
   mealColor?: string;
+  onItemClick?: (ref: OverlayItemRef) => void;
 }) {
   const droppable = useDayDroppable({ date, enabled: cards && enableDnd });
-  const rows = buildAgendaRows({ events, bucket, onEventClick, mealColor });
+  const rows = buildAgendaRows({ events, bucket, onEventClick, mealColor, onItemClick });
   const displayRows = maxEvents > 0 ? rows.slice(0, maxEvents) : rows;
   const remainingCount = maxEvents > 0 ? rows.length - maxEvents : 0;
 
@@ -202,11 +208,13 @@ function buildAgendaRows({
   bucket,
   onEventClick,
   mealColor,
+  onItemClick,
 }: {
   events: CalendarEvent[];
   bucket?: DayBucket;
   onEventClick?: (event: CalendarEvent) => void;
   mealColor?: string;
+  onItemClick?: (ref: OverlayItemRef) => void;
 }): AgendaRow[] {
   const rows: AgendaRow[] = [];
 
@@ -240,6 +248,7 @@ function buildAgendaRows({
         title: meal.name,
         subtitle: meal.cookedBy?.name ? `Cooked by ${meal.cookedBy.name}` : undefined,
         muted: Boolean(meal.cookedAt),
+        onClick: onItemClick ? () => onItemClick({ kind: 'meal', id: meal.id }) : undefined,
       });
     }
     for (const chore of bucket.chores) {
@@ -255,6 +264,7 @@ function buildAgendaRows({
         title: chore.title,
         subtitle: chore.assignedTo?.name,
         pendingApproval: Boolean(chore.pendingApproval),
+        onClick: onItemClick ? () => onItemClick({ kind: 'chore', id: chore.id }) : undefined,
       });
     }
     for (const task of bucket.tasks) {
@@ -270,6 +280,7 @@ function buildAgendaRows({
         title: task.title,
         subtitle: task.assignedTo?.name,
         muted: task.completed,
+        onClick: onItemClick ? () => onItemClick({ kind: 'task', id: task.id }) : undefined,
       });
     }
   }

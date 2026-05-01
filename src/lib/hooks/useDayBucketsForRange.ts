@@ -111,7 +111,7 @@ export function useDayBucketsForRange({
     loading: choresLoading,
     error: choresError,
     refresh: refreshChores,
-  } = useChores({ enabled: overlays.chores });
+  } = useChores({ enabled: overlays.chores, includeFuture: true });
 
   const {
     tasks,

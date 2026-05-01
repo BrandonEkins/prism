@@ -19,7 +19,7 @@ import { calculateEventPositions, positionToCSS } from '@/lib/utils/eventLayout'
 import { hexToRgba } from '@/lib/utils/color';
 import type { CalendarEvent } from '@/types/calendar';
 import type { DayBucket } from '@/lib/hooks/useWeekViewData';
-import { DroppableOverlayCell, useDayDroppable, weatherIcon, getMealTime, getChoreTime, getTaskTime, formatTimeOfDay } from './cells';
+import { DroppableOverlayCell, useDayDroppable, weatherIcon, getMealTime, getChoreTime, getTaskTime, formatTimeOfDay, type OverlayItemRef } from './cells';
 import { WeekItemCard } from './cells/WeekItemCard';
 
 export type CalendarDisplayMode = 'inline' | 'cards';
@@ -35,6 +35,8 @@ export interface WeekViewProps {
   enableDnd?: boolean;
   /** Color used for meal stripes (Family calendar-group color). */
   mealColor?: string;
+  /** Click handler for meal/chore/task overlay cards (opens edit modal). */
+  onItemClick?: (ref: OverlayItemRef) => void;
 }
 
 export function WeekView({
@@ -46,6 +48,7 @@ export function WeekView({
   bucketsByDate,
   enableDnd = false,
   mealColor,
+  onItemClick,
 }: WeekViewProps) {
   const cards = displayMode === 'cards';
   const { weekStartsOn } = useWeekStartsOn();
@@ -384,6 +387,7 @@ export function WeekView({
                         layout="row"
                         enableDnd={enableDnd}
                         mealColor={mealColor}
+                        onItemClick={onItemClick}
                       />
                     </div>
                   )}
@@ -493,6 +497,7 @@ export function WeekView({
                     hours={hours}
                     mealColor={mealColor}
                     enableDnd={enableDnd}
+                    onItemClick={onItemClick}
                   />
                 )}
                 </LandscapeDayBody>
@@ -527,11 +532,13 @@ function TimedBucketLayer({
   hours,
   mealColor,
   enableDnd,
+  onItemClick,
 }: {
   bucket: DayBucket;
   hours: number[];
   mealColor: string | undefined;
   enableDnd: boolean;
+  onItemClick?: (ref: OverlayItemRef) => void;
 }) {
   const slotPct = 100 / hours.length;
   const visibleSet = new Set(hours);
@@ -628,6 +635,7 @@ function TimedBucketLayer({
             style={{ top: `${topPct}%`, height: `${heightPct}%`, left: 0, right: 0, zIndex: 5 }}
           >
             <WeekItemCard
+              onClick={onItemClick ? () => onItemClick({ kind: p.variant, id: p.dragId.split(':')[1]! }) : undefined}
               variant={p.variant}
               size="sm"
               layout="row"
@@ -705,9 +713,10 @@ function LandscapeDayBody({
       className={cn(
         'relative flex-1 min-w-0 h-full border-l border-border',
         !transparentMode && isPast && 'bg-muted/10',
-        // Pairs with LandscapeDayHeader's ring-inset so today shows a 4-sided
-        // perimeter spanning the full column (header + time grid).
-        isToday(date) && cards && 'ring-2 ring-inset ring-seasonal-accent/70',
+        // For today: 3-sided border (left + right + bottom, no top) so it joins
+        // seamlessly with LandscapeDayHeader's 3-sided border to form a single
+        // continuous perimeter spanning header + time grid.
+        isToday(date) && cards && 'border-2 border-t-0 border-seasonal-accent/80',
         cards && enableDnd && droppable.isOver && 'ring-2 ring-inset ring-seasonal-accent shadow-lg',
       )}
     >
@@ -744,9 +753,11 @@ function LandscapeDayHeader({
       className={cn(
         'flex-1 min-w-0 border-l border-border',
         !transparentMode && isPast && 'bg-muted/20',
-        // ring-inset so the top edge isn't clipped by the parent overflow:hidden;
-        // pairs with LandscapeDayBody to form a 4-sided "today" perimeter.
-        isToday(date) && cards && 'ring-2 ring-inset ring-seasonal-accent/70',
+        // For today: 3-sided border (top + left + right, no bottom) using
+        // explicit border-2 so it joins seamlessly with LandscapeDayBody's
+        // matching 3-sided border (left + right + bottom). Together the two
+        // form a single continuous 4-sided perimeter spanning the full column.
+        isToday(date) && cards && 'border-2 border-b-0 border-seasonal-accent/80',
         cards && enableDnd && droppable.isOver && 'ring-2 ring-inset ring-seasonal-accent shadow-lg',
       )}
     >

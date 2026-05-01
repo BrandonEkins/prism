@@ -306,7 +306,7 @@ function MealCard({ meal, onMarkCooked, onUnmarkCooked, onEdit, onDelete, onDrop
 }
 
 
-function MealModal({ weekOf, meal, defaultDay, dayOptions, recipes, onClose, onSave }: {
+export function MealModal({ weekOf, meal, defaultDay, dayOptions, recipes, onClose, onSave }: {
   weekOf: string; meal?: Meal; defaultDay?: Meal['dayOfWeek']; dayOptions: readonly Meal['dayOfWeek'][]; recipes: Recipe[];
   onClose: () => void; onSave: (meal: Record<string, unknown>) => void;
 }) {

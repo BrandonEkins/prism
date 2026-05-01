@@ -17,7 +17,7 @@ import { hexToRgba } from '@/lib/utils/color';
 import { useWeekStartsOn } from '@/lib/hooks/useWeekStartsOn';
 import { seasonalPalettes } from '@/lib/themes/seasonalThemes';
 import type { CalendarEvent } from '@/types/calendar';
-import { CardHeightProbe, DayOverflowPopover, DroppableOverlayCell, WeekItemCard, useDayDroppable, weatherIcon } from './cells';
+import { CardHeightProbe, DayOverflowPopover, DroppableOverlayCell, WeekItemCard, useDayDroppable, weatherIcon, type OverlayItemRef } from './cells';
 
 /** HSL color for the seasonal accent of the cell's month. */
 function getMonthAccentColor(date: Date): string {
@@ -40,6 +40,8 @@ export interface MultiWeekViewProps {
   hideWeekends?: boolean;
   /** Color used for meal stripes (Family calendar-group color). */
   mealColor?: string;
+  /** Click handler for meal/chore/task cards. */
+  onItemClick?: (ref: OverlayItemRef) => void;
 }
 
 /** Fallback while the ResizeObserver hasn't measured yet (~1 frame on mount). */
@@ -57,6 +59,7 @@ export function MultiWeekView({
   enableDnd = false,
   hideWeekends = false,
   mealColor,
+  onItemClick,
 }: MultiWeekViewProps) {
   const { weekStartsOn } = useWeekStartsOn();
   const [cardHeight, setCardHeight] = React.useState<number | undefined>(undefined);
@@ -119,6 +122,7 @@ export function MultiWeekView({
                 enableDnd={enableDnd}
                 cardHeight={cardHeight}
                 mealColor={mealColor}
+                onItemClick={onItemClick}
               />
             ))}
           </div>
@@ -140,6 +144,7 @@ function DayCell({
   enableDnd,
   cardHeight,
   mealColor,
+  onItemClick,
 }: {
   date: Date;
   events: CalendarEvent[];
@@ -152,6 +157,7 @@ function DayCell({
   enableDnd: boolean;
   cardHeight: number | undefined;
   mealColor?: string;
+  onItemClick?: (ref: OverlayItemRef) => void;
 }) {
   const cards = displayMode === 'cards';
   const fallback = compact ? FALLBACK_VISIBLE_CARDS_COMPACT : FALLBACK_VISIBLE_CARDS;
@@ -293,6 +299,7 @@ function DayCell({
             enableDnd={enableDnd}
             include={{ meals: true, chores: false, tasks: false }}
             mealColor={mealColor}
+            onItemClick={onItemClick}
           />
         )}
         {cards
@@ -347,6 +354,7 @@ function DayCell({
             layout="column"
             enableDnd={enableDnd}
             include={{ meals: false, chores: true, tasks: true }}
+            onItemClick={onItemClick}
           />
         )}
       </div>

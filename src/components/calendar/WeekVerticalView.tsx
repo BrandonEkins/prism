@@ -17,7 +17,7 @@ import type { CalendarEvent } from '@/types/calendar';
 import { useWeekStartsOn } from '@/lib/hooks/useWeekStartsOn';
 import type { CalendarNote } from '@/lib/hooks/useCalendarNotes';
 import type { DayBucket } from '@/lib/hooks/useWeekViewData';
-import { DroppableOverlayCell, useDayDroppable } from './cells';
+import { DroppableOverlayCell, useDayDroppable, type OverlayItemRef } from './cells';
 
 export interface WeekVerticalViewProps {
   currentDate: Date;
@@ -37,6 +37,8 @@ export interface WeekVerticalViewProps {
   enableDnd?: boolean;
   /** Override stripe color used for meals (Family calendar-group color). */
   mealColor?: string;
+  /** Click handler for meal/chore/task overlay cards. */
+  onItemClick?: (ref: OverlayItemRef) => void;
 }
 
 export function WeekVerticalView({
@@ -54,6 +56,7 @@ export function WeekVerticalView({
   bucketsByDate,
   enableDnd = false,
   mealColor,
+  onItemClick,
 }: WeekVerticalViewProps) {
   const { weekStartsOn } = useWeekStartsOn();
   const bgOverride = useWidgetBgOverride();
@@ -128,6 +131,7 @@ export function WeekVerticalView({
           bucketsByDate={bucketsByDate}
           enableDnd={enableDnd}
           mealColor={mealColor}
+          onItemClick={onItemClick}
         />
       ))}
     </div>
@@ -151,6 +155,7 @@ function WeekListDayRow({
   bucketsByDate,
   enableDnd,
   mealColor,
+  onItemClick,
 }: {
   day: Date;
   today: Date;
@@ -168,6 +173,7 @@ function WeekListDayRow({
   bucketsByDate: Map<string, DayBucket> | undefined;
   enableDnd: boolean;
   mealColor: string | undefined;
+  onItemClick: ((ref: OverlayItemRef) => void) | undefined;
 }) {
   const cards = displayMode === 'cards';
   const dayStart = startOfDay(day);
@@ -272,6 +278,7 @@ function WeekListDayRow({
                     layout="row"
                     enableDnd={enableDnd}
                     mealColor={mealColor}
+                    onItemClick={onItemClick}
                   />
                 )}
               </div>
@@ -296,6 +303,8 @@ function WeekListDayRow({
               size="sm"
               layout="row"
               enableDnd={enableDnd}
+              mealColor={mealColor}
+              onItemClick={onItemClick}
             />
           )}
         </div>

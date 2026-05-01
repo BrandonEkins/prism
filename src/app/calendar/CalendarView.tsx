@@ -48,6 +48,16 @@ import { useWeekStartsOn } from '@/lib/hooks/useWeekStartsOn';
 import { useWeekMutations } from '@/app/week/useWeekMutations';
 import { ViewMenu } from './ViewMenu';
 import { ViewOptionsMenu } from './ViewOptionsMenu';
+import { useChores } from '@/lib/hooks/useChores';
+import { useTasks } from '@/lib/hooks/useTasks';
+import { useMeals } from '@/lib/hooks/useMeals';
+import { useRecipes } from '@/lib/hooks/useRecipes';
+import { useTaskLists } from '@/lib/hooks/useTaskLists';
+import { ChoreModal } from '@/app/chores/ChoreModal';
+import { TaskModal } from '@/app/tasks/TaskModal';
+import { useChoreModals } from '@/app/chores/useChoreModals';
+import type { OverlayItemRef } from '@/components/calendar/cells';
+import type { Chore, Task, Meal } from '@/types';
 
 const MEAL_TYPE_ORDER = { breakfast: 0, lunch: 1, snack: 2, dinner: 3 } as const;
 const EMPTY_EVENTS: CalendarEvent[] = [];
@@ -61,6 +71,10 @@ function sortMealsByType<T extends { mealType: 'breakfast' | 'lunch' | 'dinner' 
 ): T[] {
   return [...meals].sort((a, b) => MEAL_TYPE_ORDER[a.mealType] - MEAL_TYPE_ORDER[b.mealType]);
 }
+
+// Lazy-loaded MealModal — pulled from MealsView so the meal-edit modal can
+// be opened directly from the calendar without yanking in all of MealsView.
+const MealModal = lazy(() => import('@/app/meals/MealsView').then(m => ({ default: m.MealModal })));
 
 export function CalendarView() {
   const { activeUser, requireAuth } = useAuth();
@@ -194,6 +208,53 @@ export function CalendarView() {
 
   const [moveError, setMoveError] = useState<string | null>(null);
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
+
+  // In-page edit modals for overlay items (meals/chores/tasks) so a click on
+  // a calendar card opens the same modal that lives on the feature page.
+  const [editingChore, setEditingChore] = useState<Chore | null>(null);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [editingMeal, setEditingMeal] = useState<Meal | null>(null);
+
+  // Live data for the modals. The bucket carries lightweight summaries; the
+  // modals need full records (e.g. meal recipe URL, chore startDay), which
+  // these hooks load on demand.
+  const { chores: allChoresList, refresh: refreshAllChores } = useChores({
+    showDisabled: true,
+    includeFuture: true,
+    enabled: overlaysActive && (overlays.chores || overlays.tasks),
+  });
+  const { tasks: allTasksList, refresh: refreshAllTasks } = useTasks({
+    showCompleted: true,
+    enabled: overlaysActive && overlays.tasks,
+  });
+  const { meals: allMealsList, refresh: refreshAllMeals } = useMeals({
+    enabled: overlaysActive && overlays.meals,
+  });
+  const { recipes } = useRecipes();
+  const { lists: taskLists } = useTaskLists();
+
+  const { saveEditedChore } = useChoreModals({
+    refreshChores: refreshAllChores,
+    setShowAddModal: () => {},
+    setEditingChore,
+    deleteChore: () => {},
+  });
+
+  const handleOverlayItemClick = useMemo(
+    () => (ref: { kind: 'meal' | 'chore' | 'task'; id: string }) => {
+      if (ref.kind === 'chore') {
+        const c = allChoresList.find((x) => x.id === ref.id);
+        if (c) setEditingChore(c);
+      } else if (ref.kind === 'task') {
+        const t = allTasksList.find((x) => x.id === ref.id);
+        if (t) setEditingTask(t);
+      } else {
+        const m = allMealsList.find((x) => x.id === ref.id);
+        if (m) setEditingMeal(m);
+      }
+    },
+    [allChoresList, allTasksList, allMealsList],
+  );
 
   const handleDragStart = (e: DragStartEvent) => {
     const id = String(e.active.id);
@@ -456,6 +517,7 @@ export function CalendarView() {
                   bucketsByDate={overlaysActive ? filteredBucketsByDate : undefined}
                   enableDnd={overlaysActive}
                   mealColor={mealColor}
+                  onItemClick={handleOverlayItemClick}
                 />
               )}
               {viewType === 'month' && (
@@ -463,6 +525,7 @@ export function CalendarView() {
                   onDateClick={(date) => { setCurrentDate(date); setViewType('day'); }} bordered={weeksBordered} displayMode={displayMode}
                   bucketsByDate={overlaysActive ? filteredBucketsByDate : undefined}
                   enableDnd={overlaysActive}
+                  onItemClick={handleOverlayItemClick}
                 />
               )}
               {viewType === 'week' && (
@@ -470,6 +533,7 @@ export function CalendarView() {
                   bucketsByDate={overlaysActive ? filteredBucketsByDate : undefined}
                   enableDnd={overlaysActive}
                   mealColor={mealColor}
+                  onItemClick={handleOverlayItemClick}
                 />
               )}
               {viewType === 'weekVertical' && (
@@ -488,6 +552,7 @@ export function CalendarView() {
                   bucketsByDate={overlaysActive ? filteredBucketsByDate : undefined}
                   enableDnd={overlaysActive}
                   mealColor={mealColor}
+                  onItemClick={handleOverlayItemClick}
                 />
               )}
               {viewType === 'multiWeek' && (
@@ -496,6 +561,7 @@ export function CalendarView() {
                   enableDnd={overlaysActive}
                   hideWeekends={hideWeekends}
                   mealColor={mealColor}
+                  onItemClick={handleOverlayItemClick}
                 />
               )}
               {viewType === 'threeMonth' && (
@@ -517,6 +583,8 @@ export function CalendarView() {
                   displayMode={displayMode}
                   bucketsByDate={overlaysActive ? filteredBucketsByDate : undefined}
                   enableDnd={overlaysActive}
+                  mealColor={mealColor}
+                  onItemClick={handleOverlayItemClick}
                 />
               )}
               <DragOverlay dropAnimation={null}>
@@ -558,6 +626,79 @@ export function CalendarView() {
           } : undefined}
           onEventCreated={() => { refreshEvents(); setShowAddEvent(false); setEditingEvent(null); }}
         />
+
+        {editingChore && (
+          <ChoreModal
+            chore={editingChore}
+            familyMembers={familyMembers}
+            onClose={() => setEditingChore(null)}
+            onSave={async (updated) => {
+              await saveEditedChore(editingChore.id, updated);
+              await refreshBuckets();
+            }}
+          />
+        )}
+
+        {editingTask && (
+          <TaskModal
+            task={editingTask}
+            familyMembers={familyMembers}
+            taskLists={taskLists}
+            onClose={() => setEditingTask(null)}
+            onSave={async (updated) => {
+              try {
+                const res = await fetch(`/api/tasks/${editingTask.id}`, {
+                  method: 'PATCH',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    title: updated.title,
+                    priority: updated.priority,
+                    category: updated.category,
+                    assignedTo: updated.assignedTo?.id,
+                    dueDate: updated.dueDate?.toISOString(),
+                    completed: updated.completed,
+                    listId: updated.listId,
+                  }),
+                });
+                if (!res.ok) throw new Error('Failed to update task');
+                await refreshAllTasks();
+                await refreshBuckets();
+              } catch (err) {
+                toast({ title: err instanceof Error ? err.message : 'Failed to update task', variant: 'destructive' });
+              } finally {
+                setEditingTask(null);
+              }
+            }}
+          />
+        )}
+
+        {editingMeal && (
+          <Suspense fallback={null}>
+            <MealModal
+              meal={editingMeal}
+              weekOf={editingMeal.weekOf}
+              dayOptions={['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'] as const}
+              recipes={recipes}
+              onClose={() => setEditingMeal(null)}
+              onSave={async (updates) => {
+                try {
+                  const res = await fetch(`/api/meals/${editingMeal.id}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(updates),
+                  });
+                  if (!res.ok) throw new Error('Failed to update meal');
+                  await refreshAllMeals();
+                  await refreshBuckets();
+                } catch (err) {
+                  toast({ title: err instanceof Error ? err.message : 'Failed to update meal', variant: 'destructive' });
+                } finally {
+                  setEditingMeal(null);
+                }
+              }}
+            />
+          </Suspense>
+        )}
       </div>
     </PageWrapper>
   );

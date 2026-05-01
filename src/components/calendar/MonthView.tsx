@@ -22,7 +22,7 @@ import { useWeekStartsOn } from '@/lib/hooks/useWeekStartsOn';
 import { DAYS_SHORT_ARRAY } from '@/lib/constants/days';
 import type { CalendarEvent } from '@/types/calendar';
 import { seasonalPalettes } from '@/lib/themes/seasonalThemes';
-import { CardHeightProbe, DayOverflowPopover, DroppableOverlayCell, useDayDroppable } from './cells';
+import { CardHeightProbe, DayOverflowPopover, DroppableOverlayCell, useDayDroppable, type OverlayItemRef } from './cells';
 import { useCardCapacity } from '@/lib/hooks/useCardCapacity';
 import type { DayBucket } from '@/lib/hooks/useWeekViewData';
 
@@ -42,6 +42,7 @@ export interface MonthViewProps {
   displayMode?: 'inline' | 'cards';
   bucketsByDate?: Map<string, DayBucket>;
   enableDnd?: boolean;
+  onItemClick?: (ref: OverlayItemRef) => void;
 }
 
 /** Fallback when ResizeObserver has not yet measured (~1 frame on mount). */
@@ -56,6 +57,7 @@ export function MonthView({
   displayMode = 'inline',
   bucketsByDate,
   enableDnd = false,
+  onItemClick,
 }: MonthViewProps) {
   const cards = displayMode === 'cards';
   const { weekStartsOn } = useWeekStartsOn();
@@ -139,6 +141,7 @@ export function MonthView({
               cellBgStyle={cellBgStyle}
               onDateClick={onDateClick}
               onEventClick={onEventClick}
+              onItemClick={onItemClick}
             />
           );
         })}
@@ -166,6 +169,7 @@ function MonthDayCell({
   cellBgStyle,
   onDateClick,
   onEventClick,
+  onItemClick,
 }: {
   date: Date;
   dayEvents: CalendarEvent[];
@@ -180,6 +184,7 @@ function MonthDayCell({
   cellBgStyle: React.CSSProperties | undefined;
   onDateClick: (date: Date) => void;
   onEventClick: (event: CalendarEvent) => void;
+  onItemClick?: (ref: OverlayItemRef) => void;
 }) {
   const droppable = useDayDroppable({ date, enabled: cards && enableDnd });
 
@@ -218,6 +223,7 @@ function MonthDayCell({
           enableDnd={enableDnd}
           cardHeight={cardHeight}
           onEventClick={onEventClick}
+          onItemClick={onItemClick}
         />
       ) : (
         <ul className="flex-1 overflow-y-auto space-y-0.5 list-none m-0 px-1 pb-1 pt-0">
@@ -259,6 +265,7 @@ function DayCardsCell({
   enableDnd,
   cardHeight,
   onEventClick,
+  onItemClick,
 }: {
   date: Date;
   events: CalendarEvent[];
@@ -266,6 +273,7 @@ function DayCardsCell({
   enableDnd: boolean;
   cardHeight: number | undefined;
   onEventClick: (event: CalendarEvent) => void;
+  onItemClick?: (ref: OverlayItemRef) => void;
 }) {
   const overlayItemCount = bucket ? bucket.meals.length + bucket.chores.length + bucket.tasks.length : 0;
   // Reserve ~22px for the popover trigger, ~20px per overlay row.
@@ -324,6 +332,7 @@ function DayCardsCell({
             size="xs"
             layout="row"
             enableDnd={enableDnd}
+            onItemClick={onItemClick}
           />
         </div>
       )}

@@ -29,6 +29,11 @@ function taskStripeColor(task: { assignedTo?: { color: string } | null }): strin
   return task.assignedTo?.color || TASK_FALLBACK_COLOR;
 }
 
+export type OverlayItemRef =
+  | { kind: 'meal'; id: string }
+  | { kind: 'chore'; id: string }
+  | { kind: 'task'; id: string };
+
 interface OverlayItemsCellProps {
   bucket: Pick<DayBucket, 'meals' | 'chores' | 'tasks'>;
   size?: WeekItemSize;
@@ -40,6 +45,8 @@ interface OverlayItemsCellProps {
   /** When set, every meal uses this stripe color (e.g. the Family calendar
    * group color) instead of the cookedBy / createdBy color. */
   mealColor?: string;
+  /** Called when an item card is clicked (not dragged). */
+  onItemClick?: (ref: OverlayItemRef) => void;
   className?: string;
 }
 
@@ -55,6 +62,7 @@ export function OverlayItemsCell({
   enableDrag = false,
   include,
   mealColor,
+  onItemClick,
   className,
 }: OverlayItemsCellProps) {
   const showMeals = include?.meals ?? true;
@@ -80,6 +88,7 @@ export function OverlayItemsCell({
           subtitle={meal.cookedBy?.name ? `Cooked by ${meal.cookedBy.name}` : undefined}
           muted={Boolean(meal.cookedAt)}
           dragId={enableDrag ? `meal:${meal.id}` : undefined}
+          onClick={onItemClick ? () => onItemClick({ kind: 'meal', id: meal.id }) : undefined}
         />
       ))}
       {chores.map((chore) => (
@@ -93,6 +102,7 @@ export function OverlayItemsCell({
           subtitle={chore.assignedTo?.name}
           pendingApproval={Boolean(chore.pendingApproval)}
           dragId={enableDrag ? `chore:${chore.id}` : undefined}
+          onClick={onItemClick ? () => onItemClick({ kind: 'chore', id: chore.id }) : undefined}
         />
       ))}
       {tasks.map((task) => (
@@ -106,6 +116,7 @@ export function OverlayItemsCell({
           subtitle={task.assignedTo?.name}
           muted={task.completed}
           dragId={enableDrag ? `task:${task.id}` : undefined}
+          onClick={onItemClick ? () => onItemClick({ kind: 'task', id: task.id }) : undefined}
         />
       ))}
     </div>

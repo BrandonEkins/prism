@@ -120,7 +120,12 @@ export function WeekItemCard({
     data: { dragId },
   });
 
-  const interactive = Boolean(onClick) && !dragId;
+  // A card is "interactive" (rendered as a button + clickable) whenever it
+  // has an onClick handler, regardless of whether it's also draggable.
+  // dnd-kit's PointerSensor activationConstraint (distance: 5px) keeps a
+  // simple click from being misread as a drag, so the same element can do
+  // both — open the edit modal on click, reschedule on drag.
+  const interactive = Boolean(onClick);
   const Tag = interactive ? 'button' : 'div';
   const styles = SIZE_STYLES[size];
 
