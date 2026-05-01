@@ -231,7 +231,7 @@ export const WeatherWidget = React.memo(function WeatherWidget({
         />
 
         {/* 24-HOUR TIMELINE */}
-        {weatherData.hourly && weatherData.hourly.length > 0 && (
+        {showForecast && weatherData.hourly && weatherData.hourly.length > 0 && (
           <div className="border-t border-border pt-3">
             <HourlyTimeline hourly={weatherData.hourly} />
           </div>
@@ -503,7 +503,7 @@ function HourlyTimeline({ hourly }: { hourly: HourlyForecast[] }) {
     // so it renders correctly even before the layout has fully settled.
     const ro = new ResizeObserver((entries) => {
       const width = entries[0]?.contentRect.width;
-      if (width) timeline(el, data, { width, tracker: 0 });
+      if (width) timeline(el, data, { width, tracker: 0, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone });
     });
     ro.observe(el);
     return () => ro.disconnect();
