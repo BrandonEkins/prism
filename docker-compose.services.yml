@@ -1,0 +1,83 @@
+# Backing services only — for running `npm run dev` on the host.
+# The app runs locally; db, redis, and backup run in containers with ports exposed.
+#
+# Usage:
+#   npm run services:up    # start
+#   npm run services:down  # stop
+#   npm run services:logs  # tail logs
+#
+# Requires .env.local to override DATABASE_URL/REDIS_URL to use localhost.
+# See .env.local.example for the template.
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: prism-db
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=prism
+      - POSTGRES_USER=prism
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./src/lib/db/init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U prism -d prism"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - prism-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: prism-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - prism-network
+
+  backup:
+    build:
+      context: ./scripts
+      dockerfile: Dockerfile.backup
+    container_name: prism-backup
+    environment:
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - BACKUP_HOUR=3
+      - RETENTION_DAYS=7
+      - RCLONE_REMOTE=onedrive:Prism/backups
+      - RCLONE_RETENTION_DAYS=30
+    volumes:
+      - ./backups:/backups
+      - ./uploads:/uploads:ro
+      - ./config/rclone.conf:/root/.config/rclone/rclone.conf:ro
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - prism-network
+
+volumes:
+  postgres-data:
+    name: prism-postgres-data
+  redis-data:
+    name: prism-redis-data
+
+networks:
+  prism-network:
+    name: prism-network
+    driver: bridge

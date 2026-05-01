@@ -54,6 +54,10 @@ function mockCurrentResponse(overrides: {
       icon: '01d',
     }],
     name: overrides.name ?? 'TestCity',
+    sys: {
+      sunrise: 1712480400, // arbitrary Unix timestamps
+      sunset:  1712527200,
+    },
   };
 }
 
@@ -231,7 +235,7 @@ describe('OpenWeather integration', () => {
             mockForecastItem(Math.floor(date1.getTime() / 1000), 280, 800), // 280K ≈ 44°F
             mockForecastItem(Math.floor(date2.getTime() / 1000), 295, 800), // 295K ≈ 71°F
           ],
-          city: { name: 'TestCity', country: 'US' },
+          city: { name: 'TestCity', country: 'US', timezone: 0 },
         }),
       });
 
@@ -240,10 +244,10 @@ describe('OpenWeather integration', () => {
       expect(result.forecast[0]!.high).toBeGreaterThan(result.forecast[0]!.low);
     });
 
-    it('limits forecast to 5 days', async () => {
-      // Create 7 days of forecast data
+    it('limits forecast to 7 days', async () => {
+      // Create 9 days of forecast data; implementation caps at 7
       const items: ReturnType<typeof mockForecastItem>[] = [];
-      for (let d = 0; d < 7; d++) {
+      for (let d = 0; d < 9; d++) {
         const date = new Date(`2026-03-${15 + d}T12:00:00Z`);
         items.push(mockForecastItem(Math.floor(date.getTime() / 1000), 290, 800));
       }
@@ -252,12 +256,12 @@ describe('OpenWeather integration', () => {
         ok: true,
         json: () => Promise.resolve({
           list: items,
-          city: { name: 'TestCity', country: 'US' },
+          city: { name: 'TestCity', country: 'US', timezone: 0 },
         }),
       });
 
       const result = await fetchForecast();
-      expect(result.forecast.length).toBe(5);
+      expect(result.forecast.length).toBe(7);
     });
 
     it('uses most common condition for the day', async () => {
@@ -273,7 +277,7 @@ describe('OpenWeather integration', () => {
             mockForecastItem(baseTs + 21600, 290, 500), // rainy
             mockForecastItem(baseTs + 32400, 290, 500), // rainy
           ],
-          city: { name: 'TestCity', country: 'US' },
+          city: { name: 'TestCity', country: 'US', timezone: 0 },
         }),
       });
 
@@ -287,7 +291,7 @@ describe('OpenWeather integration', () => {
         ok: true,
         json: () => Promise.resolve({
           list: [mockForecastItem(Math.floor(Date.now() / 1000), 290, 800)],
-          city: { name: 'Springfield', country: 'US' },
+          city: { name: 'Springfield', country: 'US', timezone: 0 },
         }),
       });
 
