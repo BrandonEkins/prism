@@ -61,12 +61,9 @@ export function CalendarWidgetControls({
   // The widget views that benefit from "card vs inline" toggle: day, list,
   // week, multiWeek, month. Agenda has no such concept.
   const displayApplicable = resolvedView !== 'agenda';
-  // Hide-weekends only meaningful on multi-day views that include weekends.
-  const weekendsApplicable =
-    resolvedView === 'week' ||
-    resolvedView === 'list' ||
-    resolvedView === 'multiWeek' ||
-    resolvedView === 'month';
+  // Hide-weekends is currently only honored by MultiWeekView (see
+  // CalendarView.tsx for matching scope). Other views ignore the flag.
+  const weekendsApplicable = resolvedView === 'multiWeek';
   const showOverlayRows = displayMode === 'cards';
 
   const resetAll = () => {

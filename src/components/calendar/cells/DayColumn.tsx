@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { format, isSameDay, isToday, isTomorrow } from 'date-fns';
+import { format, isSameDay, isToday, isTomorrow, startOfDay } from 'date-fns';
 import { useDroppable } from '@dnd-kit/core';
 import { cn } from '@/lib/utils';
 import { WeekItemCard, type WeekItemSize, type WeekItemLayout } from './WeekItemCard';
@@ -19,14 +19,12 @@ const CHORE_OVERDUE_COLOR = '#ef4444';
 const CHORE_PENDING_APPROVAL_COLOR = '#a855f7';
 const MEAL_FALLBACK_COLOR = '#10b981';
 
-export interface OverlayFlags {
-  events?: boolean;
-  meals?: boolean;
-  chores?: boolean;
-  tasks?: boolean;
-}
+// OverlayFlags is canonically defined in useDayBucketsForRange — re-export here
+// so consumers that depend on this file don't need the second hop.
+export type { OverlayFlags } from '@/lib/hooks/useDayBucketsForRange';
+import type { OverlayFlags } from '@/lib/hooks/useDayBucketsForRange';
 
-const ALL_OVERLAYS: Required<OverlayFlags> = {
+const ALL_OVERLAYS: OverlayFlags = {
   events: true,
   meals: true,
   chores: true,
@@ -56,9 +54,13 @@ function timeLabel(start: Date, end: Date, allDay: boolean): string | undefined 
 function choreStripeColor(chore: { pendingApproval?: unknown; nextDue?: string }): string {
   if (chore.pendingApproval) return CHORE_PENDING_APPROVAL_COLOR;
   if (chore.nextDue) {
-    const due = new Date(chore.nextDue);
-    if (!Number.isNaN(due.getTime()) && due < new Date()) {
-      return CHORE_OVERDUE_COLOR;
+    // Parse YYYY-MM-DD as local-date; new Date(yyyy-mm-dd) parses as UTC and
+    // shifts to the previous day in negative-UTC zones, marking today's chore
+    // as overdue.
+    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(chore.nextDue);
+    if (m) {
+      const due = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+      if (due < startOfDay(new Date())) return CHORE_OVERDUE_COLOR;
     }
   }
   return CHORE_PENDING_COLOR;

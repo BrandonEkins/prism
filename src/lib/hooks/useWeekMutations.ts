@@ -12,7 +12,7 @@ interface UseWeekMutationsOptions {
 
 interface UseWeekMutationsResult {
   moveChore: (choreId: string, targetDate: Date) => Promise<void>;
-  moveTask: (taskId: string, targetDate: Date) => Promise<void>;
+  moveTask: (taskId: string, targetDate: Date, originalDue?: Date | null) => Promise<void>;
   moveMeal: (mealId: string, targetDate: Date) => Promise<void>;
   moveEvent: (eventId: string, originalStart: Date, originalEnd: Date, targetDate: Date) => Promise<void>;
 }
@@ -47,13 +47,18 @@ export function useWeekMutations({ refresh }: UseWeekMutationsOptions): UseWeekM
   );
 
   const moveTask = useCallback(
-    async (taskId: string, targetDate: Date) => {
-      // Preserve the existing time-of-day; if no prior dueDate use end-of-day.
+    async (taskId: string, targetDate: Date, originalDue?: Date | null) => {
+      // Preserve the existing time-of-day if the caller supplies the prior
+      // dueDate; otherwise default to end-of-day (legacy behavior, also the
+      // server-side "no time" sentinel — see TaskModal).
+      const useExisting = originalDue && !Number.isNaN(originalDue.getTime());
       const iso = new Date(
         targetDate.getFullYear(),
         targetDate.getMonth(),
         targetDate.getDate(),
-        23, 59, 59,
+        useExisting ? originalDue.getHours()   : 23,
+        useExisting ? originalDue.getMinutes() : 59,
+        useExisting ? originalDue.getSeconds() : 59,
       ).toISOString();
       await patchJson(`/api/tasks/${taskId}`, { dueDate: iso });
       await refresh();

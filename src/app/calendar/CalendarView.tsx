@@ -63,8 +63,8 @@ const MEAL_TYPE_ORDER = { breakfast: 0, lunch: 1, snack: 2, dinner: 3 } as const
 const EMPTY_EVENTS: CalendarEvent[] = [];
 
 /**
- * Sorts meals by mealType so the day's stack reads breakfast → lunch → dinner →
- * snack regardless of insertion order. Stable for equal mealType values.
+ * Sorts meals by mealType so the day's stack reads breakfast → lunch → snack →
+ * dinner regardless of insertion order. Stable for equal mealType values.
  */
 function sortMealsByType<T extends { mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack' }>(
   meals: T[],
@@ -282,7 +282,10 @@ export function CalendarView() {
 
     try {
       if (variant === 'chore') await moveChore(itemId, targetBucket.date);
-      else if (variant === 'task') await moveTask(itemId, targetBucket.date);
+      else if (variant === 'task') {
+        const t = allTasksList.find((x) => x.id === itemId);
+        await moveTask(itemId, targetBucket.date, t?.dueDate ? new Date(t.dueDate) : null);
+      }
       else if (variant === 'meal') await moveMeal(itemId, targetBucket.date);
       else if (variant === 'event') {
         const ev = events.find((e) => e.id === itemId);
@@ -413,12 +416,10 @@ export function CalendarView() {
                 onHideWeekendsChange={setHideWeekends}
                 showNotes={showNotes}
                 onShowNotesChange={setShowNotes}
-                weekendsApplicable={
-                  viewType === 'multiWeek' ||
-                  viewType === 'month' ||
-                  viewType === 'week' ||
-                  viewType === 'weekVertical'
-                }
+                // hideWeekends is currently only honored by MultiWeekView.
+                // Only show the toggle when it has effect; expand here if/when
+                // WeekView, WeekVerticalView, MonthView learn to respect it.
+                weekendsApplicable={viewType === 'multiWeek'}
                 notesApplicable={notesSupported}
                 displayApplicable={viewType !== 'threeMonth'}
                 overlays={overlays}
@@ -658,7 +659,7 @@ export function CalendarView() {
                     priority: updated.priority,
                     category: updated.category,
                     assignedTo: updated.assignedTo?.id,
-                    dueDate: updated.dueDate?.toISOString(),
+                    dueDate: updated.dueDate === null ? null : updated.dueDate.toISOString(),
                     completed: updated.completed,
                     listId: updated.listId,
                   }),

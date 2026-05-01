@@ -75,8 +75,10 @@ export function useChoreModals({
           requiresApproval: updatedChore.requiresApproval,
           assignedTo: updatedChore.assignedTo?.id,
           enabled: updatedChore.enabled,
-          nextDue: updatedChore.nextDue || undefined,
-          nextDueTime: updatedChore.nextDueTime ?? undefined,
+          // null clears the field on the server; undefined would be stripped
+          // and leave the prior value in place.
+          nextDue: updatedChore.nextDue ?? null,
+          nextDueTime: updatedChore.nextDueTime ?? null,
         }),
       });
       if (!response.ok) throw new Error('Failed to update chore');

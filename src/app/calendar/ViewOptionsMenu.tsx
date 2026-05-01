@@ -125,6 +125,7 @@ export function ViewOptionsMenu({
     (weeksBordered ? 1 : 0) +
     (hideWeekends ? 1 : 0) +
     (showNotes ? 1 : 0) +
+    (mergedView ? 1 : 0) +
     (overlays.events ? 0 : 1) +
     (overlays.meals ? 0 : 1) +
     (overlays.chores ? 0 : 1) +

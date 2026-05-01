@@ -461,7 +461,7 @@ export function Dashboard({
                       priority: updated.priority,
                       category: updated.category,
                       assignedTo: updated.assignedTo?.id,
-                      dueDate: updated.dueDate?.toISOString(),
+                      dueDate: updated.dueDate === null ? null : updated.dueDate.toISOString(),
                       completed: updated.completed,
                       listId: updated.listId,
                     }),

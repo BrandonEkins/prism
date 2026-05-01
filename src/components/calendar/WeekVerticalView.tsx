@@ -243,7 +243,9 @@ function WeekListDayRow({
             //   chores/tasks -> the assigned user's group column
             // Unassigned chores/tasks fall through to the Family column too.
             const dayBucket = bucketsByDate?.get(format(day, 'yyyy-MM-dd'));
-            const isFamily = group.name === 'Family';
+            // 'all' is the synthetic merged-view group; it should receive every
+            // bucket item just like the Family column does in split view.
+            const isFamily = group.name === 'Family' || group.id === 'all';
             const groupBucket = dayBucket
               ? {
                   meals: isFamily ? dayBucket.meals : [],

@@ -95,7 +95,16 @@ export const CalendarWidget = React.memo(function CalendarWidget({
       return { from: ws, to: addDays(addWeeks(ws, resolvedWeekCount), -1) };
     }
     if (resolvedView === 'month') {
-      return { from: startOfMonth(currentDate), to: endOfMonth(currentDate) };
+      // MonthView renders a 6-week grid starting on the week containing the
+      // 1st and ending on the week containing the last day, so leading/trailing
+      // days from neighbouring months are visible. Bucket range must match,
+      // otherwise overlay items on those visible-but-out-of-month days are missing.
+      const monthStart = startOfMonth(currentDate);
+      const monthEnd = endOfMonth(currentDate);
+      return {
+        from: startOfWeek(monthStart, { weekStartsOn }),
+        to: endOfWeek(monthEnd, { weekStartsOn }),
+      };
     }
     // agenda — 14 day window
     return { from: currentDate, to: addDays(currentDate, 13) };
@@ -154,7 +163,14 @@ export const CalendarWidget = React.memo(function CalendarWidget({
     if (!targetBucket) return;
     try {
       if (variant === 'chore') await moveChore(itemId, targetBucket.date);
-      else if (variant === 'task') await moveTask(itemId, targetBucket.date);
+      else if (variant === 'task') {
+        let originalDue: Date | null = null;
+        for (const b of bucketsByDate.values()) {
+          const t = b.tasks.find((x) => x.id === itemId);
+          if (t?.dueDate) { originalDue = new Date(t.dueDate); break; }
+        }
+        await moveTask(itemId, targetBucket.date, originalDue);
+      }
       else if (variant === 'meal') await moveMeal(itemId, targetBucket.date);
       else if (variant === 'event') {
         const ev = events.find((e) => e.id === itemId);
@@ -278,7 +294,12 @@ export const CalendarWidget = React.memo(function CalendarWidget({
 
       {/* flex-1 min-h-0: fills remaining space after chips / notices */}
       <div className="flex-1 min-h-0 overflow-hidden">
-        <DndContext sensors={dndSensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+        <DndContext
+          sensors={dndSensors}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+          onDragCancel={() => { setActiveDragId(null); setMoveError(null); }}
+        >
           <Suspense fallback={<div className="h-full flex items-center justify-center"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>}>
             {resolvedView === 'agenda' && (
               <AgendaView

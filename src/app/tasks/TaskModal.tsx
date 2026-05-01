@@ -23,7 +23,9 @@ export function TaskModal({
 }: {
   task?: Task;
   onClose: () => void;
-  onSave: (task: Omit<Task, 'id'> & { listId?: string }) => void;
+  // dueDate may be `null` to signal explicit clearing (server distinguishes
+  // null = clear from undefined = leave untouched).
+  onSave: (task: Omit<Task, 'id' | 'dueDate'> & { dueDate: Date | null; listId?: string }) => void;
   familyMembers: FamilyMember[];
   taskLists?: TaskList[];
   defaultListId?: string | null;
@@ -66,7 +68,9 @@ export function TaskModal({
       category: category.trim() || undefined,
       assignedTo: selectedMember || undefined,
       completed: task?.completed || false,
-      dueDate: combinedDue ?? task?.dueDate,
+      // null = user cleared the field; Date = user set it. Don't fall back to
+      // task?.dueDate or clearing becomes impossible.
+      dueDate: combinedDue ?? null,
       listId: listId || undefined,
     });
   };

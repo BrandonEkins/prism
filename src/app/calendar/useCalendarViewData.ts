@@ -134,7 +134,7 @@ export function useCalendarViewData() {
         case 'day': return subDays(prev, 1);
         case 'week': return subWeeks(prev, 1);
         case 'weekVertical': return subWeeks(prev, 1);
-        case 'multiWeek': return subWeeks(prev, 1);
+        case 'multiWeek': return subWeeks(prev, weekCount);
         case 'month': return subMonths(prev, 1);
         case 'threeMonth': return subMonths(prev, 1);
       }
@@ -148,7 +148,7 @@ export function useCalendarViewData() {
         case 'day': return addDays(prev, 1);
         case 'week': return addWeeks(prev, 1);
         case 'weekVertical': return addWeeks(prev, 1);
-        case 'multiWeek': return addWeeks(prev, 1);
+        case 'multiWeek': return addWeeks(prev, weekCount);
         case 'month': return addMonths(prev, 1);
         case 'threeMonth': return addMonths(prev, 1);
       }

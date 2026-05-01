@@ -16,7 +16,6 @@ import { Badge } from '@/components/ui';
 import type { CalendarEvent } from '@/types/calendar';
 import type { DayBucket } from '@/lib/hooks/useWeekViewData';
 import { useDayDroppable, getMealTime, getChoreTime, getTaskTime, parseTimeOfDay, formatTimeOfDay, type OverlayItemRef } from './cells';
-import { format as fmt } from 'date-fns';
 
 const MEAL_FALLBACK_COLOR = '#10b981';
 const CHORE_FALLBACK_COLOR = '#f59e0b';
@@ -100,7 +99,7 @@ export function AgendaView({
         ? e.startTime <= dayStart && e.endTime > dayStart
         : isSameDay(e.startTime, date)
     );
-    const bucket = bucketsByDate?.get(fmt(date, 'yyyy-MM-dd'));
+    const bucket = bucketsByDate?.get(format(date, 'yyyy-MM-dd'));
     const hasOverlay = bucket && (bucket.meals.length + bucket.chores.length + bucket.tasks.length > 0);
     if (dayEvents.length > 0 || hasOverlay) {
       eventsByDay.push({ date, events: dayEvents, bucket });

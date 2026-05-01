@@ -84,7 +84,10 @@ export function useCalendarWidgetPrefs(gridW: number, gridH: number) {
   );
   const [viewType, setViewType] = useState<WidgetViewType>(readViewPref);
   const [displayMode, setDisplayMode] = useState<'inline' | 'cards'>(
-    () => (typeof window !== 'undefined' && localStorage.getItem('prism-calendar-display-mode') === 'inline') ? 'inline' : 'cards'
+    // Match useCalendarViewData's default: 'cards' only if explicitly set,
+    // else 'inline'. Same localStorage key — divergent defaults caused the
+    // widget and subpage to render differently on first load.
+    () => (typeof window !== 'undefined' && localStorage.getItem('prism-calendar-display-mode') === 'cards') ? 'cards' : 'inline'
   );
   const [hideWeekends, setHideWeekends] = useState<boolean>(
     () => typeof window !== 'undefined' && localStorage.getItem('prism-calendar-hide-weekends') === 'true'

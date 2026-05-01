@@ -54,7 +54,8 @@ export function ChoreModal({
       assignedTo: selectedMember || undefined,
       enabled,
       lastCompleted: chore?.lastCompleted,
-      nextDue: nextDue || chore?.nextDue,
+      // Allow explicit clearing: empty input → null/undefined, not fallback to old value.
+      nextDue: nextDue || undefined,
       nextDueTime: nextDueTime || null,
     });
   };
