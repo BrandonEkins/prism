@@ -6,8 +6,6 @@ import {
   CalendarDays,
   CalendarRange,
   ChevronDown,
-  ChevronsLeft,
-  ChevronsRight,
   Grid3X3,
   LayoutGrid,
   List,
@@ -64,16 +62,16 @@ const OPTIONS: ViewOption[] = [
     apply: (setView) => setView('day'),
   },
   {
-    label: 'Schedule',
-    Icon: Clock,
-    isActive: (v) => v === 'week',
-    apply: (setView) => setView('week'),
-  },
-  {
     label: 'List',
     Icon: List,
     isActive: (v) => v === 'weekVertical',
     apply: (setView) => setView('weekVertical'),
+  },
+  {
+    label: 'Schedule',
+    Icon: Clock,
+    isActive: (v) => v === 'week',
+    apply: (setView) => setView('week'),
   },
   {
     label: '1 Week',
@@ -122,32 +120,26 @@ export function ViewMenu({ viewType, weekCount, onViewChange, onWeekCountChange 
   const active = OPTIONS[activeIndex] ?? OPTIONS[0]!;
   const ActiveIcon = active.Icon;
 
-  // Cycle through OPTIONS with wraparound. Uses double-chevron icons
-  // (ChevronsLeft / ChevronsRight) to stay visually distinct from the
-  // single-chevron < > date-range nav buttons in the toolbar.
+  // Cycle through OPTIONS with wraparound. Up/down arrows instead of left/right
+  // because they map to the dropdown's vertical list and avoid confusion with
+  // the < > date-range nav buttons.
   const cycle = (delta: -1 | 1) => {
     const next = (activeIndex + delta + OPTIONS.length) % OPTIONS.length;
     OPTIONS[next]!.apply(onViewChange, onWeekCountChange);
   };
 
   return (
-    <div className="inline-flex items-center gap-0.5">
-      <Button
-        variant="ghost"
-        size="icon"
-        className="h-8 w-7"
-        aria-label="Previous view"
-        title="Previous view"
-        onClick={() => cycle(-1)}
-      >
-        <ChevronsLeft className="h-4 w-4" />
-      </Button>
+    // Fixed h-9 on the parent + items-stretch + h-full on the trigger and
+    // grid-rows-2 (each row 1fr) on the triangle stack guarantees every
+    // child shares the exact same top AND bottom edge, regardless of any
+    // sub-pixel rounding from individual heights.
+    <div className="inline-flex items-stretch gap-1 h-9">
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
-          <Button variant="outline" size="sm" className="gap-1.5">
-            <ActiveIcon className="h-4 w-4" />
-            {active.label}
-            <ChevronDown className="h-3.5 w-3.5 opacity-60" />
+          <Button variant="outline" size="sm" className="gap-1.5 w-32 h-full justify-center">
+            <ActiveIcon className="h-4 w-4 shrink-0" />
+            <span className="truncate">{active.label}</span>
+            <ChevronDown className="h-3.5 w-3.5 opacity-60 shrink-0" />
           </Button>
         </PopoverTrigger>
         <PopoverContent align="end" className="w-44 p-1">
@@ -175,16 +167,26 @@ export function ViewMenu({ viewType, weekCount, onViewChange, onWeekCountChange 
           })}
         </PopoverContent>
       </Popover>
-      <Button
-        variant="ghost"
-        size="icon"
-        className="h-8 w-7"
-        aria-label="Next view"
-        title="Next view"
-        onClick={() => cycle(1)}
-      >
-        <ChevronsRight className="h-4 w-4" />
-      </Button>
+      <div className="grid grid-rows-2 gap-0.5 w-7 h-full">
+        <button
+          type="button"
+          aria-label="Previous view"
+          title="Previous view"
+          onClick={() => cycle(-1)}
+          className="rounded border border-input hover:bg-accent inline-flex items-center justify-center text-foreground/80 hover:text-foreground transition-colors min-h-0"
+        >
+          <span className="block text-[10px] leading-none">▲</span>
+        </button>
+        <button
+          type="button"
+          aria-label="Next view"
+          title="Next view"
+          onClick={() => cycle(1)}
+          className="rounded border border-input hover:bg-accent inline-flex items-center justify-center text-foreground/80 hover:text-foreground transition-colors min-h-0"
+        >
+          <span className="block text-[10px] leading-none">▼</span>
+        </button>
+      </div>
     </div>
   );
 }

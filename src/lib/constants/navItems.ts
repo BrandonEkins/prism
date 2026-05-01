@@ -1,7 +1,6 @@
 import {
   Home,
   Calendar,
-  CalendarDays,
   CheckSquare,
   ListChecks,
   Trophy,
@@ -26,7 +25,6 @@ export interface NavItem {
 /** All navigation items in canonical order. */
 export const ALL_NAV_ITEMS: NavItem[] = [
   { label: 'Dashboard', href: '/', icon: Home },
-  { label: 'Week', href: '/week', icon: CalendarDays },
   { label: 'Calendar', href: '/calendar', icon: Calendar },
   { label: 'Tasks', href: '/tasks', icon: CheckSquare },
   { label: 'Chores', href: '/chores', icon: ListChecks },

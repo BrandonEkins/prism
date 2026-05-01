@@ -30,6 +30,12 @@ interface ViewOptionsMenuProps {
   /** Whether display mode toggle is meaningful (everything except 3-month). */
   displayApplicable: boolean;
 
+  // Optional: Merge calendars toggle (only meaningful in day / list views).
+  // When `mergeApplicable` is false the row is hidden.
+  mergedView?: boolean;
+  onMergedViewChange?: (value: boolean) => void;
+  mergeApplicable?: boolean;
+
   // Overlay group
   overlays: OverlayFlags;
   onOverlaysChange: (next: OverlayFlags) => void;
@@ -38,6 +44,10 @@ interface ViewOptionsMenuProps {
 
   /** Reset every option back to default. */
   onReset: () => void;
+
+  /** Override the trigger button height (e.g. "h-8" for compact widget
+      toolbars). Defaults to h-9 to match page-level toolbar baseline. */
+  triggerClassName?: string;
 }
 
 const OVERLAY_ROWS: Array<{ key: keyof OverlayFlags; label: string; Icon: typeof Calendar }> = [
@@ -100,10 +110,14 @@ export function ViewOptionsMenu({
   weekendsApplicable,
   notesApplicable,
   displayApplicable,
+  mergedView = false,
+  onMergedViewChange,
+  mergeApplicable = false,
   overlays,
   onOverlaysChange,
   showOverlayRows,
   onReset,
+  triggerClassName,
 }: ViewOptionsMenuProps) {
   // Count toggles that are non-default so we can show a badge on the trigger.
   const nonDefaultCount =
@@ -128,7 +142,7 @@ export function ViewOptionsMenu({
           size="sm"
           aria-label="View options"
           title="View options"
-          className="gap-1.5"
+          className={cn('gap-1.5 h-9', triggerClassName)}
         >
           <Settings2 className={cn('h-4 w-4', nonDefaultCount > 0 && 'text-primary')} />
           <span className="hidden sm:inline">View</span>
@@ -205,6 +219,13 @@ export function ViewOptionsMenu({
                   checked={showNotes}
                   onChange={onShowNotesChange}
                   label="Notes column"
+                />
+              )}
+              {mergeApplicable && onMergedViewChange && (
+                <CheckRow
+                  checked={mergedView}
+                  onChange={onMergedViewChange}
+                  label="Merge calendars"
                 />
               )}
             </div>

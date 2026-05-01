@@ -86,26 +86,29 @@ export function MultiWeekView({
   }
   const colCount = hideWeekends ? 5 : 7;
 
-  // In inline mode, rows size to content (events list scrolls). In cards mode,
-  // rows are equal-height (`1fr`) so dynamic capacity has a meaningful target
-  // height to measure.
-  const rowSizing = cards ? '1fr' : 'auto';
+  // In inline mode, rows size to content (events list scrolls). In cards mode
+  // with multiple weeks, rows are equal-height (`1fr`) so dynamic capacity has
+  // a meaningful target height to measure. For 1W in cards mode the row sizes
+  // to content so the grid hugs the day's events instead of stretching to fill
+  // the screen — matches the auto-height feel of the old /week page.
+  const singleWeek = weekCount === 1;
+  const rowSizing = cards && !singleWeek ? '1fr' : 'auto';
 
   return (
-    <div className="h-full flex flex-col overflow-auto p-0.5">
-      {cards && <CardHeightProbe size={compact ? 'sm' : 'md'} onMeasure={setCardHeight} />}
+    <div className={cn('flex flex-col overflow-auto p-0.5', singleWeek ? 'min-h-0' : 'h-full')}>
+      {cards && !singleWeek && <CardHeightProbe size={compact ? 'sm' : 'md'} onMeasure={setCardHeight} />}
 
       {/* Week rows — each cell labels its own day, so no top day-name strip.
           Outer p-0.5 keeps the seasonal-accent ring on row 1 / col 1 / col 7
           from being clipped by the parent's overflow-auto. */}
       <div
-        className="flex-1 grid gap-1 min-h-0"
+        className={cn('grid gap-1 min-h-0', !singleWeek && 'flex-1')}
         style={{ gridTemplateRows: `repeat(${weekCount}, ${rowSizing})` }}
       >
         {weeks.map((week, wIdx) => (
           <div
             key={wIdx}
-            className={cn('grid gap-1', cards && 'min-h-0 h-full')}
+            className={cn('grid gap-1', cards && !singleWeek && 'min-h-0 h-full')}
             style={{ gridTemplateColumns: `repeat(${colCount}, minmax(0, 1fr))` }}
           >
             {week.map((date, dIdx) => (
@@ -123,6 +126,7 @@ export function MultiWeekView({
                 cardHeight={cardHeight}
                 mealColor={mealColor}
                 onItemClick={onItemClick}
+                showAll={singleWeek}
               />
             ))}
           </div>
@@ -145,6 +149,7 @@ function DayCell({
   cardHeight,
   mealColor,
   onItemClick,
+  showAll = false,
 }: {
   date: Date;
   events: CalendarEvent[];
@@ -158,6 +163,10 @@ function DayCell({
   cardHeight: number | undefined;
   mealColor?: string;
   onItemClick?: (ref: OverlayItemRef) => void;
+  /** When true, bypass capacity-based clipping and render every event card.
+      Used in 1W mode where vertical space is generous and the user expects
+      the row to grow to accommodate the day with the most events. */
+  showAll?: boolean;
 }) {
   const cards = displayMode === 'cards';
   const fallback = compact ? FALLBACK_VISIBLE_CARDS_COMPACT : FALLBACK_VISIBLE_CARDS;
@@ -192,7 +201,7 @@ function DayCell({
   });
 
   let visibleCount: number;
-  if (!cards) {
+  if (!cards || showAll) {
     visibleCount = sorted.length;
   } else {
     const noOverflowFit = fitWithoutOverflow ?? fallback;
@@ -228,7 +237,10 @@ function DayCell({
       data-droppable-day={cards && enableDnd ? droppable.droppableId : undefined}
       className={cn(
         'flex flex-col rounded-md',
-        cards && 'min-h-0 h-full',
+        // In 1W mode (showAll=true) the column sizes to its content. In
+        // 2/3/4W modes the cell stretches to fill the equal-height row so
+        // the capacity probe has a real target height.
+        cards && (showAll ? 'min-h-0' : 'min-h-0 h-full'),
         isPast && !cellBgStyle && 'opacity-50',
         // Cards mode: every cell gets a subtle border, today gets the month's
         // seasonal-accent ring (lavender in April, etc.).

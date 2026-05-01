@@ -45,7 +45,7 @@ import { WeekItemCard } from '@/components/calendar/cells';
 import { useIsMobile, useSwipeNavigation } from '@/lib/hooks';
 import { useAuth } from '@/components/providers';
 import { useWeekStartsOn } from '@/lib/hooks/useWeekStartsOn';
-import { useWeekMutations } from '@/app/week/useWeekMutations';
+import { useWeekMutations } from '@/lib/hooks/useWeekMutations';
 import { ViewMenu } from './ViewMenu';
 import { ViewOptionsMenu } from './ViewOptionsMenu';
 import { useChores } from '@/lib/hooks/useChores';
@@ -380,12 +380,12 @@ export function CalendarView() {
               </>
             ) : (
               <>
-                <Button variant="outline" size="sm" onClick={goToToday}>Today</Button>
+                <Button variant="outline" size="sm" onClick={goToToday} className="h-9">Today</Button>
                 <div className="flex items-center">
-                  <Button variant="ghost" size="icon" onClick={goToPrevious} aria-label="Previous">
+                  <Button variant="ghost" size="icon" onClick={goToPrevious} aria-label="Previous" className="h-9 w-9">
                     <ChevronLeft className="h-5 w-5" />
                   </Button>
-                  <Button variant="ghost" size="icon" onClick={goToNext} aria-label="Next">
+                  <Button variant="ghost" size="icon" onClick={goToNext} aria-label="Next" className="h-9 w-9">
                     <ChevronRight className="h-5 w-5" />
                   </Button>
                 </div>
@@ -556,6 +556,9 @@ export function CalendarView() {
                 />
               )}
               {viewType === 'multiWeek' && (
+                /* All weekCounts (1/2/3/4) use MultiWeekView so the grid
+                   compresses to fit the page and overflows into popovers
+                   instead of growing taller than the viewport. */
                 <MultiWeekView currentDate={currentDate} events={visibleEvents} onEventClick={setSelectedEvent} weekCount={weekCount} bordered={weeksBordered} displayMode={displayMode}
                   bucketsByDate={overlaysActive ? filteredBucketsByDate : undefined}
                   enableDnd={overlaysActive}

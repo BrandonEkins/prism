@@ -285,7 +285,7 @@ export function WeekView({
           {/* Sticky day headers */}
           <div className={cn('flex sticky top-0 z-20', !transparentMode && 'bg-card')}>
             {/* Time column spacer with toggle button */}
-            <div className="w-14 shrink-0 flex items-center justify-center">
+            <div className="w-16 shrink-0 flex items-center justify-center">
               <button
                 onClick={toggleHidden}
                 className={cn(
@@ -399,7 +399,7 @@ export function WeekView({
           {/* Hourly grid — flex-1 fills remaining space; 1fr rows stretch when hours are hidden */}
           <div className="flex-1 flex">
             {/* Time column */}
-            <div className="w-14 shrink-0 h-full grid" style={{ gridTemplateRows: `repeat(${hours.length}, 1fr)` }}>
+            <div className="w-16 shrink-0 h-full grid" style={{ gridTemplateRows: `repeat(${hours.length}, 1fr)` }}>
               {hours.map((hour) => (
                 <div key={hour} className={cn('pl-1 pr-1 text-right text-xs text-muted-foreground flex items-start pt-0.5 min-h-0', bordered && 'border-t border-border')}>
                   {format(new Date().setHours(hour, 0), 'h a')}

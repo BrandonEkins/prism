@@ -88,11 +88,11 @@ export function WeekVerticalView({
       {/* Group column headers (no background bar to match day view) */}
       {(calendarGroups.length > 0 || showNotes) && (
         <div className="sticky top-0 z-10 flex">
-          <div className="w-20 md:w-28 shrink-0" />
+          <div className="w-16 shrink-0" />
           {displayGroups.map((group) => (
-            <div key={group.id} className="flex-1 min-w-0 px-1 py-1.5">
+            <div key={group.id} className="flex-1 min-w-0 px-1 py-1">
               <div
-                className="text-xs font-medium text-center py-0.5 rounded"
+                className="text-sm font-medium text-center py-1 rounded"
                 style={{ backgroundColor: group.color, color: '#fff' }}
               >
                 {group.name}
@@ -100,9 +100,9 @@ export function WeekVerticalView({
             </div>
           ))}
           {showNotes && (
-            <div className="w-2/5 min-w-[180px] border-l border-border px-1 py-1.5">
+            <div className="w-2/5 min-w-[180px] border-l border-border px-1 py-1">
               <div
-                className="text-xs font-medium text-center py-0.5 rounded text-white"
+                className="text-sm font-medium text-center py-1 rounded text-white"
                 style={{ backgroundColor: '#6366f1' }}
               >
                 Notes
@@ -207,7 +207,7 @@ function WeekListDayRow({
     >
       <div
         className={cn(
-          'w-20 md:w-28 shrink-0 p-2 md:p-3 flex flex-col items-center justify-start',
+          'w-16 shrink-0 p-2 flex flex-col items-center justify-start',
           bordered && 'border-r border-border',
           isPast && !isCurrentDay && 'bg-muted/15',
           isCurrentDay && 'bg-primary text-primary-foreground',

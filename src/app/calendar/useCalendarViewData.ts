@@ -37,7 +37,17 @@ export function useCalendarViewData() {
   useEffect(() => {
     localStorage.setItem('prism-calendar-view-type', viewType);
   }, [viewType]);
-  const [weekCount, setWeekCount] = useState<MultiWeekCount>(2);
+  const [weekCount, setWeekCount] = useState<MultiWeekCount>(() => {
+    if (typeof window !== 'undefined') {
+      const raw = localStorage.getItem('prism-calendar-week-count');
+      const n = raw ? Number(raw) : NaN;
+      if (n === 1 || n === 2 || n === 3 || n === 4) return n as MultiWeekCount;
+    }
+    return 2;
+  });
+  useEffect(() => {
+    localStorage.setItem('prism-calendar-week-count', String(weekCount));
+  }, [weekCount]);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [showAddEvent, setShowAddEvent] = useState(false);
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
