@@ -54,8 +54,9 @@ import { resetAll } from './helpers/reset';
  * DB sidesteps the issue and keeps the parent's name out of the test source.
  */
 function getSeededParentName(): string {
+  const dbName = process.env.E2E_DB_NAME || 'prism';
   const out = execSync(
-    `docker exec prism-db psql -U prism -d prism -At -c "SELECT name FROM users WHERE role = 'parent' ORDER BY created_at LIMIT 1"`,
+    `docker exec prism-db psql -U prism -d ${dbName} -At -c "SELECT name FROM users WHERE role = 'parent' ORDER BY created_at LIMIT 1"`,
     { encoding: 'utf-8' },
   ).trim();
   if (!out) throw new Error('No seeded parent in DB — did seeds run?');
