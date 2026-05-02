@@ -409,7 +409,7 @@ describe('hourly forecast', () => {
     const { fetchWeatherData } = await import('../pirateweather');
     const result = await fetchWeatherData();
 
-    const times = result.hourly.map((h) => h.time.getTime());
+    const times = result.hourly!.map((h) => h.time.getTime());
     expect(times).not.toContain(tooOld * 1000);
     expect(times).toContain(recentStart * 1000);
     expect(times).toContain(future12h * 1000);
@@ -431,7 +431,7 @@ describe('hourly forecast', () => {
     const { fetchWeatherData } = await import('../pirateweather');
     const result = await fetchWeatherData();
 
-    const active = result.hourly.find((h) => h.time.getTime() === activeSlot * 1000);
+    const active = result.hourly!.find((h) => h.time.getTime() === activeSlot * 1000);
     expect(active?.condition).toBe('rainy');
     expect(active?.temp).toBe(58);
     expect(active?.precipIntensity).toBe(0.05);
@@ -448,7 +448,7 @@ describe('hourly forecast', () => {
     const { fetchWeatherData } = await import('../pirateweather');
     const result = await fetchWeatherData();
 
-    const future = result.hourly.find((h) => h.time.getTime() === futureSlot * 1000);
+    const future = result.hourly!.find((h) => h.time.getTime() === futureSlot * 1000);
     expect(future?.condition).toBe('sunny');    // unchanged
     expect(future?.temp).toBe(72);
   });
@@ -461,7 +461,7 @@ describe('hourly forecast', () => {
     const { fetchWeatherData } = await import('../pirateweather');
     const result = await fetchWeatherData();
 
-    const h = result.hourly[0];
+    const h = result.hourly![0];
     expect(h?.precipProbability).toBe(40);
     expect(h?.precipIntensity).toBe(0.02);
   });
@@ -554,7 +554,9 @@ describe('error handling', () => {
   });
 
   it('wraps network errors with a descriptive message', async () => {
-    jest.spyOn(global, 'fetch' as never).mockRejectedValue(new Error('ECONNREFUSED'));
+    jest.spyOn(global, 'fetch' as never).mockImplementation(
+      (() => Promise.reject(new Error('ECONNREFUSED'))) as never
+    );
     jest.resetModules();
     const { fetchWeatherData } = await import('../pirateweather');
     await expect(fetchWeatherData()).rejects.toThrow(/Pirate Weather network error: ECONNREFUSED/);

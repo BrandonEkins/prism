@@ -6,6 +6,8 @@
  * derivation from the local dateKey, hourly slicing, and error paths.
  */
 
+export {};
+
 jest.mock('@/components/widgets/WeatherWidget', () => ({}), { virtual: true });
 
 const originalEnv = process.env;
@@ -435,7 +437,7 @@ describe('fetchForecast — hourly slice', () => {
       .mockResolvedValueOnce({ ok: true, json: async () => forecastResponse(allItems) } as never); // forecast
 
     const result = await fetchWeatherData();
-    const hourlyTimes = result.hourly.map((h) => h.time.getTime() / 1000);
+    const hourlyTimes = result.hourly!.map((h) => h.time.getTime() / 1000);
 
     expect(hourlyTimes).not.toContain(tooOld);
     expect(hourlyTimes).toContain(justIn);
