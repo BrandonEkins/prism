@@ -88,7 +88,7 @@ export function useWeekViewData({
   const { chores, loading: choresLoading, error: choresError, refresh: refreshChores } =
     useChores({ enabled: true });
   const { tasks, loading: tasksLoading, error: tasksError, refresh: refreshTasks } =
-    useTasks({ showCompleted: false });
+    useTasks({ showCompleted: true });
   const { data: weather } = useWeather();
 
   const days = useMemo<DayBucket[]>(() => {

@@ -122,7 +122,11 @@ export function useDayBucketsForRange({
     loading: tasksLoading,
     error: tasksError,
     refresh: refreshTasks,
-  } = useTasks({ showCompleted: false, enabled: overlays.tasks });
+  // showCompleted: true — completed tasks render muted/strikethrough via
+  // OverlayItemsCell's muted={task.completed} → WeekItemCard styling, matching
+  // how cooked meals stay visible. Hiding them outright was a usability gap
+  // (a task you completed today disappears entirely from the calendar).
+  } = useTasks({ showCompleted: true, enabled: overlays.tasks });
 
   const { data: weather } = useWeather();
 
