@@ -343,21 +343,29 @@ function DayHeader({
   days: ForecastDay[];
   useCelsius: boolean;
 }) {
-  const globalMin = Math.min(...days.map((d) => d.low));
-  const globalMax = Math.max(...days.map((d) => d.high));
-  const span = globalMax - globalMin || 1;
-
   // Use local date comparison — server now groups by location-local date,
   // and the browser is assumed to be in the same timezone as the location.
   const now = new Date();
   const todayLocalStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+  // Drop any entries whose local date has already passed — guards against
+  // stale cache responses serving yesterday's data after midnight.
+  const validDays = days.filter((day) => {
+    const d = new Date(day.date);
+    const dayLocalStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    return dayLocalStr >= todayLocalStr;
+  });
+
+  const globalMin = Math.min(...validDays.map((d) => d.low));
+  const globalMax = Math.max(...validDays.map((d) => d.high));
+  const span = globalMax - globalMin || 1;
 
   const fmt = (f: number) =>
     useCelsius ? Math.round((f - 32) * 5 / 9) : Math.round(f);
 
   return (
     <div className="flex flex-col mt-1">
-      {days.map((day, i) => {
+      {validDays.map((day, i) => {
         const d = new Date(day.date);
         const dayLocalStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
         const isToday = dayLocalStr === todayLocalStr;
