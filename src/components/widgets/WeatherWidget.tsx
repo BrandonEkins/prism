@@ -206,6 +206,15 @@ export const WeatherWidget = React.memo(function WeatherWidget({
   // Clamp forecast days: default 7, max 7, min 1
   const resolvedDays = forecastDays ?? Math.min(7, Math.max(1, weatherData.forecast.length));
 
+  // Pre-filter to today-or-future so the label count matches what renders.
+  const now = new Date();
+  const todayLocalStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  const visibleForecast = weatherData.forecast.slice(0, resolvedDays).filter((day) => {
+    const d = new Date(day.date);
+    const s = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    return s >= todayLocalStr;
+  });
+
   const hasDays = weatherData.forecast.length > 0;
 
   // Show precipitation chart when rain is imminent (any minute > 0.01 mm/hr) and data is available
@@ -244,10 +253,10 @@ export const WeatherWidget = React.memo(function WeatherWidget({
             {/* Multi-day summary */}
             <div>
               <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                {resolvedDays}-Day Forecast
+                {visibleForecast.length}-Day Forecast
               </span>
               <DayHeader
-                days={weatherData.forecast.slice(0, resolvedDays)}
+                days={visibleForecast}
                 useCelsius={useCelsius}
               />
             </div>
@@ -343,21 +352,11 @@ function DayHeader({
   days: ForecastDay[];
   useCelsius: boolean;
 }) {
-  // Use local date comparison — server now groups by location-local date,
-  // and the browser is assumed to be in the same timezone as the location.
   const now = new Date();
   const todayLocalStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
-  // Drop any entries whose local date has already passed — guards against
-  // stale cache responses serving yesterday's data after midnight.
-  const validDays = days.filter((day) => {
-    const d = new Date(day.date);
-    const dayLocalStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-    return dayLocalStr >= todayLocalStr;
-  });
-
-  const globalMin = Math.min(...validDays.map((d) => d.low));
-  const globalMax = Math.max(...validDays.map((d) => d.high));
+  const globalMin = Math.min(...days.map((d) => d.low));
+  const globalMax = Math.max(...days.map((d) => d.high));
   const span = globalMax - globalMin || 1;
 
   const fmt = (f: number) =>
@@ -365,7 +364,7 @@ function DayHeader({
 
   return (
     <div className="flex flex-col mt-1">
-      {validDays.map((day, i) => {
+      {days.map((day, i) => {
         const d = new Date(day.date);
         const dayLocalStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
         const isToday = dayLocalStr === todayLocalStr;
