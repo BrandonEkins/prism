@@ -169,6 +169,54 @@ describe('openmeteo.fetchWeatherData', () => {
     await expect(fetchWeatherData()).rejects.toThrow(/Open-Meteo network error: ECONNREFUSED/);
   });
 
+  it('skips stale past-day entries that arrive in a cached response', async () => {
+    // Simulate a response cached just before midnight: the first daily entry
+    // is yesterday's date in the response timezone. Today's local date in
+    // America/Chicago should drop that first entry from the forecast.
+    const todayLocal = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Chicago',
+    }).format(new Date());
+    const todayDate = new Date(`${todayLocal}T12:00:00`);
+    const yesterday = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Chicago' })
+      .format(new Date(todayDate.getTime() - 24 * 60 * 60 * 1000));
+    const tomorrow = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Chicago' })
+      .format(new Date(todayDate.getTime() + 24 * 60 * 60 * 1000));
+
+    const stale = {
+      latitude: 0,
+      longitude: 0,
+      timezone: 'America/Chicago',
+      current: {
+        time: `${todayLocal}T10:00`,
+        temperature_2m: 70, apparent_temperature: 70, relative_humidity_2m: 50,
+        wind_speed_10m: 5, weather_code: 0, precipitation: 0,
+      },
+      hourly: { time: [], temperature_2m: [], precipitation_probability: [], precipitation: [], weather_code: [] },
+      daily: {
+        time: [yesterday, todayLocal, tomorrow],
+        temperature_2m_max: [50, 75, 76],
+        temperature_2m_min: [40, 60, 61],
+        weather_code: [3, 0, 1],
+        precipitation_probability_max: [80, 0, 10],
+        sunrise: [`${yesterday}T06:00`, `${todayLocal}T06:00`, `${tomorrow}T06:00`],
+        sunset:  [`${yesterday}T19:00`, `${todayLocal}T19:00`, `${tomorrow}T19:00`],
+      },
+    };
+
+    jest.spyOn(global, 'fetch' as never).mockResolvedValue({
+      ok: true,
+      json: async () => stale,
+    } as never);
+
+    const { fetchWeatherData } = await import('../openmeteo');
+    const result = await fetchWeatherData({ lat: 41.8, lon: -87.6 });
+
+    // Yesterday's high (50°F) and condition (overcast=3) should not appear.
+    expect(result.forecast.length).toBe(2);
+    expect(result.forecast[0]?.high).toBe(75);
+    expect(result.forecast[0]?.condition).not.toBe('cloudy');
+  });
+
   it('does not require any API key (zero env-var configuration)', async () => {
     // Strip any provider key env vars to prove openmeteo doesn't read them.
     const stripped = { ...process.env };
