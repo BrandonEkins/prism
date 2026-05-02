@@ -4,6 +4,9 @@ All notable changes to Prism are documented in this file.
 
 ## [Unreleased]
 
+### Added
+- **Weather — Open-Meteo provider, now the default**: New `WEATHER_PROVIDER=meteo` (https://open-meteo.com), no API key required, free with generous rate limits. Fresh installs work out of the box without signing up at a third-party weather service. Existing `pirate` and `openweather` providers remain for users who want minutely precip or already have keys configured. Tests cover lat/lon plumbing, env fallback, TZ-aware day labels, network error wrapping, and the no-API-key path.
+
 ## [1.7.0] – 2026-05-02
 
 > Major calendar refactor (widget toolbar parity with the subpage, drag-and-drop in cards mode, ten view modes including 1W–4W and Schedule, click-to-edit on widget items) and a multi-provider weather system. The `/week` page is retired — the calendar subpage is now a strict superset.
