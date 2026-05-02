@@ -4,6 +4,16 @@ All notable changes to Prism are documented in this file.
 
 ## [Unreleased]
 
+## [1.7.2] – 2026-05-02
+
+> Same-day patch follow-up: forecast past-day filter across all weather providers + a developer-experience fix for `npx jest`.
+
+### Bug Fixes
+- **Weather — forecast skips stale past-day entries (OWM, Pirate, Open-Meteo)**: When a cached weather response was generated before local midnight, the 7-day forecast would open with the **previous** local day (e.g. "Thu" on a Friday) until the cache TTL expired. Affected all three providers via three different mechanisms: OWM 3-hour intervals starting on non-zero UTC boundaries, Pirate Weather's pre-aggregated `daily.data[0]` carrying yesterday, and Open-Meteo's `daily.time[0]` doing the same. Each provider now filters past-day buckets server-side, and `WeatherWidget` adds a defense-in-depth client-side filter so a still-warm cache can't leak yesterday into the UI. The "N-Day Forecast" heading now matches the actual visible day count. Thanks to **@iann** for the diagnosis and the OWM/Pirate fix in PR #27 (merged via #31).
+
+### Internal
+- **Local jest no longer fails on integration tests**: `src/lib/db/__tests__/integration.test.ts` now self-skips when `E2E_HAS_TEST_DB !== '1'` so `npx jest` runs clean on a dev machine that doesn't expose Postgres on localhost:5433. CI keeps the same shape (no real DB → suite skips → unit-tests job stays green).
+
 ## [1.7.1] – 2026-05-02
 
 > Patch follow-up to v1.7.0. Three small fixes surfaced by post-release verification: a stale-cache trap when switching weather providers, three tables missing from the fresh-install schema snapshot, and an e2e-test chicken-and-egg around the public `/api/family` response.
