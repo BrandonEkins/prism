@@ -55,9 +55,14 @@ const mockTimeline = jest.mocked(timeline);
 // Test data helpers
 // ---------------------------------------------------------------------------
 
+// Anchor to noon tomorrow so the past-day filter never drops fixture dates.
+const NOON_MS = new Date().setHours(12, 0, 0, 0);
+const TOMORROW_NOON = new Date(NOON_MS + 86_400_000);
+const DAY_MS = 86_400_000;
+
 function makeForecastDay(overrides: Partial<ForecastDay> = {}): ForecastDay {
   return {
-    date: new Date('2026-04-07T00:00:00.000Z'),
+    date: TOMORROW_NOON,
     dayName: 'Tue',
     high: 72,
     low: 55,
@@ -94,8 +99,10 @@ function makeHourlyForecast(
 function makeWeatherData(overrides: Partial<WeatherData> = {}): WeatherData {
   const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
+  // Start from tomorrow so no entry lands on "today" (which renders as 'TODAY'
+  // rather than the dayName, breaking tests that check for specific day labels).
   const forecast: ForecastDay[] = DAY_NAMES.slice(0, 5).map((dayName, i) => ({
-    date: new Date(Date.UTC(2026, 3, 7 + i)),
+    date: new Date(NOON_MS + (1 + i) * DAY_MS),
     dayName,
     high: 70 + i,
     low:  50 + i,
@@ -330,8 +337,8 @@ describe('day summary header', () => {
     const data = makeWeatherData({
       forecast: [
         makeForecastDay({ dayName: 'Mon' }),
-        makeForecastDay({ dayName: 'Tue', date: new Date(Date.UTC(2026, 3, 8)) }),
-        makeForecastDay({ dayName: 'Wed', date: new Date(Date.UTC(2026, 3, 9)) }),
+        makeForecastDay({ dayName: 'Tue', date: new Date(NOON_MS + 2 * DAY_MS) }),
+        makeForecastDay({ dayName: 'Wed', date: new Date(NOON_MS + 3 * DAY_MS) }),
       ],
     });
     render(<WeatherWidget data={data} forecastDays={3} />);
@@ -417,13 +424,13 @@ describe('forecastDays prop', () => {
     const data = makeWeatherData({
       forecast: [
         makeForecastDay({ dayName: 'Mon' }),
-        makeForecastDay({ dayName: 'Tue', date: new Date(Date.UTC(2026, 3, 8)) }),
+        makeForecastDay({ dayName: 'Tue', date: new Date(NOON_MS + 2 * DAY_MS) }),
       ],
     });
     render(<WeatherWidget data={data} forecastDays={5} />);
 
-    // Label reflects the requested prop
-    expect(screen.queryByText('5-Day Forecast')).not.toBeNull();
+    // Label reflects actual visible days, not the requested prop
+    expect(screen.queryByText('2-Day Forecast')).not.toBeNull();
     // Header shows only the 2 days that exist
     expect(screen.queryByText('MON')).not.toBeNull();
     expect(screen.queryByText('TUE')).not.toBeNull();
