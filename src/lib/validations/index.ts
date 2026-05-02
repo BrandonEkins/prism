@@ -69,6 +69,10 @@ export const createChoreSchema = z.object({
   pointValue: z.number().int().min(0).max(1000).optional().default(0),
   requiresApproval: z.boolean().optional().default(false),
   createdBy: uuidSchema.optional(),
+  // Optional initial due date/time. When omitted, server computes nextDue
+  // from frequency.
+  nextDue: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format (YYYY-MM-DD)').nullable().optional(),
+  nextDueTime: z.string().regex(/^\d{2}:\d{2}$/, 'Invalid time format (HH:mm)').nullable().optional(),
 });
 
 export const updateChoreSchema = createChoreSchema.partial().extend({
@@ -128,6 +132,8 @@ export const createMealSchema = z.object({
   weekOf: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format (YYYY-MM-DD)'),
   dayOfWeek: z.enum(DAYS_OF_WEEK),
   mealType: z.enum(['breakfast', 'lunch', 'dinner', 'snack']),
+  // HH:mm time-of-day for time-grid placement; nullable to allow clearing.
+  mealTime: z.string().regex(/^\d{2}:\d{2}$/, 'Invalid time format (HH:mm)').nullable().optional(),
   source: z.enum(['internal', 'external']).optional().default('internal'),
   sourceId: z.string().max(255).optional(),
   createdBy: uuidSchema.optional(),
