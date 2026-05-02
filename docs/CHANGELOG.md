@@ -4,6 +4,45 @@ All notable changes to Prism are documented in this file.
 
 ## [Unreleased]
 
+## [1.7.0] – 2026-05-02
+
+> Major calendar refactor (widget toolbar parity with the subpage, drag-and-drop in cards mode, ten view modes including 1W–4W and Schedule, click-to-edit on widget items) and a multi-provider weather system. The `/week` page is retired — the calendar subpage is now a strict superset.
+
+### Added
+- **Calendar — drag-and-drop everywhere**: Drag meals, chores, tasks, and events between days in cards mode across all calendar views (Day, List, Week, 1W–4W, Month, 3 Months, Agenda) and inside the dashboard CalendarWidget. Uses a 5px PointerSensor activation distance so drag and click-to-edit coexist on the same card. Drop targets in every cell via `DroppableOverlayCell`; `moveError` surfaces inline if the API rejects the move.
+- **Calendar — click-to-edit from the widget**: Tasks, Chores, and Meals widget items open the same edit modals as the calendar subpage. Modals are lazy-loaded via `React.lazy` + `Suspense` so the dashboard's first paint isn't taxed.
+- **Calendar — cards display mode**: New per-day card view (alongside the existing inline list view) renders meals at top, events in the middle, chores+tasks at bottom, with a dynamic per-cell capacity probe (`useCardCapacity`) that respects the current font scale and viewport. Overflow folds into a "+N more" popover so nothing is silently clipped. Toggle in the View Options gear; persists per surface (subpage and widget).
+- **Calendar — view modes**: Subpage and widget now expose Agenda, Day, List, Schedule (week vertical), 1W, 2W, 3W, 4W, Month, and 3 Months. View dropdown gains stacked ▲▼ triangles for one-click cycling. Multi-week navigation now advances/retreats by `weekCount` weeks (was 1).
+- **Calendar — view options**: Hide weekends (multi-week views), merge calendars into one column, show notes column (Day/Schedule), and overlay toggles for events/meals/chores/tasks. Settings persist to localStorage and the View Options trigger shows a badge when any toggle is non-default.
+- **Calendar — meal/chore/task overlays**: Cards mode renders these alongside events on every view; bucket data comes from a shared `useDayBucketsForRange` so the subpage and widget see the same data with the same TZ handling.
+- **Weather — multi-provider system**: `WEATHER_PROVIDER` env var (`pirate` | `openweather`) selects the active provider via a factory in `src/lib/integrations/weather.ts`. `LocationParam` (string display name OR `{lat, lon}`) is the provider-neutral input.
+- **Weather — Pirate Weather** (Dark Sky-compatible): sunrise/sunset arc, minutely precipitation forecast, hourly timeline rendered via `merry-timeline`. New `PIRATE_WEATHER_API_KEY` and `WEATHER_LAT`/`WEATHER_LON` env vars (see `.env.example`). Falls back to OpenWeatherMap if not configured. Thanks to **@iann** for the original PR.
+
+### Improved
+- **Calendar widget — toolbar parity**: Layout now mirrors the subpage: Today | < > | View dropdown | View Options gear | Add Event. Today button gets explicit contrast classes for transparent vs normal mode (no more white-on-white). Calendar pill chips, view-mode persistence, and notes column all match.
+- **Calendar — TZ correctness**: Forecast day-of-week labels now use `Intl.DateTimeFormat` keyed off the response's IANA timezone (was `getUTCDay()`, which rolled past midnight for late-evening users). Chore overdue stripes parse `nextDue` (a YYYY-MM-DD DATE column) as a local date instead of UTC, so today's chore isn't flagged overdue in negative-UTC zones. Same fix applied in `DayColumn`, `useDayBucketsForRange`, and the drag preview.
+- **Calendar — month view bucket range**: CalendarWidget month view now spans the full 6-week rendered grid (start-of-week containing month start through end-of-week containing month end), so overlay items on leading/trailing days from neighboring months are no longer missing.
+- **Calendar — meal sort order**: Aligned across `useDayBucketsForRange`, `useWeekViewData`, and CalendarView's `sortMealsByType` to chronological order (breakfast → lunch → snack → dinner), matching `MEAL_TIME_DEFAULTS` in `cells/itemTime.ts`. Previously the widget rendered a 3pm snack below a 6pm dinner.
+
+### Bug Fixes
+- **Calendar drag — task time-of-day preserved**: `moveTask` now accepts the original `dueDate` and preserves its hour/minute on the target date instead of hardcoding 23:59:59 (a 9am task no longer becomes 11:59pm after drag).
+- **Calendar drag — multi-week capacity**: `MultiWeekView` cards-mode capacity now reserves space for the always-rendered overlay rows (meals at top, chores+tasks at bottom) in BOTH overflow branches via `useCardCapacity({ headerHeight, popoverHeight })`. Previously the no-overflow branch ignored overlay rows and dense days silently clipped chores/tasks with no `+N more` indicator.
+- **ChoreModal / TaskModal — clearable due dates**: Both modals now allow explicitly clearing a previously-set due date. `ChoreModal` no longer falls back to `chore?.nextDue` when the input is empty; `TaskModal`'s `onSave` widens `dueDate` to `Date | null` and the API consumers (TasksView, CalendarView, Dashboard) forward `null` so the server's clear branch fires.
+- **POST /api/meals — `mealTime` persisted**: `mealTime` field was destructured-then-not-inserted on creation, so meal time-of-day silently dropped on first save. Now persisted on both insert and the response payload.
+- **CalendarWidget DndContext — `onDragCancel`**: Escape during a drag now clears `activeDragId` and any prior `moveError` (was leaving stale state).
+- **CalendarWidget AgendaView — overlay props**: Widget's agenda view now receives `bucketsByDate`, `displayMode`, and `enableDnd` like the other six views — meals/chores/tasks no longer silently disappear in agenda mode.
+- **WeekVerticalView merged-view**: Recognizes the synthetic `all` group the same way DayViewSideBySide does — meals/chores/tasks no longer drop in the merged column.
+- **MonthView popover height**: Per-overlay-row reservation bumped from 20px to 26px (matches the actual sm-card + gap-1 height) so dense days don't push overlay items into clipped territory.
+- **`displayMode` default**: Aligned across state initializers, ViewOptionsMenu's non-default-count badge, and both Reset-to-defaults handlers — `inline` is the first-load default everywhere. Eliminates the spurious `1` badge on first load and the "Reset to defaults flips the calendar layout" surprise.
+- **`hideWeekends` toggle scope**: Tightened to multi-week only (the only view that honored it). Previously the toggle appeared in week / list / month view options and silently did nothing.
+- **Cookie `Secure` flag (logout)**: `/api/auth/logout` now derives HTTPS from `x-forwarded-proto` like the rest of the auth path, so cookies cleared during logout match the `Secure` flag they were set with behind a TLS-terminating proxy.
+
+### Internal
+- **Code review modalities — multi-agent cloud review (`/ultrareview`)**: This release was reviewed in three rounds (24 candidate findings → 16 confirmed → all addressed) — caught wiring/units/TZ regressions on weather, drag-and-drop time-of-day loss, capacity miscalculations, default-state divergence, and several silent-clipping bugs that text-only review structurally misses. See `docs/code-review-modalities.md`.
+- **`OverlayFlags` consolidated**: Single canonical definition in `useDayBucketsForRange`; cells/`DayColumn` re-exports.
+- **Dead code cleanup**: `src/app/calendar/OverlaysToolbar.tsx` (created but never imported) removed; duplicate `format as fmt` import in AgendaView removed.
+- **`/week` page retired**: `src/app/week/*` deleted, `useWeekMutations` moved to `src/lib/hooks/`. The calendar subpage is a strict superset.
+
 ## [1.6.0] – 2026-04-29
 
 > Consolidates the previously-prepared (but never tagged) v1.5.2 PWA fixes with substantial reverse-proxy / install-flow reliability work, Performance Mode polish, and new CI gating.
