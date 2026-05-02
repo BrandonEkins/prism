@@ -61,11 +61,14 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const location = await resolveLocation(searchParams.get('location'));
 
-    // Create a cache key based on location
+    // Cache key includes the provider so switching WEATHER_PROVIDER doesn't
+    // serve a stale response shaped by the previous provider (different
+    // condition strings, descriptions, and forecast fields).
+    const provider = process.env.WEATHER_PROVIDER ?? 'meteo';
     const locationKey = typeof location === 'string'
       ? location.toLowerCase().replace(/\s+/g, '-')
       : `${location.lat.toFixed(2)},${location.lon.toFixed(2)}`;
-    const cacheKey = `weather:${locationKey}`;
+    const cacheKey = `weather:${provider}:${locationKey}`;
 
     // Get from cache or fetch fresh
     const weatherData = await getCached(
