@@ -188,7 +188,7 @@ export async function fetchWeatherData(location?: LocationParam): Promise<Weathe
   }
 
   const data: OpenMeteoResponse = await response.json();
-  const { current, hourly, daily } = data;
+  const { current, hourly, daily, timezone } = data;
 
   // ── Current conditions ────────────────────────────────────────────────────
   const currentWeather: CurrentWeather = {
@@ -208,22 +208,34 @@ export async function fetchWeatherData(location?: LocationParam): Promise<Weathe
   const sunset  = daily.sunset[0]  ? new Date(daily.sunset[0])  : undefined;
 
   // ── 7-day forecast ────────────────────────────────────────────────────────
-  const forecast: ForecastDay[] = daily.time.slice(0, 7).map((dateStr, i) => {
-    // YYYY-MM-DD in the location's TZ; parse as local-date to avoid the UTC
-    // shift bug.
-    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(dateStr);
-    const date = m
-      ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]))
-      : new Date(dateStr);
-    return {
-      date,
-      dayName: DAYS_SHORT[date.getDay()] ?? 'Day',
-      high: Math.round(daily.temperature_2m_max[i] ?? 0),
-      low: Math.round(daily.temperature_2m_min[i] ?? 0),
-      condition: mapWmoCode(daily.weather_code[i] ?? 0),
-      precipProbability: Math.round(daily.precipitation_probability_max?.[i] ?? 0),
-    };
-  });
+  // Today's local date at the forecast location — used to drop stale past-day
+  // entries that can appear when a cached response was generated yesterday.
+  // Open-Meteo's `daily.time` strings are already in the response timezone, so
+  // a YYYY-MM-DD comparison is sufficient. (See iann's PR #27 for the same
+  // issue addressed in the OWM and Pirate Weather paths.)
+  const todayLocalStr = new Intl.DateTimeFormat('en-CA', { timeZone: timezone })
+    .format(new Date());
+
+  const forecast: ForecastDay[] = daily.time
+    .map((dateStr, i) => ({ dateStr, i }))
+    .filter(({ dateStr }) => dateStr.slice(0, 10) >= todayLocalStr)
+    .slice(0, 7)
+    .map(({ dateStr, i }) => {
+      // YYYY-MM-DD in the location's TZ; parse as local-date to avoid the UTC
+      // shift bug.
+      const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(dateStr);
+      const date = m
+        ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]))
+        : new Date(dateStr);
+      return {
+        date,
+        dayName: DAYS_SHORT[date.getDay()] ?? 'Day',
+        high: Math.round(daily.temperature_2m_max[i] ?? 0),
+        low: Math.round(daily.temperature_2m_min[i] ?? 0),
+        condition: mapWmoCode(daily.weather_code[i] ?? 0),
+        precipProbability: Math.round(daily.precipitation_probability_max?.[i] ?? 0),
+      };
+    });
 
   // ── Hourly: next 24 hours ─────────────────────────────────────────────────
   const nowMs = Date.now();

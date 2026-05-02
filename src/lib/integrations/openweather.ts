@@ -209,6 +209,14 @@ async function fetchForecastRaw(location?: LocationParam): Promise<{
   // not UTC midnight (which can be as early as 7 PM in US time zones).
   const tzOffsetSec = data.city.timezone;
 
+  // Today's date key in location-local time — used to skip stale past-day buckets.
+  // OWM's 3-hour intervals start from the next UTC boundary, so when shifted to local
+  // time the very first interval can still belong to the previous local day (e.g. a
+  // 3 AM UTC Friday interval is 10 PM CDT Thursday). Without this guard the forecast
+  // would open with "Thu" when it is already Friday locally.
+  const nowLocalMs = (Math.floor(Date.now() / 1000) + tzOffsetSec) * 1000;
+  const todayKey = new Date(nowLocalMs).toISOString().split('T')[0]!;
+
   const dailyData = new Map<
     string,
     { date: Date; temps: number[]; conditions: number[] }
@@ -239,7 +247,9 @@ async function fetchForecastRaw(location?: LocationParam): Promise<{
   const forecast: ForecastDay[] = [];
   let count = 0;
 
-  for (const [, dayData] of dailyData) {
+  for (const [dateKey, dayData] of dailyData) {
+    // Skip any bucket that belongs to a past local day
+    if (dateKey < todayKey) continue;
     if (count >= 7) break;
 
     const high = Math.max(...dayData.temps);
@@ -258,9 +268,11 @@ async function fetchForecastRaw(location?: LocationParam): Promise<{
       }
     }
 
-    // Use location-local day of week (shift by timezone offset, then read UTC day)
-    const localShiftedDate = new Date(dayData.date.getTime() + tzOffsetSec * 1000);
-    const dayIndex = localShiftedDate.getUTCDay();
+    // Derive day-of-week directly from the local dateKey ("YYYY-MM-DD") so the
+    // label always matches the bucket's date, regardless of when the first
+    // 3-hour sample within that bucket happened to fall in UTC.
+    const [yr, mo, dy] = dateKey.split('-').map(Number);
+    const dayIndex = new Date(Date.UTC(yr!, mo! - 1, dy!)).getUTCDay();
     forecast.push({
       date: dayData.date,
       dayName: dayNames[dayIndex] || 'Day',
