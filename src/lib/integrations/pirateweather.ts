@@ -191,17 +191,27 @@ export async function fetchWeatherData(location?: LocationParam): Promise<Weathe
     weekday: 'short',
     timeZone: timezone,
   });
-  const forecast: ForecastDay[] = daily.data.slice(0, 7).map((d) => {
-    const date = new Date(d.time * 1000);
-    return {
-      date,
-      dayName: dayNameFmt.format(date),
-      high: Math.round(d.temperatureHigh),
-      low: Math.round(d.temperatureLow),
-      condition: mapIcon(d.icon),
-      precipProbability: Math.round(d.precipProbability * 100),
-    };
-  });
+  // 'en-CA' gives YYYY-MM-DD, which is directly string-comparable.
+  const localDateFmt = new Intl.DateTimeFormat('en-CA', { timeZone: timezone });
+  // Today's local date at the forecast location — used to drop stale past-day
+  // entries that can appear when a cached response was generated yesterday
+  // (e.g. a Thursday entry visible on Friday morning until the cache expires).
+  const todayLocalStr = localDateFmt.format(new Date(Date.now()));
+
+  const forecast: ForecastDay[] = daily.data
+    .filter((d) => localDateFmt.format(new Date(d.time * 1000)) >= todayLocalStr)
+    .slice(0, 7)
+    .map((d) => {
+      const date = new Date(d.time * 1000);
+      return {
+        date,
+        dayName: dayNameFmt.format(date),
+        high: Math.round(d.temperatureHigh),
+        low: Math.round(d.temperatureLow),
+        condition: mapIcon(d.icon),
+        precipProbability: Math.round(d.precipProbability * 100),
+      };
+    });
 
   // ── Hourly: next 24 hours ─────────────────────────────────────────────────
   const nowMs = Date.now();
