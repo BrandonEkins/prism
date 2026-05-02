@@ -4,8 +4,17 @@ All notable changes to Prism are documented in this file.
 
 ## [Unreleased]
 
-### Added
-- **Weather — Open-Meteo provider, now the default**: New `WEATHER_PROVIDER=meteo` (https://open-meteo.com), no API key required, free with generous rate limits. Fresh installs work out of the box without signing up at a third-party weather service. Existing `pirate` and `openweather` providers remain for users who want minutely precip or already have keys configured. Tests cover lat/lon plumbing, env fallback, TZ-aware day labels, network error wrapping, and the no-API-key path.
+## [1.7.1] – 2026-05-02
+
+> Patch follow-up to v1.7.0. Three small fixes surfaced by post-release verification: a stale-cache trap when switching weather providers, three tables missing from the fresh-install schema snapshot, and an e2e-test chicken-and-egg around the public `/api/family` response.
+
+### Bug Fixes
+- **Weather — provider in cache key**: Switching `WEATHER_PROVIDER` (e.g. `openweather` → `meteo`) used to serve a stale response shaped by the previous provider until the 10-minute TTL expired (manual mitigation: `redis-cli DEL weather:<location>`). Cache key now embeds the active provider, so a switch produces a non-colliding key automatically.
+- **Fresh-install schema — travel_trips + weekend_***: `src/lib/db/init/02-schema.sql` was 3 tables behind master. `travel_trips` (v1.4 — Travel Map), `weekend_places` and `weekend_visits` (v1.5 — Weekend Ideas) are now created cleanly on first init. `test-fresh-install.sh` reflects the full v1.7 surface.
+
+### Internal
+- **e2e helpers — test DB isolation + auth fallback**: `helpers/reset.ts` and `visual-regression.spec.ts` now respect `E2E_DB_NAME` (default `prism`) so suites can target a synthetic test database. `helpers/auth.ts` `loginViaAPI` falls back to `memberIndex` when `/api/family` returns the redacted public response (id `''`, loginIndex set) — needed for any spec that logs in from a fresh page.
+- **Weather — Open-Meteo provider, now the default** (carried over from the v1.7.0 unreleased section, shipped here): `WEATHER_PROVIDER=meteo` is the new zero-config default. No API key required. Tests cover lat/lon plumbing, env fallback, TZ-aware day labels, network error wrapping, and the no-API-key path.
 
 ## [1.7.0] – 2026-05-02
 
