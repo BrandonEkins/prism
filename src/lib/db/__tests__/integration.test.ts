@@ -22,7 +22,16 @@ const describeIf = HAS_TEST_DB ? describe : describe.skip;
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
-const db = getTestDb();
+// Only initialize when E2E_HAS_TEST_DB is set — getTestDb() reads .env for
+// DB_PASSWORD at module load and throws in environments (like CI's plain
+// unit-tests job) where there's no .env file. The definite-assignment `!`
+// is safe because lifecycle hooks below only fire when at least one test
+// in this file runs, and `describeIf` skips every suite when HAS_TEST_DB
+// is false.
+let db!: ReturnType<typeof getTestDb>;
+if (HAS_TEST_DB) {
+  db = getTestDb();
+}
 
 async function truncateTables(): Promise<void> {
   // Order matters due to FK constraints: dependents first
