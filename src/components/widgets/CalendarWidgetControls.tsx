@@ -67,7 +67,7 @@ export function CalendarWidgetControls({
   const showOverlayRows = displayMode === 'cards';
 
   const resetAll = () => {
-    setDisplayMode('cards');
+    setDisplayMode('inline');
     setWidgetBordered(false);
     setShowNotes(false);
     setHideWeekends(false);

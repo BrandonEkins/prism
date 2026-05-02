@@ -120,8 +120,11 @@ export function ViewOptionsMenu({
   triggerClassName,
 }: ViewOptionsMenuProps) {
   // Count toggles that are non-default so we can show a badge on the trigger.
+  // 'inline' is the first-load default in both useCalendarViewData and
+  // useCalendarWidgetPrefs — keep this in sync with those initializers and
+  // with the Reset-to-defaults handlers in CalendarView and CalendarWidgetControls.
   const nonDefaultCount =
-    (displayMode === 'cards' ? 0 : 1) + // cards is the default
+    (displayMode === 'inline' ? 0 : 1) +
     (weeksBordered ? 1 : 0) +
     (hideWeekends ? 1 : 0) +
     (showNotes ? 1 : 0) +

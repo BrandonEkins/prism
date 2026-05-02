@@ -307,6 +307,9 @@ export const CalendarWidget = React.memo(function CalendarWidget({
                 days={14}
                 maxEventsPerDay={5}
                 onEventClick={handleEventClick}
+                displayMode={displayMode}
+                bucketsByDate={overlaysActive ? bucketsByDate : undefined}
+                enableDnd={enableDnd}
               />
             )}
 

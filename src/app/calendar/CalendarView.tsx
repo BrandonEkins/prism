@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, lazy, Suspense } from 'react';
-import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, addDays, addWeeks } from 'date-fns';
+import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, addDays, addWeeks, startOfDay } from 'date-fns';
 import {
   DndContext,
   DragOverlay,
@@ -426,10 +426,11 @@ export function CalendarView() {
                 onOverlaysChange={setOverlays}
                 showOverlayRows={cardsMode}
                 onReset={() => {
-                  setDisplayMode('cards');
+                  setDisplayMode('inline');
                   setWeeksBordered(false);
                   setHideWeekends(false);
                   setShowNotes(false);
+                  setMergedView(false);
                   setOverlays({ events: true, meals: true, chores: true, tasks: true });
                 }}
               />
@@ -830,9 +831,21 @@ function CalendarDragPreview({
     } else if (variant === 'chore') {
       const chore = bucket.chores.find((c) => String(c.id) === itemId);
       if (chore) {
+        // Parse nextDue (YYYY-MM-DD DATE column) as a local date and compare
+        // to startOfDay(today). new Date('YYYY-MM-DD') is parsed as UTC and
+        // would mark today's chore as overdue in negative-UTC zones — same
+        // bug fixed in DayColumn.choreStripeColor and useDayBucketsForRange.
+        let isOverdue = false;
+        if (chore.nextDue) {
+          const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(chore.nextDue);
+          if (m) {
+            const due = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+            isOverdue = due < startOfDay(new Date());
+          }
+        }
         const stripeColor = chore.pendingApproval
           ? CHORE_PENDING_APPROVAL_COLOR
-          : chore.nextDue && new Date(chore.nextDue) < new Date()
+          : isOverdue
             ? CHORE_OVERDUE_COLOR
             : CHORE_PENDING_COLOR;
         return (

@@ -38,11 +38,15 @@ interface UseDayBucketsForRangeResult {
   refresh: () => Promise<void>;
 }
 
+// Chronological order matching MEAL_TIME_DEFAULTS in cells/itemTime.ts
+// (07:00 → 12:00 → 15:00 → 18:00) and CalendarView.tsx's sortMealsByType.
+// Keep these in sync — CalendarWidget passes bucketsByDate straight to its
+// views without re-sorting, so the order from this hook is what users see.
 const MEAL_TYPE_ORDER: Record<Meal['mealType'], number> = {
   breakfast: 0,
   lunch: 1,
-  dinner: 2,
-  snack: 3,
+  snack: 2,
+  dinner: 3,
 };
 
 const EMPTY_EVENTS: CalendarEvent[] = [];

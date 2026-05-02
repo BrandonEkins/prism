@@ -183,16 +183,20 @@ function DayCell({
   });
   const isPast = isBefore(date, startOfDay(new Date())) && !isToday(date);
 
-  // Overlay items now render at the same size as event cards (meals at top,
-  // chores+tasks at bottom), so reserve roughly cardHeight per overlay item
-  // plus ~22px for the popover trigger when events overflow.
+  // Overlay items render in the same flex container as events (meals at top,
+  // chores+tasks at bottom). They are ALWAYS rendered when present, so the
+  // space they consume must be subtracted from BOTH capacity branches —
+  // otherwise the no-overflow branch picks a count that fits events alone and
+  // overflow:hidden silently clips the chores/tasks rows below.
   const overlayItemCount = bucket ? bucket.meals.length + bucket.chores.length + bucket.tasks.length : 0;
   const overlayRowHeight = cardHeight ?? 56;
   const cellGap = 4; // matches `gap-1` between cards in the events container
-  const popoverHeight = 22 + overlayItemCount * (overlayRowHeight + cellGap);
+  const overlayRowsHeight = overlayItemCount * (overlayRowHeight + cellGap);
+  const popoverTriggerHeight = 22; // only present when events actually overflow
   const { cellRef, fitWithOverflow, fitWithoutOverflow } = useCardCapacity({
     cardHeight,
-    popoverHeight,
+    headerHeight: overlayRowsHeight,
+    popoverHeight: popoverTriggerHeight,
     gap: cellGap,
     // When overlays already consume the cell, allow 0 visible events so the
     // popover trigger absorbs all of them — prevents events from spilling
