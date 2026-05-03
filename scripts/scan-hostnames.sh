@@ -72,6 +72,10 @@ ALLOWLIST=(
   "vercel.app"
   "anthropic.com"
   "claude.com"
+  # Amazon / Alexa skill development
+  "developer.amazon.com"
+  "s3.amazonaws.com"
+  "echo-api.amazon.com"
   # IETF / spec / standards references
   "ietf.org"
   "w3.org"
