@@ -131,13 +131,16 @@ if [ ! -s "$tmpfile" ]; then
 fi
 
 # Single-pass: grep -f reads patterns from the temp file. -w whole-word,
-# -F fixed-string, -I skip binary files. xargs may shard the file list
-# across multiple grep invocations on very large repos, which is fine —
-# each shard still does one pass over its files for all patterns at once.
+# -F fixed-string, -I skip binary files, -i case-insensitive (a denylist
+# entry with capitalized form previously failed to match a lowercased
+# occurrence in tracked files, since -w -F is case-sensitive by default).
+# xargs may shard the file list across multiple grep invocations on very
+# large repos, which is fine: each shard still does one pass over its
+# files for all patterns at once.
 matches=$(
   git ls-files \
     | grep -v -E '^(scripts/scan-pii\.sh|scripts/scan-examples\.sh|docs/code-review-modalities\.md)$' \
-    | xargs -d '\n' grep -wn -F -I -f "$tmpfile" 2>/dev/null \
+    | xargs -d '\n' grep -iwn -F -I -f "$tmpfile" 2>/dev/null \
   || true
 )
 
