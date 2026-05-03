@@ -105,6 +105,12 @@ Documents the authentication requirement for each API route. There are three acc
 | `/api/audit-logs` | Auth + Parent | — |
 | `/api/health` | Public | — |
 
+### Voice / Alexa
+| Route | GET | POST |
+|---|---|---|
+| `/api/v1/voice/*` | Auth (token, scope `voice` or `*`) | Auth (token, scope `voice` or `*`) |
+| `/api/alexa` | — | Alexa-signed (verifies SignatureCertChainUrl + body sig) |
+
 ---
 
 ## Notes

@@ -1,0 +1,35 @@
+{
+  "interactionModel": {
+    "languageModel": {
+      "invocationName": "prism",
+      "intents": [
+        {
+          "name": "AMAZON.CancelIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.HelpIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.StopIntent",
+          "samples": []
+        },
+        {
+          "name": "GetTodayEventsIntent",
+          "slots": [],
+          "samples": [
+            "what's on today",
+            "what's on my calendar today",
+            "what's happening today",
+            "for today's events",
+            "for today's calendar",
+            "today's events",
+            "what is on today"
+          ]
+        }
+      ],
+      "types": []
+    }
+  }
+}

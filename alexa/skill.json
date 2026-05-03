@@ -1,0 +1,47 @@
+{
+  "manifest": {
+    "publishingInformation": {
+      "locales": {
+        "en-US": {
+          "name": "Prism",
+          "summary": "Talk to your Prism family dashboard.",
+          "description": "Ask Prism for today's events, upcoming events, today's tasks, your family list, mark chores complete, add shopping items, and post family messages.",
+          "examplePhrases": [
+            "Alexa, ask Prism what's on today",
+            "Alexa, ask Prism what's coming up",
+            "Alexa, ask Prism for today's tasks"
+          ],
+          "keywords": ["family", "calendar", "dashboard", "prism"],
+          "smallIconUri": "",
+          "largeIconUri": ""
+        }
+      },
+      "isAvailableWorldwide": false,
+      "testingInstructions": "Personal-use skill. Configure ALEXA_VOICE_TOKEN on the Prism server before invoking.",
+      "category": "ORGANIZERS_AND_ASSISTANTS",
+      "distributionCountries": ["US"]
+    },
+    "apis": {
+      "custom": {
+        "endpoint": {
+          "uri": "https://prism.example.com/api/alexa",
+          "sslCertificateType": "Trusted"
+        }
+      }
+    },
+    "manifestVersion": "1.0",
+    "privacyAndCompliance": {
+      "allowsPurchases": false,
+      "usesPersonalInfo": true,
+      "isChildDirected": false,
+      "isExportCompliant": true,
+      "containsAds": false,
+      "locales": {
+        "en-US": {
+          "privacyPolicyUrl": "https://prism.example.com/privacy",
+          "termsOfUseUrl": ""
+        }
+      }
+    }
+  }
+}
