@@ -52,13 +52,16 @@ import { resetAll } from './helpers/reset';
  * the `role` field, which it only does for authenticated requests — chicken
  * and egg for any spec that needs to log in from a fresh page. Querying the
  * DB sidesteps the issue and keeps the parent's name out of the test source.
+ *
+ * Two execution paths (matching the pattern in reverse-proxy.spec.ts):
+ *   - Local: docker exec into prism-db.
+ *   - CI: postgres is a service container on localhost; use DATABASE_URL.
  */
 function getSeededParentName(): string {
-  const dbName = process.env.E2E_DB_NAME || 'prism';
-  const out = execSync(
-    `docker exec prism-db psql -U prism -d ${dbName} -At -c "SELECT name FROM users WHERE role = 'parent' ORDER BY created_at LIMIT 1"`,
-    { encoding: 'utf-8' },
-  ).trim();
+  const cmd = process.env.DATABASE_URL
+    ? `psql "${process.env.DATABASE_URL}" -At -c "SELECT name FROM users WHERE role = 'parent' ORDER BY created_at LIMIT 1"`
+    : `docker exec prism-db psql -U prism -d ${process.env.E2E_DB_NAME || 'prism'} -At -c "SELECT name FROM users WHERE role = 'parent' ORDER BY created_at LIMIT 1"`;
+  const out = execSync(cmd, { encoding: 'utf-8' }).trim();
   if (!out) throw new Error('No seeded parent in DB — did seeds run?');
   return out;
 }
