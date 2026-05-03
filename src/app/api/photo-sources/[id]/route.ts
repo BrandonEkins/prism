@@ -5,6 +5,7 @@ import { photoSources, photos } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { deletePhoto } from '@/lib/services/photo-storage';
 import { clearSourceCache } from '@/lib/services/photo-cache';
+import { invalidateEntity } from '@/lib/cache/cacheKeys';
 import { logError } from '@/lib/utils/logError';
 
 export async function PATCH(
@@ -67,6 +68,8 @@ export async function DELETE(
 
     // Cascade delete will remove photos from DB
     await db.delete(photoSources).where(eq(photoSources.id, id));
+
+    await invalidateEntity('photos');
 
     return NextResponse.json({ success: true });
   } catch (error) {

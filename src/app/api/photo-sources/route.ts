@@ -5,6 +5,9 @@ import { photoSources } from '@/lib/db/schema';
 import { sql } from 'drizzle-orm';
 import { logError } from '@/lib/utils/logError';
 import { encrypt } from '@/lib/utils/crypto';
+import { invalidateEntity } from '@/lib/cache/cacheKeys';
+import { rateLimitGuard } from '@/lib/cache/rateLimit';
+import { UnsafeUrlError } from '@/lib/utils/safeFetch';
 import {
   parseImmichShareUrl,
   fetchSharedLink,
@@ -44,6 +47,12 @@ export async function POST(request: NextRequest) {
   const auth = await requireAuth();
   if (auth instanceof NextResponse) return auth;
 
+  // Mutation route: a malicious or compromised parent session could otherwise
+  // submit URLs in a tight loop, each of which fires an outbound fetch. Cap
+  // at 20 source-create attempts per minute per user.
+  const rateLimited = await rateLimitGuard(auth.userId, 'photo-sources:create', 20, 60);
+  if (rateLimited) return rateLimited;
+
   try {
     const body = await request.json();
     const { type, name, onedriveFolderId, shareUrl, password } = body;
@@ -72,11 +81,19 @@ export async function POST(request: NextRequest) {
       }
 
       // Validate the share is reachable + the password (if any) is correct.
+      // SSRF guards inside fetchSharedLink will throw UnsafeUrlError if the
+      // serverUrl points at a private / loopback / metadata destination.
       const pw = typeof password === 'string' && password.length > 0 ? password : null;
       let link;
       try {
         link = await fetchSharedLink({ serverUrl, shareKey, password: pw });
       } catch (err) {
+        if (err instanceof UnsafeUrlError) {
+          return NextResponse.json(
+            { error: 'unsafe_url', message: 'Share URL points at a private or loopback address' },
+            { status: 400 },
+          );
+        }
         if (err instanceof ImmichPasswordRequiredError) {
           return NextResponse.json(
             { error: 'password_required', message: 'This shared link requires a password' },
@@ -115,6 +132,8 @@ export async function POST(request: NextRequest) {
         })
         .returning();
 
+      await invalidateEntity('photos');
+
       return NextResponse.json(source, { status: 201 });
     }
 
@@ -130,6 +149,8 @@ export async function POST(request: NextRequest) {
         onedriveFolderId: onedriveFolderId || null,
       })
       .returning();
+
+    await invalidateEntity('photos');
 
     return NextResponse.json(source, { status: 201 });
   } catch (error) {

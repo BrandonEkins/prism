@@ -192,6 +192,9 @@ export async function syncImmichSource(sourceId: string) {
     serverUrl: source.immichServerUrl,
     shareKey: source.immichShareKey,
     password: source.immichPasswordEnc ? decrypt(source.immichPasswordEnc) : null,
+    // Pass sourceId so fetchSharedLink seeds the cookie cache for any
+    // subsequent downloadImmichAsset calls in this process.
+    sourceId: sourceId,
   };
 
   const link = await fetchSharedLink(creds);

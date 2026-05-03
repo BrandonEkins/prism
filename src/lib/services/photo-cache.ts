@@ -8,6 +8,11 @@
  * round-trip to the upstream server for every request. Cache is best-effort:
  * read failures fall through to a fresh fetch, and write failures don't block
  * the response.
+ *
+ * TODO(disk-bound): cache directory growth is currently unbounded. For a
+ * 10k+ photo album on a Wyse-class kiosk, this can fill the data volume.
+ * Consider an LRU eviction policy or a max-bytes cap. Out of scope for
+ * the initial Immich integration.
  */
 
 import { promises as fs } from 'fs';

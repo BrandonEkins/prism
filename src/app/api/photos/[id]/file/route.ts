@@ -90,6 +90,9 @@ export async function GET(
           serverUrl: source.immichServerUrl,
           shareKey: source.immichShareKey,
           password: source.immichPasswordEnc ? decrypt(source.immichPasswordEnc) : null,
+          // Pass sourceId so the per-source cookie cache can short-circuit
+          // the per-asset login round-trip for password-protected shares.
+          sourceId: source.id,
         };
 
         const { buffer, contentType } = await downloadImmichAsset(

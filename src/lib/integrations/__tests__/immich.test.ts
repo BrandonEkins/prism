@@ -14,10 +14,13 @@ import {
   ImmichPasswordRequiredError,
   ImmichInvalidPasswordError,
   ImmichShareNotFoundError,
+  UnsafeUrlError,
+  _clearImmichCookieCache,
 } from '../immich';
 
 afterEach(() => {
   jest.clearAllMocks();
+  _clearImmichCookieCache();
 });
 
 function mockFetchOnce(impl: () => Partial<Response> | Promise<Partial<Response>>) {
@@ -360,5 +363,146 @@ describe('downloadImmichAsset', () => {
     await expect(
       downloadImmichAsset({ serverUrl: 'https://x', shareKey: 'k' }, 'asset-1'),
     ).rejects.toThrow(/Failed to download Immich asset/);
+  });
+});
+
+describe('downloadImmichAsset cookie cache (password-protected, with sourceId)', () => {
+  it('reuses the cached cookie and skips the login call on the second download', async () => {
+    const loginHeaders = new Headers();
+    loginHeaders.append('set-cookie', 'immich_auth=cached-token; Path=/; HttpOnly');
+
+    // First download: login + download = 2 calls.
+    mockFetchSequence([
+      () => ({
+        ok: true,
+        status: 201,
+        headers: loginHeaders,
+        json: () => Promise.resolve({ password: 'hash', assets: [] }),
+      }),
+      () => ({
+        ok: true,
+        status: 200,
+        headers: new Headers({ 'content-type': 'image/jpeg' }),
+        arrayBuffer: () => Promise.resolve(new ArrayBuffer(2)),
+      }),
+      // Second download: cookie should be reused, only the download call.
+      () => ({
+        ok: true,
+        status: 200,
+        headers: new Headers({ 'content-type': 'image/jpeg' }),
+        arrayBuffer: () => Promise.resolve(new ArrayBuffer(3)),
+      }),
+    ]);
+
+    const creds = { serverUrl: 'https://x', shareKey: 'k', password: 'pw', sourceId: 'src-1' };
+    await downloadImmichAsset(creds, 'asset-1');
+    await downloadImmichAsset(creds, 'asset-2');
+
+    const calls = (global.fetch as jest.Mock).mock.calls;
+    expect(calls).toHaveLength(3);
+    // First call is the login.
+    expect(calls[0][0]).toBe('https://x/api/shared-links/login?key=k');
+    // Second and third are downloads, both carrying the cached cookie.
+    expect(calls[1][0]).toContain('/api/assets/asset-1/original');
+    expect(calls[1][1].headers.Cookie).toContain('immich_auth=cached-token');
+    expect(calls[2][0]).toContain('/api/assets/asset-2/original');
+    expect(calls[2][1].headers.Cookie).toContain('immich_auth=cached-token');
+  });
+
+  it('does not cache when sourceId is omitted (every call re-logs in)', async () => {
+    const loginHeaders = new Headers();
+    loginHeaders.append('set-cookie', 'immich_auth=t1; Path=/; HttpOnly');
+
+    mockFetchSequence([
+      () => ({ ok: true, status: 201, headers: loginHeaders, json: () => Promise.resolve({ assets: [] }) }),
+      () => ({ ok: true, status: 200, headers: new Headers(), arrayBuffer: () => Promise.resolve(new ArrayBuffer(2)) }),
+      () => ({ ok: true, status: 201, headers: loginHeaders, json: () => Promise.resolve({ assets: [] }) }),
+      () => ({ ok: true, status: 200, headers: new Headers(), arrayBuffer: () => Promise.resolve(new ArrayBuffer(3)) }),
+    ]);
+
+    const creds = { serverUrl: 'https://x', shareKey: 'k', password: 'pw' };
+    await downloadImmichAsset(creds, 'asset-1');
+    await downloadImmichAsset(creds, 'asset-2');
+
+    expect((global.fetch as jest.Mock).mock.calls).toHaveLength(4);
+  });
+
+  it('drops the cached cookie on a 401 download response so the next call re-logs in', async () => {
+    const loginHeaders = new Headers();
+    loginHeaders.append('set-cookie', 'immich_auth=stale; Path=/; HttpOnly');
+
+    mockFetchSequence([
+      () => ({ ok: true, status: 201, headers: loginHeaders, json: () => Promise.resolve({ assets: [] }) }),
+      // Download fails with 401: cache should be invalidated.
+      () => ({ ok: false, status: 401, statusText: 'Unauthorized' }),
+      // Next call: fresh login + download.
+      () => ({ ok: true, status: 201, headers: loginHeaders, json: () => Promise.resolve({ assets: [] }) }),
+      () => ({ ok: true, status: 200, headers: new Headers(), arrayBuffer: () => Promise.resolve(new ArrayBuffer(2)) }),
+    ]);
+
+    const creds = { serverUrl: 'https://x', shareKey: 'k', password: 'pw', sourceId: 'src-2' };
+    await expect(downloadImmichAsset(creds, 'asset-1')).rejects.toThrow();
+    await downloadImmichAsset(creds, 'asset-2');
+
+    const calls = (global.fetch as jest.Mock).mock.calls;
+    expect(calls[2][0]).toBe('https://x/api/shared-links/login?key=k');
+  });
+
+  it('seeds the cache from a fetchSharedLink login so a later download skips re-login', async () => {
+    const loginHeaders = new Headers();
+    loginHeaders.append('set-cookie', 'immich_auth=from-sync; Path=/; HttpOnly');
+
+    mockFetchSequence([
+      // fetchSharedLink with password = login + (no follow-up because not ALBUM).
+      () => ({ ok: true, status: 201, headers: loginHeaders, json: () => Promise.resolve({ assets: [] }) }),
+      // Subsequent download should reuse the seeded cookie.
+      () => ({ ok: true, status: 200, headers: new Headers(), arrayBuffer: () => Promise.resolve(new ArrayBuffer(2)) }),
+    ]);
+
+    const creds = { serverUrl: 'https://x', shareKey: 'k', password: 'pw', sourceId: 'src-3' };
+    await fetchSharedLink(creds);
+    await downloadImmichAsset(creds, 'asset-1');
+
+    const calls = (global.fetch as jest.Mock).mock.calls;
+    expect(calls).toHaveLength(2);
+    expect(calls[1][1].headers.Cookie).toContain('immich_auth=from-sync');
+  });
+});
+
+describe('SSRF guard on Immich serverUrl', () => {
+  // validatePublicUrl only blocks private targets in production. Force prod
+  // for these cases so the dev-mode loopback escape hatch does not interfere.
+  beforeEach(() => {
+    jest.replaceProperty(process.env, 'NODE_ENV', 'production');
+  });
+
+  it('rejects fetchSharedLink with a loopback serverUrl', async () => {
+    await expect(
+      fetchSharedLink({ serverUrl: 'http://127.0.0.1:2283', shareKey: 'k' }),
+    ).rejects.toBeInstanceOf(UnsafeUrlError);
+  });
+
+  it('rejects fetchSharedLink with an RFC1918 serverUrl', async () => {
+    await expect(
+      fetchSharedLink({ serverUrl: 'http://10.0.0.5', shareKey: 'k' }),
+    ).rejects.toBeInstanceOf(UnsafeUrlError);
+  });
+
+  it('rejects fetchSharedLink with the cloud metadata IP', async () => {
+    await expect(
+      fetchSharedLink({ serverUrl: 'http://169.254.169.254', shareKey: 'k' }),
+    ).rejects.toBeInstanceOf(UnsafeUrlError);
+  });
+
+  it('rejects downloadImmichAsset with a loopback serverUrl', async () => {
+    await expect(
+      downloadImmichAsset({ serverUrl: 'http://127.0.0.1', shareKey: 'k' }, 'asset-1'),
+    ).rejects.toBeInstanceOf(UnsafeUrlError);
+  });
+
+  it('rejects downloadImmichAsset with an IPv6 loopback serverUrl', async () => {
+    await expect(
+      downloadImmichAsset({ serverUrl: 'http://[::1]', shareKey: 'k' }, 'asset-1'),
+    ).rejects.toBeInstanceOf(UnsafeUrlError);
   });
 });
