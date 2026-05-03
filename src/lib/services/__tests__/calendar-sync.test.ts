@@ -469,4 +469,79 @@ describe('syncIcalCalendarSource', () => {
       })
     );
   });
+
+  it('unwraps PropertyWithArgs objects on UID and uses the inner string for the externalEventId', async () => {
+    // Some iCal feeds carry parameters on UID too (rare, observed on a
+    // handful of corporate Outlook exports). node-ical surfaces those as
+    // { params, val } objects. Without unwrapping, instanceExternalId
+    // would produce "[object Object]_<ts>" and collide across instances.
+    mockFindFirst.mockResolvedValue(makeIcalSource());
+    mockIcalFromURL.mockResolvedValue({
+      'wrapped-uid': makeVEvent({
+        uid: { params: {}, val: 'real-uid-123' },
+      }),
+    });
+
+    const result = await syncIcalCalendarSource('ical-source-1');
+
+    expect(result.synced).toBe(1);
+    expect(mockInsertValues).toHaveBeenCalledWith(
+      expect.objectContaining({
+        externalEventId: 'real-uid-123',
+      }),
+    );
+  });
+
+  it('skips VEVENTs with missing or non-string UID and reports the error', async () => {
+    mockFindFirst.mockResolvedValue(makeIcalSource());
+    mockIcalFromURL.mockResolvedValue({
+      'no-uid': makeVEvent({ uid: null }),
+    });
+
+    const result = await syncIcalCalendarSource('ical-source-1');
+
+    expect(result.synced).toBe(0);
+    expect(result.errors[0]).toContain('UID');
+  });
+
+  it('writes recurrenceRule null on per-instance rows even when the VEVENT has an RRULE', async () => {
+    // Per-instance rows are keyed on the expanded externalEventId and
+    // should not carry the master RRULE string. Consumers reading
+    // recurrenceRule expect "this row is the recurring master," so per-
+    // instance rows must clear it. recurring stays true to preserve the
+    // boolean signal.
+    const fakeRrule = {
+      between: () => [new Date('2026-05-10T10:00:00Z')],
+      toString: () => 'FREQ=WEEKLY;COUNT=10',
+    };
+    mockFindFirst.mockResolvedValue(makeIcalSource());
+    mockIcalFromURL.mockResolvedValue({
+      'event-uid-1': makeVEvent({ rrule: fakeRrule }),
+    });
+
+    const result = await syncIcalCalendarSource('ical-source-1');
+
+    expect(result.synced).toBe(1);
+    expect(mockInsertValues).toHaveBeenCalledWith(
+      expect.objectContaining({
+        recurring: true,
+        recurrenceRule: null,
+      }),
+    );
+  });
+
+  it('rejects an icalUrl that points at a private address (SSRF guard)', async () => {
+    // Force production so the dev-mode loopback escape hatch does not
+    // interfere with this assertion.
+    jest.replaceProperty(process.env, 'NODE_ENV', 'production');
+
+    mockFindFirst.mockResolvedValue(makeIcalSource({ icalUrl: 'http://10.0.0.5/cal.ics' }));
+
+    const result = await syncIcalCalendarSource('ical-source-1');
+
+    expect(result.synced).toBe(0);
+    expect(result.errors[0]).toMatch(/private|loopback/);
+    // Critically: the upstream fetch should never have been attempted.
+    expect(mockIcalFromURL).not.toHaveBeenCalled();
+  });
 });

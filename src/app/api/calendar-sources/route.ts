@@ -17,6 +17,8 @@ import { db } from '@/lib/db/client';
 import { calendarSources, settings } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { invalidateEntity } from '@/lib/cache/cacheKeys';
+import { rateLimitGuard } from '@/lib/cache/rateLimit';
+import { validatePublicUrl, UnsafeUrlError } from '@/lib/utils/safeFetch';
 import { logError } from '@/lib/utils/logError';
 import { syncIcalCalendarSource } from '@/lib/services/calendar-sync';
 
@@ -47,13 +49,22 @@ function normalizeIcalUrl(url: string): string {
 
 export async function POST(request: NextRequest) {
   const authResult = await requireAuth();
-  if (authResult instanceof NextResponse) {
+  const isAuthed = !(authResult instanceof NextResponse);
+  if (!isAuthed) {
     const allowUnauthedSetup = !(await setupIsComplete());
     if (!allowUnauthedSetup) return authResult;
   } else {
     const forbidden = requireRole(authResult, 'canManageIntegrations');
     if (forbidden) return forbidden;
   }
+
+  // Rate-limit by user when authed, otherwise by a setup-mode bucket. The
+  // unauthenticated setup path is open by design but should not let a
+  // remote caller submit URLs in a tight loop, each of which triggers an
+  // outbound fetch.
+  const limitKey = isAuthed ? authResult.userId : 'setup-anon';
+  const rateLimited = await rateLimitGuard(limitKey, 'calendar-sources:create', 20, 60);
+  if (rateLimited) return rateLimited;
 
   try {
     const body = await request.json();
@@ -73,6 +84,24 @@ export async function POST(request: NextRequest) {
     }
 
     const icalUrl = normalizeIcalUrl(body.url.trim());
+
+    // SSRF guard: a setup-mode caller (unauthenticated by design) or a
+    // compromised parent could otherwise submit an internal hostname and
+    // use Prism as a proxy to probe the home network. Reject loopback,
+    // RFC1918, link-local, cloud metadata IP, and IPv6 ULA / loopback
+    // before any outbound fetch happens.
+    try {
+      validatePublicUrl(icalUrl);
+    } catch (err) {
+      if (err instanceof UnsafeUrlError) {
+        return NextResponse.json(
+          { error: 'iCal URL points at a private or loopback address' },
+          { status: 400 }
+        );
+      }
+      throw err;
+    }
+
     const displayName = (typeof body.name === 'string' ? body.name : '').trim() || 'iCal Calendar';
 
     const [created] = await db

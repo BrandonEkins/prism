@@ -10,6 +10,7 @@ import {
   type GoogleCalendarEvent,
 } from '@/lib/integrations/google-calendar';
 import { decrypt, encrypt } from '@/lib/utils/crypto';
+import { validatePublicUrl, UnsafeUrlError } from '@/lib/utils/safeFetch';
 import { async as icalAsync, type VEvent, type CalendarResponse } from 'node-ical';
 
 /**
@@ -413,6 +414,29 @@ export async function syncIcalCalendarSource(
   const timeMin = options.timeMin || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
   const timeMax = options.timeMax || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
+  // SSRF guard: a stored icalUrl that predates the route-level validator
+  // could still point at a private destination. Re-validate at the fetch
+  // boundary so a malicious or compromised parent cannot use Prism as
+  // a proxy to probe the internal network.
+  try {
+    validatePublicUrl(source.icalUrl);
+  } catch (err) {
+    if (err instanceof UnsafeUrlError) {
+      await db
+        .update(calendarSources)
+        .set({
+          syncErrors: {
+            lastError: 'iCal URL points at a private or loopback address; sync skipped.',
+            timestamp: new Date().toISOString(),
+          },
+          updatedAt: new Date(),
+        })
+        .where(eq(calendarSources.id, sourceId));
+      return { synced: 0, errors: ['iCal URL points at a private or loopback address'] };
+    }
+    throw err;
+  }
+
   let parsed: CalendarResponse;
   try {
     parsed = await icalAsync.fromURL(source.icalUrl);
@@ -447,6 +471,18 @@ export async function syncIcalCalendarSource(
     if (!item || item.type !== 'VEVENT') continue;
     const vevent = item as VEvent;
 
+    // node-ical may surface UID as a PropertyWithArgs object on feeds whose
+    // UID property carries parameters (rare but observed). The downstream
+    // instanceExternalId() does string concatenation on uid, so an object
+    // would produce "[object Object]_<ts>" and collide across instances.
+    // Read through the same unwrap helper used for summary / description /
+    // location and skip the VEVENT entirely if uid cannot be coerced.
+    const uid = readIcalString(vevent.uid);
+    if (!uid) {
+      errors.push('Skipped VEVENT with missing or non-string UID');
+      continue;
+    }
+
     try {
       if (vevent.status === 'CANCELLED') continue;
       if (!vevent.start || !vevent.end) continue;
@@ -463,6 +499,7 @@ export async function syncIcalCalendarSource(
       }
 
       const instances: Array<{ start: Date; end: Date; externalId: string }> = [];
+      const isRecurring = !!vevent.rrule;
 
       if (vevent.rrule) {
         // Expand recurring instances within the sync window
@@ -472,7 +509,7 @@ export async function syncIcalCalendarSource(
           instances.push({
             start: occ,
             end: new Date(occ.getTime() + baseDurationMs),
-            externalId: instanceExternalId(vevent.uid, occ),
+            externalId: instanceExternalId(uid, occ),
           });
         }
       } else {
@@ -481,12 +518,19 @@ export async function syncIcalCalendarSource(
           instances.push({
             start: vevent.start,
             end: vevent.end,
-            externalId: vevent.uid,
+            externalId: uid,
           });
         }
       }
 
-      const recurrenceRule = vevent.rrule ? vevent.rrule.toString() : null;
+      // Per-instance rows are keyed on the expanded externalEventId, so the
+      // RRULE string would be repeated identically across every occurrence.
+      // That shape misleads consumers that try to read recurrenceRule as
+      // "this row is the recurring master." Leave recurrenceRule null on
+      // expanded instances and let `recurring: true` carry the boolean
+      // signal. Preserves Google's per-row shape (which uses singleEvents:
+      // true and never carries an RRULE on individual instances either).
+      const recurrenceRule = null;
       const title = readIcalString(vevent.summary) || '(no title)';
       const description = readIcalString(vevent.description);
       const location = readIcalString(vevent.location);
@@ -504,7 +548,7 @@ export async function syncIcalCalendarSource(
             startTime: inst.start,
             endTime: inst.end,
             allDay,
-            recurring: !!vevent.rrule,
+            recurring: isRecurring,
             recurrenceRule,
             lastSynced: new Date(),
           })
@@ -517,7 +561,7 @@ export async function syncIcalCalendarSource(
               startTime: inst.start,
               endTime: inst.end,
               allDay,
-              recurring: !!vevent.rrule,
+              recurring: isRecurring,
               recurrenceRule,
               lastSynced: new Date(),
               updatedAt: new Date(),
@@ -527,7 +571,7 @@ export async function syncIcalCalendarSource(
         synced++;
       }
     } catch (error) {
-      errors.push(`Failed to sync VEVENT ${vevent.uid}: ${error instanceof Error ? error.message : String(error)}`);
+      errors.push(`Failed to sync VEVENT ${uid}: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
