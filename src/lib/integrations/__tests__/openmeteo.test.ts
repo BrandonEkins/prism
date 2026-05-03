@@ -30,11 +30,26 @@ afterEach(() => {
   jest.restoreAllMocks();
 });
 
+// Compute YYYY-MM-DD in the response timezone for a given offset (0 = today,
+// 1 = tomorrow, etc). Open-Meteo returns local-date strings with timezone=auto,
+// so the fixture mirrors that. Dates are derived from the runner's clock so
+// the past-day forecast filter (introduced in v1.7.2) does not strip fixture
+// days when the test runs.
+function localDate(offsetDays: number, timezone: string): string {
+  const base = new Date();
+  base.setUTCDate(base.getUTCDate() + offsetDays);
+  return new Intl.DateTimeFormat('en-CA', { timeZone: timezone }).format(base);
+}
+
+function dayNameFromIso(iso: string): string {
+  const d = new Date(`${iso}T12:00:00`);
+  return new Intl.DateTimeFormat('en-US', { weekday: 'short' }).format(d);
+}
+
 function buildResponse(timezone = 'America/Chicago') {
-  // 2026-05-02 is a Saturday; using local-date strings (which is what
-  // Open-Meteo returns with timezone=auto) keeps the test fixtures
-  // independent of the runner's TZ.
-  const today = '2026-05-02';
+  const today = localDate(0, timezone);
+  const day1 = localDate(1, timezone);
+  const day2 = localDate(2, timezone);
   return {
     latitude: 0,
     longitude: 0,
@@ -56,13 +71,13 @@ function buildResponse(timezone = 'America/Chicago') {
       weather_code: [0, 1, 2],
     },
     daily: {
-      time: [today, '2026-05-03', '2026-05-04'],
+      time: [today, day1, day2],
       temperature_2m_max: [75, 76, 77],
       temperature_2m_min: [60, 61, 62],
       weather_code: [0, 1, 2],
       precipitation_probability_max: [0, 10, 20],
-      sunrise: [`${today}T06:00`, '2026-05-03T06:00', '2026-05-04T06:00'],
-      sunset:  [`${today}T19:00`, '2026-05-03T19:00', '2026-05-04T19:00'],
+      sunrise: [`${today}T06:00`, `${day1}T06:00`, `${day2}T06:00`],
+      sunset:  [`${today}T19:00`, `${day1}T19:00`, `${day2}T19:00`],
     },
   };
 }
@@ -143,10 +158,15 @@ describe('openmeteo.fetchWeatherData', () => {
     const { fetchWeatherData } = await import('../openmeteo');
     const result = await fetchWeatherData();
 
-    // 2026-05-02 is a Saturday everywhere — if the parse went through UTC the
-    // day-of-week could shift by one in negative-UTC zones.
-    expect(result.forecast[0]?.dayName).toBe('Sat');
-    expect(result.forecast[1]?.dayName).toBe('Sun');
+    // The day-name labels must reflect the response's local-date strings.
+    // If the parse went through UTC, the day-of-week could shift by one
+    // in negative-UTC zones. Compute the expected names from the same
+    // fixture dates the response was built from so the test is independent
+    // of the calendar date the runner happens to be on.
+    const expected0 = dayNameFromIso(localDate(0, 'America/Chicago'));
+    const expected1 = dayNameFromIso(localDate(1, 'America/Chicago'));
+    expect(result.forecast[0]?.dayName).toBe(expected0);
+    expect(result.forecast[1]?.dayName).toBe(expected1);
   });
 
   it('omits minutely (Open-Meteo does not provide minute-by-minute precip)', async () => {
