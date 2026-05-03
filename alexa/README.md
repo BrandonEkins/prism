@@ -37,12 +37,21 @@ ALEXA_VOICE_TOKEN=ptk_...
 Restart the container (`docker-compose up -d --force-recreate app`) so it picks
 up the new env var.
 
-### 2. Edit the skill manifest
+### 2. Set the deploy hostname (env-driven)
 
-Open `alexa/skill.json` and replace `prism.example.com` with the public host
-that Alexa will reach. The endpoint must be HTTPS with a trusted (non-self-signed)
-cert. If you use Cloudflare Tunnel or similar, make sure the public hostname is
-listed in `apis.custom.endpoint.uri`.
+The committed `skill.json` keeps `prism.example.com` as a placeholder so the
+real hostname never lands in git. Set the real hostname in your shell before
+deploying. The endpoint must be HTTPS with a trusted (non-self-signed) cert.
+
+```powershell
+# PowerShell
+$env:ALEXA_PRISM_HOSTNAME = 'your-real-public-host'
+```
+
+```bash
+# bash
+export ALEXA_PRISM_HOSTNAME='your-real-public-host'
+```
 
 ### 3. Install ASK CLI
 
@@ -58,13 +67,14 @@ Pick an Amazon developer account when prompted. (Create one free at
 
 From the repo root:
 
-```bash
-ask deploy --target skill --target model --profile default
+```powershell
+pwsh alexa/deploy.ps1
 ```
 
-This uploads the manifest and interaction model. The skill goes into your
-"Development" stage automatically; you don't need to publish it to use it on
-your own Echo.
+The script substitutes `ALEXA_PRISM_HOSTNAME` into a copy of `skill.json` under
+`alexa/.deploy/` (gitignored), then runs `ask deploy --target skill --target model`
+against it. The skill goes into your "Development" stage automatically; you
+don't need to publish it to use it on your own Echo.
 
 ### 5. Enable on your Echo
 
