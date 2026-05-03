@@ -41,9 +41,9 @@ import { logActivity } from '@/lib/services/auditLog';
 // Determine whether a specific request arrived over HTTPS.
 // Use X-Forwarded-Proto (set by Nginx when proxying from TLS) if present;
 // fall back to the request URL scheme for direct access.
-// Do NOT use APP_URL or NODE_ENV — the same container is accessed via both
-// http://localhost:3000 (plain HTTP, no secure cookie) and
-// https://prism.example.com (HTTPS via Cloudflare, secure cookie).
+// Do NOT use APP_URL or NODE_ENV: the same container is accessed via both
+// plain HTTP on localhost (no secure cookie) and HTTPS through a TLS
+// terminating reverse proxy (secure cookie).
 function requestIsSecure(req: NextRequest): boolean {
   const proto = req.headers.get('x-forwarded-proto');
   if (proto) return proto === 'https';
