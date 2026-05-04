@@ -270,6 +270,32 @@ The architecture makes adding integrations relatively straightforward. If you co
 
 </details>
 
+## Bonus Features
+
+### Alexa Skill (optional)
+
+If you have an Echo device, you can talk to your Prism dashboard. Ask for today's events, today's tasks, or your family list — answered out loud by Alexa.
+
+The skill is a single-user personal skill: you generate a token in Prism, point the skill at your public Prism URL, and Alexa hits your dashboard directly. No AWS Lambda, no third-party hosting.
+
+**One-time prereqs**
+
+```powershell
+npm install -g ask-cli      # Alexa Skill Kit CLI
+ask configure               # Browser flow that links your Amazon developer account
+```
+
+If you don't have an Amazon developer account, create one (free) at [developer.amazon.com](https://developer.amazon.com) before running `ask configure`.
+
+**Setup steps** (token, env var, deploy, enable on Echo) live in [`alexa/README.md`](alexa/README.md). Roughly:
+
+1. Generate a `voice`-scoped token in Settings -> Security -> API Tokens.
+2. Add `ALEXA_VOICE_TOKEN=...` to your `.env` and recreate the app container.
+3. `$env:ALEXA_PRISM_HOSTNAME = '<your-public-host>'; pwsh alexa/deploy.ps1`
+4. Enable the skill on your Echo (Alexa app -> Skills & Games -> Your Skills -> Dev).
+
+Then: *"Alexa, ask Prism what's on today."*
+
 ## Contributing
 
 I built this for my family, but I'm sharing it because others might find it useful. If you do:

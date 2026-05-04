@@ -87,6 +87,15 @@ config/certs/
 
 # Misc
 .vercel
+
+# Alexa Skill Kit CLI (LWA refresh tokens, build state, deploy artifacts)
+.ask/
+ask-resources.json
+.deploy/
+*.pem
+*.key
+*.p12
+*.pfx
 drizzle/meta/
 *.db
 *.sqlite
