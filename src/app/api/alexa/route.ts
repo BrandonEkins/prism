@@ -25,11 +25,32 @@ import { logError } from '@/lib/utils/logError';
 
 interface AlexaRequest {
   version?: string;
+  session?: {
+    application?: { applicationId?: string };
+  };
+  context?: {
+    System?: {
+      application?: { applicationId?: string };
+    };
+  };
   request?: {
     type?: string;
     timestamp?: string;
     intent?: { name?: string };
   };
+}
+
+/**
+ * Pull the calling skill's application ID. It appears in either
+ * `session.application` (most request types) or `context.System.application`
+ * (some types like LaunchRequest may rely on the context copy). Either is
+ * authoritative when present.
+ */
+function extractApplicationId(req: AlexaRequest): string | undefined {
+  return (
+    req.session?.application?.applicationId ??
+    req.context?.System?.application?.applicationId
+  );
 }
 
 export async function POST(request: NextRequest) {
@@ -67,6 +88,28 @@ export async function POST(request: NextRequest) {
       logError('[alexa] signature verification crashed:', err);
       return NextResponse.json({ error: 'signature_verification_failed' }, { status: 400 });
     }
+  }
+
+  // Skill ID gating. The signature only proves Amazon signed the request —
+  // it does NOT prove the request came from OUR skill. Without this check,
+  // anyone could create their own Alexa skill, point it at this URL, and
+  // ride the ALEXA_VOICE_TOKEN we use upstream. Refusing requests whose
+  // applicationId doesn't match the configured skill closes that gap.
+  //
+  // ALEXA_SKILL_ID is the value shown as "Your Skill ID" in the Alexa
+  // Developer Console (format: amzn1.ask.skill.<uuid>). Required in
+  // production; warn-and-allow in dev to keep `?skipAlexaSignatureCheck=1`
+  // testing convenient.
+  const expectedSkillId = process.env.ALEXA_SKILL_ID;
+  const presentedSkillId = extractApplicationId(parsed);
+  if (expectedSkillId) {
+    if (presentedSkillId !== expectedSkillId) {
+      logError('[alexa] skill ID mismatch', { got: presentedSkillId ?? null });
+      return NextResponse.json({ error: 'skill_id_mismatch' }, { status: 403 });
+    }
+  } else if (process.env.NODE_ENV === 'production') {
+    logError('[alexa] ALEXA_SKILL_ID is not set; refusing to dispatch in production', null);
+    return NextResponse.json({ error: 'skill_id_not_configured' }, { status: 500 });
   }
 
   const reqType = parsed.request?.type;

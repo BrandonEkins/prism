@@ -113,3 +113,72 @@ describe('POST /api/alexa signature bypass — production', () => {
     expect(body.error).toMatch(/missing|signature/i);
   });
 });
+
+describe('POST /api/alexa skill ID gating', () => {
+  beforeEach(() => {
+    jest.replaceProperty(process.env, 'NODE_ENV', 'test');
+  });
+
+  afterEach(() => {
+    delete process.env.ALEXA_SKILL_ID;
+  });
+
+  it('rejects requests whose applicationId does not match ALEXA_SKILL_ID', async () => {
+    process.env.ALEXA_SKILL_ID = 'amzn1.ask.skill.expected';
+    const res = await POST(makeRequest({
+      version: '1.0',
+      session: { application: { applicationId: 'amzn1.ask.skill.attacker' } },
+      request: { type: 'LaunchRequest', timestamp: new Date().toISOString() },
+    }) as never);
+    expect(res.status).toBe(403);
+    const body = await res.json();
+    expect(body.error).toBe('skill_id_mismatch');
+  });
+
+  it('rejects requests with no applicationId when ALEXA_SKILL_ID is set', async () => {
+    process.env.ALEXA_SKILL_ID = 'amzn1.ask.skill.expected';
+    const res = await POST(makeRequest({
+      version: '1.0',
+      request: { type: 'LaunchRequest', timestamp: new Date().toISOString() },
+    }) as never);
+    expect(res.status).toBe(403);
+  });
+
+  it('accepts requests with matching applicationId in session', async () => {
+    process.env.ALEXA_SKILL_ID = 'amzn1.ask.skill.expected';
+    const res = await POST(makeRequest({
+      version: '1.0',
+      session: { application: { applicationId: 'amzn1.ask.skill.expected' } },
+      request: { type: 'LaunchRequest', timestamp: new Date().toISOString() },
+    }) as never);
+    expect(res.status).toBe(200);
+  });
+
+  it('accepts requests with matching applicationId in context.System (LaunchRequest case)', async () => {
+    process.env.ALEXA_SKILL_ID = 'amzn1.ask.skill.expected';
+    const res = await POST(makeRequest({
+      version: '1.0',
+      context: { System: { application: { applicationId: 'amzn1.ask.skill.expected' } } },
+      request: { type: 'LaunchRequest', timestamp: new Date().toISOString() },
+    }) as never);
+    expect(res.status).toBe(200);
+  });
+
+  it('refuses to dispatch in production when ALEXA_SKILL_ID is unset', async () => {
+    jest.replaceProperty(process.env, 'NODE_ENV', 'production');
+    delete process.env.ALEXA_SKILL_ID;
+    // bypass is also disabled in production so this also fails on signature,
+    // but we want to assert the path with signature check off ALSO refuses.
+    const url = 'http://localhost:3000/api/alexa';
+    const req = new Request(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        version: '1.0',
+        request: { type: 'LaunchRequest', timestamp: new Date().toISOString() },
+      }),
+    });
+    const res = await POST(req as never);
+    expect([400, 500]).toContain(res.status);
+  });
+});

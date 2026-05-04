@@ -24,18 +24,28 @@ Echo speaker
 
 ## One-time setup
 
-### 1. Generate the upstream token
+### 1. Set the two env vars on the Prism server
 
-In Prism, go to **Settings -> API Tokens** and create a token with the
-`voice` scope. Copy it and set it on the Prism server:
+Generate a `voice`-scoped API token at **Settings -> Security -> API Tokens**.
+Then add both env vars to `.env` on the Prism host:
 
 ```bash
 # .env on the host running Prism
 ALEXA_VOICE_TOKEN=ptk_...
+ALEXA_SKILL_ID=amzn1.ask.skill.your-skill-id
 ```
 
-Restart the container (`docker-compose up -d --force-recreate app`) so it picks
-up the new env var.
+`ALEXA_SKILL_ID` is the "Your Skill ID" value shown on the Build tab of the
+Alexa Developer Console. It's required in production: the webhook refuses
+requests whose `applicationId` doesn't match, even if they carry a valid
+Amazon-signed cert chain. Without it, anyone with their own Alexa skill
+could ride your `ALEXA_VOICE_TOKEN`.
+
+Rebuild and recreate the container so it picks up the new env vars:
+
+```bash
+docker-compose build app && docker-compose up -d --force-recreate app
+```
 
 ### 2. Set the deploy hostname (env-driven)
 
