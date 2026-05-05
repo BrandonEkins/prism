@@ -4,6 +4,8 @@ import {
   phraseTaskList,
   phraseFamilyMembers,
   phraseRecentMessages,
+  phraseTodayMeals,
+  phraseTodayChores,
 } from '../voicePhrases';
 
 const at = (h: number, m = 0) => {
@@ -134,6 +136,50 @@ describe('phraseFamilyMembers', () => {
   it('joins multiple members with Oxford comma', () => {
     expect(phraseFamilyMembers(['Alex', 'Jordan', 'Emma', 'Sophie']))
       .toBe('Your family has Alex, Jordan, Emma, and Sophie.');
+  });
+});
+
+describe('phraseTodayMeals', () => {
+  it('handles no meals', () => {
+    expect(phraseTodayMeals([])).toBe('No meals are planned for today.');
+  });
+
+  it('renders a single meal', () => {
+    expect(phraseTodayMeals([{ name: 'Tacos', mealType: 'dinner' }]))
+      .toBe("Today's plan is dinner: Tacos.");
+  });
+
+  it('joins multiple meals', () => {
+    expect(phraseTodayMeals([
+      { name: 'Oatmeal', mealType: 'breakfast' },
+      { name: 'Salad', mealType: 'lunch' },
+      { name: 'Tacos', mealType: 'dinner' },
+    ])).toBe("Today's meals: breakfast: Oatmeal, lunch: Salad, and dinner: Tacos.");
+  });
+});
+
+describe('phraseTodayChores', () => {
+  it('says no chores when empty (anonymous)', () => {
+    expect(phraseTodayChores([])).toBe('No chores are due today.');
+  });
+
+  it('says no chores when empty (named assignee)', () => {
+    expect(phraseTodayChores([], 'Emma')).toBe('Emma has no chores due today.');
+  });
+
+  it('handles a single chore (anonymous)', () => {
+    expect(phraseTodayChores(['Take out trash']))
+      .toBe('You have one chore today: Take out trash.');
+  });
+
+  it('handles a single chore (named)', () => {
+    expect(phraseTodayChores(['Feed the dog'], 'Emma'))
+      .toBe('Emma has one chore today: Feed the dog.');
+  });
+
+  it('counts and joins multiple chores', () => {
+    expect(phraseTodayChores(['A', 'B', 'C'], 'Emma'))
+      .toBe('Emma has 3 chores today: A, B, and C.');
   });
 });
 

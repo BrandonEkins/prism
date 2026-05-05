@@ -88,6 +88,27 @@ jest.mock('@/lib/alexa/intents/postFamilyMessage', () => ({
   })),
 }));
 
+jest.mock('@/lib/alexa/intents/getFamily', () => ({
+  handleGetFamily: mockHandler('family list'),
+}));
+
+jest.mock('@/lib/alexa/intents/getTodayMeal', () => ({
+  handleGetTodayMeal: mockHandler('today meal'),
+}));
+
+jest.mock('@/lib/alexa/intents/getTodayChores', () => ({
+  handleGetTodayChores: jest.fn(async ({ slots }) => ({
+    version: '1.0',
+    response: {
+      outputSpeech: {
+        type: 'PlainText',
+        text: `chores assignee=${slots?.Assignee?.value ?? 'none'}`,
+      },
+      shouldEndSession: true,
+    },
+  })),
+}));
+
 function makeRequest(body: unknown): Request {
   return new Request('http://localhost:3000/api/alexa?skipAlexaSignatureCheck=1', {
     method: 'POST',
@@ -211,6 +232,45 @@ describe('POST /api/alexa', () => {
     }) as never);
     const body = await res.json();
     expect(body.response.outputSpeech.text).toBe('posted: soccer at 4');
+  });
+
+  it('dispatches GetFamilyIntent', async () => {
+    const res = await POST(makeRequest({
+      version: '1.0',
+      request: {
+        type: 'IntentRequest',
+        timestamp: new Date().toISOString(),
+        intent: { name: 'GetFamilyIntent' },
+      },
+    }) as never);
+    const body = await res.json();
+    expect(body.response.outputSpeech.text).toBe('family list');
+  });
+
+  it('dispatches GetTodayMealIntent', async () => {
+    const res = await POST(makeRequest({
+      version: '1.0',
+      request: {
+        type: 'IntentRequest',
+        timestamp: new Date().toISOString(),
+        intent: { name: 'GetTodayMealIntent' },
+      },
+    }) as never);
+    const body = await res.json();
+    expect(body.response.outputSpeech.text).toBe('today meal');
+  });
+
+  it('dispatches GetTodayChoresIntent with optional assignee', async () => {
+    const res = await POST(makeRequest({
+      version: '1.0',
+      request: {
+        type: 'IntentRequest',
+        timestamp: new Date().toISOString(),
+        intent: { name: 'GetTodayChoresIntent', slots: { Assignee: { value: 'Emma' } } },
+      },
+    }) as never);
+    const body = await res.json();
+    expect(body.response.outputSpeech.text).toBe('chores assignee=Emma');
   });
 
   it('returns a polite fallback for unknown intents', async () => {

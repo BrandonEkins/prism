@@ -27,6 +27,9 @@ import { handleGetFamilyMessages } from '@/lib/alexa/intents/getFamilyMessages';
 import { handleAddShoppingItem } from '@/lib/alexa/intents/addShoppingItem';
 import { handleCompleteChore } from '@/lib/alexa/intents/completeChore';
 import { handlePostFamilyMessage } from '@/lib/alexa/intents/postFamilyMessage';
+import { handleGetFamily } from '@/lib/alexa/intents/getFamily';
+import { handleGetTodayMeal } from '@/lib/alexa/intents/getTodayMeal';
+import { handleGetTodayChores } from '@/lib/alexa/intents/getTodayChores';
 import { logError } from '@/lib/utils/logError';
 
 interface AlexaSlot {
@@ -166,6 +169,15 @@ export async function POST(request: NextRequest) {
 
     case 'PostFamilyMessageIntent':
       return NextResponse.json(await handlePostFamilyMessage({ slots }));
+
+    case 'GetFamilyIntent':
+      return NextResponse.json(await handleGetFamily());
+
+    case 'GetTodayMealIntent':
+      return NextResponse.json(await handleGetTodayMeal());
+
+    case 'GetTodayChoresIntent':
+      return NextResponse.json(await handleGetTodayChores({ slots }));
 
     case 'AMAZON.HelpIntent':
       return NextResponse.json(

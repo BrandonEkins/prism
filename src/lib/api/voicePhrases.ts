@@ -72,6 +72,33 @@ export function phraseFamilyMembers(names: string[]): string {
   return `Your family has ${oxfordJoin(names)}.`;
 }
 
+type SpeakableMeal = {
+  name: string;
+  mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack';
+};
+
+export function phraseTodayMeals(items: SpeakableMeal[]): string {
+  if (items.length === 0) return 'No meals are planned for today.';
+
+  const parts = items.map((m) => `${m.mealType}: ${m.name}`);
+  if (items.length === 1) return `Today's plan is ${parts[0]}.`;
+  return `Today's meals: ${oxfordJoin(parts)}.`;
+}
+
+export function phraseTodayChores(titles: string[], assigneeName: string | null = null): string {
+  const who = assigneeName ?? 'You';
+  if (titles.length === 0) {
+    return assigneeName
+      ? `${assigneeName} has no chores due today.`
+      : 'No chores are due today.';
+  }
+  if (titles.length === 1) {
+    return `${who} ${who === 'You' ? 'have' : 'has'} one chore today: ${titles[0]}.`;
+  }
+  const verb = who === 'You' ? 'have' : 'has';
+  return `${who} ${verb} ${titles.length} chores today: ${oxfordJoin(titles)}.`;
+}
+
 type SpeakableMessage = {
   message: string;
   authorName: string | null;

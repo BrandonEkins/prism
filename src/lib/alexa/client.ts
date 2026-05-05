@@ -75,4 +75,11 @@ export const voiceClient = {
     ),
   postFamilyMessage: (body: { message: string }) =>
     request('POST', '/api/v1/voice/message/post', body),
+  getFamily: () => request<{ count: number; members: unknown[] }>('GET', '/api/v1/voice/family'),
+  getMealsToday: () => request<{ count: number; meals: unknown[] }>('GET', '/api/v1/voice/meals/today'),
+  getChoresToday: (assignee?: string) =>
+    request<{ count: number; chores: unknown[] }>(
+      'GET',
+      assignee ? `/api/v1/voice/chores/today?assignee=${encodeURIComponent(assignee)}` : '/api/v1/voice/chores/today',
+    ),
 };

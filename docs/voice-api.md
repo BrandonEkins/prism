@@ -131,6 +131,30 @@ Author defaults to the first parent (by `sortOrder`). Voice has no way to verify
 
 **Spoken**: `"Posted message: 'soccer practice moved to 4pm today.'"`
 
+### `GET /api/v1/voice/meals/today`
+
+Returns meals planned for today (breakfast, lunch, dinner, snack), ordered by meal type. Tolerates either Sunday- or Monday-start week conventions by scanning meal entries within ±7 days of today.
+
+**Response data**: `{ count, meals: [{ id, name, mealType, mealTime }] }`
+
+**Spoken examples**:
+
+- `"No meals are planned for today."`
+- `"Today's plan is dinner: Tacos."`
+- `"Today's meals: breakfast: Oatmeal, lunch: Salad, and dinner: Tacos."`
+
+### `GET /api/v1/voice/chores/today?assignee=Emma`
+
+Returns enabled chores due today or overdue. With `assignee` set, returns chores assigned to that family member (case-insensitive name match) plus chores with no assignee (anyone-can-do). Without `assignee`, returns all chores due today.
+
+**Response data**: `{ count, chores: [{ id, title, assignedTo, nextDue, pointValue }], assigneeName }`
+
+**Spoken examples**:
+
+- `"No chores are due today."`
+- `"Emma has one chore today: Feed the dog."`
+- `"You have 3 chores today: Take out trash, Vacuum, and Wipe counters."`
+
 ### `GET /api/v1/voice/message/recent?count=N`
 
 Returns the most recent (non-expired) family messages, newest first. `count` defaults to 3, clamped to 1..10.

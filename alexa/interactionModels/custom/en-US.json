@@ -112,6 +112,44 @@
             "leave a message that {Message}",
             "send a family message {Message}"
           ]
+        },
+        {
+          "name": "GetFamilyIntent",
+          "slots": [],
+          "samples": [
+            "who is in the family",
+            "who's in the family",
+            "for the family list",
+            "list the family"
+          ]
+        },
+        {
+          "name": "GetTodayMealIntent",
+          "slots": [],
+          "samples": [
+            "what's for dinner",
+            "what's for dinner tonight",
+            "what's for lunch",
+            "what's for breakfast",
+            "what is on the meal plan today",
+            "for today's meals",
+            "what are we eating today"
+          ]
+        },
+        {
+          "name": "GetTodayChoresIntent",
+          "slots": [
+            { "name": "Assignee", "type": "AMAZON.FirstName" }
+          ],
+          "samples": [
+            "what chores do I have today",
+            "what chores are left",
+            "what are today's chores",
+            "what chores does {Assignee} have",
+            "what chores does {Assignee} have today",
+            "what does {Assignee} have to do",
+            "{Assignee}'s chores"
+          ]
         }
       ],
       "types": []

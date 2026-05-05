@@ -2,6 +2,7 @@ import { handleAddShoppingItem } from '../intents/addShoppingItem';
 import { handleCompleteChore } from '../intents/completeChore';
 import { handlePostFamilyMessage } from '../intents/postFamilyMessage';
 import { handleGetUpcomingEvents } from '../intents/getUpcomingEvents';
+import { handleGetTodayChores } from '../intents/getTodayChores';
 import { voiceClient, VoiceApiError } from '../client';
 
 jest.mock('../client', () => {
@@ -16,6 +17,9 @@ jest.mock('../client', () => {
       postShoppingItem: jest.fn(),
       completeChore: jest.fn(),
       postFamilyMessage: jest.fn(),
+      getFamily: jest.fn(),
+      getMealsToday: jest.fn(),
+      getChoresToday: jest.fn(),
     },
   };
 });
@@ -85,6 +89,20 @@ describe('PostFamilyMessageIntent slot handling', () => {
     mocked.postFamilyMessage.mockResolvedValue({ ok: true, spoken: 'Posted message.' });
     await handlePostFamilyMessage({ slots: { Message: { value: 'soccer at 4' } } });
     expect(mocked.postFamilyMessage).toHaveBeenCalledWith({ message: 'soccer at 4' });
+  });
+});
+
+describe('GetTodayChoresIntent slot handling', () => {
+  it('forwards optional assignee', async () => {
+    mocked.getChoresToday.mockResolvedValue({ ok: true, spoken: 'Emma has 1 chore today.' });
+    await handleGetTodayChores({ slots: { Assignee: { value: 'Emma' } } });
+    expect(mocked.getChoresToday).toHaveBeenCalledWith('Emma');
+  });
+
+  it('omits assignee when missing', async () => {
+    mocked.getChoresToday.mockResolvedValue({ ok: true, spoken: 'No chores today.' });
+    await handleGetTodayChores({ slots: {} });
+    expect(mocked.getChoresToday).toHaveBeenCalledWith(undefined);
   });
 });
 
