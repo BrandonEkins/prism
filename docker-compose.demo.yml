@@ -1,0 +1,36 @@
+# ============================================================================
+# Demo overlay
+# ============================================================================
+#
+# Runs Prism in read-only public-demo mode. Stack the overlay on top of the
+# base compose file:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.demo.yml up -d
+#
+# What changes vs. the base stack:
+#   - DEMO_MODE=true               server-side; middleware blocks all mutations
+#                                  except auth login/logout/session.
+#   - NEXT_PUBLIC_DEMO_MODE=true   client-side; renders the top-of-page banner.
+#   - The backup container is omitted — there is nothing worth backing up
+#     (data is reset nightly from seed).
+#
+# A nightly cron on the host should run:
+#   /opt/prism/scripts/demo-reset.sh
+# to wipe + reseed. See docs/demo-deployment.md for the full host setup.
+#
+# ============================================================================
+
+services:
+  app:
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://prism:${DB_PASSWORD}@db:5432/prism
+      - REDIS_URL=redis://redis:6379
+      - NODE_OPTIONS=--dns-result-order=ipv4first
+      - DEMO_MODE=true
+      - NEXT_PUBLIC_DEMO_MODE=true
+
+  # The backup sidecar isn't useful for the demo — every night's data is
+  # discarded and reseeded. Override its command to keep it from running.
+  backup:
+    profiles: ["disabled"]

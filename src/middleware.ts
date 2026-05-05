@@ -10,6 +10,17 @@ const CSRF_EXEMPT_PREFIXES = [
   '/api/away-mode',      // has its own same-origin check
 ];
 
+/**
+ * Mutation paths that are allowed to bypass DEMO_MODE so the demo is
+ * actually usable. Login is needed so visitors can switch between members
+ * to see role-based UI; logout is needed so they don't get stuck.
+ */
+const DEMO_ALLOWED_MUTATIONS = [
+  '/api/auth/login',
+  '/api/auth/logout',
+  '/api/auth/session',
+];
+
 function generateRequestId(): string {
   const array = new Uint8Array(12);
   crypto.getRandomValues(array);
@@ -35,6 +46,23 @@ export function middleware(request: NextRequest) {
   if (!MUTATION_METHODS.has(request.method)) return response;
 
   const { pathname } = request.nextUrl;
+
+  // DEMO_MODE: refuse mutations so visitors can't trash the seed data
+  // for everyone. A friendly error tells them this is a demo and points
+  // them at the repo. The login path is allowed so they can switch
+  // members to see role-based UI.
+  if (process.env.DEMO_MODE === 'true' && !DEMO_ALLOWED_MUTATIONS.some((p) => pathname.startsWith(p))) {
+    const forbidden = NextResponse.json(
+      {
+        error: 'demo_mode',
+        message: 'This is a read-only demo. Clone https://github.com/sandydargoport/prism to try changes on your own instance.',
+      },
+      { status: 403 },
+    );
+    forbidden.headers.set('x-request-id', requestId);
+    return forbidden;
+  }
+
   if (CSRF_EXEMPT_PREFIXES.some((p) => pathname.startsWith(p))) return response;
 
   const origin = request.headers.get('origin');

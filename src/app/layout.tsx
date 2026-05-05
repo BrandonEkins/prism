@@ -48,6 +48,7 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 // Lazy-load overlays — these are rarely needed on first paint and pull in
 // heavy dependencies (Screensaver imports WIDGET_REGISTRY + useDashboardData).
 import { LazyOverlays } from '@/components/layout/LazyOverlays';
+import { DemoBanner } from '@/components/layout/DemoBanner';
 
 // Toast notifications
 import { Toaster } from '@/components/ui/toaster';
@@ -262,6 +263,7 @@ export default function RootLayout({
         */}
         <ErrorBoundary>
           <Providers>
+            <DemoBanner />
             {children}
             <LazyOverlays />
             <Toaster />

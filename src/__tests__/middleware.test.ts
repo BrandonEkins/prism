@@ -126,4 +126,75 @@ describe('middleware', () => {
       expect(res.headers.get('x-request-id')).not.toBeNull();
     });
   });
+
+  describe('DEMO_MODE', () => {
+    afterEach(() => {
+      delete process.env.DEMO_MODE;
+    });
+
+    it('off by default — POST passes through', async () => {
+      const req = makeRequest('/api/events', {
+        method: 'POST',
+        headers: { host: 'localhost:3000', origin: 'http://localhost:3000' },
+      });
+      const res = await middleware(req);
+      expect(res.status).not.toBe(403);
+    });
+
+    it('on — POST to mutation route returns 403 with demo_mode error', async () => {
+      process.env.DEMO_MODE = 'true';
+      const req = makeRequest('/api/events', {
+        method: 'POST',
+        headers: { host: 'localhost:3000', origin: 'http://localhost:3000' },
+      });
+      const res = await middleware(req);
+      expect(res.status).toBe(403);
+      const body = await res.json();
+      expect(body.error).toBe('demo_mode');
+      expect(body.message).toMatch(/read-only demo/i);
+      expect(res.headers.get('x-request-id')).not.toBeNull();
+    });
+
+    it('on — DELETE blocked the same as POST', async () => {
+      process.env.DEMO_MODE = 'true';
+      const req = makeRequest('/api/events/abc', {
+        method: 'DELETE',
+        headers: { host: 'localhost:3000', origin: 'http://localhost:3000' },
+      });
+      const res = await middleware(req);
+      expect(res.status).toBe(403);
+      const body = await res.json();
+      expect(body.error).toBe('demo_mode');
+    });
+
+    it('on — GET passes through (reads always allowed)', async () => {
+      process.env.DEMO_MODE = 'true';
+      const req = makeRequest('/api/events', {
+        method: 'GET',
+        headers: { host: 'localhost:3000' },
+      });
+      const res = await middleware(req);
+      expect(res.status).not.toBe(403);
+    });
+
+    it('on — login allowed so visitors can switch members', async () => {
+      process.env.DEMO_MODE = 'true';
+      const req = makeRequest('/api/auth/login', {
+        method: 'POST',
+        headers: { host: 'localhost:3000', origin: 'http://localhost:3000' },
+      });
+      const res = await middleware(req);
+      expect(res.status).not.toBe(403);
+    });
+
+    it('on — logout allowed so visitors don\'t get stuck', async () => {
+      process.env.DEMO_MODE = 'true';
+      const req = makeRequest('/api/auth/logout', {
+        method: 'POST',
+        headers: { host: 'localhost:3000', origin: 'http://localhost:3000' },
+      });
+      const res = await middleware(req);
+      expect(res.status).not.toBe(403);
+    });
+  });
 });
