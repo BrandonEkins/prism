@@ -60,4 +60,19 @@ async function request<T>(method: 'GET' | 'POST', path: string, body?: unknown):
 
 export const voiceClient = {
   getCalendarToday: () => request<{ count: number; events: unknown[] }>('GET', '/api/v1/voice/calendar/today'),
+  getCalendarUpcoming: (count = 3) =>
+    request<{ count: number; events: unknown[] }>('GET', `/api/v1/voice/calendar/upcoming?count=${count}`),
+  getTasksToday: () => request<{ count: number; tasks: unknown[] }>('GET', '/api/v1/voice/tasks/today'),
+  getRecentMessages: (count = 3) =>
+    request<{ count: number; messages: unknown[] }>('GET', `/api/v1/voice/message/recent?count=${count}`),
+  postShoppingItem: (body: { item: string; list?: string; quantity?: number; unit?: string }) =>
+    request('POST', '/api/v1/voice/shopping/add', body),
+  completeChore: (body: { chore: string; assignee?: string }) =>
+    request<{ candidates?: { title: string; assignee: string | null }[] }>(
+      'POST',
+      '/api/v1/voice/chore/complete',
+      body,
+    ),
+  postFamilyMessage: (body: { message: string }) =>
+    request('POST', '/api/v1/voice/message/post', body),
 };

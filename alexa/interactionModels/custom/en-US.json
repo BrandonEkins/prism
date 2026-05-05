@@ -1,7 +1,7 @@
 {
   "interactionModel": {
     "languageModel": {
-      "invocationName": "prism",
+      "invocationName": "blob dog",
       "intents": [
         {
           "name": "AMAZON.CancelIntent",
@@ -26,6 +26,91 @@
             "for today's calendar",
             "today's events",
             "what is on today"
+          ]
+        },
+        {
+          "name": "GetUpcomingEventsIntent",
+          "slots": [
+            { "name": "Count", "type": "AMAZON.NUMBER" }
+          ],
+          "samples": [
+            "what's coming up",
+            "what's next",
+            "for upcoming events",
+            "for the next {Count} events",
+            "what are my next {Count} events",
+            "what's on my schedule",
+            "upcoming events"
+          ]
+        },
+        {
+          "name": "GetTodayTasksIntent",
+          "slots": [],
+          "samples": [
+            "what's on my to do list",
+            "what tasks do I have today",
+            "for today's tasks",
+            "what tasks are due today",
+            "what's due today",
+            "my tasks for today"
+          ]
+        },
+        {
+          "name": "GetFamilyMessagesIntent",
+          "slots": [],
+          "samples": [
+            "for messages",
+            "any messages",
+            "for family messages",
+            "what messages are there",
+            "for recent messages",
+            "what are the latest messages",
+            "read messages"
+          ]
+        },
+        {
+          "name": "AddShoppingItemIntent",
+          "slots": [
+            { "name": "Item", "type": "AMAZON.SearchQuery" },
+            { "name": "ListName", "type": "AMAZON.SearchQuery" }
+          ],
+          "samples": [
+            "add {Item} to my list",
+            "add {Item} to the {ListName} list",
+            "add {Item} to {ListName}",
+            "put {Item} on my list",
+            "put {Item} on the {ListName} list",
+            "I need {Item}",
+            "I need to buy {Item}"
+          ]
+        },
+        {
+          "name": "CompleteChoreIntent",
+          "slots": [
+            { "name": "Chore", "type": "AMAZON.SearchQuery" },
+            { "name": "Assignee", "type": "AMAZON.FirstName" }
+          ],
+          "samples": [
+            "mark {Chore} complete",
+            "mark {Chore} done",
+            "{Chore} is done",
+            "I finished {Chore}",
+            "{Assignee} finished {Chore}",
+            "mark {Chore} done for {Assignee}",
+            "complete {Chore} for {Assignee}"
+          ]
+        },
+        {
+          "name": "PostFamilyMessageIntent",
+          "slots": [
+            { "name": "Message", "type": "AMAZON.SearchQuery" }
+          ],
+          "samples": [
+            "post a message that {Message}",
+            "post message {Message}",
+            "tell the family {Message}",
+            "leave a message that {Message}",
+            "send a family message {Message}"
           ]
         }
       ],

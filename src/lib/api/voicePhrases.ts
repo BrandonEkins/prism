@@ -71,3 +71,37 @@ export function phraseFamilyMembers(names: string[]): string {
   if (names.length === 1) return `Your family has ${names[0]}.`;
   return `Your family has ${oxfordJoin(names)}.`;
 }
+
+type SpeakableMessage = {
+  message: string;
+  authorName: string | null;
+  createdAt: Date;
+};
+
+/**
+ * Past-leaning version of relativeDayLabel: messages are always already
+ * sent, so "yesterday" / "on Friday" reads better than "tomorrow."
+ */
+function pastDayLabel(target: Date, now: Date): string {
+  const oneDay = 86400000;
+  const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const diffDays = Math.round((startOfDay(now) - startOfDay(target)) / oneDay);
+
+  if (diffDays === 0) return 'today';
+  if (diffDays === 1) return 'yesterday';
+  if (diffDays < 7) return `on ${target.toLocaleDateString('en-US', { weekday: 'long' })}`;
+  return `on ${target.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}`;
+}
+
+export function phraseRecentMessages(items: SpeakableMessage[], now = new Date()): string {
+  if (items.length === 0) return 'No recent family messages.';
+
+  const lines = items.map((m) => {
+    const day = pastDayLabel(m.createdAt, now);
+    const who = m.authorName ? `${m.authorName} ${day}` : day;
+    return `${who}: ${m.message}`;
+  });
+
+  if (items.length === 1) return `Latest message from ${lines[0]}.`;
+  return `Recent messages: ${oxfordJoin(lines)}.`;
+}

@@ -3,6 +3,7 @@ import {
   phraseUpcomingEvents,
   phraseTaskList,
   phraseFamilyMembers,
+  phraseRecentMessages,
 } from '../voicePhrases';
 
 const at = (h: number, m = 0) => {
@@ -133,5 +134,45 @@ describe('phraseFamilyMembers', () => {
   it('joins multiple members with Oxford comma', () => {
     expect(phraseFamilyMembers(['Alex', 'Jordan', 'Emma', 'Sophie']))
       .toBe('Your family has Alex, Jordan, Emma, and Sophie.');
+  });
+});
+
+describe('phraseRecentMessages', () => {
+  const now = new Date('2026-05-02T12:00:00');
+  const at = (offset: number) => {
+    const d = new Date(now);
+    d.setDate(d.getDate() - offset);
+    return d;
+  };
+
+  it('handles empty list', () => {
+    expect(phraseRecentMessages([], now)).toBe('No recent family messages.');
+  });
+
+  it('renders a single message', () => {
+    const out = phraseRecentMessages(
+      [{ message: 'soccer at 4', authorName: 'Alex', createdAt: at(0) }],
+      now,
+    );
+    expect(out).toBe('Latest message from Alex today: soccer at 4.');
+  });
+
+  it('falls back when authorName is null', () => {
+    const out = phraseRecentMessages(
+      [{ message: 'hello', authorName: null, createdAt: at(0) }],
+      now,
+    );
+    expect(out).toBe('Latest message from today: hello.');
+  });
+
+  it('joins multiple messages with Oxford comma', () => {
+    const out = phraseRecentMessages(
+      [
+        { message: 'first', authorName: 'Alex', createdAt: at(0) },
+        { message: 'second', authorName: 'Jordan', createdAt: at(1) },
+      ],
+      now,
+    );
+    expect(out).toBe('Recent messages: Alex today: first and Jordan yesterday: second.');
   });
 });

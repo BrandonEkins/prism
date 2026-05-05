@@ -131,6 +131,18 @@ Author defaults to the first parent (by `sortOrder`). Voice has no way to verify
 
 **Spoken**: `"Posted message: 'soccer practice moved to 4pm today.'"`
 
+### `GET /api/v1/voice/message/recent?count=N`
+
+Returns the most recent (non-expired) family messages, newest first. `count` defaults to 3, clamped to 1..10.
+
+**Response data**: `{ count, messages: [{ id, message, authorName, createdAt }] }`
+
+**Spoken examples**:
+
+- `"No recent family messages."`
+- `"Latest message from Alex today: soccer at 4."`
+- `"Recent messages: Alex today: soccer, Jordan yesterday: groceries done, and Emma on Friday: party RSVP."`
+
 ## Security model for write operations
 
 Voice cannot escalate privileges. Specifically:

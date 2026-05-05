@@ -21,7 +21,18 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifyAlexaRequest, AlexaSignatureError } from '@/lib/alexa/validate';
 import { speak } from '@/lib/alexa/responses';
 import { handleGetTodayEvents } from '@/lib/alexa/intents/getTodayEvents';
+import { handleGetUpcomingEvents } from '@/lib/alexa/intents/getUpcomingEvents';
+import { handleGetTodayTasks } from '@/lib/alexa/intents/getTodayTasks';
+import { handleGetFamilyMessages } from '@/lib/alexa/intents/getFamilyMessages';
+import { handleAddShoppingItem } from '@/lib/alexa/intents/addShoppingItem';
+import { handleCompleteChore } from '@/lib/alexa/intents/completeChore';
+import { handlePostFamilyMessage } from '@/lib/alexa/intents/postFamilyMessage';
 import { logError } from '@/lib/utils/logError';
+
+interface AlexaSlot {
+  name?: string;
+  value?: string;
+}
 
 interface AlexaRequest {
   version?: string;
@@ -36,7 +47,10 @@ interface AlexaRequest {
   request?: {
     type?: string;
     timestamp?: string;
-    intent?: { name?: string };
+    intent?: {
+      name?: string;
+      slots?: Record<string, AlexaSlot>;
+    };
   };
 }
 
@@ -129,14 +143,33 @@ export async function POST(request: NextRequest) {
   }
 
   const intent = parsed.request?.intent?.name;
+  const slots = parsed.request?.intent?.slots ?? {};
 
   switch (intent) {
     case 'GetTodayEventsIntent':
       return NextResponse.json(await handleGetTodayEvents());
 
+    case 'GetUpcomingEventsIntent':
+      return NextResponse.json(await handleGetUpcomingEvents({ slots }));
+
+    case 'GetTodayTasksIntent':
+      return NextResponse.json(await handleGetTodayTasks());
+
+    case 'GetFamilyMessagesIntent':
+      return NextResponse.json(await handleGetFamilyMessages());
+
+    case 'AddShoppingItemIntent':
+      return NextResponse.json(await handleAddShoppingItem({ slots }));
+
+    case 'CompleteChoreIntent':
+      return NextResponse.json(await handleCompleteChore({ slots }));
+
+    case 'PostFamilyMessageIntent':
+      return NextResponse.json(await handlePostFamilyMessage({ slots }));
+
     case 'AMAZON.HelpIntent':
       return NextResponse.json(
-        speak('You can ask me about today\'s events, today\'s tasks, or your family.'),
+        speak("You can ask me about today's events, what's coming up, today's tasks, recent family messages, add an item to a list, complete a chore, or post a family message."),
       );
 
     case 'AMAZON.CancelIntent':

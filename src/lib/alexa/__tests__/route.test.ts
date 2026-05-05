@@ -8,6 +8,16 @@
 
 import { POST } from '@/app/api/alexa/route';
 
+function mockHandler(text: string) {
+  return jest.fn().mockResolvedValue({
+    version: '1.0',
+    response: {
+      outputSpeech: { type: 'PlainText', text },
+      shouldEndSession: true,
+    },
+  });
+}
+
 jest.mock('@/lib/alexa/intents/getTodayEvents', () => ({
   handleGetTodayEvents: jest.fn().mockResolvedValue({
     version: '1.0',
@@ -16,6 +26,66 @@ jest.mock('@/lib/alexa/intents/getTodayEvents', () => ({
       shouldEndSession: true,
     },
   }),
+}));
+
+jest.mock('@/lib/alexa/intents/getUpcomingEvents', () => ({
+  handleGetUpcomingEvents: jest.fn(async ({ slots }) => ({
+    version: '1.0',
+    response: {
+      outputSpeech: {
+        type: 'PlainText',
+        text: `upcoming(count=${slots?.Count?.value ?? 'default'})`,
+      },
+      shouldEndSession: true,
+    },
+  })),
+}));
+
+jest.mock('@/lib/alexa/intents/getTodayTasks', () => ({
+  handleGetTodayTasks: mockHandler('today tasks'),
+}));
+
+jest.mock('@/lib/alexa/intents/getFamilyMessages', () => ({
+  handleGetFamilyMessages: mockHandler('family messages'),
+}));
+
+jest.mock('@/lib/alexa/intents/addShoppingItem', () => ({
+  handleAddShoppingItem: jest.fn(async ({ slots }) => ({
+    version: '1.0',
+    response: {
+      outputSpeech: {
+        type: 'PlainText',
+        text: `added ${slots?.Item?.value} to ${slots?.ListName?.value ?? 'default'}`,
+      },
+      shouldEndSession: true,
+    },
+  })),
+}));
+
+jest.mock('@/lib/alexa/intents/completeChore', () => ({
+  handleCompleteChore: jest.fn(async ({ slots }) => ({
+    version: '1.0',
+    response: {
+      outputSpeech: {
+        type: 'PlainText',
+        text: `chore=${slots?.Chore?.value} assignee=${slots?.Assignee?.value ?? 'none'}`,
+      },
+      shouldEndSession: true,
+    },
+  })),
+}));
+
+jest.mock('@/lib/alexa/intents/postFamilyMessage', () => ({
+  handlePostFamilyMessage: jest.fn(async ({ slots }) => ({
+    version: '1.0',
+    response: {
+      outputSpeech: {
+        type: 'PlainText',
+        text: `posted: ${slots?.Message?.value}`,
+      },
+      shouldEndSession: true,
+    },
+  })),
 }));
 
 function makeRequest(body: unknown): Request {
@@ -60,6 +130,87 @@ describe('POST /api/alexa', () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.response.outputSpeech.text).toBe('Today you have Soccer at 4 PM.');
+  });
+
+  it('dispatches GetUpcomingEventsIntent with slot count', async () => {
+    const res = await POST(makeRequest({
+      version: '1.0',
+      request: {
+        type: 'IntentRequest',
+        timestamp: new Date().toISOString(),
+        intent: { name: 'GetUpcomingEventsIntent', slots: { Count: { value: '5' } } },
+      },
+    }) as never);
+    const body = await res.json();
+    expect(body.response.outputSpeech.text).toBe('upcoming(count=5)');
+  });
+
+  it('dispatches GetTodayTasksIntent', async () => {
+    const res = await POST(makeRequest({
+      version: '1.0',
+      request: {
+        type: 'IntentRequest',
+        timestamp: new Date().toISOString(),
+        intent: { name: 'GetTodayTasksIntent' },
+      },
+    }) as never);
+    const body = await res.json();
+    expect(body.response.outputSpeech.text).toBe('today tasks');
+  });
+
+  it('dispatches GetFamilyMessagesIntent', async () => {
+    const res = await POST(makeRequest({
+      version: '1.0',
+      request: {
+        type: 'IntentRequest',
+        timestamp: new Date().toISOString(),
+        intent: { name: 'GetFamilyMessagesIntent' },
+      },
+    }) as never);
+    const body = await res.json();
+    expect(body.response.outputSpeech.text).toBe('family messages');
+  });
+
+  it('dispatches AddShoppingItemIntent with item + list slots', async () => {
+    const res = await POST(makeRequest({
+      version: '1.0',
+      request: {
+        type: 'IntentRequest',
+        timestamp: new Date().toISOString(),
+        intent: {
+          name: 'AddShoppingItemIntent',
+          slots: { Item: { value: 'milk' }, ListName: { value: 'grocery' } },
+        },
+      },
+    }) as never);
+    const body = await res.json();
+    expect(body.response.outputSpeech.text).toBe('added milk to grocery');
+  });
+
+  it('dispatches CompleteChoreIntent without optional assignee', async () => {
+    const res = await POST(makeRequest({
+      version: '1.0',
+      request: {
+        type: 'IntentRequest',
+        timestamp: new Date().toISOString(),
+        intent: { name: 'CompleteChoreIntent', slots: { Chore: { value: 'feed the dog' } } },
+      },
+    }) as never);
+    const body = await res.json();
+    expect(body.response.outputSpeech.text).toBe('chore=feed the dog assignee=none');
+  });
+
+  it('dispatches PostFamilyMessageIntent with message slot', async () => {
+    const res = await POST(makeRequest({
+      version: '1.0',
+      request: {
+        type: 'IntentRequest',
+        timestamp: new Date().toISOString(),
+        intent: { name: 'PostFamilyMessageIntent', slots: { Message: { value: 'soccer at 4' } } },
+      },
+    }) as never);
+    const body = await res.json();
+    expect(body.response.outputSpeech.text).toBe('posted: soccer at 4');
   });
 
   it('returns a polite fallback for unknown intents', async () => {
