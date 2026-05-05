@@ -243,6 +243,38 @@
         "referrer": "Bing",
         "uniques": 1
       }
+    ],
+    "2026-05-05": [
+      {
+        "count": 165,
+        "referrer": "reddit.com",
+        "uniques": 58
+      },
+      {
+        "count": 159,
+        "referrer": "github.com",
+        "uniques": 12
+      },
+      {
+        "count": 34,
+        "referrer": "com.reddit.frontpage",
+        "uniques": 12
+      },
+      {
+        "count": 28,
+        "referrer": "Google",
+        "uniques": 4
+      },
+      {
+        "count": 20,
+        "referrer": "community.home-assistant.io",
+        "uniques": 8
+      },
+      {
+        "count": 1,
+        "referrer": "Bing",
+        "uniques": 1
+      }
     ]
   },
   "referrers": [
@@ -277,7 +309,7 @@
       "uniques": 1
     }
   ],
-  "updated_at": "2026-05-04T05:39:18Z",
+  "updated_at": "2026-05-05T05:18:45Z",
   "views": {
     "2026-04-14": {
       "count": 64,
