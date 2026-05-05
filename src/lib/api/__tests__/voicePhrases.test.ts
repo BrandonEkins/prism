@@ -6,6 +6,9 @@ import {
   phraseRecentMessages,
   phraseTodayMeals,
   phraseTodayChores,
+  phraseWeatherToday,
+  phraseBusStatus,
+  phraseUpcomingBirthdays,
 } from '../voicePhrases';
 
 const at = (h: number, m = 0) => {
@@ -136,6 +139,117 @@ describe('phraseFamilyMembers', () => {
   it('joins multiple members with Oxford comma', () => {
     expect(phraseFamilyMembers(['Alex', 'Jordan', 'Emma', 'Sophie']))
       .toBe('Your family has Alex, Jordan, Emma, and Sophie.');
+  });
+});
+
+describe('phraseWeatherToday', () => {
+  it('renders current + high/low', () => {
+    const out = phraseWeatherToday({
+      location: 'Chicago',
+      currentTemp: 65,
+      feelsLike: 65,
+      description: 'Partly cloudy',
+      high: 72,
+      low: 58,
+      precipProbability: 10,
+    });
+    expect(out).toMatch(/Chicago: currently 65 degrees\./);
+    expect(out).toContain('Partly cloudy');
+    expect(out).toContain('high 72, low 58');
+    expect(out).not.toContain('feels like');
+  });
+
+  it('includes feels-like when it differs by 3+ degrees', () => {
+    const out = phraseWeatherToday({
+      location: 'Chicago',
+      currentTemp: 32,
+      feelsLike: 22,
+      description: 'Windy',
+      high: 35,
+      low: 28,
+      precipProbability: null,
+    });
+    expect(out).toContain('feels like 22');
+  });
+
+  it('mentions precipitation only when probability is 30+%', () => {
+    const wet = phraseWeatherToday({
+      location: 'X', currentTemp: 60, feelsLike: 60, description: 'Rain', high: 65, low: 55, precipProbability: 70,
+    });
+    expect(wet).toContain('70 percent chance of precipitation');
+
+    const dry = phraseWeatherToday({
+      location: 'X', currentTemp: 60, feelsLike: 60, description: 'Sun', high: 65, low: 55, precipProbability: 10,
+    });
+    expect(dry).not.toContain('precipitation');
+  });
+});
+
+describe('phraseBusStatus', () => {
+  const mk = (overrides = {}) => ({
+    studentName: 'Emma',
+    direction: 'AM' as const,
+    scheduledTime: '07:30',
+    prediction: { status: 'no_data', etaMinutes: null, lastCheckpointName: null },
+    ...overrides,
+  });
+
+  it('says no routes when empty', () => {
+    expect(phraseBusStatus([])).toBe('No bus routes are scheduled today.');
+  });
+
+  it('mentions student name when scoped + empty', () => {
+    expect(phraseBusStatus([], { student: 'Emma' }))
+      .toBe('No bus routes are scheduled for Emma today.');
+  });
+
+  it('renders ETA for in-transit', () => {
+    const out = phraseBusStatus([
+      mk({ prediction: { status: 'in_transit', etaMinutes: 5, lastCheckpointName: 'Maple' } }),
+    ]);
+    expect(out).toContain('Emma AM: 5 minutes away');
+  });
+
+  it('renders at_stop / at_school', () => {
+    expect(phraseBusStatus([mk({ prediction: { status: 'at_stop', etaMinutes: null, lastCheckpointName: null } })]))
+      .toContain('arrived at the stop');
+    expect(phraseBusStatus([mk({ prediction: { status: 'at_school', etaMinutes: null, lastCheckpointName: null } })]))
+      .toContain('arrived at school');
+  });
+
+  it('falls back when no live data yet', () => {
+    expect(phraseBusStatus([mk({ prediction: { status: 'cold_start', etaMinutes: null, lastCheckpointName: null } })]))
+      .toContain('no live data yet');
+  });
+});
+
+describe('phraseUpcomingBirthdays', () => {
+  const now = new Date('2026-05-02T12:00:00');
+  const at = (offset: number) => {
+    const d = new Date(now);
+    d.setDate(d.getDate() + offset);
+    return d;
+  };
+
+  it('handles empty', () => {
+    expect(phraseUpcomingBirthdays([], now)).toBe('No upcoming birthdays.');
+  });
+
+  it('renders a single birthday with turning age', () => {
+    const out = phraseUpcomingBirthdays([
+      { name: 'Emma', eventType: 'birthday', next: at(2), turning: 8 },
+    ], now);
+    expect(out).toMatch(/Coming up: Emma's birthday on/);
+    expect(out).toContain('turning 8');
+  });
+
+  it('joins multiple with Oxford comma', () => {
+    const out = phraseUpcomingBirthdays([
+      { name: 'Emma', eventType: 'birthday', next: at(2), turning: null },
+      { name: 'Sophie', eventType: 'birthday', next: at(10), turning: null },
+      { name: 'Alex', eventType: 'birthday', next: at(20), turning: null },
+    ], now);
+    expect(out).toContain(', and ');
   });
 });
 

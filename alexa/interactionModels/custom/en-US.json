@@ -150,6 +150,46 @@
             "what does {Assignee} have to do",
             "{Assignee}'s chores"
           ]
+        },
+        {
+          "name": "GetWeatherIntent",
+          "slots": [],
+          "samples": [
+            "what's the weather",
+            "what's the weather today",
+            "what's the weather like",
+            "for the weather",
+            "for today's weather",
+            "is it going to rain",
+            "is it going to rain today"
+          ]
+        },
+        {
+          "name": "GetBusStatusIntent",
+          "slots": [
+            { "name": "Student", "type": "AMAZON.FirstName" }
+          ],
+          "samples": [
+            "where's the bus",
+            "where is the bus",
+            "is the bus close",
+            "for bus status",
+            "where's {Student}'s bus",
+            "where is {Student}'s bus",
+            "is {Student}'s bus close",
+            "{Student}'s bus"
+          ]
+        },
+        {
+          "name": "GetUpcomingBirthdaysIntent",
+          "slots": [],
+          "samples": [
+            "whose birthday is coming up",
+            "for upcoming birthdays",
+            "for birthdays",
+            "any birthdays coming up",
+            "what birthdays are coming up"
+          ]
         }
       ],
       "types": []

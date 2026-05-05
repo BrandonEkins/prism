@@ -72,6 +72,90 @@ export function phraseFamilyMembers(names: string[]): string {
   return `Your family has ${oxfordJoin(names)}.`;
 }
 
+interface WeatherTodayInput {
+  location: string;
+  currentTemp: number;
+  feelsLike: number;
+  description: string;
+  high: number | null;
+  low: number | null;
+  precipProbability: number | null;
+}
+
+export function phraseWeatherToday(w: WeatherTodayInput): string {
+  const parts: string[] = [];
+  parts.push(`${w.location}: currently ${w.currentTemp} degrees`);
+  if (Math.abs(w.feelsLike - w.currentTemp) >= 3) parts.push(`feels like ${w.feelsLike}`);
+  parts.push(w.description);
+  if (w.high !== null && w.low !== null) parts.push(`high ${w.high}, low ${w.low}`);
+  if (w.precipProbability !== null && w.precipProbability >= 30) {
+    parts.push(`${w.precipProbability} percent chance of precipitation`);
+  }
+  return `${parts.join('. ')}.`;
+}
+
+interface SpeakableBusRoute {
+  studentName: string;
+  direction: 'AM' | 'PM';
+  scheduledTime: string;
+  prediction: {
+    status: string;
+    etaMinutes: number | null;
+    lastCheckpointName: string | null;
+  };
+}
+
+export function phraseBusStatus(routes: SpeakableBusRoute[], opts: { student?: string } = {}): string {
+  if (routes.length === 0) {
+    if (opts.student) return `No bus routes are scheduled for ${opts.student} today.`;
+    return 'No bus routes are scheduled today.';
+  }
+
+  const lines = routes.map((r) => {
+    const who = `${r.studentName} ${r.direction}`;
+    switch (r.prediction.status) {
+      case 'at_stop':
+        return `${who}: arrived at the stop`;
+      case 'at_school':
+        return `${who}: arrived at school`;
+      case 'overdue':
+        return `${who}: overdue, scheduled ${r.scheduledTime}`;
+      case 'in_transit':
+        if (r.prediction.etaMinutes !== null) {
+          return `${who}: ${r.prediction.etaMinutes} minutes away`;
+        }
+        return `${who}: in transit, last seen at ${r.prediction.lastCheckpointName ?? 'unknown'}`;
+      case 'cold_start':
+      case 'no_data':
+      default:
+        return `${who}: scheduled ${r.scheduledTime}, no live data yet`;
+    }
+  });
+
+  return oxfordJoin(lines) + '.';
+}
+
+interface SpeakableBirthday {
+  name: string;
+  eventType: string;
+  next: Date;
+  turning: number | null;
+}
+
+export function phraseUpcomingBirthdays(items: SpeakableBirthday[], now = new Date()): string {
+  if (items.length === 0) return 'No upcoming birthdays.';
+
+  const parts = items.map((b) => {
+    const day = relativeDayLabel(b.next, now);
+    const what = b.eventType === 'birthday' ? 'birthday' : b.eventType;
+    const turning = b.turning ? `, turning ${b.turning}` : '';
+    return `${b.name}'s ${what} ${day}${turning}`;
+  });
+
+  if (items.length === 1) return `Coming up: ${parts[0]}.`;
+  return `Coming up: ${oxfordJoin(parts)}.`;
+}
+
 type SpeakableMeal = {
   name: string;
   mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack';

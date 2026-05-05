@@ -30,6 +30,9 @@ import { handlePostFamilyMessage } from '@/lib/alexa/intents/postFamilyMessage';
 import { handleGetFamily } from '@/lib/alexa/intents/getFamily';
 import { handleGetTodayMeal } from '@/lib/alexa/intents/getTodayMeal';
 import { handleGetTodayChores } from '@/lib/alexa/intents/getTodayChores';
+import { handleGetWeather } from '@/lib/alexa/intents/getWeather';
+import { handleGetBusStatus } from '@/lib/alexa/intents/getBusStatus';
+import { handleGetUpcomingBirthdays } from '@/lib/alexa/intents/getUpcomingBirthdays';
 import { logError } from '@/lib/utils/logError';
 
 interface AlexaSlot {
@@ -178,6 +181,15 @@ export async function POST(request: NextRequest) {
 
     case 'GetTodayChoresIntent':
       return NextResponse.json(await handleGetTodayChores({ slots }));
+
+    case 'GetWeatherIntent':
+      return NextResponse.json(await handleGetWeather());
+
+    case 'GetBusStatusIntent':
+      return NextResponse.json(await handleGetBusStatus({ slots }));
+
+    case 'GetUpcomingBirthdaysIntent':
+      return NextResponse.json(await handleGetUpcomingBirthdays());
 
     case 'AMAZON.HelpIntent':
       return NextResponse.json(

@@ -82,4 +82,12 @@ export const voiceClient = {
       'GET',
       assignee ? `/api/v1/voice/chores/today?assignee=${encodeURIComponent(assignee)}` : '/api/v1/voice/chores/today',
     ),
+  getWeatherToday: () => request<unknown>('GET', '/api/v1/voice/weather/today'),
+  getBusStatus: (student?: string) =>
+    request<{ count: number; routes: unknown[] }>(
+      'GET',
+      student ? `/api/v1/voice/bus/status?student=${encodeURIComponent(student)}` : '/api/v1/voice/bus/status',
+    ),
+  getUpcomingBirthdays: (days = 30) =>
+    request<{ count: number; birthdays: unknown[] }>('GET', `/api/v1/voice/birthdays/upcoming?days=${days}`),
 };

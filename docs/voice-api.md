@@ -131,6 +131,37 @@ Author defaults to the first parent (by `sortOrder`). Voice has no way to verify
 
 **Spoken**: `"Posted message: 'soccer practice moved to 4pm today.'"`
 
+### `GET /api/v1/voice/weather/today`
+
+Returns current conditions plus today's high/low. Reuses the active weather provider (`WEATHER_PROVIDER=meteo|pirate|openweather`) and the household location setting.
+
+**Response data**: `{ location, currentTemp, feelsLike, description, condition, humidity, high, low, precipProbability }`
+
+**Spoken example**: `"Chicago: currently 65 degrees. Partly cloudy. high 72, low 58."`
+
+### `GET /api/v1/voice/bus/status?student=Emma`
+
+Returns active bus routes for today with arrival predictions. Optional `student` filter narrows by `studentName` (case-insensitive substring). Today-active is determined by each route's `activeDays` array.
+
+**Response data**: `{ count, routes: [{ id, label, studentName, direction, scheduledTime, prediction }] }`
+
+**Spoken examples**:
+
+- `"No bus routes are scheduled today."`
+- `"Emma AM: 5 minutes away."`
+- `"Emma AM: arrived at the stop and Sophie PM: scheduled 15:25, no live data yet."`
+
+### `GET /api/v1/voice/birthdays/upcoming?days=N`
+
+Returns upcoming birthdays/anniversaries in the next `N` days (default 30, clamped 1..365). Compares on month/day so historic birth years are tolerated; reports the age the person is turning when the original year is available.
+
+**Response data**: `{ count, birthdays: [{ id, name, eventType, nextOccurrence, turning }] }`
+
+**Spoken examples**:
+
+- `"No upcoming birthdays."`
+- `"Coming up: Emma's birthday on Saturday, turning 8."`
+
 ### `GET /api/v1/voice/meals/today`
 
 Returns meals planned for today (breakfast, lunch, dinner, snack), ordered by meal type. Tolerates either Sunday- or Monday-start week conventions by scanning meal entries within ±7 days of today.

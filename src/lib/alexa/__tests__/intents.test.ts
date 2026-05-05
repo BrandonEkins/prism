@@ -3,6 +3,7 @@ import { handleCompleteChore } from '../intents/completeChore';
 import { handlePostFamilyMessage } from '../intents/postFamilyMessage';
 import { handleGetUpcomingEvents } from '../intents/getUpcomingEvents';
 import { handleGetTodayChores } from '../intents/getTodayChores';
+import { handleGetBusStatus } from '../intents/getBusStatus';
 import { voiceClient, VoiceApiError } from '../client';
 
 jest.mock('../client', () => {
@@ -20,6 +21,9 @@ jest.mock('../client', () => {
       getFamily: jest.fn(),
       getMealsToday: jest.fn(),
       getChoresToday: jest.fn(),
+      getWeatherToday: jest.fn(),
+      getBusStatus: jest.fn(),
+      getUpcomingBirthdays: jest.fn(),
     },
   };
 });
@@ -103,6 +107,26 @@ describe('GetTodayChoresIntent slot handling', () => {
     mocked.getChoresToday.mockResolvedValue({ ok: true, spoken: 'No chores today.' });
     await handleGetTodayChores({ slots: {} });
     expect(mocked.getChoresToday).toHaveBeenCalledWith(undefined);
+  });
+});
+
+describe('GetBusStatusIntent slot handling', () => {
+  it('forwards optional student', async () => {
+    mocked.getBusStatus.mockResolvedValue({ ok: true, spoken: 'Emma AM: 5 minutes away.' });
+    await handleGetBusStatus({ slots: { Student: { value: 'Emma' } } });
+    expect(mocked.getBusStatus).toHaveBeenCalledWith('Emma');
+  });
+
+  it('omits student when missing', async () => {
+    mocked.getBusStatus.mockResolvedValue({ ok: true, spoken: 'No routes today.' });
+    await handleGetBusStatus({ slots: {} });
+    expect(mocked.getBusStatus).toHaveBeenCalledWith(undefined);
+  });
+
+  it('apologizes on failure', async () => {
+    mocked.getBusStatus.mockRejectedValue(new VoiceApiError(503, null));
+    const res = await handleGetBusStatus({ slots: {} });
+    expect(res.response.outputSpeech.text).toMatch(/couldn't reach the bus/i);
   });
 });
 

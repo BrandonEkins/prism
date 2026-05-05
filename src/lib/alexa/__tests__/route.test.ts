@@ -109,6 +109,27 @@ jest.mock('@/lib/alexa/intents/getTodayChores', () => ({
   })),
 }));
 
+jest.mock('@/lib/alexa/intents/getWeather', () => ({
+  handleGetWeather: mockHandler('weather today'),
+}));
+
+jest.mock('@/lib/alexa/intents/getBusStatus', () => ({
+  handleGetBusStatus: jest.fn(async ({ slots }) => ({
+    version: '1.0',
+    response: {
+      outputSpeech: {
+        type: 'PlainText',
+        text: `bus student=${slots?.Student?.value ?? 'none'}`,
+      },
+      shouldEndSession: true,
+    },
+  })),
+}));
+
+jest.mock('@/lib/alexa/intents/getUpcomingBirthdays', () => ({
+  handleGetUpcomingBirthdays: mockHandler('birthdays upcoming'),
+}));
+
 function makeRequest(body: unknown): Request {
   return new Request('http://localhost:3000/api/alexa?skipAlexaSignatureCheck=1', {
     method: 'POST',
@@ -271,6 +292,45 @@ describe('POST /api/alexa', () => {
     }) as never);
     const body = await res.json();
     expect(body.response.outputSpeech.text).toBe('chores assignee=Emma');
+  });
+
+  it('dispatches GetWeatherIntent', async () => {
+    const res = await POST(makeRequest({
+      version: '1.0',
+      request: {
+        type: 'IntentRequest',
+        timestamp: new Date().toISOString(),
+        intent: { name: 'GetWeatherIntent' },
+      },
+    }) as never);
+    const body = await res.json();
+    expect(body.response.outputSpeech.text).toBe('weather today');
+  });
+
+  it('dispatches GetBusStatusIntent with optional student', async () => {
+    const res = await POST(makeRequest({
+      version: '1.0',
+      request: {
+        type: 'IntentRequest',
+        timestamp: new Date().toISOString(),
+        intent: { name: 'GetBusStatusIntent', slots: { Student: { value: 'Emma' } } },
+      },
+    }) as never);
+    const body = await res.json();
+    expect(body.response.outputSpeech.text).toBe('bus student=Emma');
+  });
+
+  it('dispatches GetUpcomingBirthdaysIntent', async () => {
+    const res = await POST(makeRequest({
+      version: '1.0',
+      request: {
+        type: 'IntentRequest',
+        timestamp: new Date().toISOString(),
+        intent: { name: 'GetUpcomingBirthdaysIntent' },
+      },
+    }) as never);
+    const body = await res.json();
+    expect(body.response.outputSpeech.text).toBe('birthdays upcoming');
   });
 
   it('returns a polite fallback for unknown intents', async () => {
