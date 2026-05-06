@@ -71,15 +71,11 @@
         {
           "name": "AddShoppingItemIntent",
           "slots": [
-            { "name": "Item", "type": "AMAZON.SearchQuery" },
-            { "name": "ListName", "type": "AMAZON.SearchQuery" }
+            { "name": "Item", "type": "AMAZON.SearchQuery" }
           ],
           "samples": [
             "add {Item} to my list",
-            "add {Item} to the {ListName} list",
-            "add {Item} to {ListName}",
             "put {Item} on my list",
-            "put {Item} on the {ListName} list",
             "I need {Item}",
             "I need to buy {Item}"
           ]
@@ -87,17 +83,13 @@
         {
           "name": "CompleteChoreIntent",
           "slots": [
-            { "name": "Chore", "type": "AMAZON.SearchQuery" },
-            { "name": "Assignee", "type": "AMAZON.FirstName" }
+            { "name": "Chore", "type": "AMAZON.SearchQuery" }
           ],
           "samples": [
             "mark {Chore} complete",
             "mark {Chore} done",
             "{Chore} is done",
-            "I finished {Chore}",
-            "{Assignee} finished {Chore}",
-            "mark {Chore} done for {Assignee}",
-            "complete {Chore} for {Assignee}"
+            "I finished {Chore}"
           ]
         },
         {
@@ -148,7 +140,7 @@
             "what chores does {Assignee} have",
             "what chores does {Assignee} have today",
             "what does {Assignee} have to do",
-            "{Assignee}'s chores"
+            "chores for {Assignee}"
           ]
         },
         {
@@ -174,10 +166,10 @@
             "where is the bus",
             "is the bus close",
             "for bus status",
-            "where's {Student}'s bus",
-            "where is {Student}'s bus",
-            "is {Student}'s bus close",
-            "{Student}'s bus"
+            "where is the bus for {Student}",
+            "is the bus close for {Student}",
+            "the bus for {Student}",
+            "where is {Student} on the bus"
           ]
         },
         {
