@@ -49,25 +49,52 @@ export interface ParsedShoppingQuantity {
   unit?: string;
 }
 
+/**
+ * Aggressively shorten an ingredient string to just the searchable noun:
+ *   - drop everything after the first comma (preparation modifiers like
+ *     "seeded and sliced", "peeled and deveined", "at room temperature")
+ *   - drop everything from " or " onward (alternative ingredients like
+ *     "or 1/2 tsp crushed red pepper flakes")
+ *   - drop parenthetical asides ("(optional)", "(about 6)")
+ *   - drop " to taste" suffix
+ */
+function stripModifiers(text: string): string {
+  let s = text.replace(/\([^)]*\)/g, ' ');           // (parentheticals)
+  s = s.replace(/\s+to taste\b.*$/i, '');             // "salt to taste"
+  const orIdx = s.search(/\s+or\s+/i);
+  if (orIdx >= 0) s = s.slice(0, orIdx);
+  const commaIdx = s.indexOf(',');
+  if (commaIdx >= 0) s = s.slice(0, commaIdx);
+  return s.replace(/\s+/g, ' ').trim();
+}
+
 export function parseShoppingQuantity(text: string): ParsedShoppingQuantity {
   const original = text.trim();
   const match = original.match(QUANTITY_RE);
-  if (!match) return { name: original, original };
 
-  const quantity = match[1]!.trim();
-  let rest = match[2]!.trim();
-
-  // Optional measurement-word unit ("cups", "lb", etc.).
-  const tokens = rest.split(/\s+/);
-  const firstToken = tokens[0]?.toLowerCase().replace(/[.,:]$/, '');
+  let quantity: string | undefined;
   let unit: string | undefined;
-  if (firstToken && MEASUREMENT_WORDS.has(firstToken)) {
-    unit = firstToken;
-    rest = tokens.slice(1).join(' ').trim();
+  let rest: string;
+
+  if (match) {
+    quantity = match[1]!.trim();
+    rest = match[2]!.trim();
+
+    // Optional measurement-word unit ("cups", "lb", etc.).
+    const tokens = rest.split(/\s+/);
+    const firstToken = tokens[0]?.toLowerCase().replace(/[.,:]$/, '');
+    if (firstToken && MEASUREMENT_WORDS.has(firstToken)) {
+      unit = firstToken;
+      rest = tokens.slice(1).join(' ').trim();
+    }
+
+    // Strip a leading "of " ("2 cups of flour" → "flour").
+    rest = rest.replace(/^of\s+/i, '').trim();
+  } else {
+    rest = original;
   }
 
-  // Strip a leading "of " ("2 cups of flour" → "flour").
-  rest = rest.replace(/^of\s+/i, '').trim();
+  rest = stripModifiers(rest);
 
   return {
     name: rest || original,

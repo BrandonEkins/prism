@@ -10,7 +10,8 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { ChevronLeft, ChevronRight, Check, X, Loader2, ExternalLink } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Check, X, Loader2, ExternalLink, Search } from 'lucide-react';
+import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { parseShoppingQuantity, type ParsedShoppingQuantity } from '@/lib/utils/parseShoppingQuantity';
 import type { ShoppingItem } from '@/types';
@@ -48,6 +49,9 @@ export function KrogerCartModal({ items, onClose }: KrogerCartModalProps) {
   const [index, setIndex] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
+  // Editable-search-term state for the "search again" affordance.
+  const [editQuery, setEditQuery] = useState('');
+  const [retrying, setRetrying] = useState(false);
 
   // Pre-parse all items once: strip leading quantity/unit so the Kroger
   // search hits the noun ("flour", not "2 cups flour"). The original text
@@ -127,6 +131,43 @@ export function KrogerCartModal({ items, onClose }: KrogerCartModalProps) {
       next.set(current.id, productId);
       return next;
     });
+  };
+
+  // Reset the editor whenever we land on a new item.
+  useEffect(() => {
+    setEditQuery(current?.query ?? '');
+  }, [current?.id, current?.query]);
+
+  const retrySearch = async () => {
+    const query = editQuery.trim();
+    if (!query || !current) return;
+    setRetrying(true);
+    try {
+      const res = await fetch('/api/integrations/kroger/products/search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          items: [{ id: current.id, query, cachedProductId: null }],
+        }),
+      });
+      if (!res.ok) throw new Error('Search failed');
+      const data = await res.json() as { results: SearchResult[] };
+      const updated = data.results[0];
+      if (!updated) throw new Error('No result returned');
+      setResults((prev) => prev.map((r, i) => (i === index ? updated : r)));
+      setPicks((prev) => {
+        const next = new Map(prev);
+        next.set(current.id, updated.preselectedProductId ?? null);
+        return next;
+      });
+    } catch (err) {
+      toast({
+        title: err instanceof Error ? err.message : 'Search failed',
+        variant: 'destructive',
+      });
+    } finally {
+      setRetrying(false);
+    }
   };
 
   const goNext = () => {
@@ -239,9 +280,34 @@ export function KrogerCartModal({ items, onClose }: KrogerCartModalProps) {
 
         {!done && current && (
           <div className="space-y-2 py-2">
+            {/* Editable search query — always available so you can refine
+                a wrong parse without skipping the whole item. */}
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                <Input
+                  value={editQuery}
+                  onChange={(e) => setEditQuery(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') retrySearch(); }}
+                  placeholder="Search Kroger…"
+                  className="h-8 pl-7 text-sm"
+                />
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={retrySearch}
+                disabled={retrying || !editQuery.trim() || editQuery.trim() === current.query}
+              >
+                {retrying ? '…' : 'Search'}
+              </Button>
+            </div>
+
             {current.candidates.length === 0 ? (
               <div className="rounded border border-dashed p-4 text-sm text-muted-foreground">
-                No Kroger matches found for &quot;{current.query}&quot;.
+                No Kroger matches found for &quot;{current.query}&quot;. Try editing the
+                search above (e.g. shorten to the noun).
               </div>
             ) : (
               <ul className="space-y-2">
