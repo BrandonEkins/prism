@@ -271,8 +271,14 @@ export async function refreshTokens(refreshToken: string): Promise<KrogerTokens 
 
 /**
  * Exchange an authorization code for tokens during the OAuth callback.
+ *
+ * `redirectUri` must match the one passed to /authorize — Kroger validates
+ * exact-string equality. Pass the value from `resolveKrogerRedirectUri`.
  */
-export async function exchangeCodeForTokens(code: string): Promise<KrogerTokens> {
+export async function exchangeCodeForTokens(
+  code: string,
+  redirectUri: string,
+): Promise<KrogerTokens> {
   const creds = await getKrogerCredentials();
   if (!creds) throw new Error('Kroger OAuth not configured');
 
@@ -287,7 +293,7 @@ export async function exchangeCodeForTokens(code: string): Promise<KrogerTokens>
     body: new URLSearchParams({
       grant_type: 'authorization_code',
       code,
-      redirect_uri: creds.redirectUri,
+      redirect_uri: redirectUri,
     }),
   });
 
@@ -307,14 +313,20 @@ export async function exchangeCodeForTokens(code: string): Promise<KrogerTokens>
 /**
  * Build the consent screen URL. Kroger requires explicit user opt-in for
  * the cart.basic:write scope.
+ *
+ * `redirectUri` is the host-specific URI the user will land back on after
+ * consent; it must be one of the URIs the user registered with Kroger.
  */
-export async function buildAuthorizeUrl(state: string): Promise<string | null> {
+export async function buildAuthorizeUrl(
+  state: string,
+  redirectUri: string,
+): Promise<string | null> {
   const creds = await getKrogerCredentials();
   if (!creds) return null;
 
   const params = new URLSearchParams({
     client_id: creds.clientId,
-    redirect_uri: creds.redirectUri,
+    redirect_uri: redirectUri,
     response_type: 'code',
     scope: 'product.compact cart.basic:write profile.compact',
     state,
