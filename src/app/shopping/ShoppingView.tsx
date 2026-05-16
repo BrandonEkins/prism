@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { toast } from '@/components/ui/use-toast';
-import { ShoppingCart, Plus, Settings, Maximize2, Minimize2, Tags } from 'lucide-react';
+import { ShoppingCart, Plus, Settings, Maximize2, Minimize2, Tags, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -15,6 +15,7 @@ import { ListModal } from '@/app/shopping/ListModal';
 import { ShoppingCelebration } from '@/app/shopping/ShoppingCelebration';
 import { ManageCategoriesModal } from '@/app/shopping/ManageCategoriesModal';
 import { ScanFlowSheet } from '@/app/shopping/ScanFlowSheet';
+import { KrogerCartModal } from '@/app/shopping/KrogerCartModal';
 import { useShoppingViewData } from './useShoppingViewData';
 import { useShoppingCategories } from '@/lib/hooks/useShoppingCategories';
 import { useShoppingDragReorder } from './useShoppingDragReorder';
@@ -44,6 +45,7 @@ export function getCategoryEmoji(category: string): string {
 
 export function ShoppingView() {
   const [showCameraScanner, setShowCameraScanner] = useState(false);
+  const [showKrogerModal, setShowKrogerModal] = useState(false);
 
   const { scan, clearScan, handleCameraScan, handleListChosen, doAdd } = useShoppingScanFlow();
 
@@ -157,6 +159,21 @@ export function ShoppingView() {
               badge={activeList ? <Badge variant="secondary">{checkedItems}/{totalItems}</Badge> : undefined}
               actions={<>
                 <UndoButton />
+                {activeList && activeList.items.some((i) => !i.checked) && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={async () => {
+                      const user = await requireAuth('Send to Kroger');
+                      if (!user) return;
+                      setShowKrogerModal(true);
+                    }}
+                    title="Send unchecked items to Kroger / Mariano's cart"
+                  >
+                    <Send className="h-4 w-4 mr-1" />
+                    Send to Kroger
+                  </Button>
+                )}
                 <Button variant="ghost" size="icon" onClick={() => setShoppingMode(true)} title="Enter shopping mode">
                   <Maximize2 className="h-4 w-4" />
                 </Button>
@@ -353,6 +370,13 @@ export function ShoppingView() {
         />
 
         <ShoppingCelebration show={showCelebration} onComplete={() => setShowCelebration(false)} />
+
+        {showKrogerModal && activeList && (
+          <KrogerCartModal
+            items={activeList.items.filter((i) => !i.checked)}
+            onClose={() => setShowKrogerModal(false)}
+          />
+        )}
       </div>
     </PageWrapper>
   );

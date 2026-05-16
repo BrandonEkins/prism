@@ -13,6 +13,7 @@ import {
   EntityListCard,
   ConfirmDialog,
 } from './integrations/components';
+import { KrogerConnectionCard } from './KrogerConnectionCard';
 
 export function ShoppingIntegrationsSection() {
   const { lists: shoppingLists, loading: listsLoading } = useShoppingLists({ refreshInterval: 0 });
@@ -34,6 +35,8 @@ export function ShoppingIntegrationsSection() {
           onDismiss={() => integration.setStatusMessage(null)}
         />
       )}
+
+      <KrogerConnectionCard />
 
       <ConnectedSourcesCard
         sources={integration.sources}

@@ -425,6 +425,11 @@ export const shoppingItems = pgTable('shopping_items', {
   externalUpdatedAt: timestamp('external_updated_at'),
   lastSynced: timestamp('last_synced'),
 
+  // Cached Kroger productId from the last time this item was sent to the
+  // Kroger cart — pre-selects the same SKU on subsequent sends so weekly
+  // staples become one-tap.
+  krogerProductId: varchar('kroger_product_id', { length: 50 }),
+
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 }, (table) => ({
@@ -433,6 +438,40 @@ export const shoppingItems = pgTable('shopping_items', {
   checkedIdx: index('shopping_items_checked_idx').on(table.checked),
   shoppingListSourceIdx: index('shopping_items_source_idx').on(table.shoppingListSourceId),
   externalIdIdx: index('shopping_items_external_id_idx').on(table.externalId),
+}));
+
+// ============================================================================
+// KROGER CART INTEGRATION
+// ============================================================================
+
+/**
+ * Per-user Kroger OAuth tokens. Unlike Microsoft / Google integrations which
+ * are scoped to a Prism list (shopping_list_sources), Kroger is account-level
+ * — one connection per user, used to push items into that user's online cart.
+ *
+ * Tokens are encrypted at the application layer with ENCRYPTION_KEY.
+ */
+export const userKrogerConnections = pgTable('user_kroger_connections', {
+  id: uuid('id').defaultRandom().primaryKey(),
+
+  userId: uuid('user_id')
+    .references(() => users.id, { onDelete: 'cascade' })
+    .notNull()
+    .unique(),
+
+  accessToken: text('access_token').notNull(),
+  refreshToken: text('refresh_token'),
+  tokenExpiresAt: timestamp('token_expires_at'),
+
+  // Optional — Kroger's "favorite store" id if the user picked one. Lets us
+  // search products with location-specific pricing.
+  preferredLocationId: varchar('preferred_location_id', { length: 50 }),
+  preferredLocationName: varchar('preferred_location_name', { length: 255 }),
+
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => ({
+  userIdIdx: index('user_kroger_connections_user_id_idx').on(table.userId),
 }));
 
 

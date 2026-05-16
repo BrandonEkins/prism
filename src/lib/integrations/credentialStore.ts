@@ -19,6 +19,7 @@ import { decrypt } from '@/lib/utils/crypto';
 type GoogleCredentials = { clientId: string; clientSecret: string; redirectUri: string; gmailRedirectUri: string };
 type MicrosoftCredentials = { clientId: string; clientSecret: string; redirectUri: string; tasksRedirectUri: string };
 type WeatherCredentials = { apiKey: string };
+type KrogerCredentials = { clientId: string; clientSecret: string; redirectUri: string };
 
 async function getSetting(key: string): Promise<Record<string, string> | null> {
   try {
@@ -77,4 +78,20 @@ export async function getWeatherApiKey(): Promise<string | null> {
     return safeDecrypt(stored.apiKey) ?? stored.apiKey;
   }
   return process.env.OPENWEATHER_API_KEY ?? null;
+}
+
+export async function getKrogerCredentials(): Promise<KrogerCredentials | null> {
+  const stored = await getSetting('credentials.kroger');
+  if (stored?.clientId) {
+    return {
+      clientId: safeDecrypt(stored.clientId) ?? stored.clientId ?? '',
+      clientSecret: safeDecrypt(stored.clientSecret) ?? stored.clientSecret ?? '',
+      redirectUri: stored.redirectUri ?? process.env.KROGER_REDIRECT_URI ?? '',
+    };
+  }
+  const clientId = process.env.KROGER_CLIENT_ID;
+  const clientSecret = process.env.KROGER_CLIENT_SECRET;
+  const redirectUri = process.env.KROGER_REDIRECT_URI;
+  if (!clientId || !clientSecret || !redirectUri) return null;
+  return { clientId, clientSecret, redirectUri };
 }

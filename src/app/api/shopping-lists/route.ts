@@ -77,6 +77,7 @@ export async function GET(request: NextRequest) {
         recurrenceInterval: shoppingItems.recurrenceInterval,
         notes: shoppingItems.notes,
         listId: shoppingItems.listId,
+        krogerProductId: shoppingItems.krogerProductId,
         createdAt: shoppingItems.createdAt,
         addedById: users.id,
         addedByName: users.name,
@@ -115,6 +116,7 @@ export async function GET(request: NextRequest) {
         recurrenceInterval: item.recurrenceInterval,
         notes: item.notes,
         listId: item.listId,
+        krogerProductId: item.krogerProductId,
         createdAt: item.createdAt.toISOString(),
         addedBy: item.addedById ? {
           id: item.addedById,

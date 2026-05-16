@@ -83,6 +83,8 @@ export interface ShoppingItem {
     color: string;
   };
   source?: string;
+  /** Kroger productId cached from the last "Send to Kroger" pick. */
+  krogerProductId?: string | null;
   createdAt: Date | string;
 }
 
