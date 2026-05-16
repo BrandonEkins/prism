@@ -1,8 +1,8 @@
 /**
  * Resolve the Kroger OAuth redirect URI from the current request.
  *
- * Prism can be reached via multiple hosts (e.g. https://prism.example.com
- * over WAN and http://192.168.x.x:3000 on LAN). The OAuth redirect URI
+ * Prism can be reached via multiple hosts (e.g. a public https hostname
+ * over WAN and an http://192.168.x.x:3000 LAN address). The OAuth redirect URI
  * must match the host the user started the flow from — Kroger validates
  * that the URI sent to /token matches the one sent to /authorize, and the
  * post-auth redirect needs to land back on the same origin so the user's
