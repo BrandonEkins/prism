@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/dialog';
 import { ChevronLeft, ChevronRight, Check, X, Loader2, ExternalLink } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { parseShoppingQuantity, type ParsedShoppingQuantity } from '@/lib/utils/parseShoppingQuantity';
 import type { ShoppingItem } from '@/types';
 
 interface KrogerProductCandidate {
@@ -48,6 +49,15 @@ export function KrogerCartModal({ items, onClose }: KrogerCartModalProps) {
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
 
+  // Pre-parse all items once: strip leading quantity/unit so the Kroger
+  // search hits the noun ("flour", not "2 cups flour"). The original text
+  // is shown in the picker so the user can see if multiples are needed.
+  const parsedByItemId = useMemo(() => {
+    const map = new Map<string, ParsedShoppingQuantity>();
+    for (const item of items) map.set(item.id, parseShoppingQuantity(item.name));
+    return map;
+  }, [items]);
+
   // Fetch candidates for every item in parallel up front.
   useEffect(() => {
     let cancelled = false;
@@ -59,7 +69,7 @@ export function KrogerCartModal({ items, onClose }: KrogerCartModalProps) {
           body: JSON.stringify({
             items: items.map((i) => ({
               id: i.id,
-              query: i.name,
+              query: parsedByItemId.get(i.id)?.name ?? i.name,
               cachedProductId: i.krogerProductId ?? null,
             })),
           }),
@@ -92,7 +102,8 @@ export function KrogerCartModal({ items, onClose }: KrogerCartModalProps) {
       }
     })();
     return () => { cancelled = true; };
-    // Intentionally only run once on mount.
+    // Intentionally only run once on mount; items+parsed map are stable
+    // for the lifetime of this modal instance.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -215,8 +226,15 @@ export function KrogerCartModal({ items, onClose }: KrogerCartModalProps) {
           <DialogTitle>
             {done
               ? 'Review & send'
-              : `${index + 1} of ${total}: ${current?.query ?? ''}`}
+              : current
+                ? `${index + 1} of ${total}: ${parsedByItemId.get(current.id)?.original ?? current.query}`
+                : ''}
           </DialogTitle>
+          {!done && current && parsedByItemId.get(current.id) && parsedByItemId.get(current.id)!.original !== parsedByItemId.get(current.id)!.name && (
+            <p className="text-xs text-muted-foreground">
+              Searching Kroger for &quot;{parsedByItemId.get(current.id)!.name}&quot;
+            </p>
+          )}
         </DialogHeader>
 
         {!done && current && (
@@ -303,7 +321,9 @@ export function KrogerCartModal({ items, onClose }: KrogerCartModalProps) {
                     ) : (
                       <X className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                     )}
-                    <span className="text-muted-foreground">{r.query}</span>
+                    <span className="text-muted-foreground">
+                      {parsedByItemId.get(r.id)?.original ?? r.query}
+                    </span>
                     {cand && (
                       <span className="text-xs text-muted-foreground truncate">
                         → {cand.brand ? `${cand.brand} ` : ''}{cand.description}
