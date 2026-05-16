@@ -272,6 +272,29 @@ test.describe('Visual regression', () => {
     }
   }
 
+  // ─── Mobile calendar (PWA) ──────────────────────────────────────────────
+  // The mobile calendar is agenda-only — the toggle for Day view, the
+  // prev/next chevrons, and the Today button have all been removed because
+  // agenda doesn't paginate. Capture the header at a phone viewport so
+  // future regressions to the mobile-only branch are caught.
+  for (const theme of ['light', 'dark'] as const) {
+    test(`mobile calendar agenda - ${theme}`, async ({ page }) => {
+      test.skip(!HAS_TEST_DB, 'Set E2E_HAS_TEST_DB=1 against a fresh-seeded DB');
+      await page.setViewportSize({ width: 390, height: 844 }); // iPhone 14
+      await setClientFlags(page, { theme });
+      await setCalendarPrefs(page, { viewType: 'agenda', displayMode: 'inline' });
+      await loginViaAPI(page, parentName);
+      await page.goto('/calendar');
+      await page.waitForLoadState('networkidle');
+      await page.waitForTimeout(800);
+
+      await expect(page).toHaveScreenshot(`mobile-calendar-agenda-${theme}.png`, {
+        ...SCREENSHOT_OPTIONS,
+        mask: dynamicMasks(page),
+      });
+    });
+  }
+
   // PIN modal tests — also gated on E2E_HAS_TEST_DB because the modal
   // shows the seeded family members' names, which would be PII against
   // a live deployment.

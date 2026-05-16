@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { toast } from '@/components/ui/use-toast';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useConfirmDialog } from '@/lib/hooks/useConfirmDialog';
-import { ChefHat, Plus, Search, Heart, X, Link2, FileUp, PenLine, ChevronDown } from 'lucide-react';
+import { ChefHat, Plus, Search, Heart, X, Link2, FileUp, PenLine, ChevronDown, ClipboardPaste } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -25,6 +25,8 @@ import { RecipeDetailModal } from './RecipeDetailModal';
 import { RecipeFormModal } from './RecipeFormModal';
 import { ImportUrlModal } from './ImportUrlModal';
 import { ImportPaprikaModal } from './ImportPaprikaModal';
+import { ImportTextModal } from './ImportTextModal';
+import type { ParsedRecipeText } from '@/lib/utils/recipeTextParser';
 
 type ViewMode = 'all' | 'favorites';
 
@@ -38,6 +40,8 @@ export function RecipesView() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showImportUrlModal, setShowImportUrlModal] = useState(false);
   const [showImportPaprikaModal, setShowImportPaprikaModal] = useState(false);
+  const [showImportTextModal, setShowImportTextModal] = useState(false);
+  const [textPrefill, setTextPrefill] = useState<ParsedRecipeText | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [paramHandled, setParamHandled] = useState(false);
 
@@ -97,6 +101,11 @@ export function RecipesView() {
     setShowImportPaprikaModal(true);
   };
 
+  const handleImportTextWithAuth = async () => {
+    if (!await requireAuth('Import Recipe', 'Please log in to import a recipe')) return;
+    setShowImportTextModal(true);
+  };
+
   return (
     <PageWrapper>
       <div className="h-screen flex flex-col">
@@ -119,6 +128,10 @@ export function RecipesView() {
                 <DropdownMenuItem onClick={handleImportPaprikaWithAuth}>
                   <FileUp className="h-4 w-4 mr-2 text-muted-foreground" />
                   Import from Paprika
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleImportTextWithAuth}>
+                  <ClipboardPaste className="h-4 w-4 mr-2 text-muted-foreground" />
+                  Paste recipe text
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleAddWithAuth}>
                   <PenLine className="h-4 w-4 mr-2 text-muted-foreground" />
@@ -207,8 +220,35 @@ export function RecipesView() {
       )}
 
       {showAddModal && (
-        <RecipeFormModal onClose={() => setShowAddModal(false)}
-          onSave={async data => { await createRecipe(data); setShowAddModal(false); }} />
+        <RecipeFormModal
+          recipe={textPrefill ? {
+            // Cast to Recipe just to populate the form's initial values; the
+            // form only reads these fields, not the rest of the Recipe shape.
+            // No `id` is set, so the form treats this as a brand-new recipe.
+            name: textPrefill.name,
+            ingredients: textPrefill.ingredients,
+            instructions: textPrefill.instructions,
+            prepTime: textPrefill.prepTime,
+            cookTime: textPrefill.cookTime,
+            servings: textPrefill.servings,
+          } as Recipe : undefined}
+          onClose={() => { setShowAddModal(false); setTextPrefill(null); }}
+          onSave={async data => {
+            await createRecipe(data);
+            setShowAddModal(false);
+            setTextPrefill(null);
+          }}
+        />
+      )}
+
+      {showImportTextModal && (
+        <ImportTextModal
+          onClose={() => setShowImportTextModal(false)}
+          onParsed={(parsed) => {
+            setTextPrefill(parsed);
+            setShowAddModal(true);
+          }}
+        />
       )}
 
       {showEditModal && selectedRecipe && (

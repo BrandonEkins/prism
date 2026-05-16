@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
+import { Camera, Trash2 } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -48,6 +49,63 @@ export function RecipeFormModal({ recipe, onClose, onSave }: RecipeFormModalProp
   const [category, setCategory] = useState(recipe?.category || '');
   const [imageUrl, setImageUrl] = useState(recipe?.imageUrl || '');
   const [notes, setNotes] = useState(recipe?.notes || '');
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const recipeId = recipe?.id;
+
+  const handleFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    // Reset input so re-selecting the same file fires onChange again.
+    if (fileInputRef.current) fileInputRef.current.value = '';
+    if (!file || !recipeId) return;
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast({ title: 'Image too large (max 10MB)', variant: 'destructive' });
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const res = await fetch(`/api/recipes/${recipeId}/image`, {
+        method: 'POST',
+        body: fd,
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'Upload failed');
+      }
+      const { imageUrl: newUrl } = await res.json();
+      setImageUrl(newUrl);
+      toast({ title: 'Photo added' });
+    } catch (err) {
+      toast({
+        title: err instanceof Error ? err.message : 'Failed to upload photo',
+        variant: 'destructive',
+      });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleRemovePhoto = async () => {
+    if (!recipeId) {
+      setImageUrl('');
+      return;
+    }
+    setUploading(true);
+    try {
+      const res = await fetch(`/api/recipes/${recipeId}/image`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Delete failed');
+      setImageUrl('');
+    } catch {
+      toast({ title: 'Failed to remove photo', variant: 'destructive' });
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const handleSave = async () => {
     if (!name.trim()) {
@@ -84,7 +142,7 @@ export function RecipeFormModal({ recipe, onClose, onSave }: RecipeFormModalProp
     <Dialog open onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{recipe ? 'Edit Recipe' : 'Add Recipe'}</DialogTitle>
+          <DialogTitle>{recipe?.id ? 'Edit Recipe' : 'Add Recipe'}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
@@ -182,12 +240,60 @@ export function RecipeFormModal({ recipe, onClose, onSave }: RecipeFormModalProp
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="imageUrl">Image URL</Label>
+            <Label htmlFor="imageUrl">Photo</Label>
+            {imageUrl && (
+              <div className="relative w-full max-w-xs">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={imageUrl}
+                  alt="Recipe"
+                  className="w-full h-40 object-cover rounded border border-border"
+                />
+              </div>
+            )}
+            <div className="flex flex-wrap items-center gap-2">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                capture="environment"
+                className="hidden"
+                onChange={handleFileSelected}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={!recipeId || uploading}
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <Camera className="h-4 w-4 mr-1" />
+                {uploading ? 'Uploading...' : imageUrl ? 'Replace photo' : 'Upload photo'}
+              </Button>
+              {imageUrl && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  disabled={uploading}
+                  onClick={handleRemovePhoto}
+                >
+                  <Trash2 className="h-4 w-4 mr-1" />
+                  Remove
+                </Button>
+              )}
+            </div>
+            {!recipeId && (
+              <p className="text-xs text-muted-foreground">
+                Save the recipe first, then reopen to upload a photo from your device.
+              </p>
+            )}
             <Input
               id="imageUrl"
               value={imageUrl}
               onChange={(e) => setImageUrl(e.target.value)}
-              placeholder="https://..."
+              placeholder="…or paste an image URL"
+              className="text-sm"
             />
           </div>
 
@@ -208,7 +314,7 @@ export function RecipeFormModal({ recipe, onClose, onSave }: RecipeFormModalProp
             Cancel
           </Button>
           <Button onClick={handleSave} disabled={saving}>
-            {saving ? 'Saving...' : recipe ? 'Save Changes' : 'Add Recipe'}
+            {saving ? 'Saving...' : recipe?.id ? 'Save Changes' : 'Add Recipe'}
           </Button>
         </DialogFooter>
       </DialogContent>

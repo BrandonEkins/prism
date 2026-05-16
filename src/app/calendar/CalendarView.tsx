@@ -330,9 +330,9 @@ export function CalendarView() {
     setShowAddEvent(true);
   };
 
-  // Force agenda or day view on mobile; default to agenda
+  // Mobile is agenda-only.
   useEffect(() => {
-    if (isMobile && viewType !== 'day' && viewType !== 'agenda') {
+    if (isMobile && viewType !== 'agenda') {
       setViewType('agenda');
     }
   }, [isMobile, viewType, setViewType]);
@@ -342,46 +342,9 @@ export function CalendarView() {
       <div className="h-screen flex flex-col">
         <SubpageHeader
           icon={!isMobile ? <Calendar className="h-5 w-5 text-primary" /> : undefined}
-          title={isMobile ? format(currentDate, 'MMM d, yyyy') : getDateRangeTitle()}
+          title={getDateRangeTitle()}
           actions={<>
-            {isMobile ? (
-              <>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={goToToday}
-                  className="h-7 text-xs"
-                >
-                  Today
-                </Button>
-                <div className="flex items-center border rounded-md">
-                  <Button
-                    variant={viewType === 'agenda' ? 'secondary' : 'ghost'}
-                    size="sm"
-                    onClick={() => setViewType('agenda')}
-                    className="h-7 text-xs rounded-r-none"
-                  >
-                    Agenda
-                  </Button>
-                  <Button
-                    variant={viewType === 'day' ? 'secondary' : 'ghost'}
-                    size="sm"
-                    onClick={() => setViewType('day')}
-                    className="h-7 text-xs rounded-l-none border-l"
-                  >
-                    Day
-                  </Button>
-                </div>
-                <div className="flex items-center">
-                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={goToPrevious} aria-label="Previous">
-                    <ChevronLeft className="h-4 w-4" />
-                  </Button>
-                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={goToNext} aria-label="Next">
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </div>
-              </>
-            ) : (
+            {isMobile ? null : (
               <>
                 <Button variant="outline" size="sm" onClick={goToToday} className="h-9">Today</Button>
                 <div className="flex items-center">
@@ -394,8 +357,7 @@ export function CalendarView() {
                 </div>
               </>
             )}
-            {/* View switcher dropdown — replaces the tab strip. Mobile shows
-                its own Agenda/Day toggle inline (rendered above). */}
+            {/* View switcher dropdown — mobile is agenda-only and hides this. */}
             <div className="hidden md:flex">
               <ViewMenu
                 viewType={viewType}
