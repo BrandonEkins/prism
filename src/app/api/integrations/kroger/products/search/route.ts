@@ -36,8 +36,8 @@ export async function POST(request: NextRequest) {
     if (items.length === 0) {
       return NextResponse.json({ results: [] });
     }
-    if (items.length > 50) {
-      return NextResponse.json({ error: 'Too many items (max 50 per request)' }, { status: 400 });
+    if (items.length > 200) {
+      return NextResponse.json({ error: 'Too many items (max 200 per request)' }, { status: 400 });
     }
 
     const tokens = await getUserTokens(auth.userId);
