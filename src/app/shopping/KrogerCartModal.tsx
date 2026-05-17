@@ -27,32 +27,109 @@ interface KrogerProductCandidate {
   priceDisplay?: string;
 }
 
+type Dimension = 'weight' | 'volume' | 'count';
+
+// Conversion to the canonical base unit of each dimension.
+// Weight → ounces. Volume → fl oz. Count → count.
+const TO_OZ: Record<string, number> = {
+  oz: 1, lb: 16, g: 0.035274, kg: 35.274,
+};
+const TO_FLOZ: Record<string, number> = {
+  floz: 1, ml: 0.033814, l: 33.814,
+  cup: 8, pt: 16, qt: 32, gal: 128,
+};
+
+interface ParsedSize {
+  value: number;
+  unit: string;
+  dimension: Dimension;
+  /** Value expressed in the dimension's base unit (oz / fl oz / count). */
+  valueInBase: number;
+}
+
 /**
- * Parse a Kroger size string ("16 oz", "1 lb", "12 ct", "2 lb / 32 oz") into
- * a normalized number + unit usable for unit-price math. Returns null when
- * the size doesn't fit a known pattern.
+ * Parse a Kroger size string ("16 oz", "1 lb", "12 ct", "2 lb / 32 oz") and
+ * also classify the dimension + a base-unit value so callers can normalize
+ * across candidates (e.g. always show $/lb regardless of native unit).
  */
-function parseSize(size: string | undefined): { value: number; unit: string } | null {
+function parseSize(size: string | undefined): ParsedSize | null {
   if (!size) return null;
   // Take the FIRST measurement chunk so "2 lb / 32 oz" yields "2 lb".
-  const m = size.match(/(\d+(?:\.\d+)?)\s*(fl\s*oz|oz|lb|lbs?|g|kg|ml|l|ct|count|pk|pack)\b/i);
+  const m = size.match(/(\d+(?:\.\d+)?)\s*(fl\s*oz|oz|lb|lbs?|g|kg|ml|l|cup|pt|pint|qt|quart|gal|gallon|ct|count|pk|pack)\b/i);
   if (!m) return null;
   const value = parseFloat(m[1]!);
   let unit = m[2]!.toLowerCase().replace(/\s+/g, '');
   if (unit === 'lbs') unit = 'lb';
   if (unit === 'count') unit = 'ct';
   if (unit === 'pack') unit = 'pk';
-  return { value, unit };
+  if (unit === 'pint') unit = 'pt';
+  if (unit === 'quart') unit = 'qt';
+  if (unit === 'gallon') unit = 'gal';
+
+  const ozFactor = TO_OZ[unit];
+  if (ozFactor != null) {
+    return { value, unit, dimension: 'weight', valueInBase: value * ozFactor };
+  }
+  const flozFactor = TO_FLOZ[unit];
+  if (flozFactor != null) {
+    return { value, unit, dimension: 'volume', valueInBase: value * flozFactor };
+  }
+  if (unit === 'ct' || unit === 'pk') {
+    return { value, unit, dimension: 'count', valueInBase: value };
+  }
+  return null;
 }
 
-function unitPriceDisplay(price: number | undefined, size: string | undefined): string | null {
+/**
+ * For a set of candidates, return the dimension shared by the most of them.
+ * Used to pick a single canonical unit per picker page so unit prices are
+ * directly comparable rather than mixing $/oz against $/lb.
+ */
+function dominantDimension(candidates: KrogerProductCandidate[]): Dimension | null {
+  const counts: Record<Dimension, number> = { weight: 0, volume: 0, count: 0 };
+  for (const c of candidates) {
+    const p = parseSize(c.size);
+    if (p) counts[p.dimension]++;
+  }
+  const max = Math.max(counts.weight, counts.volume, counts.count);
+  if (max === 0) return null;
+  if (counts.weight === max) return 'weight';
+  if (counts.volume === max) return 'volume';
+  return 'count';
+}
+
+function formatPrice(value: number): string {
+  // 2 decimals everywhere; cents are what matter for unit-price comparison.
+  return value < 1 || value >= 10 ? value.toFixed(2) : value.toFixed(2);
+}
+
+/**
+ * Display a unit price for a candidate, normalized to the page's canonical
+ * dimension when this candidate matches it (so all weight candidates compare
+ * as $/lb, all volume as $/fl oz, etc.). Candidates in a different dimension
+ * fall back to their native unit so the row still shows something useful.
+ */
+function unitPriceDisplay(
+  price: number | undefined,
+  size: string | undefined,
+  canonicalDim: Dimension | null,
+): string | null {
   if (price == null) return null;
   const parsed = parseSize(size);
   if (!parsed || parsed.value <= 0) return null;
-  const per = price / parsed.value;
-  // Round to whole cents below $1, tenths above $10 to keep it scannable.
-  const decimals = per < 1 ? 2 : per < 10 ? 2 : 1;
-  return `$${per.toFixed(decimals)}/${parsed.unit}`;
+
+  if (canonicalDim && parsed.dimension === canonicalDim) {
+    if (canonicalDim === 'weight') {
+      return `$${formatPrice((price / parsed.valueInBase) * 16)}/lb`;
+    }
+    if (canonicalDim === 'volume') {
+      return `$${formatPrice(price / parsed.valueInBase)}/fl oz`;
+    }
+    return `$${formatPrice(price / parsed.value)}/ct`;
+  }
+
+  // Fall back to native-unit per-price for mismatched-dimension outliers.
+  return `$${formatPrice(price / parsed.value)}/${parsed.unit}`;
 }
 
 interface SearchResult {
@@ -144,6 +221,14 @@ export function KrogerCartModal({ items, onClose }: KrogerCartModalProps) {
 
   const current = results[index];
   const total = results.length;
+
+  // Pick a single canonical unit (lb / fl oz / ct) for the current item's
+  // candidates so all unit prices on this page are directly comparable
+  // rather than mixing $/oz with $/lb.
+  const canonicalDim = useMemo(
+    () => (current ? dominantDimension(current.candidates) : null),
+    [current],
+  );
 
   const summary = useMemo(() => {
     let added = 0;
@@ -410,7 +495,7 @@ export function KrogerCartModal({ items, onClose }: KrogerCartModalProps) {
                             <>
                               <span className="text-sm font-semibold tabular-nums whitespace-nowrap">{c.priceDisplay}</span>
                               {(() => {
-                                const u = unitPriceDisplay(c.price, c.size);
+                                const u = unitPriceDisplay(c.price, c.size, canonicalDim);
                                 return u ? (
                                   <span className="text-[10px] text-muted-foreground tabular-nums whitespace-nowrap">{u}</span>
                                 ) : null;
