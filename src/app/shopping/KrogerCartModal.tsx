@@ -27,6 +27,34 @@ interface KrogerProductCandidate {
   priceDisplay?: string;
 }
 
+/**
+ * Parse a Kroger size string ("16 oz", "1 lb", "12 ct", "2 lb / 32 oz") into
+ * a normalized number + unit usable for unit-price math. Returns null when
+ * the size doesn't fit a known pattern.
+ */
+function parseSize(size: string | undefined): { value: number; unit: string } | null {
+  if (!size) return null;
+  // Take the FIRST measurement chunk so "2 lb / 32 oz" yields "2 lb".
+  const m = size.match(/(\d+(?:\.\d+)?)\s*(fl\s*oz|oz|lb|lbs?|g|kg|ml|l|ct|count|pk|pack)\b/i);
+  if (!m) return null;
+  const value = parseFloat(m[1]!);
+  let unit = m[2]!.toLowerCase().replace(/\s+/g, '');
+  if (unit === 'lbs') unit = 'lb';
+  if (unit === 'count') unit = 'ct';
+  if (unit === 'pack') unit = 'pk';
+  return { value, unit };
+}
+
+function unitPriceDisplay(price: number | undefined, size: string | undefined): string | null {
+  if (price == null) return null;
+  const parsed = parseSize(size);
+  if (!parsed || parsed.value <= 0) return null;
+  const per = price / parsed.value;
+  // Round to whole cents below $1, tenths above $10 to keep it scannable.
+  const decimals = per < 1 ? 2 : per < 10 ? 2 : 1;
+  return `$${per.toFixed(decimals)}/${parsed.unit}`;
+}
+
 interface SearchResult {
   id: string;
   query: string;
@@ -319,7 +347,7 @@ export function KrogerCartModal({ items, onClose }: KrogerCartModalProps) {
                         type="button"
                         onClick={() => pickCurrent(c.productId)}
                         className={cn(
-                          'w-full flex items-center gap-3 rounded border p-2 text-left transition',
+                          'w-full flex items-stretch gap-3 rounded border p-2 text-left transition',
                           selected
                             ? 'border-primary bg-primary/5'
                             : 'border-border hover:bg-muted/50',
@@ -335,15 +363,30 @@ export function KrogerCartModal({ items, onClose }: KrogerCartModalProps) {
                         ) : (
                           <div className="h-14 w-14 rounded bg-muted flex-shrink-0" />
                         )}
-                        <div className="flex-1 min-w-0">
+                        <div className="flex-1 min-w-0 flex flex-col justify-center">
                           <div className="text-sm font-medium truncate">
                             {c.brand ? `${c.brand} — ` : ''}{c.description}
                           </div>
-                          <div className="text-xs text-muted-foreground truncate">
-                            {[c.size, c.priceDisplay].filter(Boolean).join(' • ')}
-                          </div>
+                          {c.size && (
+                            <div className="text-xs text-muted-foreground truncate">{c.size}</div>
+                          )}
                         </div>
-                        {selected && <Check className="h-5 w-5 text-primary flex-shrink-0" />}
+                        <div className="flex-shrink-0 flex flex-col items-end justify-center w-20">
+                          {c.priceDisplay ? (
+                            <>
+                              <span className="text-sm font-semibold tabular-nums">{c.priceDisplay}</span>
+                              {(() => {
+                                const u = unitPriceDisplay(c.price, c.size);
+                                return u ? (
+                                  <span className="text-[10px] text-muted-foreground tabular-nums">{u}</span>
+                                ) : null;
+                              })()}
+                            </>
+                          ) : (
+                            <span className="text-[10px] text-muted-foreground">no price</span>
+                          )}
+                        </div>
+                        {selected && <Check className="h-5 w-5 text-primary flex-shrink-0 self-center" />}
                       </button>
                     </li>
                   );
