@@ -290,7 +290,14 @@ export function KrogerCartModal({ items, onClose }: KrogerCartModalProps) {
 
   return (
     <Dialog open onOpenChange={onClose}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+      <DialogContent
+        className={cn(
+          // Mobile: tight horizontal padding so the candidate row's image +
+          // name + price all fit on a ~390px iPhone width. Desktop reverts
+          // to the cushy defaults.
+          'max-w-lg p-3 sm:p-6 max-h-[90vh] overflow-y-auto',
+        )}
+      >
         <DialogHeader>
           <DialogTitle>
             {done
@@ -347,7 +354,7 @@ export function KrogerCartModal({ items, onClose }: KrogerCartModalProps) {
                         type="button"
                         onClick={() => pickCurrent(c.productId)}
                         className={cn(
-                          'w-full flex items-stretch gap-3 rounded border p-2 text-left transition',
+                          'w-full flex items-stretch gap-2 sm:gap-3 rounded border p-2 text-left transition',
                           selected
                             ? 'border-primary bg-primary/5'
                             : 'border-border hover:bg-muted/50',
@@ -358,27 +365,30 @@ export function KrogerCartModal({ items, onClose }: KrogerCartModalProps) {
                           <img
                             src={c.imageUrl}
                             alt=""
-                            className="h-14 w-14 object-contain rounded bg-white flex-shrink-0"
+                            className="h-12 w-12 sm:h-14 sm:w-14 object-contain rounded bg-white flex-shrink-0"
                           />
                         ) : (
-                          <div className="h-14 w-14 rounded bg-muted flex-shrink-0" />
+                          <div className="h-12 w-12 sm:h-14 sm:w-14 rounded bg-muted flex-shrink-0" />
                         )}
                         <div className="flex-1 min-w-0 flex flex-col justify-center">
-                          <div className="text-sm font-medium truncate">
+                          {/* Wrap name to 2 lines instead of truncating —
+                              full product strings need to be readable on
+                              narrow phone screens. */}
+                          <div className="text-sm font-medium leading-tight line-clamp-2">
                             {c.brand ? `${c.brand} — ` : ''}{c.description}
                           </div>
                           {c.size && (
-                            <div className="text-xs text-muted-foreground truncate">{c.size}</div>
+                            <div className="text-xs text-muted-foreground truncate mt-0.5">{c.size}</div>
                           )}
                         </div>
-                        <div className="flex-shrink-0 flex flex-col items-end justify-center w-20">
+                        <div className="flex-shrink-0 flex flex-col items-end justify-center min-w-[3.5rem]">
                           {c.priceDisplay ? (
                             <>
-                              <span className="text-sm font-semibold tabular-nums">{c.priceDisplay}</span>
+                              <span className="text-sm font-semibold tabular-nums whitespace-nowrap">{c.priceDisplay}</span>
                               {(() => {
                                 const u = unitPriceDisplay(c.price, c.size);
                                 return u ? (
-                                  <span className="text-[10px] text-muted-foreground tabular-nums">{u}</span>
+                                  <span className="text-[10px] text-muted-foreground tabular-nums whitespace-nowrap">{u}</span>
                                 ) : null;
                               })()}
                             </>
@@ -386,7 +396,7 @@ export function KrogerCartModal({ items, onClose }: KrogerCartModalProps) {
                             <span className="text-[10px] text-muted-foreground">no price</span>
                           )}
                         </div>
-                        {selected && <Check className="h-5 w-5 text-primary flex-shrink-0 self-center" />}
+                        {selected && <Check className="h-4 w-4 sm:h-5 sm:w-5 text-primary flex-shrink-0 self-center" />}
                       </button>
                     </li>
                   );
@@ -424,20 +434,22 @@ export function KrogerCartModal({ items, onClose }: KrogerCartModalProps) {
                 const pid = picks.get(r.id);
                 const cand = pid ? r.candidates.find((c) => c.productId === pid) : null;
                 return (
-                  <li key={r.id} className="flex items-center gap-2">
+                  <li key={r.id} className="flex items-start gap-2 min-w-0">
                     {cand ? (
-                      <Check className="h-4 w-4 text-primary flex-shrink-0" />
+                      <Check className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
                     ) : (
-                      <X className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                      <X className="h-4 w-4 text-muted-foreground flex-shrink-0 mt-0.5" />
                     )}
-                    <span className="text-muted-foreground">
-                      {parsedByItemId.get(r.id)?.original ?? r.query}
-                    </span>
-                    {cand && (
-                      <span className="text-xs text-muted-foreground truncate">
-                        → {cand.brand ? `${cand.brand} ` : ''}{cand.description}
-                      </span>
-                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className="text-muted-foreground break-words">
+                        {parsedByItemId.get(r.id)?.original ?? r.query}
+                      </div>
+                      {cand && (
+                        <div className="text-xs text-muted-foreground break-words">
+                          → {cand.brand ? `${cand.brand} ` : ''}{cand.description}
+                        </div>
+                      )}
+                    </div>
                   </li>
                 );
               })}
