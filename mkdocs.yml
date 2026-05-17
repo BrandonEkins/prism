@@ -1,0 +1,101 @@
+site_name: Prism
+site_description: A subscription-free, self-hosted family dashboard.
+site_url: https://sandydargoport.github.io/prism/
+repo_url: https://github.com/sandydargoport/prism
+repo_name: sandydargoport/prism
+edit_uri: edit/master/docs/
+
+docs_dir: docs
+site_dir: site
+
+theme:
+  name: material
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - navigation.indexes
+    - content.code.copy
+    - content.action.edit
+    - search.suggest
+    - search.highlight
+    - toc.follow
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/weather-night
+        name: Switch to light mode
+  icon:
+    repo: fontawesome/brands/github
+    edit: material/pencil
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+
+plugins:
+  - search
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/sandydargoport/prism
+
+nav:
+  - Home: index.md
+  - Get Started:
+      - Install: getting-started/install.md
+      - First-time setup: getting-started/first-time-setup.md
+      - Updating: getting-started/updating.md
+  - User Guide:
+      - Overview: HELP.md
+      - Calendar: features/CALENDAR.md
+      - Shopping: features/SHOPPING.md
+      - Recipes: features/RECIPES.md
+      - Tasks: features/TASKS.md
+      - Goals: features/GOALS.md
+      - Mobile (PWA): features/MOBILE.md
+      - Global input: features/global-input-system.md
+  - Integrations:
+      - Kroger / Mariano's: features/KROGER.md
+      - Home Assistant: home-assistant.md
+      - Voice API: voice-api.md
+  - Deployment:
+      - Demo deployment: demo-deployment.md
+  - Releases:
+      - Changelog: CHANGELOG.md
+
+# Files present in docs/ but intentionally not in the rendered nav
+# (kept in-repo for engineering reference, not user docs).
+not_in_nav: |
+  /arch-review-v4.md
+  /calendar-cards-design.md
+  /code-review-modalities.md
+  /api-auth-levels.md

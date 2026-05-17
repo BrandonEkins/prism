@@ -1,0 +1,76 @@
+# Installing Prism
+
+Prism ships as a Docker Compose application. You have two install paths:
+
+1. **Clone and build** — for any platform with Docker + git.
+2. **Pull pre-built image** — for amd64 or ARM64 (Raspberry Pi).
+
+After installation, open **<http://localhost:3000>** and log in with PIN `1234` (parent) or `0000` (child). Change these on the first run.
+
+---
+
+## Option 1: Clone and build
+
+### HTTPS / Nginx certificate prerequisite (Linux / WSL)
+
+Prism's default Nginx config terminates TLS on port `443` and expects:
+
+- `config/certs/prism.crt`
+- `config/certs/prism.key`
+
+If these files are missing, Nginx fails with `cannot load certificate "/etc/nginx/certs/prism.crt"`.
+
+Generate a local self-signed cert:
+
+```bash
+mkdir -p config/certs
+openssl req -x509 -nodes -days 365 \
+  -newkey rsa:2048 \
+  -keyout config/certs/prism.key \
+  -out config/certs/prism.crt \
+  -subj "/CN=localhost"
+```
+
+If you see `Permission denied` while writing certs:
+
+```bash
+sudo chown -R "$USER:$USER" config/certs
+```
+
+### Clone and run
+
+```bash
+git clone https://github.com/sandydargoport/prism.git
+cd prism
+bash scripts/install.sh
+```
+
+!!! tip
+    If you prefer `./scripts/install.sh`, make it executable first with `chmod +x scripts/install.sh`.
+
+---
+
+## Option 2: Pull pre-built image
+
+Works on both amd64 and ARM64 — the manifest auto-selects the right binary.
+
+```bash
+# Download docker-compose.yml and .env.example
+curl -O https://raw.githubusercontent.com/sandydargoport/prism/master/docker-compose.yml
+curl -O https://raw.githubusercontent.com/sandydargoport/prism/master/.env.example
+cp .env.example .env
+# Edit .env with your secrets
+
+docker-compose up -d
+```
+
+!!! note "Raspberry Pi"
+    Tested on Pi 4 (4 GB+). Works with the pre-built ARM64 image — no compilation needed.
+
+---
+
+## First login
+
+Open **<http://localhost:3000>** and log in with PIN `1234` (parent) or `0000` (child).
+
+Next: [first-time setup](first-time-setup.md).
