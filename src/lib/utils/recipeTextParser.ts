@@ -45,6 +45,36 @@ const MEASUREMENT_WORDS = new Set([
   'qt', 'quart', 'quarts', 'pt', 'pint', 'pints', 'gal', 'gallon', 'gallons',
 ]);
 
+// Words that stay lowercase in title-case, EXCEPT at the start or end of the
+// title. Standard AP/Chicago style minus the conjunctions you wouldn't
+// commonly find in a recipe name.
+const TITLE_CASE_STOP_WORDS = new Set([
+  'a', 'an', 'and', 'as', 'at', 'but', 'by', 'for', 'from', 'in', 'into',
+  'nor', 'of', 'on', 'or', 'over', 'per', 'the', 'to', 'up', 'via', 'vs',
+  'with',
+]);
+
+function titleCase(text: string): string {
+  const words = text.trim().split(/\s+/);
+  return words
+    .map((word, idx) => {
+      const lower = word.toLowerCase();
+      const isFirst = idx === 0;
+      const isLast = idx === words.length - 1;
+      // After a colon or em-dash, also capitalize regardless of stop-word status.
+      const prevWord = idx > 0 ? words[idx - 1]! : '';
+      const startsClause = /[:—–-]$/.test(prevWord);
+      if (!isFirst && !isLast && !startsClause && TITLE_CASE_STOP_WORDS.has(lower)) {
+        return lower;
+      }
+      // Preserve interior caps like "BBQ" or "PB&J" — only flip the first
+      // letter when the input is all lowercase.
+      if (word !== lower) return word;
+      return word.charAt(0).toUpperCase() + word.slice(1);
+    })
+    .join(' ');
+}
+
 const SECTION_HEADERS = {
   ingredients: /^(ingredients?|what you('|')?ll need)\s*:?\s*$/i,
   instructions: /^(instructions?|directions?|method|steps?|preparation|how to make|to make)\s*:?\s*$/i,
@@ -190,7 +220,7 @@ export function parseRecipeText(raw: string): ParsedRecipeText {
     ) continue;
     // A line that's clearly an ingredient shouldn't be the title.
     if (isIngredientLine(line)) continue;
-    title = line.replace(/^[#*\s]+/, '').trim();
+    title = titleCase(line.replace(/^[#*\s]+/, '').trim());
     titleLineIdx = i;
     break;
   }

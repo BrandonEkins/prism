@@ -290,7 +290,11 @@ export function ListModal({
               >
                 Everyone
               </Button>
-              {familyMembers.map((member) => (
+              {/* Filter out members whose id wasn't exposed (unauthenticated
+                  /api/family responses return id='' instead of a real UUID).
+                  Otherwise selecting them sets assignedTo to an empty string
+                  and the create endpoint fails validation. */}
+              {familyMembers.filter((m) => m.id).map((member) => (
                 <Button
                   key={member.id}
                   type="button"

@@ -105,8 +105,11 @@ export function RecipeDetailModal({
       await onAddToShoppingList(listId, scaledIngredients);
       setShowListPicker(false);
       toast({ title: `Added ${scaledIngredients.length} ingredients to shopping list!`, variant: 'success' });
-    } catch {
-      toast({ title: 'Failed to add ingredients to shopping list', variant: 'destructive' });
+    } catch (err) {
+      toast({
+        title: err instanceof Error ? err.message : 'Failed to add ingredients to shopping list',
+        variant: 'destructive',
+      });
     } finally {
       setAddingToList(false);
     }

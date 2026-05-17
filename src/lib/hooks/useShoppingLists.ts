@@ -199,7 +199,11 @@ export function useShoppingLists(options: UseShoppingListsOptions = {}): UseShop
         });
 
         if (!response.ok) {
-          throw new Error('Failed to add item');
+          const data = await response.json().catch(() => ({}));
+          const detail = data.details?.[0]?.message
+            ?? data.error
+            ?? `HTTP ${response.status}`;
+          throw new Error(`Failed to add item: ${detail}`);
         }
 
         const newItem = await response.json();

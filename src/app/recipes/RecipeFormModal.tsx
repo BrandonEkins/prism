@@ -256,7 +256,6 @@ export function RecipeFormModal({ recipe, onClose, onSave }: RecipeFormModalProp
                 ref={fileInputRef}
                 type="file"
                 accept="image/jpeg,image/png,image/webp"
-                capture="environment"
                 className="hidden"
                 onChange={handleFileSelected}
               />
