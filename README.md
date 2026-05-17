@@ -1,8 +1,5 @@
 # Prism
 
-> [!IMPORTANT]
-> **Upgrading from before April 11, 2026?** Database migrations now run automatically on container startup. Run `git pull && docker-compose up -d --build` and your database will update itself. No manual steps required.
-
 **A subscription-free, self-hosted family dashboard that integrates with the tools you already use without becoming yet another system of record.**
 
 [![License](https://img.shields.io/badge/license-PolyForm%20NC%201.0-blue.svg)](LICENSE)
@@ -14,7 +11,7 @@ Prism is a configurable family dashboard designed for large wall-mounted screens
 
 ---
 
-## What's New
+## What's New in v1.8.0
 
 > **Send to Kroger / Mariano's / Ralphs / King Soopers / Smith's / Fred Meyer / QFC / Fry's / Harris Teeter / Pick 'n Save / Metro Market / 10 more** · **Paste OCR'd recipes** · **Server-side calendar sync** · **Recipe scaling pills**
 

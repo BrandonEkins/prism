@@ -2,7 +2,9 @@
 
 All notable changes to Prism are documented in this file.
 
-## [Unreleased]
+## [1.8.0] – 2026-05-17
+
+> Send-to-Kroger cart push (every Kroger banner, OAuth per-user, SKU picker with normalized unit prices and per-item caching), recipe import from pasted OCR text with section-aware ingredients and ½×–4× scaling pills, server-side calendar sync cron with a ±90/365-day window, mobile PWA becomes agenda-only, plus the foundation Voice API for the upcoming Alexa / Home Assistant integration. Same `git pull && docker-compose up -d --build` upgrade.
 
 ### Added — Shopping
 - **Send to Kroger (and every Kroger banner: Mariano's, Ralphs, King Soopers, Fred Meyer, QFC, Smith's, Fry's, Harris Teeter, Pick 'n Save, Metro Market, Pay Less, Food 4 Less, Foods Co., Bakers' Plus, City Market, Copps, Dillons, Gerbes, Jay C, Ruler Foods)**: Push your Prism shopping list straight into your online Kroger cart for pickup or delivery. Per-user OAuth 2.0 with encrypted token storage in a new `user_kroger_connections` table. A picker walks you through each item with up to 5 SKU candidates, image, price, and a normalized unit price (lb / fl oz / ct) so candidates within a page are directly comparable. Quantity controls let you bump cart count, "search again" lets you refine when the parser strips too much, and the chosen SKU is cached per shopping item (`shopping_items.kroger_product_id`) so weekly staples become one-tap after first pick. Per-user store picker via Kroger's Locations API binds location-aware pricing to your preferred Mariano's (or any banner). Settings → Shopping has the connect/disconnect flow plus inline credentials entry — no setup-wizard re-run needed. Dynamic OAuth redirect URI so a WAN https hostname and a LAN `192.168.x.x:3000` URL both work if both URIs are registered on the Kroger dev app.
