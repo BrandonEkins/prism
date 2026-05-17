@@ -190,7 +190,7 @@ export function RecipeDetailModal({
               </div>
             )}
             {recipe.servings && (
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <span className="text-muted-foreground">Servings:</span>
                 <div className="flex items-center gap-1">
                   <Button
@@ -214,9 +214,27 @@ export function RecipeDetailModal({
                     <Plus className="h-3 w-3" />
                   </Button>
                 </div>
+                {/* Quick scale buttons — multiplier of the original servings. */}
+                <div className="flex items-center gap-1">
+                  {[1, 2, 3, 4].map((mult) => {
+                    const target = (recipe.servings ?? 1) * mult;
+                    const active = desiredServings === target;
+                    return (
+                      <Button
+                        key={mult}
+                        variant={active ? 'secondary' : 'outline'}
+                        size="sm"
+                        className="h-6 px-2 text-xs"
+                        onClick={() => setDesiredServings(target)}
+                      >
+                        {mult}×
+                      </Button>
+                    );
+                  })}
+                </div>
                 {scaleFactor !== 1 && (
                   <span className="text-xs text-muted-foreground">
-                    (scaled {scaleFactor > 1 ? 'up' : 'down'})
+                    (scaled {scaleFactor > 1 ? 'up' : 'down'} ×{scaleFactor.toFixed(scaleFactor % 1 ? 2 : 0)})
                   </span>
                 )}
               </div>

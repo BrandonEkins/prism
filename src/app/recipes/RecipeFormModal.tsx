@@ -111,10 +111,16 @@ export function RecipeFormModal({ recipe, onClose, onSave }: RecipeFormModalProp
     setUploading(true);
     try {
       const res = await fetch(`/api/recipes/${recipeId}/image`, { method: 'DELETE' });
-      if (!res.ok) throw new Error('Delete failed');
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || `HTTP ${res.status}`);
+      }
       setImageUrl('');
-    } catch {
-      toast({ title: 'Failed to remove photo', variant: 'destructive' });
+    } catch (err) {
+      toast({
+        title: err instanceof Error ? `Failed to remove photo: ${err.message}` : 'Failed to remove photo',
+        variant: 'destructive',
+      });
     } finally {
       setUploading(false);
     }
@@ -152,7 +158,10 @@ export function RecipeFormModal({ recipe, onClose, onSave }: RecipeFormModalProp
         notes: notes.trim() || undefined,
       });
     } catch (err) {
-      toast({ title: 'Failed to save recipe', variant: 'destructive' });
+      toast({
+        title: err instanceof Error ? err.message : 'Failed to save recipe',
+        variant: 'destructive',
+      });
     } finally {
       setSaving(false);
     }
