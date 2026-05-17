@@ -214,20 +214,27 @@ export function RecipeDetailModal({
                     <Plus className="h-3 w-3" />
                   </Button>
                 </div>
-                {/* Quick scale buttons — multiplier of the original servings. */}
+                {/* Quick scale buttons — multiplier of the original servings.
+                    ½× rounds up to the nearest whole serving (1 minimum). */}
                 <div className="flex items-center gap-1">
-                  {[1, 2, 3, 4].map((mult) => {
-                    const target = (recipe.servings ?? 1) * mult;
+                  {[
+                    { mult: 0.5, label: '½×' },
+                    { mult: 1, label: '1×' },
+                    { mult: 2, label: '2×' },
+                    { mult: 3, label: '3×' },
+                    { mult: 4, label: '4×' },
+                  ].map(({ mult, label }) => {
+                    const target = Math.max(1, Math.round((recipe.servings ?? 1) * mult));
                     const active = desiredServings === target;
                     return (
                       <Button
-                        key={mult}
+                        key={label}
                         variant={active ? 'secondary' : 'outline'}
                         size="sm"
                         className="h-6 px-2 text-xs"
                         onClick={() => setDesiredServings(target)}
                       >
-                        {mult}×
+                        {label}
                       </Button>
                     );
                   })}

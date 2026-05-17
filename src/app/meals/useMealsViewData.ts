@@ -8,7 +8,9 @@ import { useAuth } from '@/components/providers/AuthProvider';
 import { useWeekStartsOn } from '@/lib/hooks/useWeekStartsOn';
 import type { Meal } from '@/types';
 
-const mealTypeOrder: Record<string, number> = { breakfast: 0, lunch: 1, dinner: 2, snack: 3 };
+// Snack between lunch and dinner — matches the order used by CalendarView's
+// `sortMealsByType` so a day's meal stack reads the same in both UIs.
+const mealTypeOrder: Record<string, number> = { breakfast: 0, lunch: 1, snack: 2, dinner: 3 };
 
 export function useMealsViewData() {
   const { weekStartsOn } = useWeekStartsOn();
