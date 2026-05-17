@@ -14,11 +14,17 @@ Prism is a configurable family dashboard designed for large wall-mounted screens
 
 ---
 
-## What's New in v1.7.0
+## What's New
 
-> **Calendar refactor** · **Drag-and-drop everywhere** · **Cards display mode** · **Multi-provider weather** · **Click-to-edit from the widget**
+> **Send to Kroger / Mariano's / Ralphs / King Soopers / Smith's / Fred Meyer / QFC / Fry's / Harris Teeter / Pick 'n Save / Metro Market / 10 more** · **Paste OCR'd recipes** · **Server-side calendar sync** · **Recipe scaling pills**
 
-The calendar subpage and the dashboard CalendarWidget now share a unified toolbar and support ten view modes (Agenda, Day, List, Schedule, 1W–4W, Month, 3 Months). A new **cards** display mode renders meals, events, chores, and tasks in per-day cards with full drag-and-drop between days; a dynamic capacity probe folds overflow into a "+N more" popover so nothing is silently clipped. Tasks/Chores/Meals widget items are click-to-edit, opening the same modals as the subpage. The weather stack is now multi-provider (`WEATHER_PROVIDER=meteo|pirate|openweather`) — Open-Meteo is the new zero-config default, with Pirate Weather adding a sunrise/sunset arc and minutely precipitation timeline when configured.
+Push your Prism shopping list straight into your online cart at **any Kroger banner** for pickup or delivery — one Kroger account works across all 21 banners. The picker walks you through SKU candidates per item with image, price, and a normalized unit price (lb / fl oz / ct) so options compare directly; picked SKUs are cached so weekly staples are one-tap on the next trip. [Kroger setup guide](docs/features/KROGER.md).
+
+Take a photo of a recipe card with iOS Live Text or Google Lens, paste into Prism, and a heuristic parser splits it into title, ingredients (with section headings preserved — *"Fries:"* / *"Meatballs:"* / *"Sauce:"*), prep / cook time, and step-by-step instructions, ready to review before saving. Per-recipe photo upload from your camera or library. Quick scaling pills (½× / 1× / 2× / 3× / 4×) on the detail view.
+
+Calendar sync now runs as a server-side cron so events stay current even when nobody's looking at Prism, and the default sync window widened from ±30 days to −90 / +365 so school-year and sports-season events all the way out actually show up.
+
+> **Earlier in v1.7:** Calendar refactor with ten view modes, drag-and-drop everywhere, cards display mode, click-to-edit from the widget, and a multi-provider weather stack (Open-Meteo / Pirate Weather / OpenWeatherMap).
 
 See the [full changelog](docs/CHANGELOG.md) for details on every release.
 
@@ -156,12 +162,14 @@ Beyond the dashboard, Prism includes dedicated pages for:
 
 - **Google Calendar** - Bidirectional sync via OAuth: create, edit, and delete events in Prism and changes push back to Google Calendar; iCal supported for read-only calendar sources
 - **Microsoft To Do** - Tasks, shopping lists, and wish lists (bidirectional sync)
+- **Kroger online cart** ([setup guide](docs/features/KROGER.md)) - Push your Prism shopping list directly into your online cart at any Kroger banner for pickup or delivery: **Kroger, Mariano's, Ralphs, King Soopers, Fred Meyer, QFC, Smith's, Fry's, Harris Teeter, Pick 'n Save, Metro Market, Pay Less, Food 4 Less, Foods Co., Bakers' Plus, City Market, Copps, Dillons, Gerbes, Jay C,** and **Ruler Foods** (one Kroger account works across all banners). Per-item SKU picker with image, price, and normalized unit price for quick comparison; cached SKUs make weekly staples one-tap; default-store picker uses your zip to bind location-aware pricing.
 - **OneDrive** - Photos for slideshow and wallpaper
-- **OpenWeatherMap** - Weather data
+- **OpenWeatherMap / Pirate Weather / Open-Meteo** - Weather data (Open-Meteo is the zero-config default; no API key required)
 - **Gmail + FirstView** - School bus arrival tracking via geofence email notifications
 - **Open Food Facts** - Product lookup for barcode scanning (no API key required)
 - **USB HID barcode scanners** - Plug-and-play on desktop: scanner acts as a keyboard, items added instantly
 - **Paprika** - Recipe import
+- **Paste recipe text** - OCR a recipe card with iOS Live Text or Google Lens, paste into Prism, and a heuristic parser splits it into title, prep/cook time, ingredients (with section headings like "Fries:" / "Meatballs:" preserved), and instructions for review before saving
 
 The goal isn't to replace your existing tools. It's to bring them together in one place that works for your family's rhythms.
 
