@@ -74,6 +74,9 @@ export function KrogerCartModal({ items, onClose }: KrogerCartModalProps) {
   const [authError, setAuthError] = useState(false);
   const [results, setResults] = useState<SearchResult[]>([]);
   const [picks, setPicks] = useState<PickState>(new Map());
+  // Per-item quantity to push to the Kroger cart. Defaults to 1; user can
+  // bump up/down via the +/- buttons after picking a SKU.
+  const [quantities, setQuantities] = useState<Map<string, number>>(new Map());
   const [index, setIndex] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
@@ -159,6 +162,26 @@ export function KrogerCartModal({ items, onClose }: KrogerCartModalProps) {
       next.set(current.id, productId);
       return next;
     });
+    // First time picking a SKU, seed quantity to 1 if not already set.
+    if (productId) {
+      setQuantities((prev) => {
+        if (prev.has(current.id)) return prev;
+        const next = new Map(prev);
+        next.set(current.id, 1);
+        return next;
+      });
+    }
+  };
+
+  const adjustQuantity = (delta: number) => {
+    if (!current) return;
+    setQuantities((prev) => {
+      const next = new Map(prev);
+      const curr = next.get(current.id) ?? 1;
+      const updated = Math.max(1, Math.min(99, curr + delta));
+      next.set(current.id, updated);
+      return next;
+    });
   };
 
   // Reset the editor whenever we land on a new item.
@@ -216,9 +239,10 @@ export function KrogerCartModal({ items, onClose }: KrogerCartModalProps) {
           if (!productId) return null;
           const cand = r.candidates.find((c) => c.productId === productId);
           if (!cand) return null;
-          return { shoppingItemId: r.id, productId: cand.productId, upc: cand.upc };
+          const quantity = quantities.get(r.id) ?? 1;
+          return { shoppingItemId: r.id, productId: cand.productId, upc: cand.upc, quantity };
         })
-        .filter((x): x is { shoppingItemId: string; productId: string; upc: string } => x !== null);
+        .filter((x): x is { shoppingItemId: string; productId: string; upc: string; quantity: number } => x !== null);
 
       if (selections.length === 0) {
         toast({ title: 'Nothing selected to send', variant: 'warning' });
@@ -417,6 +441,42 @@ export function KrogerCartModal({ items, onClose }: KrogerCartModalProps) {
               <X className="h-4 w-4" />
               Skip this item
             </button>
+
+            {/* Quantity adjuster — only meaningful once a SKU is selected.
+                Default 1, capped 1-99. Sent to Kroger's cart-add as the
+                `quantity` per UPC. */}
+            {picks.get(current.id) && (
+              <div className="flex items-center justify-between rounded border bg-muted/30 p-2">
+                <span className="text-sm font-medium">Quantity</span>
+                <div className="flex items-center gap-1">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-8 w-8 p-0"
+                    onClick={() => adjustQuantity(-1)}
+                    disabled={(quantities.get(current.id) ?? 1) <= 1}
+                    aria-label="Decrease quantity"
+                  >
+                    −
+                  </Button>
+                  <span className="min-w-[2rem] text-center text-base font-semibold tabular-nums">
+                    {quantities.get(current.id) ?? 1}
+                  </span>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-8 w-8 p-0"
+                    onClick={() => adjustQuantity(1)}
+                    disabled={(quantities.get(current.id) ?? 1) >= 99}
+                    aria-label="Increase quantity"
+                  >
+                    +
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -447,6 +507,11 @@ export function KrogerCartModal({ items, onClose }: KrogerCartModalProps) {
                       {cand && (
                         <div className="text-xs text-muted-foreground break-words">
                           → {cand.brand ? `${cand.brand} ` : ''}{cand.description}
+                          {(quantities.get(r.id) ?? 1) > 1 && (
+                            <span className="ml-1 font-medium text-foreground">
+                              × {quantities.get(r.id)}
+                            </span>
+                          )}
                         </div>
                       )}
                     </div>
