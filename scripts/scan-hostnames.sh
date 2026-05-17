@@ -53,6 +53,7 @@ ALLOWLIST=(
   "github.com"
   "githubusercontent.com"
   "ghcr.io"
+  "sandydargoport.github.io"
   # Common vendor docs the comments may legitimately reference
   "graph.microsoft.com"
   "googleapis.com"
