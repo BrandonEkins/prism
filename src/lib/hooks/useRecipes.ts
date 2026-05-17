@@ -3,8 +3,17 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { navCacheGet, navCacheSet } from '@/lib/utils/navCache';
 
-interface RecipeIngredient {
-  text: string;
+/**
+ * A line in a recipe's ingredient list. Either:
+ *   - { text: "1 cup flour" } — a regular ingredient (the common case)
+ *   - { heading: "Fries" }   — a section header that groups subsequent ingredients
+ *
+ * `text` is optional so heading-only entries are valid; renderers and the
+ * add-to-shopping-list flow filter on which field is present.
+ */
+export interface RecipeIngredient {
+  text?: string;
+  heading?: string;
   name?: string;
   amount?: string;
   unit?: string;

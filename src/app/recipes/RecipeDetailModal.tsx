@@ -98,10 +98,13 @@ export function RecipeDetailModal({
     if (!recipe.ingredients || recipe.ingredients.length === 0) return;
     setAddingToList(true);
     try {
-      // Scale ingredients before adding
-      const scaledIngredients = recipe.ingredients.map((ing) => ({
-        text: scaleIngredient(ing.text),
-      }));
+      // Scale ingredients before adding. Section headings are filtered out —
+      // they aren't shopping items, just visual grouping in the recipe view.
+      const scaledIngredients = recipe.ingredients
+        .filter((ing) => ing.text && !ing.heading)
+        .map((ing) => ({
+          text: scaleIngredient(ing.text ?? ''),
+        }));
       await onAddToShoppingList(listId, scaledIngredients);
       setShowListPicker(false);
       toast({ title: `Added ${scaledIngredients.length} ingredients to shopping list!`, variant: 'success' });
@@ -259,19 +262,28 @@ export function RecipeDetailModal({
                 )}
               </div>
               <ul className="space-y-1">
-                {recipe.ingredients.map((ing, i) => (
-                  <li
-                    key={i}
-                    onClick={() => toggleIngredient(i)}
-                    className={cn(
-                      'text-sm flex items-start gap-2 cursor-pointer select-none hover:bg-accent/50 rounded px-1 -mx-1 transition-colors',
-                      checkedIngredients.has(i) && 'line-through text-muted-foreground'
-                    )}
-                  >
-                    <span className="text-muted-foreground">&bull;</span>
-                    {scaleIngredient(ing.text)}
-                  </li>
-                ))}
+                {recipe.ingredients.map((ing, i) => {
+                  if (ing.heading) {
+                    return (
+                      <li key={i} className="text-sm font-semibold mt-3 first:mt-0">
+                        {ing.heading}
+                      </li>
+                    );
+                  }
+                  return (
+                    <li
+                      key={i}
+                      onClick={() => toggleIngredient(i)}
+                      className={cn(
+                        'text-sm flex items-start gap-2 cursor-pointer select-none hover:bg-accent/50 rounded px-1 -mx-1 transition-colors',
+                        checkedIngredients.has(i) && 'line-through text-muted-foreground',
+                      )}
+                    >
+                      <span className="text-muted-foreground">&bull;</span>
+                      {scaleIngredient(ing.text ?? '')}
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           )}

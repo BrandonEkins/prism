@@ -107,7 +107,9 @@ export async function POST(request: NextRequest) {
   if (auth instanceof NextResponse) return auth;
 
   const { rateLimitGuard } = await import('@/lib/cache/rateLimit');
-  const limited = await rateLimitGuard(auth.userId, 'shopping-items', 30, 60);
+  // 120/min — recipes with long ingredient lists are added one-by-one in
+  // a loop from the client, and 30/min was hitting the limit on import.
+  const limited = await rateLimitGuard(auth.userId, 'shopping-items', 120, 60);
   if (limited) return limited;
 
   try {

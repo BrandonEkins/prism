@@ -18,11 +18,32 @@
 
 export interface ParsedRecipeText {
   name: string;
-  ingredients: Array<{ text: string }>;
+  ingredients: Array<{ text?: string; heading?: string }>;
   instructions: string;
   prepTime?: number;
   cookTime?: number;
   servings?: number;
+}
+
+/**
+ * Match section headers used inside ingredient blocks ("Fries:",
+ * "For the Sauce", "Meatballs"). Heuristics:
+ *   - Short line (≤ 50 chars)
+ *   - No leading digit/fraction (so it's not an ingredient)
+ *   - Either ends with ":" or starts with "For the"/"For"
+ */
+function isIngredientHeading(line: string): boolean {
+  const trimmed = line.trim();
+  if (!trimmed || trimmed.length > 50) return false;
+  if (/^(\d|[¼½¾⅓⅔⅛⅜⅝⅞])/.test(trimmed)) return false;
+  if (/:\s*$/.test(trimmed)) return true;
+  if (/^for the\b/i.test(trimmed)) return true;
+  if (/^for\s+\S/i.test(trimmed) && trimmed.split(/\s+/).length <= 4) return true;
+  return false;
+}
+
+function normalizeHeading(line: string): string {
+  return line.trim().replace(/[:.]+\s*$/, '').replace(/^for the\s+/i, '').trim();
 }
 
 // Common measurement words used to detect ingredient lines. Lowercased,
@@ -235,7 +256,10 @@ export function parseRecipeText(raw: string): ParsedRecipeText {
     else if (SECTION_HEADERS.notes.test(line)) headerIdx.push({ idx, section: 'notes' });
   });
 
-  const ingredientLines: string[] = [];
+  // Ingredients can now be heading entries ({ heading }) or text entries
+  // ({ text }) so a recipe like "Fries / Meatballs / Sauce" keeps its
+  // structure on save + display.
+  const ingredients: Array<{ text?: string; heading?: string }> = [];
   const instructionLines: string[] = [];
 
   if (headerIdx.length > 0) {
@@ -246,8 +270,13 @@ export function parseRecipeText(raw: string): ParsedRecipeText {
       for (let i = idx + 1; i < nextIdx; i++) {
         const line = lines[i];
         if (!line || metadataLineIdx.has(i)) continue;
-        if (section === 'ingredients') ingredientLines.push(stripBullet(line));
-        else if (section === 'instructions') instructionLines.push(line);
+        if (section === 'ingredients') {
+          if (isIngredientHeading(line)) {
+            ingredients.push({ heading: normalizeHeading(line) });
+          } else {
+            ingredients.push({ text: stripBullet(line) });
+          }
+        } else if (section === 'instructions') instructionLines.push(line);
         // notes section is dropped — user can copy from raw text if needed.
       }
     }
@@ -258,7 +287,9 @@ export function parseRecipeText(raw: string): ParsedRecipeText {
       const line = lines[i];
       if (!line || metadataLineIdx.has(i)) continue;
       if (isIngredientLine(line)) {
-        ingredientLines.push(stripBullet(line));
+        ingredients.push({ text: stripBullet(line) });
+      } else if (isIngredientHeading(line)) {
+        ingredients.push({ heading: normalizeHeading(line) });
       } else {
         instructionLines.push(line);
       }
@@ -276,7 +307,7 @@ export function parseRecipeText(raw: string): ParsedRecipeText {
 
   return {
     name: title || 'Untitled Recipe',
-    ingredients: ingredientLines.map((text) => ({ text })),
+    ingredients,
     instructions: cleanedInstructions.join('\n').trim(),
     prepTime,
     cookTime,

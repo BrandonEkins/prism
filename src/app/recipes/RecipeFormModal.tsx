@@ -22,7 +22,7 @@ export interface RecipeFormModalProps {
   onSave: (data: {
     name: string;
     description?: string;
-    ingredients?: Array<{ text: string }>;
+    ingredients?: Array<{ text?: string; heading?: string }>;
     instructions?: string;
     prepTime?: number;
     cookTime?: number;
@@ -38,9 +38,22 @@ export function RecipeFormModal({ recipe, onClose, onSave }: RecipeFormModalProp
   const [saving, setSaving] = useState(false);
   const [name, setName] = useState(recipe?.name || '');
   const [description, setDescription] = useState(recipe?.description || '');
-  const [ingredientsText, setIngredientsText] = useState(
-    recipe?.ingredients?.map((i) => i.text).join('\n') || ''
-  );
+  // Serialize headings as "Heading:" with a blank line before each section
+  // so the textarea round-trips cleanly. Text-only entries stay as-is.
+  const [ingredientsText, setIngredientsText] = useState(() => {
+    if (!recipe?.ingredients) return '';
+    const lines: string[] = [];
+    for (let i = 0; i < recipe.ingredients.length; i++) {
+      const ing = recipe.ingredients[i]!;
+      if (ing.heading) {
+        if (lines.length > 0) lines.push('');
+        lines.push(`${ing.heading}:`);
+      } else if (ing.text) {
+        lines.push(ing.text);
+      }
+    }
+    return lines.join('\n');
+  });
   const [instructions, setInstructions] = useState(recipe?.instructions || '');
   const [prepTime, setPrepTime] = useState(recipe?.prepTime?.toString() || '');
   const [cookTime, setCookTime] = useState(recipe?.cookTime?.toString() || '');
@@ -120,8 +133,15 @@ export function RecipeFormModal({ recipe, onClose, onSave }: RecipeFormModalProp
         description: description.trim() || undefined,
         ingredients: ingredientsText
           .split('\n')
-          .filter((line) => line.trim())
-          .map((text) => ({ text: text.trim() })),
+          .map((line) => line.trim())
+          .filter((line) => line.length > 0)
+          .map((line) => {
+            // Trailing-colon (and short, non-numeric) → section heading.
+            if (/^[^\d¼½¾⅓⅔⅛⅜⅝⅞].{0,49}:\s*$/.test(line)) {
+              return { heading: line.replace(/[:.]+\s*$/, '').trim() };
+            }
+            return { text: line };
+          }),
         instructions: instructions.trim() || undefined,
         prepTime: prepTime ? parseInt(prepTime, 10) : undefined,
         cookTime: cookTime ? parseInt(cookTime, 10) : undefined,
@@ -218,13 +238,15 @@ export function RecipeFormModal({ recipe, onClose, onSave }: RecipeFormModalProp
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="ingredients">Ingredients (one per line)</Label>
+            <Label htmlFor="ingredients">
+              Ingredients (one per line; end a line with &quot;:&quot; for a section)
+            </Label>
             <Textarea
               id="ingredients"
               value={ingredientsText}
               onChange={(e) => setIngredientsText(e.target.value)}
-              placeholder="1 lb chicken breast&#10;1 cup breadcrumbs&#10;..."
-              rows={6}
+              placeholder={'Fries:\n4 potatoes\n2 tbsp olive oil\n\nMeatballs:\n1 lb ground beef\n1 egg'}
+              rows={8}
             />
           </div>
 
