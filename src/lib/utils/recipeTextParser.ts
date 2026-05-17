@@ -305,10 +305,22 @@ export function parseRecipeText(raw: string): ParsedRecipeText {
     ? instructionLines.map((l) => l.replace(/^step\s*\d+\s*[:.\-]?\s*/i, ''))
     : instructionLines;
 
+  // Inject line breaks before in-line step markers so OCR'd instructions
+  // that arrived as "1. Preheat oven. 2. Mix bowl. 3. Bake." become
+  // properly separated steps. Only breaks where the next token *looks* like
+  // a step marker (number-dot + capital letter, "Step N", or a bullet
+  // followed by a word) so we don't split "Mix 2 tbsp flour".
+  const splitOnStepMarkers = (text: string): string =>
+    text
+      .replace(/\s+(?=\d+[.)]\s+[A-Z])/g, '\n')
+      .replace(/\s+(?=Step\s+\d+\b)/gi, '\n')
+      .replace(/\s+(?=[•●▪·]\s+\w)/g, '\n')
+      .replace(/\n{3,}/g, '\n\n');
+
   return {
     name: title || 'Untitled Recipe',
     ingredients,
-    instructions: cleanedInstructions.join('\n').trim(),
+    instructions: splitOnStepMarkers(cleanedInstructions.join('\n')).trim(),
     prepTime,
     cookTime,
     servings,
