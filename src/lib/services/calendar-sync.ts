@@ -14,6 +14,21 @@ import { validatePublicUrl, UnsafeUrlError } from '@/lib/utils/safeFetch';
 import { async as icalAsync, type VEvent, type CalendarResponse } from 'node-ical';
 
 /**
+ * Default sync window.
+ *
+ * Past: 90 days back so recent-past events (last quarter) keep flowing in.
+ * Events OLDER than this are never touched by sync — the delete-on-remove
+ * logic only operates within this window, so historic events synced under
+ * an older default stay in the local DB forever.
+ *
+ * Future: 365 days forward so school-year, sports-season, and far-out
+ * scheduled events show up. The previous ±30-day default silently dropped
+ * anything beyond a month.
+ */
+const DEFAULT_TIME_MIN_MS = 90 * 24 * 60 * 60 * 1000;       // 90 days
+const DEFAULT_TIME_MAX_MS = 365 * 24 * 60 * 60 * 1000;      // 365 days
+
+/**
  * Check if token needs refresh (within 5 minutes of expiry)
  */
 function tokenNeedsRefresh(expiresAt: Date | null): boolean {
@@ -98,9 +113,9 @@ export async function syncGoogleCalendarSource(
     }
   }
 
-  // Set default time range (30 days ago to 30 days from now)
-  const timeMin = options.timeMin || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-  const timeMax = options.timeMax || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+  // Default sync window — 30 days back, 365 days forward. See constants above.
+  const timeMin = options.timeMin || new Date(Date.now() - DEFAULT_TIME_MIN_MS);
+  const timeMax = options.timeMax || new Date(Date.now() + DEFAULT_TIME_MAX_MS);
 
   // Fetch events from Google
   let googleEvents: GoogleCalendarEvent[];
@@ -411,8 +426,8 @@ export async function syncIcalCalendarSource(
     return { synced: 0, errors: ['No iCal URL configured'] };
   }
 
-  const timeMin = options.timeMin || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-  const timeMax = options.timeMax || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+  const timeMin = options.timeMin || new Date(Date.now() - DEFAULT_TIME_MIN_MS);
+  const timeMax = options.timeMax || new Date(Date.now() + DEFAULT_TIME_MAX_MS);
 
   // SSRF guard: a stored icalUrl that predates the route-level validator
   // could still point at a private destination. Re-validate at the fetch
