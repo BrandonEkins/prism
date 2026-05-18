@@ -1,0 +1,100 @@
+# Screenshot instance — wipes data and reloads the rich seed on every boot.
+#
+# Boots an isolated Prism on :3010 with its own DB (:5435) and Redis (:6380).
+# Volumes are namespaced "prism-screenshots-*" so they never touch the
+# production prism-app / prism-db / prism-redis containers or their data.
+#
+# Distinct from docker-compose.demo.yml (which is the public read-only demo
+# overlay for a future publicly-accessible site).
+#
+# Usage:
+#   docker-compose -f docker-compose.screenshots.yml up -d
+#   open http://localhost:3010
+#   ... take screenshots ...
+#   docker-compose -f docker-compose.screenshots.yml down
+#
+# To wipe and reseed without rebuilding: `down` then `up -d` again —
+# the entrypoint runs clear + seed on every boot.
+
+services:
+  app-screenshots:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: prism-app-screenshots
+    ports:
+      - "3010:3000"
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://prism:screenshots_password@db-screenshots:5432/prism
+      - REDIS_URL=redis://redis-screenshots:6379
+      - DB_PASSWORD=screenshots_password
+      # Demo-only encryption key. Safe to commit because data is fictional and
+      # the instance is LAN-only.
+      - ENCRYPTION_KEY=screenshots_only_key_32bytes_xxxxx
+      - NODE_OPTIONS=--dns-result-order=ipv4first
+    volumes:
+      # Mount source for hot reload during screenshot iteration.
+      - .:/app
+      # Keep node_modules / .next from the image (avoid host/container mismatch).
+      - /app/node_modules
+      - /app/.next
+    depends_on:
+      db-screenshots:
+        condition: service_healthy
+      redis-screenshots:
+        condition: service_started
+    restart: unless-stopped
+    entrypoint: ["/bin/sh", "/app/docker/entrypoint-screenshots.sh"]
+    networks:
+      - prism-screenshots-network
+
+  db-screenshots:
+    image: postgres:15-alpine
+    container_name: prism-db-screenshots
+    ports:
+      - "5435:5432"
+    environment:
+      - POSTGRES_DB=prism
+      - POSTGRES_USER=prism
+      - POSTGRES_PASSWORD=screenshots_password
+    volumes:
+      - postgres-data-screenshots:/var/lib/postgresql/data
+      - ./src/lib/db/init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U prism -d prism"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+    restart: unless-stopped
+    networks:
+      - prism-screenshots-network
+
+  redis-screenshots:
+    image: redis:7-alpine
+    container_name: prism-redis-screenshots
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis-data-screenshots:/data
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - prism-screenshots-network
+
+volumes:
+  postgres-data-screenshots:
+    name: prism-screenshots-postgres-data
+  redis-data-screenshots:
+    name: prism-screenshots-redis-data
+
+networks:
+  prism-screenshots-network:
+    name: prism-screenshots-network
+    driver: bridge
