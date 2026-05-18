@@ -269,6 +269,7 @@ describe('syncImmichSource', () => {
     await syncImmichSource('immich-source-1');
 
     expect(mockFetchSharedLink).toHaveBeenCalledWith({
+      sourceId: 'immich-source-1',
       serverUrl: 'https://immich.example.com',
       shareKey: 'share-key-abc',
       password: 'decrypted-enc-pw',
@@ -279,6 +280,7 @@ describe('syncImmichSource', () => {
     await syncImmichSource('immich-source-1');
 
     expect(mockFetchSharedLink).toHaveBeenCalledWith({
+      sourceId: 'immich-source-1',
       serverUrl: 'https://immich.example.com',
       shareKey: 'share-key-abc',
       password: null,
