@@ -65,6 +65,34 @@ To-do items with assignment, due dates, priorities, lists, nested grouping (Pers
 
 Kids earn points from approved chores. Parents set goals — recurring (allowance) or one-time (LEGO set). Waterfall allocation fills goals in priority order. Seasonal celebration animations when a goal is achieved.
 
+### [Messages](features/MESSAGES.md)
+
+Family message board. Post, pin, mark important, set expiration, edit-in-place, group by person.
+
+### [Wishes & Gift Ideas](features/WISHES.md)
+
+Per-member wish lists with secret claim tracking, plus private gift-idea tracking for the gift-giver side.
+
+### [Photos](features/PHOTOS.md)
+
+Local uploads + OneDrive sync with folder picker. Geotagging powers the Travel Map photo strip. Used by the screensaver, dashboard wallpaper, and slideshow widget.
+
+### [Travel Map](features/TRAVEL.md)
+
+Interactive 3D globe for tracking visited places, bucket-list destinations, and multi-stop trips (route / loop / hub). Geotagged photos auto-link to nearby pins.
+
+### [Weekend Ideas](features/WEEKEND.md)
+
+Family activity board for local places to visit. Backlog, visited tracking, ratings, tags, favorites.
+
+### [Bus Tracking](features/BUS.md)
+
+School bus arrival predictions via Gmail/FirstView email parsing. Adaptive polling, route auto-discovery, AM/PM trips per student.
+
+### [Display Modes](features/DISPLAY-MODES.md)
+
+Screensaver, Away Mode, and Babysitter Mode — three overlay modes that layer on top of the dashboard for idle, privacy, and caregiver scenarios.
+
 ### [Mobile & PWA](features/MOBILE.md)
 
 Installable as a PWA on iOS, Android, and desktop. Phone viewports get a Floating Action Button (FAB), simplified single-column dashboard, and agenda-only calendar.
@@ -79,7 +107,7 @@ Installable as a PWA on iOS, Android, and desktop. Phone viewports get a Floatin
 
 ## Other features (covered inline below)
 
-The following features are smaller in scope; they're documented here rather than getting their own page.
+A few smaller surfaces are documented here rather than on dedicated pages.
 
 ### Chores
 
@@ -90,83 +118,6 @@ Views: **Group by Person** (cards per family member), **List view** (sortable), 
 ### Meals
 
 Weekly meal planner. Plan meals by day + meal type (breakfast / lunch / snack / dinner). Link recipes from the [Recipes](features/RECIPES.md) library so opening a planned meal jumps to its recipe. Mark as cooked to track. Drag between days — including from the dashboard Meals widget on touch devices. Week starts on your configured day (*Settings → Display → Week Starts On*).
-
-### Messages
-
-Family message board for shared updates.
-
-- **Post** messages attributed to whoever's logged in.
-- **Pin** important ones to the top.
-- **Mark as important** for visual emphasis.
-- **Set expiration** (12h / 1d / 2d / 3d / 7d) for temporary notices.
-- **Edit** — pencil icon, edit in place, Ctrl+Enter to save.
-- **Delete** — authors can delete their own; parents can delete any.
-- **Group by Person** toggle organizes into person-colored cards.
-
-### Wishes & Gift Ideas
-
-**My Wishes Tab.** Each family member has their own wish list. Others can view and **secretly mark items as purchased** — the owner doesn't see who claimed what.
-
-- Quick-add input at the top of the list (name, URL, notes).
-- **Claim** marks as purchased, hidden from the owner.
-- **Cross off** — owner can cross off items themselves; if someone else already secretly bought it, the message reads "Someone already got this for you!"
-- Optional **Microsoft To Do sync** per member (*Settings → Wish List Sync*).
-
-**Gift Ideas Tab.** Private per-user gift idea tracking for other family members.
-
-- Each person sees columns for every OTHER family member.
-- Add gift ideas with name, link, price, notes.
-- Mark as purchased.
-- **Privacy** — only you can see your own gift ideas. Never visible to the recipient or other family members.
-- Gift ideas do NOT sync to Microsoft To Do (privacy protection).
-
-### Photos
-
-Photo gallery with local uploads and OneDrive sync.
-
-- **Gallery** — browse with lightbox view.
-- **Slideshow** — auto-rotating display, used by the screensaver.
-- **Sources** — local uploads + OneDrive sync (with **folder picker** so you don't have to sync the root).
-- **GPS backfill** — read EXIF GPS from already-synced photos without re-downloading (used by Travel Map photo linking).
-- **Orientation filter** — show only landscape / portrait / square.
-- **Pin photo** — set as wallpaper or screensaver background.
-
-### Travel Map
-
-Interactive 3D globe for tracking family travel.
-
-- **Places** — drop pins for visited / want-to-go / bucket list places. Filter by status, year, country.
-- **Trips** — multi-stop journeys: **Route** (A→B→C), **Loop** (closed), or **Hub** (home base + spokes). National park stops as sub-pins.
-- **GPS photo linking** — geotagged OneDrive photos auto-match to nearby pins. Photo strip on each pin's detail panel.
-- **Globe controls** — drag to rotate, scroll/pinch to zoom, sun/moon toggle for dark map.
-
-### Weekend Ideas
-
-A family activity board for local places to visit.
-
-- **Backlog** of places to try.
-- **Visited tracking** with 1-5 star rating.
-- **Favorites** flag.
-- **Tags** — outdoor / hike / nature / food / museum / farm. Grouped into emoji-headed category sections.
-- **Filters** — status, favorites, tags, search.
-- **Visit frequency** — pip dots grouped in 5s.
-
-### Bus Tracking
-
-School bus arrival predictions via Gmail / FirstView email parsing.
-
-- Configure per student with AM/PM trips.
-- Adaptive polling — scales from 60s down to 10s as the bus approaches.
-- Active-days awareness (no false "overdue" on weekends).
-- Route auto-discovery scans existing emails to propose routes.
-- Gmail label filter support (if your bus emails skip the inbox).
-- Dashboard + screensaver widgets with status dots + ETA.
-
-### Display Modes
-
-- **Screensaver** — photo slideshow after idle timeout. Each dashboard has its own screensaver layout. Configurable timeout (1 / 5 / 15 / 30 / 60 min) and rotation interval.
-- **Away Mode** — privacy overlay with photos + clock + weather. Activate manually (shield icon) or auto-activate after 4h / 8h / 1 day / 1 week of inactivity. Exit requires parent PIN.
-- **Babysitter Mode** — caregiver information overlay with emergency contacts, WiFi (with QR code), child info (allergies, bedtime, medications), house rules. Sections can be marked sensitive to require PIN unlock. Public URL `/babysitter` works without login (for sharing the link with the caregiver before they arrive).
 
 ### Performance Mode
 

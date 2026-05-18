@@ -1,6 +1,8 @@
 # Public Demo Deployment
 
-This page explains how the public demo at (e.g.) `prism-demo.duckdns.org` is hosted, why it's structured the way it is, and how to stand up your own copy.
+> **Status: not yet hosted.** This page is the recipe for standing up a public read-only Prism instance on your own VM. There is no live demo URL yet; when one is published, it will be linked from the [home page](index.md) and the [GitHub README](https://github.com/sandydargoport/prism).
+
+This page explains how a public Prism demo (e.g. at a hostname like `prism-demo.duckdns.org`) would be hosted, why it's structured the way it is, and how to stand up your own copy.
 
 ## What the demo is
 

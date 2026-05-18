@@ -81,6 +81,13 @@ nav:
       - Recipes: features/RECIPES.md
       - Tasks: features/TASKS.md
       - Goals: features/GOALS.md
+      - Messages: features/MESSAGES.md
+      - Wishes & Gift Ideas: features/WISHES.md
+      - Photos: features/PHOTOS.md
+      - Travel Map: features/TRAVEL.md
+      - Weekend Ideas: features/WEEKEND.md
+      - Bus Tracking: features/BUS.md
+      - Display Modes: features/DISPLAY-MODES.md
       - Mobile (PWA): features/MOBILE.md
       - Global input: features/global-input-system.md
   - Integrations:
@@ -88,7 +95,7 @@ nav:
       - Home Assistant: home-assistant.md
       - Voice API: voice-api.md
   - Deployment:
-      - Demo deployment: demo-deployment.md
+      - Public demo (self-hosting recipe): demo-deployment.md
   - Releases:
       - Changelog: CHANGELOG.md
 
