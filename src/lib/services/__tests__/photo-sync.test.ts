@@ -273,6 +273,7 @@ describe('syncImmichSource', () => {
       serverUrl: 'https://immich.example.com',
       shareKey: 'share-key-abc',
       password: 'decrypted-enc-pw',
+      sourceId: 'immich-source-1',
     });
   });
 
@@ -284,6 +285,7 @@ describe('syncImmichSource', () => {
       serverUrl: 'https://immich.example.com',
       shareKey: 'share-key-abc',
       password: null,
+      sourceId: 'immich-source-1',
     });
   });
 
