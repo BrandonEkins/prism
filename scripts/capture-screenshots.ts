@@ -47,21 +47,21 @@ const SCREENSHOTS: CaptureSpec[] = [
     url: '/',
     description: 'Dashboard with widgets (light mode)',
     theme: 'light',
-    settleMs: 1500,
+    settleMs: 15000, // dashboard has many lazy-loaded widgets that each fetch async
   },
   {
     name: 'dashboard-dark',
     url: '/',
     description: 'Dashboard with widgets (dark mode)',
     theme: 'dark',
-    settleMs: 1500,
+    settleMs: 15000,
   },
   {
     name: 'dashboard-mobile',
     url: '/',
     description: 'Mobile dashboard (single-column cards)',
     mobile: true,
-    settleMs: 1000,
+    settleMs: 4000,
   },
 
   // ─── Calendar ──────────────────────────────────────────────
@@ -245,18 +245,24 @@ async function loginAsAlex(page: Page) {
  * placeholders. Polling for their absence is more reliable than a fixed
  * sleep that risks capturing the splash.
  */
-async function waitForContentReady(page: Page, settleMs = 2500): Promise<void> {
-  // Poll until both: (a) the page is no longer the "Prism" splash, and
-  // (b) no "Loading X..." indicator is visible. Next.js dev mode compiles
-  // each route on first hit (several seconds), so a fixed sleep risks
-  // capturing the loading state. 30s timeout fallback keeps the script
-  // from hanging if the heuristic ever misses.
+async function waitForContentReady(page: Page, settleMs = 3500): Promise<void> {
+  // Poll until none of: the "Prism" splash, an empty body, a generic
+  // "Loading..." indicator, or a "Loading X Y Z..." status message
+  // (matches "Loading shopping lists...", "Loading travel pins...", etc.).
+  // Skeleton/spinner elements indicate the page rendered the chrome but the
+  // data hasn't arrived; we wait for them to disappear too.
   await page
     .waitForFunction(
       () => {
         const text = document.body.innerText.trim();
-        if (text === 'Prism' || text === '' || text === 'Loading...') return false;
-        if (/Loading\s+\w+\.\.\./.test(text)) return false;
+        if (!text || text === 'Prism') return false;
+        if (/Loading[\s\w]*\.\.\./i.test(text)) return false;
+        // Skeleton placeholders (animate-pulse) and spinners (animate-spin)
+        // are both indicators that content is still loading.
+        const loaders = document.querySelectorAll(
+          '[class*="animate-pulse"], [class*="animate-spin"], [class*="skeleton"], [data-loading="true"]',
+        );
+        if (loaders.length > 0) return false;
         return true;
       },
       { timeout: 30_000, polling: 250 },
@@ -298,8 +304,9 @@ async function captureOnce(browser: Browser, spec: CaptureSpec): Promise<void> {
     }
 
     // Wait for content to be ready (loading indicators gone), then a small
-    // extra settle for animations + render finalization.
-    await waitForContentReady(page, spec.settleMs ?? 1500);
+    // extra settle for animations + render finalization. Pass through the
+    // spec's settleMs override; otherwise the function default applies.
+    await waitForContentReady(page, spec.settleMs);
 
     const outPath = path.join(OUT_DIR, `${spec.name}.png`);
     await page.screenshot({ path: outPath, fullPage: false });

@@ -1,5 +1,7 @@
 # Weekend Ideas
 
+![Weekend activity board](../demos/weekend.png){ .hero-image }
+
 A family activity board for local places to visit. Lower-stakes than the Travel Map (which is global trips and bucket-list pins), more structured than a Notes-app list. Built around the question: *"what should we do this weekend?"*
 
 ---

@@ -13,30 +13,11 @@ Prism is a configurable family dashboard designed for large wall-mounted screens
 
 ---
 
-## Screenshots
+<p align="center">
+  <img src="docs/demos/dashboard-dark.png" width="800" alt="Prism dashboard in dark mode">
+</p>
 
-<table>
-  <tr>
-    <td align="center"><b>Dashboard (Dark Mode)</b><br><img src="docs/demos/dashboard-dark.png" width="500" alt="Dashboard with widgets in dark mode"></td>
-  </tr>
-  <tr>
-    <td align="center"><b>Calendar</b><br><img src="docs/demos/calendar_light.png" width="500" alt="Calendar week view with events"></td>
-  </tr>
-  <tr>
-    <td align="center"><b>Travel Map</b><br><img src="docs/demos/travel_map.png" width="500" alt="Travel map globe with trip routes and place pins"></td>
-  </tr>
-</table>
-
-<table>
-  <tr>
-    <td align="center"><b>Chores</b><br><img src="docs/demos/chores.png" width="400" alt="Chores grouped by person"></td>
-    <td align="center"><b>Shopping</b><br><img src="docs/demos/shopping.png" width="400" alt="Shopping list with items"></td>
-  </tr>
-  <tr>
-    <td align="center"><b>Wishes & Gift Ideas</b><br><img src="docs/demos/wishes.png" width="400" alt="Wish lists and private gift ideas"></td>
-    <td align="center"><b>Mobile PWA</b><br><img src="docs/demos/mobile.jpg" width="250" alt="Mobile dashboard with summary cards"></td>
-  </tr>
-</table>
+**[See the full screenshot gallery and feature tour →](https://sandydargoport.github.io/prism/screenshots/)**
 
 ---
 

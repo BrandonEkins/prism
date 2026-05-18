@@ -1,5 +1,7 @@
 # Tasks
 
+![Tasks page with multiple lists](../demos/tasks.png){ .hero-image }
+
 To-do items with assignment, due dates, priorities, lists, and bidirectional sync to either Microsoft To Do or Google Tasks. Pick whichever your family already uses; same UI in Prism either way.
 
 ---

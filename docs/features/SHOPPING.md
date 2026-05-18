@@ -1,5 +1,7 @@
 # Shopping
 
+![Shopping list with categories](../demos/shopping.png){ .hero-image }
+
 Multiple lists, drag-to-reorder categories, per-person attribution, camera + USB barcode scanning, Microsoft To Do sync, and one-click push to your online Kroger cart at any banner. Built for the in-store experience as much as the at-home planning one.
 
 ---

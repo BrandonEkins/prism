@@ -1,0 +1,40 @@
+/* Hero image at the top of each feature page — full width with subtle border + rounded corners. */
+.md-content img.hero-image {
+  width: 100%;
+  max-width: 900px;
+  border-radius: 0.5rem;
+  border: 1px solid var(--md-default-fg-color--lightest);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+  margin: 0 auto 1.5rem;
+  display: block;
+}
+
+[data-md-color-scheme="slate"] .md-content img.hero-image {
+  border-color: var(--md-default-fg-color--lighter);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+/* Mobile-viewport hero image — centered, narrower. */
+.md-content img.hero-image-mobile {
+  border-radius: 0.5rem;
+  border: 1px solid var(--md-default-fg-color--lightest);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+  margin: 0 auto 1.5rem;
+  display: block;
+}
+
+[data-md-color-scheme="slate"] .md-content img.hero-image-mobile {
+  border-color: var(--md-default-fg-color--lighter);
+}
+
+/* Gallery cards on the Screenshots page — uniform image treatment. */
+.md-content .grid.cards img {
+  border-radius: 0.375rem;
+  border: 1px solid var(--md-default-fg-color--lightest);
+  width: 100%;
+  display: block;
+}
+
+[data-md-color-scheme="slate"] .md-content .grid.cards img {
+  border-color: var(--md-default-fg-color--lighter);
+}

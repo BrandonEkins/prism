@@ -1,5 +1,7 @@
 # Mobile & PWA
 
+![Mobile dashboard](../demos/dashboard-mobile.png){ .hero-image-mobile width="300" }
+
 Prism is built as a Progressive Web App (PWA) that adapts to whatever you install it on — phone, tablet, kiosk, or wall-mounted display. Same code, same data, different UI surface depending on screen size, orientation, and pointer type.
 
 ---

@@ -1,5 +1,7 @@
 # Wishes & Gift Ideas
 
+![Wish lists with claim tracking](../demos/wishes.png){ .hero-image }
+
 Per-family-member wish lists with secret claim tracking for gift surprises, plus private gift-idea tracking for the gift-giver side. Built around the family-gift-giving problem: kids and parents want to keep wish lists, but gift-givers also want their own private "what I'm planning to buy" notes that the recipient never sees.
 
 ---

@@ -1,5 +1,7 @@
 # Travel Map
 
+![Travel globe with pins](../demos/travel-globe.png){ .hero-image }
+
 Interactive 3D globe for tracking family travel. Drop pins for places you've visited or want to visit, build multi-stop trips (route / loop / hub), and link GPS-tagged OneDrive photos to the places where they were taken. Built with MapLibre GL + OpenFreeMap tiles — no API keys, no rate limits, no vendor lock-in.
 
 ---

@@ -1,5 +1,7 @@
 # Goals & Points
 
+![Goals page with points waterfall](../demos/goals.png){ .hero-image }
+
 Kids earn points by completing chores. Parents set goals — toys, treats, privileges — with point costs. Earned points flow into goals in priority order via a "waterfall" allocation, and seasonal celebrations fire when a goal is achieved.
 
 ---

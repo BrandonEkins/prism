@@ -1,5 +1,7 @@
 # Photos
 
+![Photo gallery](../demos/photos.png){ .hero-image }
+
 Photo gallery, screensaver feed, wallpaper source, and the GPS-linked photo strip on the Travel Map. Backed by local uploads plus OneDrive sync (with a folder picker so you don't have to sync the whole drive).
 
 ---

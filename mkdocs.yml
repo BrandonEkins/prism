@@ -63,6 +63,9 @@ markdown_extensions:
 plugins:
   - search
 
+extra_css:
+  - stylesheets/extra.css
+
 extra:
   social:
     - icon: fontawesome/brands/github
@@ -70,6 +73,7 @@ extra:
 
 nav:
   - Home: index.md
+  - Screenshots: screenshots.md
   - Get Started:
       - Install: getting-started/install.md
       - First-time setup: getting-started/first-time-setup.md

@@ -1,5 +1,7 @@
 # Recipes
 
+![Recipe library](../demos/recipes.png){ .hero-image }
+
 Browse, import (URL, Paprika, paste-text), photograph, scale, and cook recipes — designed for a large kitchen screen so you don't have to keep unlocking your phone while your hands are covered in flour.
 
 ---

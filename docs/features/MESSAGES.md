@@ -1,5 +1,7 @@
 # Messages
 
+![Family message board](../demos/messages.png){ .hero-image }
+
 Family message board for shared updates. Lower-friction than texting (no notifications, no group chat noise), more persistent than a sticky note on the fridge. Built for the "drop a note that everyone will see when they walk past the wall display" pattern.
 
 ---
