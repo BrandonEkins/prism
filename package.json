@@ -51,6 +51,7 @@
     "db:seed": "tsx src/lib/db/seed.ts",
     "db:clear": "tsx src/lib/db/clear.ts",
     "db:bundle": "esbuild src/lib/db/seed.ts src/lib/db/clear.ts --bundle --platform=node --target=node20 --format=cjs --outdir=dist/db --out-extension:.js=.cjs --external:bcrypt",
+    "screenshots:capture": "tsx scripts/capture-screenshots.ts",
     "docker:build": "docker-compose build",
     "docker:up": "docker-compose up -d",
     "docker:down": "docker-compose down",

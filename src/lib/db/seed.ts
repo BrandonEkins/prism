@@ -861,9 +861,13 @@ async function seed() {
     { key: 'theme',    value: { mode: 'system' } },
     { key: 'location', value: { city: 'Springfield', state: 'IL', country: 'US' } },
     { key: 'security', value: { requirePinForEvents: true, requirePinForDelete: true, requirePinForSettings: true, sessionTimeout: 30 } },
+    // Mark setup as complete so the dashboard doesn't redirect to /setup.
+    // The wizard normally writes this row after creating the first parent;
+    // since the seed creates parents directly, we shortcut here.
+    { key: 'setupComplete', value: { completedAt: NOW.toISOString() } },
   ]);
 
-  console.log(`  Created 3 settings`);
+  console.log(`  Created 4 settings (including setupComplete)`);
 
   // ─── LAYOUTS ──────────────────────────────────────────────────────────────
   console.log('Creating default layout...');
