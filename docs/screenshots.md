@@ -33,11 +33,19 @@ A visual tour of every page in Prism. Captured against a fresh seed (the synthet
 
     ![Calendar month view](demos/calendar-month.png)
 
--   **Week view**
+-   **Multi-week view (2 weeks)**
 
-    ![Calendar week view](demos/calendar-week.png)
+    ![Calendar multi-week view](demos/calendar-multiweek.png)
 
--   **Agenda view**
+-   **Schedule view (single week, hourly)**
+
+    ![Calendar schedule view](demos/calendar-week.png)
+
+-   **Day view (side-by-side per person)**
+
+    ![Calendar day view](demos/calendar-day.png)
+
+-   **Agenda view (chronological list)**
 
     ![Calendar agenda view](demos/calendar-agenda.png)
 

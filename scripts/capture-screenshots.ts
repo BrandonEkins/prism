@@ -26,6 +26,15 @@ const OUT_DIR = path.resolve(__dirname, '..', 'docs', 'demos');
 const DESKTOP_VIEWPORT = { width: 1440, height: 900 };
 const MOBILE_VIEWPORT = { width: 390, height: 844 }; // iPhone 14
 
+type CalendarViewType =
+  | 'agenda'
+  | 'day'
+  | 'week'
+  | 'weekVertical'
+  | 'multiWeek'
+  | 'month'
+  | 'threeMonth';
+
 interface CaptureSpec {
   name: string;
   url: string;
@@ -36,6 +45,14 @@ interface CaptureSpec {
   theme?: 'light' | 'dark';
   /** Mobile viewport instead of desktop */
   mobile?: boolean;
+  /**
+   * Pre-seed the calendar view via localStorage before navigation. The view
+   * picker (ViewMenu) reads `prism-calendar-view-type` and `prism-calendar-
+   * week-count` on mount, so this is the most reliable way to land on a
+   * specific view — no need to click through the popover.
+   */
+  calendarView?: CalendarViewType;
+  calendarWeekCount?: 1 | 2 | 3 | 4;
   /** Optional pre-screenshot setup (e.g. click into a sub-view) */
   setup?: (page: Page) => Promise<void>;
 }
@@ -65,52 +82,51 @@ const SCREENSHOTS: CaptureSpec[] = [
   },
 
   // ─── Calendar ──────────────────────────────────────────────
+  // Each view is pre-seeded via localStorage rather than clicking the view
+  // picker — see CaptureSpec.calendarView above for the rationale.
   {
     name: 'calendar-month',
     url: '/calendar',
     description: 'Calendar month view',
-    settleMs: 1500,
-    setup: async (page) => {
-      // Switch to month view if not default
-      const monthBtn = page.locator('button:has-text("Month")').first();
-      if (await monthBtn.isVisible()) {
-        await monthBtn.click().catch(() => {});
-        await page.waitForTimeout(500);
-      }
-    },
+    settleMs: 6000,
+    calendarView: 'month',
+  },
+  {
+    name: 'calendar-multiweek',
+    url: '/calendar',
+    description: 'Calendar multi-week view (2 weeks)',
+    settleMs: 6000,
+    calendarView: 'multiWeek',
+    calendarWeekCount: 2,
   },
   {
     name: 'calendar-week',
     url: '/calendar',
-    description: 'Calendar week view',
-    settleMs: 1500,
-    setup: async (page) => {
-      const viewBtn = page.locator('button:has-text("1W")').first();
-      if (await viewBtn.isVisible()) {
-        await viewBtn.click().catch(() => {});
-        await page.waitForTimeout(500);
-      }
-    },
+    description: 'Calendar schedule view (single-week timeline)',
+    settleMs: 6000,
+    calendarView: 'week',
+  },
+  {
+    name: 'calendar-day',
+    url: '/calendar',
+    description: 'Calendar day view (side-by-side per-person columns)',
+    settleMs: 6000,
+    calendarView: 'day',
   },
   {
     name: 'calendar-agenda',
     url: '/calendar',
-    description: 'Calendar agenda view',
-    settleMs: 1000,
-    setup: async (page) => {
-      const viewBtn = page.locator('button:has-text("Agenda")').first();
-      if (await viewBtn.isVisible()) {
-        await viewBtn.click().catch(() => {});
-        await page.waitForTimeout(500);
-      }
-    },
+    description: 'Calendar agenda view (chronological list)',
+    settleMs: 6000,
+    calendarView: 'agenda',
   },
   {
     name: 'calendar-mobile',
     url: '/calendar',
     description: 'Mobile calendar (agenda-only)',
     mobile: true,
-    settleMs: 1000,
+    settleMs: 5000,
+    calendarView: 'agenda',
   },
 
   // ─── Shopping ──────────────────────────────────────────────
@@ -209,17 +225,6 @@ const SCREENSHOTS: CaptureSpec[] = [
   },
 ];
 
-async function setTheme(page: Page, theme: 'light' | 'dark') {
-  await page.evaluate((t) => {
-    const html = document.documentElement;
-    html.classList.remove('light', 'dark');
-    html.classList.add(t);
-    try {
-      localStorage.setItem('theme', t);
-    } catch {}
-  }, theme);
-}
-
 async function loginAsAlex(page: Page) {
   const familyResp = await page.request.get('/api/family');
   const familyJson = await familyResp.json();
@@ -284,6 +289,33 @@ async function captureOnce(browser: Browser, spec: CaptureSpec): Promise<void> {
 
   const page = await context.newPage();
 
+  // Pre-seed localStorage BEFORE first paint so the page renders directly in
+  // the requested state (theme + calendar view) without a mid-load swap.
+  // Without this, switching state after mount re-triggers widget loading
+  // states and the settle wait can capture a half-loaded view.
+  await page.addInitScript(
+    ({ theme, calendarView, calendarWeekCount }) => {
+      try {
+        if (theme) {
+          localStorage.setItem('theme', theme);
+          document.documentElement.classList.remove('light', 'dark');
+          document.documentElement.classList.add(theme);
+        }
+        if (calendarView) {
+          localStorage.setItem('prism-calendar-view-type', calendarView);
+        }
+        if (calendarWeekCount) {
+          localStorage.setItem('prism-calendar-week-count', String(calendarWeekCount));
+        }
+      } catch {}
+    },
+    {
+      theme: spec.theme ?? null,
+      calendarView: spec.calendarView ?? null,
+      calendarWeekCount: spec.calendarWeekCount ?? null,
+    },
+  );
+
   try {
     // Login first (against the base URL — sets auth cookies on the context).
     // Use 'load' rather than 'networkidle': Next.js dev mode keeps a hot-reload
@@ -293,11 +325,6 @@ async function captureOnce(browser: Browser, spec: CaptureSpec): Promise<void> {
 
     // Navigate to the target page.
     await page.goto(spec.url, { waitUntil: 'load', timeout: 60_000 });
-
-    if (spec.theme) {
-      await setTheme(page, spec.theme);
-      await page.waitForTimeout(300);
-    }
 
     if (spec.setup) {
       await spec.setup(page);
@@ -367,7 +394,20 @@ async function main() {
     fs.mkdirSync(OUT_DIR, { recursive: true });
   }
 
-  console.log(`\nCapturing ${SCREENSHOTS.length} screenshots from ${BASE_URL}`);
+  // Optional filter: `npm run screenshots:capture -- calendar` runs only specs
+  // whose name contains "calendar". Multiple substrings combine with OR.
+  const filterArgs = process.argv.slice(2);
+  const specs = filterArgs.length
+    ? SCREENSHOTS.filter((s) => filterArgs.some((f) => s.name.includes(f)))
+    : SCREENSHOTS;
+
+  if (specs.length === 0) {
+    console.error(`No screenshots match filter: ${filterArgs.join(', ')}`);
+    process.exit(1);
+  }
+
+  console.log(`\nCapturing ${specs.length} screenshots from ${BASE_URL}`);
+  if (filterArgs.length) console.log(`Filter: ${filterArgs.join(', ')}`);
   console.log(`Output: ${OUT_DIR}\n`);
 
   // Quick health check before spinning up the browser
@@ -388,7 +428,7 @@ async function main() {
   let failed = 0;
 
   try {
-    for (const spec of SCREENSHOTS) {
+    for (const spec of specs) {
       const success = await captureOne(browser, spec);
       if (success) ok++;
       else failed++;
@@ -400,7 +440,7 @@ async function main() {
     await browser.close();
   }
 
-  console.log(`\nDone. ${ok} of ${SCREENSHOTS.length} captured`);
+  console.log(`\nDone. ${ok} of ${specs.length} captured`);
   if (failed > 0) {
     console.log(`${failed} failed — re-run to retry, or capture individually.`);
     process.exit(1);
