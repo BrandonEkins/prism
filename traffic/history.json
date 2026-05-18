@@ -127,6 +127,14 @@
     "2026-05-15": {
       "count": 14,
       "uniques": 9
+    },
+    "2026-05-16": {
+      "count": 13,
+      "uniques": 9
+    },
+    "2026-05-17": {
+      "count": 202,
+      "uniques": 25
     }
   },
   "referrer_history": {
@@ -737,38 +745,65 @@
         "referrer": "DuckDuckGo",
         "uniques": 1
       }
+    ],
+    "2026-05-18": [
+      {
+        "count": 172,
+        "referrer": "reddit.com",
+        "uniques": 61
+      },
+      {
+        "count": 54,
+        "referrer": "github.com",
+        "uniques": 12
+      },
+      {
+        "count": 26,
+        "referrer": "com.reddit.frontpage",
+        "uniques": 14
+      },
+      {
+        "count": 19,
+        "referrer": "community.home-assistant.io",
+        "uniques": 10
+      },
+      {
+        "count": 15,
+        "referrer": "Google",
+        "uniques": 6
+      },
+      {
+        "count": 1,
+        "referrer": "DuckDuckGo",
+        "uniques": 1
+      }
     ]
   },
   "referrers": [
     {
-      "count": 140,
+      "count": 172,
       "referrer": "reddit.com",
-      "uniques": 57
+      "uniques": 61
     },
     {
-      "count": 86,
+      "count": 54,
       "referrer": "github.com",
       "uniques": 12
     },
     {
-      "count": 45,
+      "count": 26,
       "referrer": "com.reddit.frontpage",
-      "uniques": 18
+      "uniques": 14
     },
     {
-      "count": 38,
-      "referrer": "Google",
-      "uniques": 5
-    },
-    {
-      "count": 28,
+      "count": 19,
       "referrer": "community.home-assistant.io",
-      "uniques": 9
+      "uniques": 10
     },
     {
-      "count": 1,
-      "referrer": "Bing",
-      "uniques": 1
+      "count": 15,
+      "referrer": "Google",
+      "uniques": 6
     },
     {
       "count": 1,
@@ -776,7 +811,7 @@
       "uniques": 1
     }
   ],
-  "updated_at": "2026-05-17T05:52:53Z",
+  "updated_at": "2026-05-18T06:19:12Z",
   "views": {
     "2026-04-14": {
       "count": 64,
@@ -905,6 +940,14 @@
     "2026-05-15": {
       "count": 22,
       "uniques": 8
+    },
+    "2026-05-16": {
+      "count": 45,
+      "uniques": 8
+    },
+    "2026-05-17": {
+      "count": 66,
+      "uniques": 19
     }
   }
 }
