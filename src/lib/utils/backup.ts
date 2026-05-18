@@ -292,8 +292,9 @@ export async function truncateAllData(): Promise<{ success: boolean; error?: str
  */
 export async function seedDatabase(): Promise<{ success: boolean; error?: string }> {
   try {
-    // Run the seed script via npm
-    const command = 'cd /app && node -e "require(\'./src/lib/db/seed.js\')"';
+    // Run the esbuild-bundled seed (self-contained CJS, no src/ or
+    // tsx required at runtime — see Dockerfile `db:bundle` step).
+    const command = 'node /app/dist/db/seed.cjs';
 
     await execAsync(command, {
       shell: '/bin/sh',
