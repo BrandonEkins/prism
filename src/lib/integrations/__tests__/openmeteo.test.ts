@@ -237,6 +237,80 @@ describe('openmeteo.fetchWeatherData', () => {
     expect(result.forecast[0]?.condition).not.toBe('cloudy');
   });
 
+  it('parses sunrise/sunset as wall-clock-in-location, not wall-clock-in-runtime', async () => {
+    // Regression: Open-Meteo returns "2026-05-19T05:42" (no offset) for a
+    // location in America/Chicago. The bug was that `new Date(s)` interpreted
+    // this as the runtime's local time — UTC in our Docker containers — so the
+    // serialized ISO instant was 5 hours off, displaying sunrise around
+    // midnight in the browser. Verify the parser uses the response's timezone
+    // to land on the correct UTC instant.
+    const today = localDate(0, 'America/Chicago');
+    const response = buildResponse('America/Chicago');
+    response.daily.sunrise = [`${today}T05:42`];
+    response.daily.sunset = [`${today}T20:07`];
+
+    jest.spyOn(global, 'fetch' as never).mockResolvedValue({
+      ok: true,
+      json: async () => response,
+    } as never);
+
+    const { fetchWeatherData } = await import('../openmeteo');
+    const result = await fetchWeatherData();
+
+    // 05:42 CDT = 10:42 UTC (or 05:42 CST = 11:42 UTC in winter). Display in
+    // the location's TZ to make the assertion robust to test-runner TZ AND
+    // DST transitions — what we care about is "05:42 in Chicago".
+    const sunriseInChicago = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/Chicago',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    }).format(result.sunrise);
+    expect(sunriseInChicago).toBe('05:42');
+
+    const sunsetInChicago = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/Chicago',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    }).format(result.sunset!);
+    expect(sunsetInChicago).toBe('20:07');
+  });
+
+  it('parses hourly times as wall-clock-in-location', async () => {
+    // Same regression as the sunrise test, applied to the hourly forecast.
+    const today = localDate(0, 'America/Chicago');
+    const response = buildResponse('America/Chicago');
+    response.hourly.time = [`${today}T09:00`, `${today}T10:00`, `${today}T11:00`];
+    response.hourly.temperature_2m = [70, 71, 72];
+    response.hourly.precipitation_probability = [0, 0, 0];
+    response.hourly.precipitation = [0, 0, 0];
+    response.hourly.weather_code = [0, 0, 0];
+
+    jest.spyOn(global, 'fetch' as never).mockResolvedValue({
+      ok: true,
+      json: async () => response,
+    } as never);
+
+    const { fetchWeatherData } = await import('../openmeteo');
+    const result = await fetchWeatherData();
+
+    // Hourly is filtered to a 12-hour window around `now`, so at least one of
+    // the three fixture hours should survive. Whichever does, its wall-clock
+    // in America/Chicago must read back as one of "09:00" / "10:00" / "11:00".
+    expect(result.hourly && result.hourly.length).toBeGreaterThan(0);
+    if (result.hourly && result.hourly.length > 0) {
+      const formatter = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'America/Chicago',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      });
+      const wallClocks = result.hourly.map((h) => formatter.format(h.time));
+      expect(wallClocks.every((wc) => ['09:00', '10:00', '11:00'].includes(wc))).toBe(true);
+    }
+  });
+
   it('does not require any API key (zero env-var configuration)', async () => {
     // Strip any provider key env vars to prove openmeteo doesn't read them.
     const stripped = { ...process.env };
