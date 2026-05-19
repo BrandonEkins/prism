@@ -27,7 +27,7 @@ A visual tour of Prism, captured against a fresh seed (the synthetic Alex / Jord
 
 === "Calendar"
 
-    Prism has five calendar views — pick the one that matches how your family thinks about time.
+    Prism has five calendar views — pick the one that matches how your family thinks about time. Each view can also switch into **cards mode** to show stacked event cards plus optional overlay rows for meals, chores, and tasks per day.
 
     <div class="grid cards" markdown>
 
@@ -35,9 +35,17 @@ A visual tour of Prism, captured against a fresh seed (the synthetic Alex / Jord
 
         ![Calendar month view](demos/calendar-month.png)
 
+    -   **Month — cards mode**
+
+        ![Calendar month cards mode](demos/calendar-month-cards.png)
+
     -   **Multi-week (2 weeks)**
 
         ![Calendar multi-week view](demos/calendar-multiweek.png)
+
+    -   **Multi-week — cards mode**
+
+        ![Calendar multi-week cards mode](demos/calendar-multiweek-cards.png)
 
     -   **Schedule (single week, hourly)**
 
@@ -54,6 +62,10 @@ A visual tour of Prism, captured against a fresh seed (the synthetic Alex / Jord
     -   **Mobile (agenda-only)**
 
         ![Mobile calendar](demos/calendar-mobile.png){ width="300" }
+
+    -   **Mobile — cards mode**
+
+        ![Mobile calendar cards mode](demos/calendar-mobile-cards.png){ width="300" }
 
     </div>
 

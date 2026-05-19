@@ -192,17 +192,15 @@ export const LAYOUT_TEMPLATES: Record<string, LayoutTemplate> = {
 // window still look correct. Keep these widgets in sync with seed.ts.
 export const DEFAULT_TEMPLATE: LayoutTemplate = {
   name: 'Default',
-  description: 'Balanced 9-widget layout, no calendar',
+  description: 'Balanced 7-widget layout — weather-forward, no calendar/birthdays/points',
   orientation: 'landscape',
   widgets: [
-    { i: 'clock',     x: 0,  y: 0,  w: 16, h: 10 },
-    { i: 'weather',   x: 16, y: 0,  w: 16, h: 10 },
-    { i: 'tasks',     x: 32, y: 0,  w: 16, h: 10 },
-    { i: 'messages',  x: 0,  y: 10, w: 16, h: 10 },
-    { i: 'chores',    x: 16, y: 10, w: 16, h: 10 },
-    { i: 'shopping',  x: 32, y: 10, w: 16, h: 10 },
-    { i: 'meals',     x: 0,  y: 20, w: 24, h: 8 },
-    { i: 'birthdays', x: 24, y: 20, w: 12, h: 8 },
-    { i: 'points',    x: 36, y: 20, w: 12, h: 8 },
+    { i: 'weather',   x: 0,  y: 0,  w: 24, h: 14 },
+    { i: 'clock',     x: 24, y: 0,  w: 24, h: 7  },
+    { i: 'tasks',     x: 24, y: 7,  w: 24, h: 7  },
+    { i: 'messages',  x: 0,  y: 14, w: 16, h: 9  },
+    { i: 'chores',    x: 16, y: 14, w: 16, h: 9  },
+    { i: 'shopping',  x: 32, y: 14, w: 16, h: 9  },
+    { i: 'meals',     x: 0,  y: 23, w: 48, h: 7  },
   ],
 };

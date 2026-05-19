@@ -877,19 +877,18 @@ async function seed() {
       name: 'Default Dashboard',
       isDefault: true,
       widgets: [
-        // Tight 2-row layout that fits cleanly in a 1440x900 viewport with no
-        // off-screen overflow. Calendar is intentionally omitted — it fetches
-        // events asynchronously and the loading spinner photographs poorly.
-        // Users add it themselves once Google Calendar / iCal is connected.
-        { i: 'clock',     x: 0,  y: 0,  w: 16, h: 10 },
-        { i: 'weather',   x: 16, y: 0,  w: 16, h: 10 },
-        { i: 'tasks',     x: 32, y: 0,  w: 16, h: 10 },
-        { i: 'messages',  x: 0,  y: 10, w: 16, h: 10 },
-        { i: 'chores',    x: 16, y: 10, w: 16, h: 10 },
-        { i: 'shopping',  x: 32, y: 10, w: 16, h: 10 },
-        { i: 'meals',     x: 0,  y: 20, w: 24, h: 8 },
-        { i: 'birthdays', x: 24, y: 20, w: 12, h: 8 },
-        { i: 'points',    x: 36, y: 20, w: 12, h: 8 },
+        // 7-widget layout that fits cleanly in a 1440x900 viewport. Weather is
+        // sized 2x wider than the rest so the sun-arc and forecast strip have
+        // room. Calendar, Birthdays, and Points are intentionally omitted from
+        // the default seed — they fetch async and the loading spinner
+        // photographs poorly. Users add them via Settings once they want them.
+        { i: 'weather',   x: 0,  y: 0,  w: 24, h: 14 },
+        { i: 'clock',     x: 24, y: 0,  w: 24, h: 7  },
+        { i: 'tasks',     x: 24, y: 7,  w: 24, h: 7  },
+        { i: 'messages',  x: 0,  y: 14, w: 16, h: 9  },
+        { i: 'chores',    x: 16, y: 14, w: 16, h: 9  },
+        { i: 'shopping',  x: 32, y: 14, w: 16, h: 9  },
+        { i: 'meals',     x: 0,  y: 23, w: 48, h: 7  },
       ],
       createdBy: alex.id,
     },

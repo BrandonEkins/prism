@@ -53,6 +53,11 @@ interface CaptureSpec {
    */
   calendarView?: CalendarViewType;
   calendarWeekCount?: 1 | 2 | 3 | 4;
+  /**
+   * Pre-seed the calendar display mode (inline strips vs stacked cards).
+   * Reads `prism-calendar-display-mode` localStorage on mount.
+   */
+  calendarDisplayMode?: 'inline' | 'cards';
   /** Optional pre-screenshot setup (e.g. click into a sub-view) */
   setup?: (page: Page) => Promise<void>;
 }
@@ -127,6 +132,34 @@ const SCREENSHOTS: CaptureSpec[] = [
     mobile: true,
     settleMs: 5000,
     calendarView: 'agenda',
+  },
+  // Cards-mode variants — show stacked event cards in each day cell, with
+  // overlay rows below the calendar grid for meals/chores/tasks per day.
+  {
+    name: 'calendar-month-cards',
+    url: '/calendar',
+    description: 'Calendar month view in cards mode (with meal/chore/task overlays)',
+    settleMs: 7000,
+    calendarView: 'month',
+    calendarDisplayMode: 'cards',
+  },
+  {
+    name: 'calendar-multiweek-cards',
+    url: '/calendar',
+    description: 'Calendar multi-week view in cards mode (2 weeks)',
+    settleMs: 7000,
+    calendarView: 'multiWeek',
+    calendarWeekCount: 2,
+    calendarDisplayMode: 'cards',
+  },
+  {
+    name: 'calendar-mobile-cards',
+    url: '/calendar',
+    description: 'Mobile calendar in cards mode',
+    mobile: true,
+    settleMs: 6000,
+    calendarView: 'agenda',
+    calendarDisplayMode: 'cards',
   },
 
   // ─── Shopping ──────────────────────────────────────────────
@@ -294,7 +327,7 @@ async function captureOnce(browser: Browser, spec: CaptureSpec): Promise<void> {
   // Without this, switching state after mount re-triggers widget loading
   // states and the settle wait can capture a half-loaded view.
   await page.addInitScript(
-    ({ theme, calendarView, calendarWeekCount }) => {
+    ({ theme, calendarView, calendarWeekCount, calendarDisplayMode }) => {
       try {
         if (theme) {
           localStorage.setItem('theme', theme);
@@ -307,12 +340,25 @@ async function captureOnce(browser: Browser, spec: CaptureSpec): Promise<void> {
         if (calendarWeekCount) {
           localStorage.setItem('prism-calendar-week-count', String(calendarWeekCount));
         }
+        if (calendarDisplayMode) {
+          localStorage.setItem('prism-calendar-display-mode', calendarDisplayMode);
+          // In cards mode, also enable meal/chore/task overlays so the cards
+          // visually demonstrate what cards mode is for (extra rows under each
+          // day with the day's tasks, chores, and meals).
+          if (calendarDisplayMode === 'cards') {
+            localStorage.setItem(
+              'prism-calendar-overlays',
+              JSON.stringify({ events: true, meals: true, chores: true, tasks: true }),
+            );
+          }
+        }
       } catch {}
     },
     {
       theme: spec.theme ?? null,
       calendarView: spec.calendarView ?? null,
       calendarWeekCount: spec.calendarWeekCount ?? null,
+      calendarDisplayMode: spec.calendarDisplayMode ?? null,
     },
   );
 

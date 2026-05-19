@@ -1,6 +1,6 @@
 // jsdom doesn't implement ResizeObserver. Stub it and fire the callback
-// immediately on observe() so code that calls timeline() inside the callback
-// (e.g. WeatherWidget's merry-timeline integration) is exercised in tests.
+// immediately on observe() so width-sensitive layout code (e.g. the weather
+// widget's sunrise/sunset arc and precipitation chart) is exercised in tests.
 global.ResizeObserver = class ResizeObserver {
   constructor(callback) {
     this._callback = callback;
