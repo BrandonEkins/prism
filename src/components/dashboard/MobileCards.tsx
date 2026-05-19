@@ -67,21 +67,22 @@ function CardShell({ href, icon, title, count, children }: {
 
 export function WeatherCard({ data }: { data: DashData['weather'] }) {
   if (data.loading || !data.data) return null;
-  const w = data.data as { temperature?: number; condition?: string; description?: string };
-  if (!w.temperature) return null;
+  const wd = data.data;
+  const cur = wd.current;
+  if (cur?.temperature == null) return null;
 
   const iconCls = 'h-5 w-5';
-  const icon = w.condition === 'sunny' ? <Sun className={iconCls} /> :
-    w.condition === 'partly-cloudy' ? <CloudSun className={iconCls} /> :
-    w.condition === 'rainy' || w.condition === 'stormy' ? <CloudRain className={iconCls} /> :
-    w.condition === 'snowy' ? <CloudSnow className={iconCls} /> :
+  const icon = cur.condition === 'sunny' ? <Sun className={iconCls} /> :
+    cur.condition === 'partly-cloudy' ? <CloudSun className={iconCls} /> :
+    cur.condition === 'rainy' || cur.condition === 'stormy' ? <CloudRain className={iconCls} /> :
+    cur.condition === 'snowy' ? <CloudSnow className={iconCls} /> :
     <Cloud className={iconCls} />;
 
   return (
     <div className="bg-card/85 backdrop-blur-sm rounded-xl border border-border p-3 flex items-center gap-3">
       {icon}
-      <span className="text-2xl font-light tabular-nums">{Math.round(w.temperature)}°F</span>
-      <span className="text-sm text-muted-foreground capitalize">{w.description}</span>
+      <span className="text-2xl font-light tabular-nums">{Math.round(cur.temperature)}°{wd.units.temperature}</span>
+      <span className="text-sm text-muted-foreground capitalize">{cur.description}</span>
     </div>
   );
 }

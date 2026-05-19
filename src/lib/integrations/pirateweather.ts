@@ -25,7 +25,7 @@ import type {
   HourlyForecast,
   MinutelyData,
 } from '@/components/widgets/WeatherWidget';
-import type { LocationParam } from './weather';
+import type { LocationParam, WeatherOptions } from './weather';
 
 // ---------------------------------------------------------------------------
 // Pirate Weather (Dark Sky-compatible) response types
@@ -144,13 +144,21 @@ function mapIcon(icon: string): WeatherCondition {
  *                  has no name-based geocoding, so coordinates still come
  *                  from env in that case).
  */
-export async function fetchWeatherData(location?: LocationParam): Promise<WeatherData> {
+export async function fetchWeatherData(
+  location?: LocationParam,
+  options?: WeatherOptions,
+): Promise<WeatherData> {
   const config = getConfig(location);
+  const units = options?.units ?? { temperature: 'F', windSpeed: 'mph', precipitation: 'in' };
+  // Pirate Weather's `units` query param: us = imperial, si = metric (Celsius,
+  // m/s, mm), ca = metric with km/h. We map our settings → ca for metric
+  // (matches our windSpeed: 'km/h') and → us for imperial.
+  const pwUnits = units.temperature === 'C' ? 'ca' : 'us';
 
   const url =
     `https://api.pirateweather.net/forecast/${config.apiKey}` +
     `/${config.lat},${config.lon}` +
-    `?units=us&extend=hourly`;
+    `?units=${pwUnits}&extend=hourly`;
 
   let response: Response;
   try {
@@ -269,6 +277,7 @@ export async function fetchWeatherData(location?: LocationParam): Promise<Weathe
 
   return {
     location: config.locationName,
+    units,
     current,
     forecast,
     hourly: patchedHourly,

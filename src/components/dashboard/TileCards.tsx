@@ -59,7 +59,8 @@ export function WeatherTile({ data }: { data: DashData['weather'] }) {
       <TileLine dim>Loading…</TileLine>
     </TileShell>
   );
-  const current = (data.data as { current?: { temperature?: number; condition?: string; description?: string } }).current;
+  const wd = data.data;
+  const current = wd.current;
   const WeatherIcon = current?.condition === 'sunny' ? Sun
     : current?.condition === 'partly-cloudy' ? CloudSun
     : current?.condition === 'rainy' || current?.condition === 'stormy' ? CloudRain
@@ -67,7 +68,7 @@ export function WeatherTile({ data }: { data: DashData['weather'] }) {
     : Cloud;
   return (
     <TileShell icon={<WeatherIcon className="h-4 w-4 text-sky-400" />} title="Weather">
-      {current?.temperature != null && <TileLine>{current.temperature}°F</TileLine>}
+      {current?.temperature != null && <TileLine>{current.temperature}°{wd.units.temperature}</TileLine>}
       {current?.description && <TileLine dim>{current.description}</TileLine>}
     </TileShell>
   );

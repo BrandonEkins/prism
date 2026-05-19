@@ -18,6 +18,7 @@ import { db } from '@/lib/db/client';
 import { settings } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { logError } from '@/lib/utils/logError';
+import type { WeatherUnits } from '@/components/widgets/WeatherWidget';
 
 // Cache weather data for 30 minutes
 const WEATHER_CACHE_TTL = 30 * 60;
@@ -49,6 +50,29 @@ async function resolveLocation(queryLocation: string | null): Promise<LocationPa
   return process.env.WEATHER_LOCATION || 'Chicago,IL,US';
 }
 
+const IMPERIAL: WeatherUnits = { temperature: 'F', windSpeed: 'mph', precipitation: 'in' };
+const METRIC:   WeatherUnits = { temperature: 'C', windSpeed: 'km/h', precipitation: 'mm' };
+
+/**
+ * Resolve display units: `weather.units` setting ("imperial" | "metric").
+ * Defaults to imperial so existing installs are unchanged. The env var
+ * `WEATHER_UNITS` overrides if no DB setting is present (lets self-hosters
+ * default a fresh install to metric without going through Settings).
+ */
+async function resolveUnits(): Promise<WeatherUnits> {
+  try {
+    const [row] = await db.select().from(settings).where(eq(settings.key, 'weather'));
+    if (row?.value) {
+      const val = row.value as { units?: 'imperial' | 'metric' };
+      if (val.units === 'metric') return METRIC;
+      if (val.units === 'imperial') return IMPERIAL;
+    }
+  } catch { /* fall through */ }
+
+  if ((process.env.WEATHER_UNITS ?? '').toLowerCase() === 'metric') return METRIC;
+  return IMPERIAL;
+}
+
 /**
  * GET /api/weather
  * Fetches weather data for a location (cached for 30 minutes)
@@ -60,20 +84,20 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const location = await resolveLocation(searchParams.get('location'));
+    const units = await resolveUnits();
 
-    // Cache key includes the provider so switching WEATHER_PROVIDER doesn't
-    // serve a stale response shaped by the previous provider (different
-    // condition strings, descriptions, and forecast fields).
+    // Cache key includes the provider AND the units so switching either
+    // doesn't serve a stale response shaped by the previous selection.
     const provider = process.env.WEATHER_PROVIDER ?? 'meteo';
     const locationKey = typeof location === 'string'
       ? location.toLowerCase().replace(/\s+/g, '-')
       : `${location.lat.toFixed(2)},${location.lon.toFixed(2)}`;
-    const cacheKey = `weather:${provider}:${locationKey}`;
+    const cacheKey = `weather:${provider}:${units.temperature}:${locationKey}`;
 
     // Get from cache or fetch fresh
     const weatherData = await getCached(
       cacheKey,
-      () => fetchWeatherData(location),
+      () => fetchWeatherData(location, { units }),
       WEATHER_CACHE_TTL
     );
 

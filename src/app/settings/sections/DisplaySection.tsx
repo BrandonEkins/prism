@@ -184,7 +184,80 @@ export function DisplaySection() {
       <TimersCard />
 
       <LocationCard />
+
+      <WeatherUnitsCard />
     </div>
+  );
+}
+
+function WeatherUnitsCard() {
+  const [units, setUnits] = useState<'imperial' | 'metric' | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/settings')
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        const value = data?.settings?.weather as { units?: 'imperial' | 'metric' } | undefined;
+        setUnits(value?.units === 'metric' ? 'metric' : 'imperial');
+      })
+      .catch(() => setUnits('imperial'));
+  }, []);
+
+  const save = useCallback(async (next: 'imperial' | 'metric') => {
+    setUnits(next);
+    setSaving(true);
+    try {
+      await fetch('/api/settings', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key: 'weather', value: { units: next } }),
+      });
+    } catch { /* ignore — UI already updated optimistically */ }
+    setSaving(false);
+  }, []);
+
+  if (units === null) return null;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Weather units</CardTitle>
+        <CardDescription>
+          Imperial shows °F, mph, and inches. Metric shows °C, km/h, and mm. Applies to every place weather is rendered (widget, mobile cards, away mode, babysitter mode).
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="inline-flex rounded-md border border-input p-0.5" role="radiogroup" aria-label="Weather units">
+          <button
+            type="button"
+            role="radio"
+            aria-checked={units === 'imperial'}
+            disabled={saving}
+            onClick={() => save('imperial')}
+            className={cn(
+              'px-3 py-1.5 text-sm rounded-sm transition-colors',
+              units === 'imperial' ? 'bg-primary text-primary-foreground' : 'hover:bg-accent',
+            )}
+          >
+            Imperial (°F, mph)
+          </button>
+          <button
+            type="button"
+            role="radio"
+            aria-checked={units === 'metric'}
+            disabled={saving}
+            onClick={() => save('metric')}
+            className={cn(
+              'px-3 py-1.5 text-sm rounded-sm transition-colors',
+              units === 'metric' ? 'bg-primary text-primary-foreground' : 'hover:bg-accent',
+            )}
+          >
+            Metric (°C, km/h)
+          </button>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 

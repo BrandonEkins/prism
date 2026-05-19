@@ -84,6 +84,8 @@ function makeHourlyForecast(
   }));
 }
 
+const DEFAULT_UNITS = { temperature: 'F' as const, windSpeed: 'mph' as const, precipitation: 'in' as const };
+
 /** Build a full WeatherData object. */
 function makeWeatherData(overrides: Partial<WeatherData> = {}): WeatherData {
   const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -100,6 +102,7 @@ function makeWeatherData(overrides: Partial<WeatherData> = {}): WeatherData {
 
   return {
     location: 'Chicago, IL',
+    units: DEFAULT_UNITS,
     current: {
       temperature: 68,
       feelsLike:   65,
@@ -212,12 +215,13 @@ describe('day summary header', () => {
     expect(screen.queryAllByText(/44°/).length).toBeGreaterThan(0);
   });
 
-  it('converts temperatures to Celsius when useCelsius=true', () => {
-    // 95°F → 35°C, 50°F → 10°C
+  it('displays temperatures as-is when data.units.temperature is C', () => {
+    // Server returned values in °C — widget should not re-convert.
     const data = makeWeatherData({
-      forecast: [makeForecastDay({ high: 95, low: 50 })],
+      units: { temperature: 'C', windSpeed: 'km/h', precipitation: 'mm' },
+      forecast: [makeForecastDay({ high: 35, low: 10 })],
     });
-    render(<WeatherWidget data={data} forecastDays={1} useCelsius />);
+    render(<WeatherWidget data={data} forecastDays={1} />);
     expect(screen.queryAllByText(/35°/).length).toBeGreaterThan(0);
     expect(screen.queryAllByText(/10°/).length).toBeGreaterThan(0);
   });
@@ -291,11 +295,14 @@ describe('current conditions', () => {
     expect(screen.queryByText('73°F')).not.toBeNull();
   });
 
-  it('converts current temperature to °C when useCelsius=true', () => {
+  it('renders °C suffix when data.units.temperature is C', () => {
+    // Server returns 0°C directly — widget renders the value with the unit
+    // from data.units, not by client-side conversion.
     const data = makeWeatherData({
-      current: { ...makeWeatherData().current, temperature: 32 },
+      units: { temperature: 'C', windSpeed: 'km/h', precipitation: 'mm' },
+      current: { ...makeWeatherData().current, temperature: 0 },
     });
-    render(<WeatherWidget data={data} useCelsius />);
+    render(<WeatherWidget data={data} />);
     expect(screen.queryByText('0°C')).not.toBeNull();
   });
 

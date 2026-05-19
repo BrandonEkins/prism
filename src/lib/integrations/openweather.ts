@@ -13,12 +13,13 @@ import { DAYS_SHORT_ARRAY } from '@/lib/constants/days';
 import type {
   WeatherData,
   WeatherCondition,
+  WeatherUnits,
   CurrentWeather,
   ForecastDay,
   ForecastPeriod,
   HourlyForecast,
 } from '@/components/widgets/WeatherWidget';
-import type { LocationParam } from './weather';
+import type { LocationParam, WeatherOptions } from './weather';
 
 export type { LocationParam };
 
@@ -123,11 +124,31 @@ function kelvinToFahrenheit(kelvin: number): number {
   return Math.round((kelvin - 273.15) * 9 / 5 + 32);
 }
 
+/** Convert Kelvin to Celsius. */
+function kelvinToCelsius(kelvin: number): number {
+  return Math.round(kelvin - 273.15);
+}
+
 /**
  * Convert m/s to mph
  */
 function mpsToMph(mps: number): number {
   return Math.round(mps * 2.237);
+}
+
+/** Convert m/s to km/h. */
+function mpsToKmh(mps: number): number {
+  return Math.round(mps * 3.6);
+}
+
+/** Unit-aware temperature converter for callers that have a WeatherUnits handy. */
+function tempFromKelvin(kelvin: number, units: WeatherUnits): number {
+  return units.temperature === 'C' ? kelvinToCelsius(kelvin) : kelvinToFahrenheit(kelvin);
+}
+
+/** Unit-aware wind-speed converter. */
+function windFromMps(mps: number, units: WeatherUnits): number {
+  return units.windSpeed === 'km/h' ? mpsToKmh(mps) : mpsToMph(mps);
 }
 
 /**
@@ -146,7 +167,8 @@ function buildLocationParam(loc: LocationParam): string {
  * Fetch current weather data
  */
 export async function fetchCurrentWeather(
-  location?: LocationParam
+  location?: LocationParam,
+  units: WeatherUnits = { temperature: 'F', windSpeed: 'mph', precipitation: 'in' },
 ): Promise<CurrentWeather & { locationName: string; sunrise: Date; sunset: Date }> {
   const config = await getConfig();
   const loc = location ?? config.location;
@@ -168,11 +190,11 @@ export async function fetchCurrentWeather(
   }
 
   return {
-    temperature: kelvinToFahrenheit(data.main.temp),
-    feelsLike: kelvinToFahrenheit(data.main.feels_like),
+    temperature: tempFromKelvin(data.main.temp, units),
+    feelsLike: tempFromKelvin(data.main.feels_like, units),
     condition: mapCondition(weather.id),
     humidity: data.main.humidity,
-    windSpeed: mpsToMph(data.wind.speed),
+    windSpeed: windFromMps(data.wind.speed, units),
     description: weather.description,
     locationName: data.name,
     sunrise: new Date(data.sys.sunrise * 1000),
@@ -183,7 +205,10 @@ export async function fetchCurrentWeather(
 /**
  * Fetch 5-day forecast (returns raw data too for period extraction)
  */
-async function fetchForecastRaw(location?: LocationParam): Promise<{
+async function fetchForecastRaw(
+  location?: LocationParam,
+  units: WeatherUnits = { temperature: 'F', windSpeed: 'mph', precipitation: 'in' },
+): Promise<{
   forecast: ForecastDay[];
   raw: OpenWeatherForecast['list'];
   hourly: HourlyForecast[];
@@ -276,8 +301,8 @@ async function fetchForecastRaw(location?: LocationParam): Promise<{
     forecast.push({
       date: dayData.date,
       dayName: dayNames[dayIndex] || 'Day',
-      high: kelvinToFahrenheit(high),
-      low: kelvinToFahrenheit(low),
+      high: tempFromKelvin(high, units),
+      low: tempFromKelvin(low, units),
       condition: mapCondition(mostCommonCondition),
     });
 
@@ -295,7 +320,7 @@ async function fetchForecastRaw(location?: LocationParam): Promise<{
     .map((item) => ({
       time: new Date(item.dt * 1000),
       condition: mapCondition(item.weather[0]?.id ?? 800),
-      temp: kelvinToFahrenheit(item.main.temp),
+      temp: tempFromKelvin(item.main.temp, units),
     }));
 
   return {
@@ -321,7 +346,10 @@ export async function fetchForecast(location?: LocationParam): Promise<{
  * Extract today's period forecasts (Morning/Afternoon/Evening)
  * from the 3-hour forecast data.
  */
-function extractPeriods(forecastList: OpenWeatherForecast['list']): ForecastPeriod[] {
+function extractPeriods(
+  forecastList: OpenWeatherForecast['list'],
+  units: WeatherUnits,
+): ForecastPeriod[] {
   const now = new Date();
   const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
   const periods: ForecastPeriod[] = [];
@@ -347,7 +375,7 @@ function extractPeriods(forecastList: OpenWeatherForecast['list']): ForecastPeri
       const condId = matching[0]!.weather[0]?.id || 800;
       periods.push({
         label: def.label,
-        temp: kelvinToFahrenheit(avgTemp),
+        temp: tempFromKelvin(avgTemp, units),
         condition: mapCondition(condId),
       });
     }
@@ -359,13 +387,17 @@ function extractPeriods(forecastList: OpenWeatherForecast['list']): ForecastPeri
 /**
  * Fetch complete weather data (current + forecast)
  */
-export async function fetchWeatherData(location?: LocationParam): Promise<WeatherData> {
+export async function fetchWeatherData(
+  location?: LocationParam,
+  options?: WeatherOptions,
+): Promise<WeatherData> {
+  const units: WeatherUnits = options?.units ?? { temperature: 'F', windSpeed: 'mph', precipitation: 'in' };
   const [currentData, forecastData] = await Promise.all([
-    fetchCurrentWeather(location),
-    fetchForecastRaw(location),
+    fetchCurrentWeather(location, units),
+    fetchForecastRaw(location, units),
   ]);
 
-  const periods = extractPeriods(forecastData.raw);
+  const periods = extractPeriods(forecastData.raw, units);
 
   // Override the currently-active hourly interval with observed current conditions,
   // since the forecast model can disagree with what's actually happening right now.
@@ -378,6 +410,7 @@ export async function fetchWeatherData(location?: LocationParam): Promise<Weathe
 
   return {
     location: currentData.locationName,
+    units,
     current: {
       temperature: currentData.temperature,
       feelsLike: currentData.feelsLike,

@@ -201,10 +201,9 @@ function BabysitterClock() {
 }
 
 function BabysitterWeather() {
-  const [weather, setWeather] = useState<{
-    temperature: number;
-    condition: string;
-    description: string;
+  const [data, setData] = useState<{
+    current: { temperature: number; condition: string; description: string };
+    units: { temperature: 'F' | 'C' };
   } | null>(null);
 
   useEffect(() => {
@@ -212,8 +211,8 @@ function BabysitterWeather() {
       try {
         const res = await fetch('/api/weather');
         if (res.ok) {
-          const data = await res.json();
-          if (data.current) setWeather(data.current);
+          const json = await res.json();
+          if (json.current && json.units) setData({ current: json.current, units: json.units });
         }
       } catch {
         // Weather is optional
@@ -224,7 +223,8 @@ function BabysitterWeather() {
     return () => clearInterval(interval);
   }, []);
 
-  if (!weather) return null;
+  if (!data) return null;
+  const { current: weather, units } = data;
 
   const icon = getWeatherIcon(weather.condition);
 
@@ -232,7 +232,7 @@ function BabysitterWeather() {
     <div className="flex items-center gap-3 text-white/80">
       <div className="text-3xl">{icon}</div>
       <div>
-        <div className="text-2xl font-light">{Math.round(weather.temperature)}°F</div>
+        <div className="text-2xl font-light">{Math.round(weather.temperature)}°{units.temperature}</div>
         <div className="text-xs text-white/50 capitalize">{weather.description}</div>
       </div>
     </div>

@@ -14,23 +14,30 @@
  *   import { fetchWeatherData, type LocationParam } from '@/lib/integrations/weather';
  */
 
-import type { WeatherData } from '@/components/widgets/WeatherWidget';
+import type { WeatherData, WeatherUnits } from '@/components/widgets/WeatherWidget';
 
 export type LocationParam = string | { lat: number; lon: number };
 
-export async function fetchWeatherData(location?: LocationParam): Promise<WeatherData> {
+export interface WeatherOptions {
+  units?: WeatherUnits;
+}
+
+export async function fetchWeatherData(
+  location?: LocationParam,
+  options?: WeatherOptions,
+): Promise<WeatherData> {
   const provider = process.env.WEATHER_PROVIDER ?? 'meteo';
 
   if (provider === 'openweather') {
     const { fetchWeatherData: fetchOW } = await import('./openweather');
-    return fetchOW(location);
+    return fetchOW(location, options);
   }
 
   if (provider === 'pirate') {
     const { fetchWeatherData: fetchPW } = await import('./pirateweather');
-    return fetchPW(location);
+    return fetchPW(location, options);
   }
 
   const { fetchWeatherData: fetchOM } = await import('./openmeteo');
-  return fetchOM(location);
+  return fetchOM(location, options);
 }

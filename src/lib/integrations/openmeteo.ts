@@ -20,20 +20,26 @@
  *   WEATHER_LAT / WEATHER_LON — coordinates (default Chicago)
  *   WEATHER_LOCATION         — display name shown in the widget
  *
- * Returns temperatures in Fahrenheit and wind in mph (`temperature_unit=
- * fahrenheit&windspeed_unit=mph`) so the response shape matches the other
- * providers — the widget converts to Celsius client-side via useCelsius.
+ * Requests temperatures, wind, and precipitation in either imperial or metric
+ * units based on the caller's `WeatherOptions.units` preference (defaults to
+ * imperial). The response carries the actual `units` so display components
+ * render the right suffix without converting values themselves.
  */
 
 import type {
   WeatherData,
   WeatherCondition,
+  WeatherUnits,
   CurrentWeather,
   ForecastDay,
   ForecastPeriod,
   HourlyForecast,
 } from '@/components/widgets/WeatherWidget';
-import type { LocationParam } from './weather';
+import type { LocationParam, WeatherOptions } from './weather';
+
+function defaultImperialUnits(): WeatherUnits {
+  return { temperature: 'F', windSpeed: 'mph', precipitation: 'in' };
+}
 
 // ---------------------------------------------------------------------------
 // Open-Meteo response types (subset of the fields we use)
@@ -170,8 +176,12 @@ function zonedTimeToUtc(localIso: string, timeZone: string): Date {
 
 const DAYS_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-export async function fetchWeatherData(location?: LocationParam): Promise<WeatherData> {
+export async function fetchWeatherData(
+  location?: LocationParam,
+  options?: WeatherOptions,
+): Promise<WeatherData> {
   const config = getConfig(location);
+  const units = options?.units ?? defaultImperialUnits();
 
   // `timezone=auto` returns daily/hourly times in the location's local TZ,
   // which lets us treat YYYY-MM-DD daily entries as local-date strings without
@@ -180,9 +190,9 @@ export async function fetchWeatherData(location?: LocationParam): Promise<Weathe
     latitude: String(config.lat),
     longitude: String(config.lon),
     timezone: 'auto',
-    temperature_unit: 'fahrenheit',
-    wind_speed_unit: 'mph',
-    precipitation_unit: 'inch',
+    temperature_unit: units.temperature === 'C' ? 'celsius' : 'fahrenheit',
+    wind_speed_unit: units.windSpeed === 'km/h' ? 'kmh' : 'mph',
+    precipitation_unit: units.precipitation === 'mm' ? 'mm' : 'inch',
     current: [
       'temperature_2m',
       'apparent_temperature',
@@ -335,6 +345,7 @@ export async function fetchWeatherData(location?: LocationParam): Promise<Weathe
 
   return {
     location: config.locationName,
+    units,
     current: currentWeather,
     forecast,
     hourly: patchedHourly,

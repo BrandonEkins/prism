@@ -92,6 +92,22 @@ export interface MinutelyData {
   precipProbability: number; // 0–1
 }
 
+/**
+ * Display units carried in every weather response. Determined by the user's
+ * Display settings (Imperial vs Metric); falls back to imperial on legacy
+ * installs that don't have the setting saved. Each field controls which
+ * suffix the display components render — components don't convert values
+ * themselves, so what you see is what the provider returned.
+ */
+export interface WeatherUnits {
+  /** 'F' (default) or 'C'. Affects current.temperature, forecast hi/lo, hourly.temp, periods.temp, feelsLike. */
+  temperature: 'F' | 'C';
+  /** 'mph' (default) or 'km/h'. Affects current.windSpeed. */
+  windSpeed: 'mph' | 'km/h';
+  /** 'in' (default) or 'mm'. Affects current.precipitation, hourly.precipIntensity, minutely.precipIntensity. */
+  precipitation: 'in' | 'mm';
+}
+
 export interface WeatherData {
   location: string;
   current: CurrentWeather;
@@ -103,6 +119,8 @@ export interface WeatherData {
   minutely?: MinutelyData[];
   sunrise?: Date;
   sunset?: Date;
+  /** Units that the temperature/wind/precip fields are reported in. */
+  units: WeatherUnits;
   lastUpdated: Date;
 }
 
@@ -112,6 +130,11 @@ export interface WeatherData {
  */
 export interface WeatherWidgetProps {
   location?: string;
+  /**
+   * @deprecated Display units are now driven by `data.units` (server-side,
+   * from the user's Display setting). The prop is still accepted for backward
+   * compatibility but ignored. To show Celsius, change the Display setting.
+   */
   useCelsius?: boolean;
   showForecast?: boolean;
   /** Number of upcoming days to display in the multi-day summary (1–7, default 5) */
@@ -168,6 +191,15 @@ function tempToColor(fahrenheit: number): string {
 }
 
 
+function formatTemp(value: number, units: WeatherUnits): string {
+  return `${Math.round(value)}°${units.temperature}`;
+}
+
+/** Convert a temperature value (in either F or C) to the F scale tempToColor expects. */
+function toFahrenheitForColor(value: number, units: WeatherUnits): number {
+  return units.temperature === 'C' ? value * 9 / 5 + 32 : value;
+}
+
 /** Normalize "City,State,Country" → "City, State" regardless of upstream format. */
 function formatLocation(location: string): string {
   const parts = location.split(',').map((s) => s.trim()).filter(Boolean);
@@ -199,6 +231,7 @@ export const WeatherWidget = React.memo(function WeatherWidget({
   className,
 }: WeatherWidgetProps) {
   const weatherData = externalData || getDemoWeatherData(location);
+  const units = weatherData.units;
 
   const isVertical = gridH > gridW;
 
@@ -236,13 +269,13 @@ export const WeatherWidget = React.memo(function WeatherWidget({
         <CurrentConditions
           weather={weatherData.current}
           location={weatherData.location}
-          useCelsius={useCelsius}
+          units={units}
         />
 
         {/* HOURLY FORECAST */}
         {showForecast && weatherData.hourly && weatherData.hourly.length > 0 && (
           <div className="border-t border-border pt-3">
-            <HourlyTimeline hourly={weatherData.hourly} useCelsius={useCelsius} />
+            <HourlyTimeline hourly={weatherData.hourly} units={units} />
           </div>
         )}
 
@@ -257,7 +290,7 @@ export const WeatherWidget = React.memo(function WeatherWidget({
               </span>
               <DayHeader
                 days={visibleForecast}
-                useCelsius={useCelsius}
+                units={units}
               />
             </div>
 
@@ -299,14 +332,14 @@ export const WeatherWidget = React.memo(function WeatherWidget({
 function CurrentConditions({
   weather,
   location,
-  useCelsius,
+  units,
 }: {
   weather: CurrentWeather;
   location: string;
-  useCelsius: boolean;
+  units: WeatherUnits;
 }) {
-  const temp  = formatTempDisplay(weather.temperature, useCelsius);
-  const feels = formatTempDisplay(weather.feelsLike, useCelsius);
+  const temp  = formatTemp(weather.temperature, units);
+  const feels = formatTemp(weather.feelsLike, units);
 
   return (
     <div className="flex items-start justify-between gap-2">
@@ -338,7 +371,7 @@ function CurrentConditions({
         </div>
         <div className="flex items-center justify-end gap-1">
           <Wind className="h-3 w-3" />
-          <span>{weather.windSpeed} mph</span>
+          <span>{weather.windSpeed} {units.windSpeed}</span>
         </div>
       </div>
     </div>
@@ -354,10 +387,10 @@ function CurrentConditions({
  */
 function DayHeader({
   days,
-  useCelsius,
+  units,
 }: {
   days: ForecastDay[];
-  useCelsius: boolean;
+  units: WeatherUnits;
 }) {
   const now = new Date();
   const todayLocalStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
@@ -366,8 +399,11 @@ function DayHeader({
   const globalMax = Math.max(...days.map((d) => d.high));
   const span = globalMax - globalMin || 1;
 
-  const fmt = (f: number) =>
-    useCelsius ? Math.round((f - 32) * 5 / 9) : Math.round(f);
+  // Values come in `units.temperature`; the gradient palette is keyed on °F
+  // (TEMP_COLOR_STOPS), so convert only for color lookup. Display values pass
+  // through unmodified — what the server returned is what we show.
+  const fmt = (v: number) => Math.round(v);
+  const colorFor = (v: number) => tempToColor(toFahrenheitForColor(v, units));
 
   return (
     <div className="flex flex-col mt-1">
@@ -413,7 +449,7 @@ function DayHeader({
                 className="h-4 rounded-full"
                 style={{
                   flex: Math.max(widthPct, 4),
-                  background: `linear-gradient(to right, ${tempToColor(day.low)}, ${tempToColor(day.high)})`,
+                  background: `linear-gradient(to right, ${colorFor(day.low)}, ${colorFor(day.high)})`,
                 }}
               />
               <span className="flex-none text-[11px] font-semibold tabular-nums pl-1">
@@ -458,7 +494,7 @@ function WeatherIcon({
  * meaningfully matters (≥10%). The first card is labeled "Now". Replaces the
  * earlier merry-timeline color strip, which read as a 1995-era band chart.
  */
-function HourlyTimeline({ hourly, useCelsius }: { hourly: HourlyForecast[]; useCelsius: boolean }) {
+function HourlyTimeline({ hourly, units }: { hourly: HourlyForecast[]; units: WeatherUnits }) {
   // Start at the hour whose endTime is still in the future ("Now" card).
   // Take 8 hours so the row stays readable at the default widget width.
   const nowMs = Date.now();
@@ -500,7 +536,7 @@ function HourlyTimeline({ hourly, useCelsius }: { hourly: HourlyForecast[]; useC
               </span>
               <WeatherIcon condition={h.condition} className="h-5 w-5 text-foreground/80" />
               <span className="text-xs font-semibold tabular-nums">
-                {formatTempDisplay(h.temp, useCelsius).replace(/°[CF]/, '°')}
+                {Math.round(h.temp)}°
               </span>
               <span className={cn(
                 'text-[10px] tabular-nums',
@@ -934,6 +970,7 @@ function getDemoWeatherData(location: string): WeatherData {
 
   return {
     location:    location || 'Melrose, MA',
+    units: { temperature: 'F', windSpeed: 'mph', precipitation: 'in' },
     current: {
       temperature: 52,
       feelsLike:   48,
