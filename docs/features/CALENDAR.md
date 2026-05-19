@@ -18,9 +18,22 @@ The connection covers Calendar specifically — if you also want Google Tasks sy
 
 ### iCal subscriptions (read-only)
 
-*Settings → Calendars → Add iCal source → paste URL.*
+*Settings → Calendars → Subscribe to a calendar → paste URL.*
 
 For any calendar published as an `.ics` URL — school calendars, sports leagues, holiday feeds, your spouse's outlook.live.com calendar — paste the URL and Prism subscribes. Events sync periodically and appear alongside Google events. iCal sources are read-only by definition (no write endpoint exists for these feeds), so the dashboard treats them like any other source for display but won't offer edit affordances on their events.
+
+### Apple Calendar / iCloud (read-only via the iCal feed)
+
+iCloud doesn't speak OAuth or expose a public REST API, so Prism rides the same iCal-subscription path. Apple makes a `webcal://` URL available for any calendar you mark as Public. From a Mac:
+
+1. Open *Calendar.app*, right-click the calendar in the sidebar → *Share Calendar*.
+2. Tick **Public Calendar** — a URL appears underneath.
+3. Click the *share* button next to the URL and *Copy Link* (it'll start with `webcal://`).
+4. In Prism: *Settings → Calendars → Subscribe to a calendar*, paste the URL, give it a name, click *Add*.
+
+From iCloud.com it's the same idea: *Calendar → ⓘ next to the calendar → Public Calendar → Copy Link*.
+
+Caveats: this is a one-way feed (changes you make in Prism don't push back to iCloud — there's no UI to "edit" these events because the feed is read-only), and the calendar has to be marked Public on iCloud's side. Apple Reminders, iCloud Photos, and other Apple services don't have an equivalent open path, so they aren't currently supported.
 
 ### Per-calendar customization
 

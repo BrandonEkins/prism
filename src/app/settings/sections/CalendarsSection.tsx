@@ -237,6 +237,8 @@ export function CalendarsSection() {
         </Button>
       </div>
 
+      <AddIcalSubscriptionCard onAdded={refreshCalendars} />
+
       {/* Connected Calendars */}
       <Card>
         <CardHeader>
@@ -734,6 +736,83 @@ function WeekStartCard() {
           >
             Monday
           </button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+/**
+ * Add an iCal subscription (read-only feed).
+ *
+ * Anything published as an `.ics` URL works — Apple Calendar / iCloud
+ * (Public-Calendar share gives a webcal://... URL), Microsoft Outlook web
+ * calendars, Yahoo Calendar, school sports feeds, trash pickup, etc.
+ * Two-way sync isn't possible for these — the feed is one-way by definition.
+ */
+function AddIcalSubscriptionCard({ onAdded }: { onAdded: () => void }) {
+  const [url, setUrl] = useState('');
+  const [name, setName] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  const submit = async () => {
+    if (!url.trim()) return;
+    setSubmitting(true);
+    try {
+      const body: Record<string, string> = { url: url.trim(), type: 'ical' };
+      if (name.trim()) body.name = name.trim();
+      const res = await fetch('/api/calendar-sources', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        toast({ title: data.error || 'Failed to add calendar', variant: 'destructive' });
+        return;
+      }
+      toast({ title: 'Subscription added — first sync running in background', variant: 'success' });
+      setUrl('');
+      setName('');
+      onAdded();
+    } catch (err) {
+      toast({ title: err instanceof Error ? err.message : 'Failed to add calendar', variant: 'destructive' });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Subscribe to a calendar (read-only)</CardTitle>
+        <CardDescription>
+          Paste any public iCal URL — Apple Calendar / iCloud, Outlook.live.com, a school sports feed, etc.
+          Apple users: in <em>Calendar.app → right-click your calendar → Share Calendar → Public Calendar</em>, then copy the <code>webcal://</code> URL. iCloud.com works the same way under <em>Calendar → ⓘ → Public Calendar</em>.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div className="grid gap-3 sm:grid-cols-[1fr_220px_auto]">
+          <Input
+            type="url"
+            placeholder="webcal://p99-caldav.icloud.com/published/..."
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            disabled={submitting}
+            onKeyDown={(e) => { if (e.key === 'Enter') submit(); }}
+          />
+          <Input
+            type="text"
+            placeholder="Name (optional)"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            disabled={submitting}
+            onKeyDown={(e) => { if (e.key === 'Enter') submit(); }}
+          />
+          <Button onClick={submit} disabled={submitting || !url.trim()}>
+            <Plus className="h-4 w-4 mr-2" />
+            {submitting ? 'Adding…' : 'Add'}
+          </Button>
         </div>
       </CardContent>
     </Card>
