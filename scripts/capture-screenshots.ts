@@ -78,7 +78,7 @@ const SCREENSHOTS: CaptureSpec[] = [
     url: '/',
     description: 'Mobile dashboard (single-column cards)',
     mobile: true,
-    settleMs: 4000,
+    settleMs: 15000, // mobile cards each fetch async — match desktop dashboard
   },
 
   // ─── Calendar ──────────────────────────────────────────────
