@@ -877,19 +877,19 @@ async function seed() {
       name: 'Default Dashboard',
       isDefault: true,
       widgets: [
-        // Calendar widget is intentionally not in the default seed layout —
-        // it fetches events asynchronously and renders a loading spinner that
-        // captures poorly in screenshots. Users add it themselves once they've
-        // connected Google Calendar / iCal sources.
-        { i: 'clock',     x: 0,  y: 0,  w: 16, h: 8 },
-        { i: 'weather',   x: 16, y: 0,  w: 16, h: 12 },
-        { i: 'tasks',     x: 32, y: 0,  w: 16, h: 12 },
-        { i: 'messages',  x: 0,  y: 8,  w: 16, h: 12 },
-        { i: 'chores',    x: 16, y: 12, w: 16, h: 12 },
-        { i: 'shopping',  x: 32, y: 12, w: 16, h: 12 },
+        // Tight 2-row layout that fits cleanly in a 1440x900 viewport with no
+        // off-screen overflow. Calendar is intentionally omitted — it fetches
+        // events asynchronously and the loading spinner photographs poorly.
+        // Users add it themselves once Google Calendar / iCal is connected.
+        { i: 'clock',     x: 0,  y: 0,  w: 16, h: 10 },
+        { i: 'weather',   x: 16, y: 0,  w: 16, h: 10 },
+        { i: 'tasks',     x: 32, y: 0,  w: 16, h: 10 },
+        { i: 'messages',  x: 0,  y: 10, w: 16, h: 10 },
+        { i: 'chores',    x: 16, y: 10, w: 16, h: 10 },
+        { i: 'shopping',  x: 32, y: 10, w: 16, h: 10 },
         { i: 'meals',     x: 0,  y: 20, w: 24, h: 8 },
-        { i: 'birthdays', x: 24, y: 24, w: 12, h: 8 },
-        { i: 'points',    x: 36, y: 24, w: 12, h: 8 },
+        { i: 'birthdays', x: 24, y: 20, w: 12, h: 8 },
+        { i: 'points',    x: 36, y: 20, w: 12, h: 8 },
       ],
       createdBy: alex.id,
     },

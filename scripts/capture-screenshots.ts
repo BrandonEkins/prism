@@ -326,6 +326,20 @@ async function captureOnce(browser: Browser, spec: CaptureSpec): Promise<void> {
     // Navigate to the target page.
     await page.goto(spec.url, { waitUntil: 'load', timeout: 60_000 });
 
+    // Hide Next.js dev-mode overlays (the "N" build-status badge in the
+    // bottom-left, the issue toast, and any error dialog). These are rendered
+    // into a fixed-position `nextjs-portal` element that's irrelevant to docs
+    // screenshots but would otherwise overlay every capture.
+    await page.addStyleTag({
+      content: `
+        nextjs-portal,
+        [data-nextjs-toast],
+        [data-nextjs-dialog-overlay],
+        #__next-build-watcher,
+        [data-next-mark-loading] { display: none !important; }
+      `,
+    });
+
     if (spec.setup) {
       await spec.setup(page);
     }

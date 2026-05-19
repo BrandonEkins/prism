@@ -5,106 +5,120 @@ hide:
 
 # Screenshots
 
-A visual tour of every page in Prism. Captured against a fresh seed (the synthetic Alex / Jordan / Emma / Sophie family) — your own dashboard will look different.
+A visual tour of Prism, captured against a fresh seed (the synthetic Alex / Jordan / Emma / Sophie family). Your own dashboard will look different — these images are illustrative.
 
-## Dashboard
+=== "Dashboard"
 
-<div class="grid cards" markdown>
+    <div class="grid cards" markdown>
 
--   **Light mode**
+    -   **Light mode**
 
-    ![Dashboard light mode](demos/dashboard-light.png)
+        ![Dashboard light mode](demos/dashboard-light.png)
 
--   **Dark mode**
+    -   **Dark mode**
 
-    ![Dashboard dark mode](demos/dashboard-dark.png)
+        ![Dashboard dark mode](demos/dashboard-dark.png)
 
--   **Mobile (PWA)**
+    -   **Mobile (PWA)**
 
-    ![Mobile dashboard](demos/dashboard-mobile.png){ width="300" }
+        ![Mobile dashboard](demos/dashboard-mobile.png){ width="300" }
 
-</div>
+    </div>
 
-## Calendar
+=== "Calendar"
 
-<div class="grid cards" markdown>
+    Prism has five calendar views — pick the one that matches how your family thinks about time.
 
--   **Month view**
+    <div class="grid cards" markdown>
 
-    ![Calendar month view](demos/calendar-month.png)
+    -   **Month**
 
--   **Multi-week view (2 weeks)**
+        ![Calendar month view](demos/calendar-month.png)
 
-    ![Calendar multi-week view](demos/calendar-multiweek.png)
+    -   **Multi-week (2 weeks)**
 
--   **Schedule view (single week, hourly)**
+        ![Calendar multi-week view](demos/calendar-multiweek.png)
 
-    ![Calendar schedule view](demos/calendar-week.png)
+    -   **Schedule (single week, hourly)**
 
--   **Day view (side-by-side per person)**
+        ![Calendar schedule view](demos/calendar-week.png)
 
-    ![Calendar day view](demos/calendar-day.png)
+    -   **Day (per-person columns)**
 
--   **Agenda view (chronological list)**
+        ![Calendar day view](demos/calendar-day.png)
 
-    ![Calendar agenda view](demos/calendar-agenda.png)
+    -   **Agenda (chronological list)**
 
--   **Mobile (agenda-only)**
+        ![Calendar agenda view](demos/calendar-agenda.png)
 
-    ![Mobile calendar](demos/calendar-mobile.png){ width="300" }
+    -   **Mobile (agenda-only)**
 
-</div>
+        ![Mobile calendar](demos/calendar-mobile.png){ width="300" }
 
-## Shopping
+    </div>
 
-<div class="grid cards" markdown>
+=== "Lists"
 
--   **Grocery list with categories**
+    <div class="grid cards" markdown>
 
-    ![Shopping list](demos/shopping.png)
+    -   **Shopping**
 
--   **Mobile shopping**
+        ![Shopping list](demos/shopping.png)
 
-    ![Mobile shopping](demos/shopping-mobile.png){ width="300" }
+    -   **Shopping (mobile)**
 
-</div>
+        ![Mobile shopping](demos/shopping-mobile.png){ width="300" }
 
-## Recipes
+    -   **Tasks**
 
-![Recipe library](demos/recipes.png)
+        ![Tasks page](demos/tasks.png)
 
-## Meals
+    -   **Chores**
 
-![Weekly meal planner](demos/meals.png)
+        ![Chores grouped by person](demos/chores.png)
 
-## Tasks
+    </div>
 
-![Tasks page](demos/tasks.png)
+=== "Family"
 
-## Chores
+    <div class="grid cards" markdown>
 
-![Chores grouped by person](demos/chores.png)
+    -   **Meals**
 
-## Goals & Points
+        ![Weekly meal planner](demos/meals.png)
 
-![Goals waterfall](demos/goals.png)
+    -   **Recipes**
 
-## Wishes & Gift Ideas
+        ![Recipe library](demos/recipes.png)
 
-![Wish lists with claim tracking](demos/wishes.png)
+    -   **Goals & Points**
 
-## Photos
+        ![Goals waterfall](demos/goals.png)
 
-![Photo gallery](demos/photos.png)
+    -   **Messages**
 
-## Travel Map
+        ![Family message board](demos/messages.png)
 
-![Travel globe](demos/travel-globe.png)
+    -   **Wishes & Gift Ideas**
 
-## Weekend Ideas
+        ![Wish lists with claim tracking](demos/wishes.png)
 
-![Weekend activity board](demos/weekend.png)
+    -   **Photos**
 
-## Messages
+        ![Photo gallery](demos/photos.png)
 
-![Family message board](demos/messages.png)
+    </div>
+
+=== "Maps & extras"
+
+    <div class="grid cards" markdown>
+
+    -   **Travel map**
+
+        ![Travel globe](demos/travel-globe.png)
+
+    -   **Weekend ideas**
+
+        ![Weekend activity board](demos/weekend.png)
+
+    </div>
