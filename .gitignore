@@ -115,7 +115,11 @@ screenshots/
 *.zip
 *.tar.gz
 *.rar
-.claude/
+# Claude Code: ignore runtime state, keep shared config + hooks tracked
+.claude/*
+!.claude/settings.json
+!.claude/hooks/
+!.claude/hooks/**
 docs/MARKETING.md
 docker-compose.override.yml
 
