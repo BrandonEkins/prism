@@ -1,0 +1,50 @@
+# Auto-close inactive issues to keep the backlog focused.
+#
+# Behavior:
+#   - 90 days no activity  -> labeled `stale` + warning comment
+#   - 14 more days no reply -> closed with reason `not_planned`
+#
+# Nothing is deleted. The `stale` label persists after close, so closed-by-bot
+# items remain visible and reopenable.
+#
+# See auto-closed items:
+#   https://github.com/sandydargoport/prism/issues?q=is%3Aissue+is%3Aclosed+label%3Astale
+#
+# Exempt labels (never staled):
+#   roadmap, bug, enhancement, layout-submission, pinned, security
+#
+# To exempt a specific issue, apply one of those labels (or add `pinned`).
+
+name: Close stale issues
+
+on:
+  schedule:
+    - cron: '30 1 * * *'  # daily at 01:30 UTC
+  workflow_dispatch:
+
+permissions:
+  issues: write
+
+jobs:
+  stale:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/stale@v9
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          days-before-issue-stale: 90
+          days-before-issue-close: 14
+          stale-issue-label: stale
+          close-issue-reason: not_planned
+          exempt-issue-labels: roadmap,bug,enhancement,layout-submission,pinned,security
+          remove-stale-when-updated: true
+          stale-issue-message: |
+            This issue has been inactive for 90 days. If it's still relevant, a comment or a 👍 will keep it open — it will otherwise auto-close in 14 days. Reopening is one click.
+          close-issue-message: |
+            Auto-closing after 14 days of inactivity following the stale label. Not a judgment — just keeping the backlog focused. Reopen if this still matters.
+
+            All auto-closed items remain searchable at:
+            https://github.com/sandydargoport/prism/issues?q=is%3Aissue+is%3Aclosed+label%3Astale
+          days-before-pr-stale: -1
+          days-before-pr-close: -1
+          exempt-all-milestones: true

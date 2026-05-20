@@ -1,0 +1,77 @@
+name: Bug report
+description: Something in Prism isn't working as expected
+title: "bug: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a bug. The more concrete the report, the faster it gets fixed.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: A clear description of the bug — what you did, what you expected, what actually happened.
+      placeholder: "When I clicked X, the dashboard showed Y instead of Z."
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open Settings
+        2. Click …
+        3. See error
+    validations:
+      required: true
+
+  - type: input
+    id: prism-version
+    attributes:
+      label: Prism version
+      description: "Find this in Settings → About, or run: `docker exec prism-app sh -c 'cat package.json | grep version'`"
+      placeholder: "1.8.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: deployment
+    attributes:
+      label: Deployment
+      options:
+        - Docker Compose (recommended)
+        - Standalone Node
+        - Other (please describe below)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: browser
+    attributes:
+      label: Browser
+      options:
+        - Chrome
+        - Firefox
+        - Safari
+        - Edge
+        - Mobile Safari (iOS)
+        - Mobile Chrome (Android)
+        - Other / N-A
+    validations:
+      required: false
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs (optional)
+      description: "Output from `docker logs --tail 200 prism-app` around the time of the bug."
+      render: shell
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else? (optional)
+      description: Screenshots, related issues, ideas about what's going on.
