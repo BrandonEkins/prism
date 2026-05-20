@@ -77,11 +77,11 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
 
 ### Vote on what gets built next
 
-The public roadmap lives in the [**Prism Backlog** Project](https://github.com/users/sandydargoport/projects/3). Each item is a regular issue tagged `roadmap` — react with 👍 if you want it built, 👎 if you'd rather it didn't get built. The priority order on the [vote-rank list](https://github.com/sandydargoport/prism/issues?q=is%3Aissue+is%3Aopen+label%3Aroadmap+sort%3Areactions-%2B1-desc) is driven by 👍 count.
+The public roadmap lives in the [**Prism Roadmap** Project](https://github.com/users/sandydargoport/projects/3). Each item is an issue tagged `roadmap`. React with any emoji — 👍, ❤️, 🚀, 🎉 — to signal you want it built. The priority order on the [vote-rank list](https://github.com/sandydargoport/prism/issues?q=is%3Aissue+is%3Aopen+label%3Aroadmap+sort%3Areactions-desc) sums all reactions, so it doesn't matter which one you pick.
 
-**How to react on an issue:** open the issue, look at the bottom-right of the issue body for the small 😊 icon, click it, pick 👍 or 👎. Reactions on the issue body count toward the sort; reactions on comments do not.
+**How to react on an issue:** open the issue, look at the bottom-right of the issue body for the small 😊 icon, click it, pick any reaction. Reactions on the issue body count toward the sort; reactions on comments do not.
 
-Your votes shape what ships next.
+Your reactions shape what ships next.
 
 ## License
 
