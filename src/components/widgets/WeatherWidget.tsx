@@ -754,6 +754,9 @@ function SunriseSunsetArc({
 }) {
   const [width, setWidth] = React.useState(220);
   const containerRef = React.useRef<HTMLDivElement>(null);
+  // Unique gradient ID so multiple weather widgets on a page (e.g., dashboard
+  // + lite mode) don't share a single <defs> entry.
+  const gradientId = `sun-grad-${React.useId()}`;
 
   React.useEffect(() => {
     const el = containerRef.current;
@@ -878,13 +881,38 @@ function SunriseSunsetArc({
     return `M ${cx},${cy - r} A ${r},${r} 0 0 ${outerSweep} ${cx},${cy + r} A ${rxAbs},${r} 0 0 ${innerSweep} ${cx},${cy - r} Z`;
   };
 
-  const SUN_COLOR = '#FBBF24';
+  const SUN_COLOR = '#FBBF24';   // amber-400 — sun at zenith
+  const SUN_LOW   = '#F97316';   // orange-500 — sun at low altitude
+  const SUN_HORIZON = '#EF4444'; // red-500 — sun at the horizon
   const MOON_COLOR = '#60A5FA';
   const labelRowH = moonSamples ? 28 : 14;
+
+  // Pick a sun-dot color that matches where it sits on the altitude gradient
+  // — red near the horizon, amber high in the sky. Bucketed (rather than
+  // smoothly interpolated) for legibility against a small dot.
+  const sunDotColor = isDay
+    ? sunPos.altitude < 0.087 // ~5°
+      ? SUN_HORIZON
+      : sunPos.altitude < 0.314 // ~18°
+        ? SUN_LOW
+        : SUN_COLOR
+    : '#94A3B8';
 
   return (
     <div ref={containerRef} className="flex flex-col gap-1 w-full">
       <svg width={width} height={H} style={{ display: 'block', overflow: 'visible' }}>
+        {/* Altitude-based color gradient for the sun arc — red at the
+            horizon, orange at low altitude, amber at zenith. Matches the
+            atmospheric-scattering color shift you'd actually see in the sky. */}
+        <defs>
+          <linearGradient id={gradientId} gradientUnits="userSpaceOnUse"
+            x1={0} y1={horizonY} x2={0} y2={horizonY - ryTop}>
+            <stop offset="0" stopColor={SUN_HORIZON} />
+            <stop offset="0.3" stopColor={SUN_LOW} />
+            <stop offset="1" stopColor={SUN_COLOR} />
+          </linearGradient>
+        </defs>
+
         {/* Horizon line */}
         <line
           x1={pad - 4} y1={horizonY} x2={width - pad + 4} y2={horizonY}
@@ -895,10 +923,10 @@ function SunriseSunsetArc({
         <path d={sunFullPath} fill="none" stroke="currentColor"
           strokeOpacity={0.2} strokeWidth={2} strokeDasharray="4 3" />
 
-        {/* Sun: elapsed above-horizon — amber */}
+        {/* Sun: elapsed above-horizon — gradient by altitude (red→orange→amber) */}
         {sunElapsedAbove.map((d, i) => (
-          <path key={`sun-up-${i}`} d={d} fill="none" stroke={SUN_COLOR}
-            strokeOpacity={0.7} strokeWidth={2.5} strokeLinecap="round" />
+          <path key={`sun-up-${i}`} d={d} fill="none" stroke={`url(#${gradientId})`}
+            strokeOpacity={0.85} strokeWidth={2.5} strokeLinecap="round" />
         ))}
 
         {/* Sun: elapsed below-horizon — slate */}
@@ -937,12 +965,12 @@ function SunriseSunsetArc({
             stroke={MOON_COLOR} strokeOpacity={0.55} strokeWidth={1.5} />
         )}
 
-        {/* Sun glow + dot */}
-        {isDay && <circle cx={sunX} cy={sunY} r={16} fill={SUN_COLOR} opacity={0.2} />}
+        {/* Sun glow + dot — color tracks altitude so a low sun glows red/orange */}
+        {isDay && <circle cx={sunX} cy={sunY} r={16} fill={sunDotColor} opacity={0.2} />}
         <circle
           cx={sunX} cy={sunY}
           r={isDay ? 7 : 4}
-          fill={isDay ? SUN_COLOR : '#94A3B8'}
+          fill={sunDotColor}
           opacity={isDay ? 1 : 0.55}
         />
 
