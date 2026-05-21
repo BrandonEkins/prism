@@ -20,6 +20,21 @@ import type {
   HourlyForecast,
 } from '@/components/widgets/WeatherWidget';
 import type { LocationParam, WeatherOptions } from './weather';
+import { getMoonData } from './moon';
+
+/**
+ * Best-effort lat/lon for the moon calc. OpenWeather's free endpoints don't
+ * include coordinates in the response, so we prefer an explicit `{lat, lon}`
+ * LocationParam, then fall back to WEATHER_LAT/LON env, then Chicago.
+ */
+function resolveLatLon(location?: LocationParam): { lat: number; lon: number } {
+  if (typeof location === 'object' && location !== null && 'lat' in location) {
+    return { lat: location.lat, lon: location.lon };
+  }
+  const lat = parseFloat(process.env.WEATHER_LAT || '41.8781');
+  const lon = parseFloat(process.env.WEATHER_LON || '-87.6298');
+  return { lat, lon };
+}
 
 export type { LocationParam };
 
@@ -408,6 +423,9 @@ export async function fetchWeatherData(
       : h
   );
 
+  const { lat, lon } = resolveLatLon(location);
+  const moon = getMoonData(lat, lon);
+
   return {
     location: currentData.locationName,
     units,
@@ -424,6 +442,13 @@ export async function fetchWeatherData(
     periods,
     sunrise: currentData.sunrise,
     sunset: currentData.sunset,
+    moonrise: moon.moonrise,
+    moonset: moon.moonset,
+    moonPhase: moon.moonPhase,
+    moonIllumination: moon.moonIllumination,
+    moonPhaseName: moon.moonPhaseName,
+    lat,
+    lon,
     lastUpdated: new Date(),
   };
 }

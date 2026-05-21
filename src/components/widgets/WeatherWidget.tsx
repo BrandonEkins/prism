@@ -26,6 +26,7 @@
 'use client';
 
 import * as React from 'react';
+import SunCalc from 'suncalc';
 import {
   Cloud,
   CloudRain,
@@ -119,6 +120,21 @@ export interface WeatherData {
   minutely?: MinutelyData[];
   sunrise?: Date;
   sunset?: Date;
+  /** Moonrise for today in the location's timezone (computed locally via suncalc). */
+  moonrise?: Date;
+  /** Moonset for today in the location's timezone (computed locally via suncalc). */
+  moonset?: Date;
+  /** Phase angle 0..1 — 0 = new, 0.25 = first quarter, 0.5 = full, 0.75 = last quarter. */
+  moonPhase?: number;
+  /** Illuminated fraction 0..1 — independent of waxing vs waning. */
+  moonIllumination?: number;
+  /** Human-readable phase label, e.g. "Waning Gibbous". */
+  moonPhaseName?: string;
+  /** Latitude of the weather location — used client-side by suncalc to draw
+   *  the sun/moon arcs at their true altitudes. */
+  lat?: number;
+  /** Longitude of the weather location. Pair with lat. */
+  lon?: number;
   /** Units that the temperature/wind/precip fields are reported in. */
   units: WeatherUnits;
   lastUpdated: Date;
@@ -307,7 +323,16 @@ export const WeatherWidget = React.memo(function WeatherWidget({
                     {weatherData.sunset!.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
                   </span>
                 </div>
-                <SunriseSunsetArc sunrise={weatherData.sunrise!} sunset={weatherData.sunset!} />
+                <SunriseSunsetArc
+                  sunrise={weatherData.sunrise!}
+                  sunset={weatherData.sunset!}
+                  lat={weatherData.lat}
+                  lon={weatherData.lon}
+                  moonrise={weatherData.moonrise}
+                  moonset={weatherData.moonset}
+                  moonPhase={weatherData.moonPhase}
+                  moonPhaseName={weatherData.moonPhaseName}
+                />
               </div>
             )}
 
@@ -688,13 +713,45 @@ function PrecipitationChart({ minutely }: { minutely: MinutelyData[] }) {
 
 
 /**
- * SUNRISE / SUNSET ARC
- * Full 24-hour timeline: right edge = 12 AM (midnight), left edge = next 12 AM.
- * The single arc rises above the horizon between sunrise and sunset, and dips
- * below at night. The sun/moon dot moves right-to-left as the day progresses,
- * resetting to the right edge at midnight.
+ * SUN + MOON ARC
+ *
+ * Plots true celestial altitudes for both the sun and (optionally) the moon
+ * across a 24-hour timeline (left edge = today's local midnight, right edge
+ * = next midnight). Altitudes come from suncalc, so the visual peak height
+ * of each arc reflects how high the body actually reaches in the sky on
+ * the given day and latitude — summer sun arcs higher than winter sun,
+ * and the moon arc varies with declination.
+ *
+ * Scale: π/2 (90°, the zenith) maps to `ryTop` pixels above the horizon;
+ * sub-zenith altitudes shrink proportionally. Same scale below the horizon
+ * capped at `ryBot`.
+ *
+ * Sun: amber for the elapsed portion of today (matches the prior look —
+ * dashed background for future positions, slate-gray for elapsed below-
+ * horizon nighttime).
+ * Moon: blue for the entire above-horizon arc, with a phase-glyph dot at
+ * the moon's current position. Below-horizon segments use the dashed
+ * background only.
  */
-function SunriseSunsetArc({ sunrise, sunset }: { sunrise: Date; sunset: Date }) {
+function SunriseSunsetArc({
+  sunrise,
+  sunset,
+  lat,
+  lon,
+  moonrise,
+  moonset,
+  moonPhase,
+  moonPhaseName,
+}: {
+  sunrise: Date;
+  sunset: Date;
+  lat?: number;
+  lon?: number;
+  moonrise?: Date;
+  moonset?: Date;
+  moonPhase?: number;
+  moonPhaseName?: string;
+}) {
   const [width, setWidth] = React.useState(220);
   const containerRef = React.useRef<HTMLDivElement>(null);
 
@@ -708,91 +765,122 @@ function SunriseSunsetArc({ sunrise, sunset }: { sunrise: Date; sunset: Date }) 
     return () => ro.disconnect();
   }, []);
 
-  const nowMs  = Date.now();
-  const riseMs = sunrise.getTime();
-  const setMs  = sunset.getTime();
-
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const midnightMs = today.getTime();
-
-  const dayMs   = setMs - riseMs;
-  const nightMs = 24 * 3_600_000 - dayMs;
-  const isDay   = nowMs >= riseMs && nowMs <= setMs;
-
   const H        = 110;
   const horizonY = 66;
   const pad      = 8;
   const arcWidth = width - 2 * pad;
-  const ryTop    = horizonY - 10;      // peak height above horizon during day
-  const ryBot    = H - horizonY - 10;  // depth below horizon during night
+  const ryTop    = horizonY - 10;      // pixels representing zenith (alt = π/2)
+  const ryBot    = H - horizonY - 10;  // pixels representing antizenith (alt = -π/2)
+  const dayMs    = 24 * 3_600_000;
 
-  // Y for any absolute timestamp — sinusoidal within each day/night half
-  const getY = (tAbs: number): number => {
-    if (tAbs >= riseMs && tAbs <= setMs) {
-      return horizonY - ryTop * Math.sin(Math.PI * (tAbs - riseMs) / dayMs);
-    } else if (tAbs > setMs) {
-      return horizonY + ryBot * Math.sin(Math.PI * (tAbs - setMs) / nightMs);
-    } else {
-      // Before sunrise: late-night phase (fraction from previous sunset)
-      return horizonY + ryBot * Math.sin(Math.PI * (1 - (riseMs - tAbs) / nightMs));
-    }
-  };
+  const today = React.useMemo(() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; }, []);
+  const midnightMs = today.getTime();
+  const nowMs = Date.now();
 
-  // X: frac=0 (midnight) → left edge; frac=1 (next midnight) → right edge
+  // X helper — frac 0..1 of today's 24h window maps to the SVG width.
   const xOf = (frac: number) => pad + frac * arcWidth;
+  const nowFrac = Math.max(0, Math.min(1, (nowMs - midnightMs) / dayMs));
 
-  const nowFrac  = Math.max(0, Math.min(1, (nowMs - midnightMs) / 86_400_000));
-  const riseFrac = (riseMs - midnightMs) / 86_400_000;
-  const setFrac  = (setMs  - midnightMs) / 86_400_000;
+  // Map a celestial altitude (radians, -π/2..π/2) to a Y pixel.
+  // FIXED scale: zenith = ryTop above horizonY. Sub-zenith altitudes shrink
+  // proportionally so winter sun visibly arcs lower than summer sun.
+  const altToY = React.useCallback((altRad: number): number => {
+    if (altRad >= 0) return horizonY - ryTop * Math.min(1, altRad / (Math.PI / 2));
+    return horizonY + ryBot * Math.min(1, -altRad / (Math.PI / 2));
+  }, [horizonY, ryTop, ryBot]);
 
-  const sunX  = xOf(nowFrac);
-  const sunY  = getY(nowMs);
-  const riseX = xOf(riseFrac);
-  const setX  = xOf(setFrac);
+  // Resolve coords: fall back to Chicago for demo data without lat/lon.
+  const useLat = lat ?? 41.8781;
+  const useLon = lon ?? -87.6298;
 
-  // Build an SVG polyline path between two time fractions
-  const buildPath = (fromFrac: number, toFrac: number, steps: number): string => {
-    const pts: string[] = [];
-    for (let i = 0; i <= steps; i++) {
-      const f = fromFrac + (i / steps) * (toFrac - fromFrac);
-      pts.push(`${i === 0 ? 'M' : 'L'} ${xOf(f).toFixed(1)} ${getY(midnightMs + f * 86_400_000).toFixed(1)}`);
+  // 96 samples = every 15 min. Memoize on (date, lat, lon) so we don't
+  // recompute 192 suncalc calls on every render (e.g., width resize).
+  const STEPS = 96;
+  const samples = React.useMemo(() => {
+    const sun: { frac: number; alt: number; y: number }[] = [];
+    const moon: { frac: number; alt: number; y: number }[] = [];
+    for (let i = 0; i <= STEPS; i++) {
+      const frac = i / STEPS;
+      const t = new Date(midnightMs + frac * dayMs);
+      const sAlt = SunCalc.getPosition(t, useLat, useLon).altitude;
+      const mAlt = SunCalc.getMoonPosition(t, useLat, useLon).altitude;
+      sun.push({ frac, alt: sAlt, y: altToY(sAlt) });
+      moon.push({ frac, alt: mAlt, y: altToY(mAlt) });
     }
-    return pts.join(' ');
+    return { sun, moon };
+  }, [midnightMs, dayMs, useLat, useLon, altToY]);
+
+  // Generic helpers — convert a sample list into one or more SVG paths,
+  // optionally filtering by above/below horizon and elapsed/future.
+  const samplesToPath = (pts: { frac: number; y: number }[]): string =>
+    pts.map((p, i) => `${i === 0 ? 'M' : 'L'} ${xOf(p.frac).toFixed(1)} ${p.y.toFixed(1)}`).join(' ');
+
+  const segmentBy = (
+    pts: { frac: number; alt: number; y: number }[],
+    keep: (s: { alt: number; frac: number }) => boolean,
+  ): string[] => {
+    const out: string[] = [];
+    let buf: { frac: number; y: number }[] = [];
+    for (const s of pts) {
+      if (keep(s)) buf.push({ frac: s.frac, y: s.y });
+      else if (buf.length > 1) { out.push(samplesToPath(buf)); buf = []; }
+      else buf = [];
+    }
+    if (buf.length > 1) out.push(samplesToPath(buf));
+    return out;
   };
 
-  const fullPath = buildPath(0, 1, 96);
+  // Sun arc segments. "Elapsed" portions (frac ≤ nowFrac) get the bright
+  // amber / slate treatment; future portions sit on the dashed background.
+  const sunFullPath = samplesToPath(samples.sun);
+  const sunElapsedAbove = segmentBy(samples.sun, s => s.frac <= nowFrac && s.alt >= 0);
+  const sunElapsedBelow = segmentBy(samples.sun, s => s.frac <= nowFrac && s.alt < 0);
 
-  // Elapsed arcs — scoped to avoid amber appearing on the wrong side of the horizon.
-  // Daytime:       amber from sunrise → now (in progress).
-  // After sunset:  amber from sunrise → sunset (completed day) + gray from sunset → now.
-  // Before sunrise: gray from midnight → now (still in overnight).
-  let elapsedDayPath: string | null = null;
-  let elapsedNightPath: string | null = null;  // post-sunset night portion
-  let elapsedPreDawnPath: string | null = null; // midnight → sunrise portion
+  // Moon: light up the whole above-horizon portion in blue (we don't track
+  // elapsed/future for moon — the curve is short enough that it reads as a
+  // single "moon-up" highlight).
+  const moonSamples = moonrise || moonset || moonPhase !== undefined ? samples.moon : null;
+  const moonFullPath = moonSamples ? samplesToPath(moonSamples) : null;
+  const moonAbovePaths = moonSamples ? segmentBy(moonSamples, s => s.alt >= 0) : [];
 
-  if (isDay) {
-    // Midnight → sunrise has already passed
-    elapsedPreDawnPath = buildPath(0, riseFrac, Math.max(4, Math.round(96 * riseFrac)));
-    if (nowFrac > riseFrac + 0.002) {
-      elapsedDayPath = buildPath(riseFrac, nowFrac, Math.max(4, Math.round(96 * (nowFrac - riseFrac))));
-    }
-  } else if (nowMs > setMs) {
-    // Full day completed: pre-dawn night + full day arc + post-sunset night so far
-    elapsedPreDawnPath = buildPath(0, riseFrac, Math.max(4, Math.round(96 * riseFrac)));
-    elapsedDayPath     = buildPath(riseFrac, setFrac, Math.max(8, Math.round(96 * (setFrac - riseFrac))));
-    if (nowFrac > setFrac + 0.002) {
-      elapsedNightPath = buildPath(setFrac, nowFrac, Math.max(4, Math.round(96 * (nowFrac - setFrac))));
-    }
-  } else {
-    if (nowFrac > 0.01) {
-      elapsedNightPath = buildPath(0, nowFrac, Math.max(4, Math.round(96 * nowFrac)));
-    }
-  }
+  // Current positions (uses suncalc directly rather than interpolating
+  // samples — accurate to the second instead of the 15-min sample grid).
+  const sunPos = SunCalc.getPosition(new Date(nowMs), useLat, useLon);
+  const sunX = xOf(nowFrac);
+  const sunY = altToY(sunPos.altitude);
+  const isDay = sunPos.altitude >= 0;
 
-  const fmt  = (d: Date) => d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true });
-  const dayH = Math.floor(dayMs / 3_600_000);
-  const dayM = Math.round((dayMs % 3_600_000) / 60_000);
+  const moonPos = moonSamples ? SunCalc.getMoonPosition(new Date(nowMs), useLat, useLon) : null;
+  const moonX = moonPos ? xOf(nowFrac) : 0;
+  const moonY = moonPos ? altToY(moonPos.altitude) : 0;
+  const isMoonUp = moonPos ? moonPos.altitude >= 0 : false;
+
+  // Rise/set fractions, clamped to [0,1] today. Suncalc rises/sets can
+  // straddle midnight, in which case we just hide the off-screen tick.
+  const sunRiseFrac = (sunrise.getTime() - midnightMs) / dayMs;
+  const sunSetFrac  = (sunset.getTime()  - midnightMs) / dayMs;
+  const moonRiseRaw = moonrise ? (moonrise.getTime() - midnightMs) / dayMs : null;
+  const moonSetRaw  = moonset  ? (moonset.getTime()  - midnightMs) / dayMs : null;
+  const inWindow = (f: number | null): f is number => f !== null && f >= 0 && f <= 1;
+
+  const fmt = (d: Date) => d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true });
+  const sunDayMs = sunset.getTime() - sunrise.getTime();
+  const dayH = Math.floor(sunDayMs / 3_600_000);
+  const dayM = Math.round((sunDayMs % 3_600_000) / 60_000);
+
+  // Moon phase glyph path — single closed shape (half-circle on the lit side +
+  // ellipse for the terminator). Mirrors the standalone MoonIcon component.
+  const phasePath = (cx: number, cy: number, r: number, phase: number): string => {
+    const ph = ((phase % 1) + 1) % 1;
+    const rxAbs = Math.abs(Math.cos(2 * Math.PI * ph)) * r;
+    const outerSweep = ph < 0.5 ? 1 : 0;
+    const innerSweep = Math.floor(ph * 4) % 2 === 1 ? 1 : 0;
+    return `M ${cx},${cy - r} A ${r},${r} 0 0 ${outerSweep} ${cx},${cy + r} A ${rxAbs},${r} 0 0 ${innerSweep} ${cx},${cy - r} Z`;
+  };
+
+  const SUN_COLOR = '#FBBF24';
+  const MOON_COLOR = '#60A5FA';
+  const labelRowH = moonSamples ? 28 : 14;
 
   return (
     <div ref={containerRef} className="flex flex-col gap-1 w-full">
@@ -803,69 +891,120 @@ function SunriseSunsetArc({ sunrise, sunset }: { sunrise: Date; sunset: Date }) 
           stroke="currentColor" strokeOpacity={0.12} strokeWidth={1}
         />
 
-        {/* Sunrise / sunset tick marks */}
-        <line x1={riseX} y1={horizonY - 5} x2={riseX} y2={horizonY + 5}
-          stroke="currentColor" strokeOpacity={0.3} strokeWidth={1.5} />
-        <line x1={setX}  y1={horizonY - 5} x2={setX}  y2={horizonY + 5}
-          stroke="currentColor" strokeOpacity={0.3} strokeWidth={1.5} />
+        {/* Sun: full 24h arc — dashed background */}
+        <path d={sunFullPath} fill="none" stroke="currentColor"
+          strokeOpacity={0.2} strokeWidth={2} strokeDasharray="4 3" />
 
-        {/* Full 24-hour arc — dashed */}
-        <path
-          d={fullPath}
-          fill="none" stroke="currentColor"
-          strokeOpacity={0.2} strokeWidth={2} strokeDasharray="4 3"
-        />
+        {/* Sun: elapsed above-horizon — amber */}
+        {sunElapsedAbove.map((d, i) => (
+          <path key={`sun-up-${i}`} d={d} fill="none" stroke={SUN_COLOR}
+            strokeOpacity={0.7} strokeWidth={2.5} strokeLinecap="round" />
+        ))}
 
-        {/* Elapsed daytime arc — amber */}
-        {elapsedDayPath && (
-          <path
-            d={elapsedDayPath}
-            fill="none" stroke="#FBBF24"
-            strokeOpacity={0.7} strokeWidth={2.5} strokeLinecap="round"
-          />
+        {/* Sun: elapsed below-horizon — slate */}
+        {sunElapsedBelow.map((d, i) => (
+          <path key={`sun-down-${i}`} d={d} fill="none" stroke="#94A3B8"
+            strokeOpacity={0.45} strokeWidth={2.5} strokeLinecap="round" />
+        ))}
+
+        {/* Sunrise / sunset ticks */}
+        {inWindow(sunRiseFrac) && (
+          <line x1={xOf(sunRiseFrac)} y1={horizonY - 5} x2={xOf(sunRiseFrac)} y2={horizonY + 5}
+            stroke={SUN_COLOR} strokeOpacity={0.55} strokeWidth={1.5} />
+        )}
+        {inWindow(sunSetFrac) && (
+          <line x1={xOf(sunSetFrac)} y1={horizonY - 5} x2={xOf(sunSetFrac)} y2={horizonY + 5}
+            stroke={SUN_COLOR} strokeOpacity={0.55} strokeWidth={1.5} />
         )}
 
-        {/* Elapsed pre-dawn arc — muted (midnight → sunrise) */}
-        {elapsedPreDawnPath && (
-          <path
-            d={elapsedPreDawnPath}
-            fill="none" stroke="#94A3B8"
-            strokeOpacity={0.45} strokeWidth={2.5} strokeLinecap="round"
-          />
+        {/* Moon arc (full + above-horizon highlight) */}
+        {moonFullPath && (
+          <path d={moonFullPath} fill="none" stroke="currentColor"
+            strokeOpacity={0.15} strokeWidth={1.5} strokeDasharray="2 4" />
+        )}
+        {moonAbovePaths.map((d, i) => (
+          <path key={`moon-up-${i}`} d={d} fill="none" stroke={MOON_COLOR}
+            strokeOpacity={0.75} strokeWidth={2} strokeLinecap="round" />
+        ))}
+
+        {/* Moonrise / moonset ticks */}
+        {inWindow(moonRiseRaw) && (
+          <line x1={xOf(moonRiseRaw)} y1={horizonY - 4} x2={xOf(moonRiseRaw)} y2={horizonY + 4}
+            stroke={MOON_COLOR} strokeOpacity={0.55} strokeWidth={1.5} />
+        )}
+        {inWindow(moonSetRaw) && (
+          <line x1={xOf(moonSetRaw)} y1={horizonY - 4} x2={xOf(moonSetRaw)} y2={horizonY + 4}
+            stroke={MOON_COLOR} strokeOpacity={0.55} strokeWidth={1.5} />
         )}
 
-        {/* Elapsed post-sunset arc — muted (sunset → now) */}
-        {elapsedNightPath && (
-          <path
-            d={elapsedNightPath}
-            fill="none" stroke="#94A3B8"
-            strokeOpacity={0.45} strokeWidth={2.5} strokeLinecap="round"
-          />
-        )}
-
-        {/* Sun glow */}
-        {isDay && <circle cx={sunX} cy={sunY} r={16} fill="#FBBF24" opacity={0.2} />}
-
-        {/* Sun / moon dot */}
+        {/* Sun glow + dot */}
+        {isDay && <circle cx={sunX} cy={sunY} r={16} fill={SUN_COLOR} opacity={0.2} />}
         <circle
           cx={sunX} cy={sunY}
-          r={isDay ? 7 : 5}
-          fill={isDay ? '#FBBF24' : '#94A3B8'}
-          opacity={isDay ? 1 : 0.65}
+          r={isDay ? 7 : 4}
+          fill={isDay ? SUN_COLOR : '#94A3B8'}
+          opacity={isDay ? 1 : 0.55}
         />
+
+        {/* Moon glyph at current position — blue when above, muted when below.
+            Disc outline is drawn unfilled so a new moon (lit area collapses to
+            zero) reads as an empty circle rather than a faint disc. */}
+        {moonSamples && moonPhase !== undefined && (
+          <g>
+            {isMoonUp && <circle cx={moonX} cy={moonY} r={11} fill={MOON_COLOR} opacity={0.18} />}
+            <circle cx={moonX} cy={moonY} r={6}
+              fill="none"
+              stroke={isMoonUp ? MOON_COLOR : '#94A3B8'}
+              strokeOpacity={isMoonUp ? 0.65 : 0.4}
+              strokeWidth={1} />
+            <path d={phasePath(moonX, moonY, 6, moonPhase)}
+              fill={isMoonUp ? MOON_COLOR : '#94A3B8'}
+              opacity={isMoonUp ? 1 : 0.55} />
+          </g>
+        )}
       </svg>
 
-      {/* Labels: sunrise/sunset at their x positions, daylight duration between */}
-      <div className="relative h-4 text-[11px] text-muted-foreground/70 select-none">
-        <span className="absolute -translate-x-1/2 whitespace-nowrap" style={{ left: riseX }}>
-          {fmt(sunrise)}
-        </span>
-        <span className="absolute -translate-x-1/2 whitespace-nowrap opacity-60" style={{ left: (riseX + setX) / 2 }}>
-          {dayH}h {dayM}m
-        </span>
-        <span className="absolute -translate-x-1/2 whitespace-nowrap" style={{ left: setX }}>
-          {fmt(sunset)}
-        </span>
+      {/* Two-row label strip — sunrise / duration / sunset on top, moon times below */}
+      <div className="relative text-[11px] text-muted-foreground/70 select-none" style={{ height: labelRowH }}>
+        <div className="relative h-3.5">
+          {inWindow(sunRiseFrac) && (
+            <span className="absolute -translate-x-1/2 whitespace-nowrap" style={{ left: xOf(sunRiseFrac) }}>
+              {fmt(sunrise)}
+            </span>
+          )}
+          {inWindow(sunRiseFrac) && inWindow(sunSetFrac) && (
+            <span className="absolute -translate-x-1/2 whitespace-nowrap opacity-60"
+              style={{ left: (xOf(sunRiseFrac) + xOf(sunSetFrac)) / 2 }}>
+              {dayH}h {dayM}m
+            </span>
+          )}
+          {inWindow(sunSetFrac) && (
+            <span className="absolute -translate-x-1/2 whitespace-nowrap" style={{ left: xOf(sunSetFrac) }}>
+              {fmt(sunset)}
+            </span>
+          )}
+        </div>
+        {moonSamples && (
+          <div className="relative h-3.5" style={{ color: MOON_COLOR }}>
+            {inWindow(moonRiseRaw) && moonrise && (
+              <span className="absolute -translate-x-1/2 whitespace-nowrap opacity-85"
+                style={{ left: xOf(moonRiseRaw) }}>
+                {fmt(moonrise)}
+              </span>
+            )}
+            {moonPhaseName && (
+              <span className="absolute left-1/2 -translate-x-1/2 whitespace-nowrap opacity-60">
+                {moonPhaseName}
+              </span>
+            )}
+            {inWindow(moonSetRaw) && moonset && (
+              <span className="absolute -translate-x-1/2 whitespace-nowrap opacity-85"
+                style={{ left: xOf(moonSetRaw) }}>
+                {fmt(moonset)}
+              </span>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -976,6 +1115,16 @@ function getDemoWeatherData(location: string): WeatherData {
     minutely,
     sunrise,
     sunset,
+    // Synthetic moon fixture: waning gibbous — easy to eyeball in dev.
+    moonrise: (() => { const d = new Date(today); d.setHours(20, 14, 0, 0); return d; })(),
+    moonset:  (() => { const d = new Date(today); d.setHours(8, 47, 0, 0); d.setDate(d.getDate() + 1); return d; })(),
+    moonPhase: 0.62,
+    moonIllumination: 0.78,
+    moonPhaseName: 'Waning Gibbous',
+    // Default to the same Chicago coords used by the server providers so
+    // suncalc can plot real altitude curves in demo mode.
+    lat: 41.8781,
+    lon: -87.6298,
     lastUpdated: new Date(),
   };
 }
