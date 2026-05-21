@@ -62,34 +62,83 @@ interface TrainNode {
   name: string;
   index: number;
   isStop: boolean;    // square shape — the ETA target
-  isSchool: boolean;  // diamond shape — school terminal (AM only)
+  isSchool: boolean;  // diamond shape — school terminal
+  /**
+   * True for the PM school diamond, which represents where the bus came FROM
+   * rather than a checkpoint the bus will visit. FirstView does not emit a
+   * "left school" email at the start of PM, so this node would never light up
+   * via its own sortOrder — instead it is treated as reached the moment any
+   * PM event has fired (i.e. lastCheckpointIndex >= 0).
+   */
+  isOrigin?: boolean;
 }
 
 function buildNodes(route: BusRouteStatus): TrainNode[] {
   const checkpoints = route.checkpoints || [];
-  const stopIsInCheckpoints = route.stopName
-    ? checkpoints.some(cp => cp.name === route.stopName)
-    : false;
 
-  const nodes: TrainNode[] = checkpoints.map((cp, i) => ({
+  // FirstView emails come in three types: distance_based (intermediate stops),
+  // arrived_at_stop (the family's home stop), arrived_at_school (the school).
+  // Older data and manual edits can land "Home" / "School" inside the
+  // `checkpoints` array as literal labels even though `stopName` / `schoolName`
+  // also carry them — treat both cases as the same semantic terminal so we
+  // don't render a square AND a diamond for the same stop.
+  const isHomeCheckpoint = (cp: { name: string }) =>
+    cp.name.toLowerCase() === 'home' ||
+    (route.stopName != null && cp.name.toLowerCase() === route.stopName.toLowerCase());
+  const isSchoolCheckpoint = (cp: { name: string }) =>
+    cp.name.toLowerCase() === 'school' ||
+    (route.schoolName != null && cp.name.toLowerCase() === route.schoolName.toLowerCase());
+
+  const homeCp = checkpoints.find(isHomeCheckpoint) ?? null;
+  const schoolCp = checkpoints.find(isSchoolCheckpoint) ?? null;
+  const intermediates = checkpoints.filter(
+    cp => !isHomeCheckpoint(cp) && !isSchoolCheckpoint(cp),
+  );
+
+  const intermediateNodes: TrainNode[] = intermediates.map(cp => ({
     name: cp.name,
-    index: i,
-    isStop: cp.name === route.stopName,
+    index: cp.sortOrder,
+    isStop: false,
     isSchool: false,
   }));
 
-  // Legacy: stopName is an implicit terminal after the named list
-  if (route.stopName && !stopIsInCheckpoints) {
-    nodes.push({ name: route.stopName, index: checkpoints.length, isStop: true, isSchool: false });
+  // Home terminal — labelled with the route's stopName (proper noun) when set,
+  // since a literal "Home" checkpoint is just a placeholder for the family's
+  // actual stop. Index reuses the checkpoint's sortOrder when present, else a
+  // synthetic position past the intermediates (legacy implicit-terminal path).
+  const homeNode: TrainNode | null = homeCp || route.stopName ? {
+    name: route.stopName ?? homeCp!.name,
+    index: homeCp ? homeCp.sortOrder : intermediates.length,
+    isStop: true,
+    isSchool: false,
+  } : null;
+
+  // School terminal (diamond) — labelled with schoolName when set.
+  const schoolNode: TrainNode | null = schoolCp || route.schoolName ? {
+    name: route.schoolName ?? schoolCp!.name,
+    index: schoolCp ? schoolCp.sortOrder : intermediates.length + 1,
+    isStop: false,
+    isSchool: true,
+  } : null;
+
+  // Arrange by direction:
+  //   AM — bus picks up at homes and ends at school: [intermediates, home, school]
+  //   PM — bus leaves school and ends at the family's home: [school, intermediates, home]
+  // PM intermediate stops are kept in stored sortOrder (the bus does not reverse
+  // street direction between AM and PM — only the start/end terminals swap).
+  if (route.direction === 'AM') {
+    return [
+      ...intermediateNodes,
+      ...(homeNode ? [homeNode] : []),
+      ...(schoolNode ? [schoolNode] : []),
+    ];
   }
 
-  // School is the AM terminal (diamond), not shown as destination for PM
-  if (route.direction === 'AM' && route.schoolName) {
-    const schoolIdx = checkpoints.length + (route.stopName && !stopIsInCheckpoints ? 1 : 0);
-    nodes.push({ name: route.schoolName, index: schoolIdx, isStop: false, isSchool: true });
-  }
-
-  return nodes;
+  return [
+    ...(schoolNode ? [{ ...schoolNode, isOrigin: true }] : []),
+    ...intermediateNodes,
+    ...(homeNode ? [homeNode] : []),
+  ];
 }
 
 function RouteStatusCard({ route, compact }: { route: BusRouteStatus; compact: boolean }) {
@@ -147,12 +196,20 @@ function TrainMap({
   const nodeSize = compact ? 10 : 14;
   const trackY = Math.floor(nodeSize / 2) - 1;
 
-  const isSegPassed = (from: TrainNode, to: TrainNode) =>
-    from.index < lastIdx || (from.index === lastIdx && to.index <= lastIdx);
+  // Origin nodes (PM school diamond) light up the instant ANY event has fired,
+  // since the bus came from there but FirstView doesn't emit a "left" email.
+  const isReached = (node: TrainNode) =>
+    node.isOrigin ? lastIdx >= 0 : node.index <= lastIdx;
+
+  const isSegPassed = (from: TrainNode, to: TrainNode) => {
+    if (from.isOrigin) return lastIdx >= 0;
+    return from.index < lastIdx || (from.index === lastIdx && to.index <= lastIdx);
+  };
 
   const renderNodeAt = (node: TrainNode, leftPct: number, topOffset: number) => {
-    const reached = node.index <= lastIdx;
-    const current = node.index === lastIdx && prediction.status !== 'no_data';
+    const reached = isReached(node);
+    // Origin nodes never pulse — the bus has left them, it isn't *at* them.
+    const current = !node.isOrigin && node.index === lastIdx && prediction.status !== 'no_data';
     const shapeBase = cn(
       'border-2 transition-all',
       reached
