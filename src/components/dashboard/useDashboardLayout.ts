@@ -11,6 +11,7 @@ import {
   deleteScreensaverPreset,
 } from '@/components/screensaver/screensaverStorage';
 import type { WidgetConfig, Layout } from '@/lib/hooks/useLayouts';
+import { findNextFreeSlot } from '@/lib/utils/widgetPlacement';
 
 interface LayoutsData {
   savedLayout: Layout | null;
@@ -135,8 +136,8 @@ export function useDashboardLayout(layouts: LayoutsData, slug?: string) {
       if (exists) {
         updated = prev.map(w => w.i === widgetType ? { ...w, visible } : w);
       } else if (visible) {
-        const maxY = Math.max(0, ...prev.map(w => w.y + w.h));
-        updated = [...prev, { i: widgetType, x: 0, y: maxY, w: 3, h: 3, visible: true }];
+        const { x, y } = findNextFreeSlot(prev, 3, 3);
+        updated = [...prev, { i: widgetType, x, y, w: 3, h: 3, visible: true }];
       } else {
         return prev;
       }

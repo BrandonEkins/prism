@@ -5,6 +5,7 @@ import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { WIDGET_COLORS } from './LayoutPreview';
 import { WIDGET_REGISTRY, ALL_WIDGET_TYPES, SCREENSAVER_WIDGETS } from '@/components/widgets/widgetRegistry';
 import type { WidgetConfig } from '@/lib/hooks/useLayouts';
+import { findNextFreeSlot } from '@/lib/utils/widgetPlacement';
 
 interface CoordinateEditorProps {
   widgets: WidgetConfig[];
@@ -60,17 +61,12 @@ export function CoordinateEditor({ widgets, onWidgetsChange, mode, onFocusedWidg
     } else {
       const reg = WIDGET_REGISTRY[widgetId];
       if (!reg) return;
-      const maxY = Math.max(0, ...widgets.filter(w => w.visible !== false).map(w => w.y + w.h));
+      // Find the first free slot row-by-row, columns inside each row — slots
+      // a new widget into top-row gaps before falling through to the bottom.
+      const { x, y } = findNextFreeSlot(widgets, reg.defaultW, reg.defaultH);
       onWidgetsChange([
         ...widgets,
-        {
-          i: widgetId,
-          x: 0,
-          y: maxY,
-          w: reg.defaultW,
-          h: reg.defaultH,
-          visible: true,
-        },
+        { i: widgetId, x, y, w: reg.defaultW, h: reg.defaultH, visible: true },
       ]);
     }
   }, [widgets, onWidgetsChange]);
