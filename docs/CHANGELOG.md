@@ -4,8 +4,10 @@ All notable changes to Prism are documented in this file.
 
 ## Unreleased
 
+## [1.8.3] – 2026-05-22
+
 ### Added — Dashboard
-- **Double-tap any widget to magnify it** (interactive Dashboard only). The widget animates from its grid position to a centered ~84vw × 84vh modal with the rest of the dashboard dimmed behind. Auto-collapses after 8 seconds of inactivity (timer resets on any tap or scroll inside the magnified widget), or immediately on Escape / backdrop tap. Re-renders the widget at the larger size so any compact-mode threshold (e.g., Weather widget's `gridW < 12` mode) unwinds into the full layout. Gated to the interactive render path only — Screensaver, Away Mode, and Babysitter Mode don't wrap their widgets in the provider, so the handler isn't attached there.
+- **Double-tap any widget to magnify it** (interactive Dashboard only). The widget snaps to a centered ~84vw × 84vh modal with the rest of the dashboard dimmed behind. Auto-collapses after 8 seconds of inactivity (timer resets on any tap or scroll inside the magnified widget), or immediately on Escape / backdrop tap. Re-renders the widget at the larger size so any compact-mode threshold (e.g., Weather widget's `gridW < 12` mode) unwinds into the full layout. Gated to the interactive render path only — Screensaver, Away Mode, and Babysitter Mode don't wrap their widgets in the provider, so the handler isn't attached there.
 
 ## [1.8.2] – 2026-05-22
 
