@@ -376,7 +376,6 @@ export const WeatherWidget = React.memo(function WeatherWidget({
                   moonrise={weatherData.moonrise}
                   moonset={weatherData.moonset}
                   moonPhase={weatherData.moonPhase}
-                  moonPhaseName={weatherData.moonPhaseName}
                 />
               </div>
             )}
@@ -797,7 +796,6 @@ function SunriseSunsetArc({
   moonrise,
   moonset,
   moonPhase,
-  moonPhaseName,
 }: {
   sunrise: Date;
   sunset: Date;
@@ -806,7 +804,6 @@ function SunriseSunsetArc({
   moonrise?: Date;
   moonset?: Date;
   moonPhase?: number;
-  moonPhaseName?: string;
 }) {
   const [width, setWidth] = React.useState(220);
   const containerRef = React.useRef<HTMLDivElement>(null);
@@ -931,7 +928,7 @@ function SunriseSunsetArc({
   const SUN_LOW   = '#F97316';   // orange-500 — sun at low altitude
   const SUN_HORIZON = '#EF4444'; // red-500 — sun at the horizon
   const MOON_COLOR = '#60A5FA';
-  const labelRowH = moonSamples ? 28 : 14;
+  const labelRowH = 14;
 
   // Pick a sun-dot color that matches where it sits on the altitude gradient
   // — red near the horizon, amber high in the sky. Bucketed (rather than
@@ -1038,10 +1035,10 @@ function SunriseSunsetArc({
         )}
       </svg>
 
-      {/* Two-row label strip — sunrise / duration / sunset on top, moon times below.
-          Duration sits at the sun's apex (midpoint between rise and set), tinted
-          amber to match the arc. Phase name sits at the moon's apex when both
-          rise and set fall in today's window; falls back to chart center otherwise. */}
+      {/* Single-row label strip — sunrise / duration / sunset only.
+          Moon labels intentionally omitted: the moon arc, blue tick marks,
+          phase-shaped dot, and per-day forecast glyphs already convey the
+          information, and stacking a second text row read as visual noise. */}
       <div className="relative text-[11px] text-muted-foreground/70 select-none" style={{ height: labelRowH }}>
         <div className="relative h-3.5">
           {inWindow(sunRiseFrac) && (
@@ -1061,53 +1058,6 @@ function SunriseSunsetArc({
             </span>
           )}
         </div>
-        {moonSamples && (
-          <div className="relative h-3.5" style={{ color: MOON_COLOR }}>
-            {/* Always render moonrise/moonset times — even when one falls
-                outside today's window (a common "moon-up spans midnight" case).
-                Position by X when in window, clamp to the edge otherwise so
-                both times are always visible to the user. */}
-            {moonrise && (() => {
-              const clamped = Math.max(0, Math.min(1, moonRiseRaw ?? 0));
-              const outOfWindow = moonRiseRaw === null || !inWindow(moonRiseRaw);
-              return (
-                <span className="absolute whitespace-nowrap opacity-85 tabular-nums"
-                  style={outOfWindow
-                    ? (clamped >= 0.5 ? { right: 2 } : { left: 2 })
-                    : { left: xOf(clamped), transform: 'translateX(-50%)' }}>
-                  {fmt(moonrise)}
-                </span>
-              );
-            })()}
-            {moonPhaseName && (() => {
-              const apexX = inWindow(moonRiseRaw) && inWindow(moonSetRaw) && moonRiseRaw < moonSetRaw
-                ? (xOf(moonRiseRaw) + xOf(moonSetRaw)) / 2
-                : null;
-              return apexX !== null ? (
-                <span className="absolute -translate-x-1/2 whitespace-nowrap font-medium opacity-85"
-                  style={{ left: apexX }}>
-                  {moonPhaseName}
-                </span>
-              ) : (
-                <span className="absolute left-1/2 -translate-x-1/2 whitespace-nowrap opacity-60">
-                  {moonPhaseName}
-                </span>
-              );
-            })()}
-            {moonset && (() => {
-              const clamped = Math.max(0, Math.min(1, moonSetRaw ?? 1));
-              const outOfWindow = moonSetRaw === null || !inWindow(moonSetRaw);
-              return (
-                <span className="absolute whitespace-nowrap opacity-85 tabular-nums"
-                  style={outOfWindow
-                    ? (clamped >= 0.5 ? { right: 2 } : { left: 2 })
-                    : { left: xOf(clamped), transform: 'translateX(-50%)' }}>
-                  {fmt(moonset)}
-                </span>
-              );
-            })()}
-          </div>
-        )}
       </div>
     </div>
   );

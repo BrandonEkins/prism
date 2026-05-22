@@ -277,7 +277,7 @@ function DragOverlayContent({
       className={`rounded-lg border-2 border-primary shadow-lg ${textClass}`}
     >
       <WidgetBgOverrideProvider value={{ hasCustomBg: !!widget.backgroundColor, textColor: widget.textColor, textOpacity: widget.textOpacity, gridLineOpacity: widget.gridLineOpacity, cellBackgroundColor: widget.cellBackgroundColor, cellBackgroundOpacity: widget.cellBackgroundOpacity }}>
-        <div className="h-full w-full overflow-hidden">
+        <div className="h-full w-full overflow-hidden" style={{ pointerEvents: 'none' }}>
           {renderWidget(widget)}
         </div>
       </WidgetBgOverrideProvider>
@@ -353,9 +353,17 @@ function DraggableWidget({
           : `border-dashed ${theme.borderDash}`
       } rounded-lg pointer-events-none`} />
 
-      {/* Widget content */}
+      {/* Widget content — interactivity disabled in edit mode so a stray
+          click on an internal link (e.g. the Travel widget's "Open the map →")
+          can't navigate away mid-edit and discard unsaved layout changes.
+          The outer wrapper still receives drag/select events because clicks
+          bubble through pointer-events:none and the wrapper has its own
+          onClick + dnd-kit listeners. */}
       <WidgetBgOverrideProvider value={{ hasCustomBg, textColor: widget.textColor, textOpacity: widget.textOpacity, gridLineOpacity: widget.gridLineOpacity, cellBackgroundColor: widget.cellBackgroundColor, cellBackgroundOpacity: widget.cellBackgroundOpacity }}>
-        <div className={`h-full w-full overflow-hidden ${textClass}`}>
+        <div
+          className={`h-full w-full overflow-hidden ${textClass}`}
+          style={{ pointerEvents: 'none' }}
+        >
           {renderWidget(widget)}
         </div>
       </WidgetBgOverrideProvider>

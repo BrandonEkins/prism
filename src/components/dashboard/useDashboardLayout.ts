@@ -12,6 +12,8 @@ import {
 } from '@/components/screensaver/screensaverStorage';
 import type { WidgetConfig, Layout } from '@/lib/hooks/useLayouts';
 import { findNextFreeSlot } from '@/lib/utils/widgetPlacement';
+import { useAuth } from '@/components/providers/AuthProvider';
+import { toast } from '@/components/ui/use-toast';
 
 interface LayoutsData {
   savedLayout: Layout | null;
@@ -21,6 +23,7 @@ interface LayoutsData {
 }
 
 export function useDashboardLayout(layouts: LayoutsData, slug?: string) {
+  const { activeUser } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [editingWidgets, setEditingWidgets] = useState<WidgetConfig[]>([]);
   const preEditWidgetsRef = useRef<WidgetConfig[]>([]);
@@ -58,11 +61,13 @@ export function useDashboardLayout(layouts: LayoutsData, slug?: string) {
     }
   }, [activeLayout]);
 
-  // Re-enter edit mode after dashboard switch (sessionStorage flag)
+  // Re-enter edit mode after dashboard switch (sessionStorage flag).
+  // Only re-enter when the active user is still a parent — guards against a
+  // stale flag re-engaging edit mode after a logout / session expiry.
   useEffect(() => {
     if (activeLayout && typeof window !== 'undefined') {
       const flag = sessionStorage.getItem('prism:editing');
-      if (flag) {
+      if (flag && activeUser?.role === 'parent') {
         sessionStorage.removeItem('prism:editing');
         const current = activeLayout.widgets ?? DEFAULT_TEMPLATE.widgets;
         preEditWidgetsRef.current = current;
@@ -70,18 +75,30 @@ export function useDashboardLayout(layouts: LayoutsData, slug?: string) {
         setIsEditing(true);
       }
     }
-  }, [activeLayout]);
+  }, [activeLayout, activeUser]);
 
   const activeWidgets = isEditing
     ? editingWidgets
     : activeLayout?.widgets ?? DEFAULT_TEMPLATE.widgets;
 
   const handleEditStart = useCallback(() => {
+    // Auth gate: only logged-in parents can edit. Signed-out users get a
+    // toast reminder; signed-in non-parents are quietly blocked (their
+    // edit button is already hidden, so this is just a safety net).
+    if (!activeUser) {
+      toast({
+        title: 'Sign in to edit',
+        description: 'Log in as a parent to edit the dashboard layout.',
+        duration: 3000,
+      });
+      return;
+    }
+    if (activeUser.role !== 'parent') return;
     const current = activeLayout?.widgets ?? DEFAULT_TEMPLATE.widgets;
     preEditWidgetsRef.current = current;
     setEditingWidgets(current);
     setIsEditing(true);
-  }, [activeLayout]);
+  }, [activeLayout, activeUser]);
 
   const handleSave = useCallback(async (name?: string) => {
     try {
