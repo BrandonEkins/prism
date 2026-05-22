@@ -523,7 +523,7 @@ function DayHeader({
               <span className="text-[11px] text-muted-foreground tabular-nums w-7 text-right flex-shrink-0">
                 {fmt(day.low)}°
               </span>
-              <div className="flex-1 relative h-4 rounded-full bg-muted-foreground/15 overflow-hidden min-w-0">
+              <div className="flex-1 relative h-4 rounded-full bg-muted-foreground/25 ring-1 ring-inset ring-muted-foreground/15 overflow-hidden min-w-0">
                 <div
                   className="absolute top-0 bottom-0 rounded-full"
                   style={{
