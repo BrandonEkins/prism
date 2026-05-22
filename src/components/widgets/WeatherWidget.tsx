@@ -450,8 +450,14 @@ function CurrentConditions({
           <Wind className="h-3 w-3" />
           <span>{weather.windSpeed} {units.windSpeed}</span>
         </div>
-        {(sunrise || sunset || moonPhase !== undefined) && (
-          <div className="flex items-center justify-end gap-2 pt-0.5 tabular-nums">
+        {moonPhase !== undefined && (
+          <div className="flex items-center justify-end gap-1 pt-0.5">
+            <MoonGlyph phase={moonPhase} size={12} />
+            {moonPhaseName && <span>{moonPhaseName}</span>}
+          </div>
+        )}
+        {(sunrise || sunset) && (
+          <div className="flex items-center justify-end gap-2 tabular-nums">
             {sunrise && (
               <span className="flex items-center gap-0.5" title="Sunrise">
                 <Sunrise className="h-3 w-3" style={{ color: '#FBBF24' }} />
@@ -462,11 +468,6 @@ function CurrentConditions({
               <span className="flex items-center gap-0.5" title="Sunset">
                 <Sunset className="h-3 w-3" style={{ color: '#F97316' }} />
                 {fmtTime(sunset)}
-              </span>
-            )}
-            {moonPhase !== undefined && (
-              <span className="flex items-center" title={moonPhaseName ? `Moon — ${moonPhaseName}` : 'Moon phase'}>
-                <MoonGlyph phase={moonPhase} size={12} />
               </span>
             )}
           </div>
@@ -954,6 +955,8 @@ function SunriseSunsetArc({
   const SUN_HORIZON = '#EF4444'; // red-500 — sun at the horizon
   const MOON_COLOR = '#60A5FA';
 
+  const fmtTime = (d: Date) => d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true });
+
   // Pick a sun-dot color that matches where it sits on the altitude gradient
   // — red near the horizon, amber high in the sky. Bucketed (rather than
   // smoothly interpolated) for legibility against a small dot.
@@ -1058,6 +1061,36 @@ function SunriseSunsetArc({
           </g>
         )}
       </svg>
+
+      {/* Sunrise / duration / sunset label strip — sunrise on the left at its
+          X, duration in the middle (amber to match the arc), sunset on the
+          right. The header row above duplicates the rise/set times, which is
+          deliberate: this row anchors them to the arc itself. */}
+      <div className="relative text-[11px] text-muted-foreground/70 select-none" style={{ height: 14 }}>
+        <div className="relative h-3.5">
+          {inWindow(sunRiseFrac) && (
+            <span className="absolute -translate-x-1/2 whitespace-nowrap tabular-nums" style={{ left: xOf(sunRiseFrac) }}>
+              {fmtTime(sunrise)}
+            </span>
+          )}
+          {inWindow(sunRiseFrac) && inWindow(sunSetFrac) && (() => {
+            const dayMsSpan = sunset.getTime() - sunrise.getTime();
+            const h = Math.floor(dayMsSpan / 3_600_000);
+            const m = Math.round((dayMsSpan % 3_600_000) / 60_000);
+            return (
+              <span className="absolute -translate-x-1/2 whitespace-nowrap font-medium"
+                style={{ left: (xOf(sunRiseFrac) + xOf(sunSetFrac)) / 2, color: SUN_COLOR, opacity: 0.85 }}>
+                {h}h {m}m
+              </span>
+            );
+          })()}
+          {inWindow(sunSetFrac) && (
+            <span className="absolute -translate-x-1/2 whitespace-nowrap tabular-nums" style={{ left: xOf(sunSetFrac) }}>
+              {fmtTime(sunset)}
+            </span>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
