@@ -33,7 +33,7 @@ body:
     attributes:
       label: Prism version
       description: "Find this in Settings → About, or run: `docker exec prism-app sh -c 'cat package.json | grep version'`"
-      placeholder: "1.8.0"
+      placeholder: "e.g. 1.8.2"
     validations:
       required: true
 

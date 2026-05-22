@@ -38,6 +38,9 @@ jobs:
 
       - run: npm run lint
 
+      - name: Version sync (package.json ↔ CHANGELOG)
+        run: bash scripts/check-version-sync.sh
+
   unit:
     name: Unit tests (jest)
     runs-on: ubuntu-latest
