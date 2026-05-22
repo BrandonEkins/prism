@@ -37,7 +37,13 @@ export function CoordinateEditor({ widgets, onWidgetsChange, mode, onFocusedWidg
   [allWidgetIds, widgets]);
 
   const hiddenIds = useMemo(() =>
-    allWidgetIds.filter(id => !visibleIds.includes(id)),
+    allWidgetIds
+      .filter(id => !visibleIds.includes(id))
+      .sort((a, b) => {
+        const aLabel = WIDGET_REGISTRY[a]?.label || a;
+        const bLabel = WIDGET_REGISTRY[b]?.label || b;
+        return aLabel.localeCompare(bLabel);
+      }),
   [allWidgetIds, visibleIds]);
 
   // Close add dropdown on outside click
