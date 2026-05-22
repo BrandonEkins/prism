@@ -4,6 +4,10 @@ All notable changes to Prism are documented in this file.
 
 ## Unreleased
 
+## [1.8.2] – 2026-05-22
+
+> Adds an MCP server (`.mcp/`) that exposes Prism's REST API as Model Context Protocol tools, so AI clients (Claude Desktop, Claude Code, Cursor, Gemini CLI, Gemini Code Assist, VS Code Copilot Chat) can read and write family data through natural-language chat.
+
 ### Added — Integrations
 - **MCP server for Prism (`.mcp/`)**: Self-contained Model Context Protocol server that exposes the Prism REST API as MCP tools, so AI clients (Claude Desktop, Claude Code, Cursor, Gemini CLI, Gemini Code Assist, VS Code Copilot Chat) can read and write chores, tasks, events, shopping, messages, meals, goals, recipes, maintenance, points, weather, and family data directly from a chat window. Uses the existing API-token auth (Settings → Security → API Tokens) via env vars in the client config. Built on `@modelcontextprotocol/sdk` v1.29+ with stdio transport. Returns both legacy `content` text and modern `structuredContent` objects (2025-06-18 spec) so parsed-object-aware clients can skip a JSON parse step. Future remote/hosted variant would use Streamable HTTP + OAuth 2.1 per spec 2025-11-25 — current build is local-subprocess only. See [`.mcp/README.md`](../.mcp/README.md) for setup.
 
