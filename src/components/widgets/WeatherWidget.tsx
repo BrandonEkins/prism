@@ -485,7 +485,6 @@ function DayHeader({
 
         const leftPct  = ((day.low  - globalMin) / span) * 100;
         const widthPct = ((day.high - day.low)   / span) * 100;
-        const rightPct = ((day.high - globalMin)  / span) * 100;
 
         // Moon phase for this calendar day — global (no lat/lon needed since
         // phase is the same anywhere on Earth at a given instant). Sampled at
@@ -517,23 +516,27 @@ function DayHeader({
               <MoonGlyph phase={dayPhase} size={14} />
             </div>
 
-            {/* Track: proportional flex spacers keep temps outside the pill, no overflow */}
-            <div className="flex-1 flex items-center min-w-0">
-              <div style={{ flex: leftPct }} />
-              <span className="flex-none text-[11px] text-muted-foreground tabular-nums pr-1">
+            {/* Unified pill track (Apple Weather style): every day's track is the
+                same width across the week, with the colored day-range positioned
+                inside. Low and high temps sit at fixed left/right positions so
+                they line up across days too. */}
+            <div className="flex-1 flex items-center gap-1.5 min-w-0">
+              <span className="text-[11px] text-muted-foreground tabular-nums w-7 text-right flex-shrink-0">
                 {fmt(day.low)}°
               </span>
-              <div
-                className="h-4 rounded-full"
-                style={{
-                  flex: Math.max(widthPct, 4),
-                  background: `linear-gradient(to right, ${colorFor(day.low)}, ${colorFor(day.high)})`,
-                }}
-              />
-              <span className="flex-none text-[11px] font-semibold tabular-nums pl-1">
+              <div className="flex-1 relative h-4 rounded-full bg-muted-foreground/15 overflow-hidden min-w-0">
+                <div
+                  className="absolute top-0 bottom-0 rounded-full"
+                  style={{
+                    left: `${leftPct}%`,
+                    width: `${Math.max(widthPct, 4)}%`,
+                    background: `linear-gradient(to right, ${colorFor(day.low)}, ${colorFor(day.high)})`,
+                  }}
+                />
+              </div>
+              <span className="text-[11px] font-semibold tabular-nums w-7 text-left flex-shrink-0">
                 {fmt(day.high)}°
               </span>
-              <div style={{ flex: Math.max(100 - rightPct, 0) }} />
             </div>
           </div>
         );
