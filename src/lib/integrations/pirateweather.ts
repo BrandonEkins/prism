@@ -26,6 +26,7 @@ import type {
   MinutelyData,
 } from '@/components/widgets/WeatherWidget';
 import type { LocationParam, WeatherOptions } from './weather';
+import { getMoonData } from './moon';
 
 // ---------------------------------------------------------------------------
 // Pirate Weather (Dark Sky-compatible) response types
@@ -275,6 +276,9 @@ export async function fetchWeatherData(
   // ── Minutely precipitation data ───────────────────────────────────────────
   const minutelyData: MinutelyData[] | undefined = minutely?.data;
 
+  // ── Moon (local computation — Pirate Weather has phase but not rise/set) ──
+  const moon = getMoonData(config.lat, config.lon);
+
   return {
     location: config.locationName,
     units,
@@ -284,6 +288,13 @@ export async function fetchWeatherData(
     periods,
     sunrise,
     sunset,
+    moonrise: moon.moonrise,
+    moonset: moon.moonset,
+    moonPhase: moon.moonPhase,
+    moonIllumination: moon.moonIllumination,
+    moonPhaseName: moon.moonPhaseName,
+    lat: config.lat,
+    lon: config.lon,
     minutely: minutelyData,
     lastUpdated: new Date(),
   };

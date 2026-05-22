@@ -36,6 +36,7 @@ import type {
   HourlyForecast,
 } from '@/components/widgets/WeatherWidget';
 import type { LocationParam, WeatherOptions } from './weather';
+import { getMoonData } from './moon';
 
 function defaultImperialUnits(): WeatherUnits {
   return { temperature: 'F', windSpeed: 'mph', precipitation: 'in' };
@@ -343,6 +344,9 @@ export async function fetchWeatherData(
     }
   }
 
+  // ── Moon (local computation — Open-Meteo doesn't expose moon data) ────────
+  const moon = getMoonData(config.lat, config.lon);
+
   return {
     location: config.locationName,
     units,
@@ -352,6 +356,13 @@ export async function fetchWeatherData(
     periods,
     sunrise,
     sunset,
+    moonrise: moon.moonrise,
+    moonset: moon.moonset,
+    moonPhase: moon.moonPhase,
+    moonIllumination: moon.moonIllumination,
+    moonPhaseName: moon.moonPhaseName,
+    lat: config.lat,
+    lon: config.lon,
     // Open-Meteo doesn't provide minutely precip — leave undefined.
     minutely: undefined,
     lastUpdated: new Date(),

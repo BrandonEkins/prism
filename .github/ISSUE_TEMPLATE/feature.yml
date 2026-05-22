@@ -1,0 +1,32 @@
+name: Feature request
+description: Suggest something Prism should do
+title: "feat: "
+labels: ["enhancement", "roadmap"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the idea! Feature requests are filed as **roadmap items** — community 👍 / 👎 reactions on the issue signal priority.
+
+        See the current roadmap, sorted by votes:
+        https://github.com/sandydargoport/prism/issues?q=is%3Aissue+is%3Aopen+label%3Aroadmap+sort%3Areactions-%2B1-desc
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What's missing or awkward about Prism today? What workflow doesn't work?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed
+    attributes:
+      label: Proposed shape (optional)
+      description: How might this work? No need for a polished design — rough ideas help.
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives you've considered (optional)
+      description: Workarounds, other apps that do this well, anything you tried instead.

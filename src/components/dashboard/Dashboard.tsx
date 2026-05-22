@@ -331,7 +331,7 @@ export function Dashboard({
       <DashboardLayout className={className}>
         <DashboardHeader
           onScreensaverClick={() => window.dispatchEvent(new Event('prism:screensaver'))}
-          onEditClick={activeUser?.role === 'parent' ? layout.handleEditStart : undefined}
+          onEditClick={activeUser && activeUser.role !== 'parent' ? undefined : layout.handleEditStart}
         />
 
         {layout.isEditing && (

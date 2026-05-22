@@ -16,6 +16,8 @@ function transformWeather(json: unknown): WeatherData {
     hourly?: Array<{ time: string; condition: string; temp: number }>;
     sunrise?: string;
     sunset?: string;
+    moonrise?: string;
+    moonset?: string;
     [key: string]: unknown;
   };
   return {
@@ -29,8 +31,10 @@ function transformWeather(json: unknown): WeatherData {
       ...h,
       time: new Date(h.time),
     })),
-    sunrise: raw.sunrise ? new Date(raw.sunrise) : undefined,
-    sunset:  raw.sunset  ? new Date(raw.sunset)  : undefined,
+    sunrise:  raw.sunrise  ? new Date(raw.sunrise)  : undefined,
+    sunset:   raw.sunset   ? new Date(raw.sunset)   : undefined,
+    moonrise: raw.moonrise ? new Date(raw.moonrise) : undefined,
+    moonset:  raw.moonset  ? new Date(raw.moonset)  : undefined,
   } as unknown as WeatherData;
 }
 
