@@ -130,6 +130,58 @@ export function AuthProvider({ children }: AuthProviderProps) {
     return () => window.removeEventListener('prism:auth-expired', handleAuthExpired);
   }, []);
 
+  // Global "sign-in required" toast for mutation 401s.
+  //
+  // When a signed-out user edits a field, ticks a chore, adds a shopping
+  // item, etc., the underlying /api/* mutation returns 401. Without an
+  // interceptor, the UI just silently fails to update — confusing, since
+  // there's no signal that auth is the cause. We wrap window.fetch once
+  // here so every mutation response gets checked and a single toast fires
+  // the same way the dashboard edit-button click does.
+  //
+  // Constraints:
+  // - Only /api/* paths (don't interfere with third-party fetches like
+  //   Google Maps tiles, OneDrive image proxies, etc.).
+  // - Only mutation methods (POST/PUT/PATCH/DELETE). GETs to /api/* can
+  //   legitimately return 401 during the initial session check.
+  // - Debounced: a save burst (e.g. 10 chore updates) fires one toast,
+  //   not ten.
+  // - Suppressed while the PIN modal is open — requireAuth() already
+  //   toasted and is prompting; double-toast would be noise.
+  const showModalRef = useRef(false);
+  showModalRef.current = showModal;
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const originalFetch = window.fetch;
+    let lastToastAt = 0;
+    const DEBOUNCE_MS = 2500;
+
+    window.fetch = async (input, init) => {
+      const response = await originalFetch(input, init);
+      if (!response.ok && response.status === 401) {
+        const method = (init?.method ?? 'GET').toUpperCase();
+        const url = typeof input === 'string'
+          ? input
+          : input instanceof URL ? input.toString()
+          : (input as Request).url;
+        const isMutation = method !== 'GET' && method !== 'HEAD' && method !== 'OPTIONS';
+        const isApi = url.includes('/api/');
+        const now = Date.now();
+        if (isMutation && isApi && !showModalRef.current && now - lastToastAt > DEBOUNCE_MS) {
+          lastToastAt = now;
+          toast({
+            title: 'Sign in to make changes',
+            description: 'Enter your PIN to save edits.',
+            duration: 3000,
+          });
+        }
+      }
+      return response;
+    };
+
+    return () => { window.fetch = originalFetch; };
+  }, []);
+
   /**
    * Require authentication before proceeding
    * Returns the authenticated user or null if cancelled
