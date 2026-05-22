@@ -4,8 +4,12 @@ All notable changes to Prism are documented in this file.
 
 ## Unreleased
 
+### Changed — Auth
+- **Sign-in toast fires for every blocked mutation**: When a signed-out viewer edits a field, ticks a chore, adds a shopping item, or otherwise attempts any `/api/*` mutation, the call returned 401 and the UI silently failed to update — no signal that auth was the cause. A global `window.fetch` interceptor in `AuthProvider` now catches mutation 401s and toasts "Sign in to make changes — Enter your PIN to save edits." Debounced 2.5s so a save burst fires one toast, not ten. Suppressed while the PIN modal is already open (so `requireAuth`'s own toast doesn't double up). Limited to `/api/*` paths and POST/PUT/PATCH/DELETE so third-party fetches and the initial session-check GET aren't affected. Mirrors the dashboard edit-button behavior we added in 1.8.1.
+
 ### Changed — Weather
-- **Sun + moon info moved to the header row**: Sunrise time (with the lucide `Sunrise` icon, amber) and sunset time (with `Sunset`, orange) now sit alongside Feels Like / Humidity / Wind in the upper-right of the weather widget, joined by a small moon phase glyph. The redundant label strip under the daylight arc — sunrise / "Xh Ym" duration / sunset — is gone; the arc renders as pure visual now. The "Xh Ym" duration line in particular wasn't carrying its weight, and seeing sunrise/sunset times at the top alongside the temperature is faster to read than scanning down past the forecast.
+- **Sun + moon info now in the header row**: Sunrise (lucide `Sunrise` icon, amber) and sunset (`Sunset`, orange) times sit alongside Feels Like / Humidity / Wind in the upper-right of the weather widget. A moon-phase glyph + phase name (e.g. "Waning Gibbous") sits on its own line above the sun row.
+- **Daylight arc still carries its anchor strip**: sunrise / "Xh Ym" duration / sunset under the curve. (Briefly removed in favor of header-only; restored because the strip anchors the arc's edges and the duration reads well as context for the visualization.)
 
 ## [1.8.3] – 2026-05-22
 
