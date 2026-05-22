@@ -1063,15 +1063,23 @@ function SunriseSunsetArc({
         </div>
         {moonSamples && (
           <div className="relative h-3.5" style={{ color: MOON_COLOR }}>
-            {inWindow(moonRiseRaw) && moonrise && (
-              <span className="absolute -translate-x-1/2 whitespace-nowrap opacity-85"
-                style={{ left: xOf(moonRiseRaw) }}>
-                {fmt(moonrise)}
-              </span>
-            )}
+            {/* Always render moonrise/moonset times — even when one falls
+                outside today's window (a common "moon-up spans midnight" case).
+                Position by X when in window, clamp to the edge otherwise so
+                both times are always visible to the user. */}
+            {moonrise && (() => {
+              const clamped = Math.max(0, Math.min(1, moonRiseRaw ?? 0));
+              const outOfWindow = moonRiseRaw === null || !inWindow(moonRiseRaw);
+              return (
+                <span className="absolute whitespace-nowrap opacity-85 tabular-nums"
+                  style={outOfWindow
+                    ? (clamped >= 0.5 ? { right: 2 } : { left: 2 })
+                    : { left: xOf(clamped), transform: 'translateX(-50%)' }}>
+                  {fmt(moonrise)}
+                </span>
+              );
+            })()}
             {moonPhaseName && (() => {
-              // Apex = midpoint of moon-up window when both rise and set are in
-              // today's frame; else fall back to chart center.
               const apexX = inWindow(moonRiseRaw) && inWindow(moonSetRaw) && moonRiseRaw < moonSetRaw
                 ? (xOf(moonRiseRaw) + xOf(moonSetRaw)) / 2
                 : null;
@@ -1086,12 +1094,18 @@ function SunriseSunsetArc({
                 </span>
               );
             })()}
-            {inWindow(moonSetRaw) && moonset && (
-              <span className="absolute -translate-x-1/2 whitespace-nowrap opacity-85"
-                style={{ left: xOf(moonSetRaw) }}>
-                {fmt(moonset)}
-              </span>
-            )}
+            {moonset && (() => {
+              const clamped = Math.max(0, Math.min(1, moonSetRaw ?? 1));
+              const outOfWindow = moonSetRaw === null || !inWindow(moonSetRaw);
+              return (
+                <span className="absolute whitespace-nowrap opacity-85 tabular-nums"
+                  style={outOfWindow
+                    ? (clamped >= 0.5 ? { right: 2 } : { left: 2 })
+                    : { left: xOf(clamped), transform: 'translateX(-50%)' }}>
+                  {fmt(moonset)}
+                </span>
+              );
+            })()}
           </div>
         )}
       </div>

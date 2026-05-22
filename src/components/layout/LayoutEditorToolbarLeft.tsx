@@ -205,11 +205,11 @@ export function LayoutEditorToolbarLeft({
         </div>
       </PopoverButton>
 
-      {/* Preview popover */}
+      {/* Mini-map popover — layout overview + screen-size toggles + validation */}
       <PopoverButton
         label={
           <>
-            Preview
+            Mini-map
             {validation.errors.length > 0 && (
               <span className="ml-1 w-2 h-2 rounded-full bg-destructive inline-block" />
             )}
