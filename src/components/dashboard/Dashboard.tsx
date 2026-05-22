@@ -36,6 +36,7 @@ import { WIDGET_REGISTRY } from '@/components/widgets/widgetRegistry';
 import { renderScreensaverPreview } from '@/components/screensaver/ScreensaverWidgetPreview';
 import type { WidgetConfig } from '@/lib/hooks/useLayouts';
 import { WidgetErrorBoundary } from '@/components/dashboard/WidgetErrorBoundary';
+import { WidgetExpandProvider, useWidgetExpand } from '@/components/dashboard/WidgetExpandProvider';
 import { useDashboardData } from './useDashboardData';
 import { useDashboardLayout } from './useDashboardLayout';
 import { buildWidgetProps } from './useWidgetProps';
@@ -272,15 +273,19 @@ export function Dashboard({
     return constraints;
   }, []);
 
-  const renderDashboardWidget = useCallback((w: WidgetConfig) => {
-    const reg = WIDGET_REGISTRY[w.i];
+  // Renders a single widget at the given gridW/gridH. Used both inside the
+  // dashboard grid (sized to the widget's saved cells) and inside the
+  // magnify overlay (sized to the larger overlay viewport so the widget
+  // re-renders in its non-compact form).
+  const renderWidgetAt = useCallback((widgetId: string, gridW: number, gridH: number) => {
+    const reg = WIDGET_REGISTRY[widgetId];
     if (!reg) {
-      return <div style={{ background: '#330', color: '#ff0', padding: 8 }}>Unknown widget: {w.i}</div>;
+      return <div style={{ background: '#330', color: '#ff0', padding: 8 }}>Unknown widget: {widgetId}</div>;
     }
     const Component = reg.component;
-    const props = { ...widgetProps[w.i] || {}, gridW: w.w, gridH: w.h };
+    const props = { ...widgetProps[widgetId] || {}, gridW, gridH };
     return (
-      <WidgetBoundary name={w.i}>
+      <WidgetBoundary name={widgetId}>
         <Suspense fallback={<div className="flex items-center justify-center h-full text-muted-foreground text-sm">Loading...</div>}>
           <Component {...props} />
         </Suspense>
@@ -288,6 +293,23 @@ export function Dashboard({
     );
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data]);
+
+  // Used by the magnify overlay — pass big enough gridW/gridH that any
+  // widget with a compact-mode threshold re-renders in expanded form.
+  const renderMagnifiedWidget = useCallback(
+    (widgetId: string) => renderWidgetAt(widgetId, 24, 20),
+    [renderWidgetAt],
+  );
+
+  const renderDashboardWidget = useCallback((w: WidgetConfig) => {
+    const inner = renderWidgetAt(w.i, w.w, w.h);
+    // In edit mode, drag/select handlers own the widget chrome — don't
+    // also fire a magnify on double-tap. Outside edit mode, wrap with a
+    // double-click handler that pulls the magnify trigger from context.
+    if (layout.isEditing) return inner;
+    return <DashboardWidgetCell widgetId={w.i}>{inner}</DashboardWidgetCell>;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [layout.isEditing, renderWidgetAt]);
 
   const renderSsWidget = useCallback((w: WidgetConfig) => {
     // Use actual widgets with real data in the screensaver designer
@@ -396,20 +418,22 @@ export function Dashboard({
           />
         ) : (
           <WidgetErrorBoundary>
-            <LayoutGridEditor
-              layout={layout.activeWidgets}
-              onLayoutChange={layout.isEditing ? layout.setEditingWidgets : () => {}}
-              isEditable={layout.isEditing}
-              renderWidget={renderDashboardWidget}
-              widgetConstraints={dashboardConstraints}
-              margin={8}
-              headerOffset={layout.isEditing ? 140 : uiHidden ? 0 : 50}
-              bottomOffset={bottomOffset}
-              screenGuideOrientation={screenGuideOrientation}
-              enabledSizes={enabledSizes}
-              onScrollInfo={handleScrollInfo}
-              scrollToRef={scrollToGridRef}
-            />
+            <WidgetExpandProvider renderMagnified={renderMagnifiedWidget}>
+              <LayoutGridEditor
+                layout={layout.activeWidgets}
+                onLayoutChange={layout.isEditing ? layout.setEditingWidgets : () => {}}
+                isEditable={layout.isEditing}
+                renderWidget={renderDashboardWidget}
+                widgetConstraints={dashboardConstraints}
+                margin={8}
+                headerOffset={layout.isEditing ? 140 : uiHidden ? 0 : 50}
+                bottomOffset={bottomOffset}
+                screenGuideOrientation={screenGuideOrientation}
+                enabledSizes={enabledSizes}
+                onScrollInfo={handleScrollInfo}
+                scrollToRef={scrollToGridRef}
+              />
+            </WidgetExpandProvider>
           </WidgetErrorBoundary>
         )}
 
@@ -507,5 +531,41 @@ export function Dashboard({
       </DashboardLayout>
       <ConfirmDialog {...confirmDialogProps} />
     </AppShell>
+  );
+}
+
+/**
+ * Wraps a widget body with a double-tap-to-magnify handler. Only rendered
+ * in the interactive (non-edit-mode) dashboard path, so the screensaver
+ * / away / babysitter render paths never get this behavior.
+ *
+ * The handler stops at the cell wrapper — it does NOT walk into internal
+ * widget content. That means double-clicking an item inside a widget
+ * (e.g. a shopping list row) still triggers the item's own click first,
+ * and the magnify only fires when there's no inner click target.
+ */
+function DashboardWidgetCell({
+  widgetId,
+  children,
+}: {
+  widgetId: string;
+  children: React.ReactNode;
+}) {
+  const { triggerExpand, expandedId } = useWidgetExpand();
+  const handleDoubleClick = React.useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => triggerExpand(widgetId, e.currentTarget),
+    [widgetId, triggerExpand],
+  );
+  // Hide the in-grid instance while its clone is the magnified modal —
+  // avoids two copies of the same widget animating at once.
+  const hidden = expandedId === widgetId;
+  return (
+    <div
+      onDoubleClick={handleDoubleClick}
+      className="h-full w-full"
+      style={{ opacity: hidden ? 0 : 1, transition: 'opacity 100ms' }}
+    >
+      {children}
+    </div>
   );
 }
