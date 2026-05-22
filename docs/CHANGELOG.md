@@ -4,6 +4,9 @@ All notable changes to Prism are documented in this file.
 
 ## Unreleased
 
+### Changed — Weather
+- **Sun + moon info moved to the header row**: Sunrise time (with the lucide `Sunrise` icon, amber) and sunset time (with `Sunset`, orange) now sit alongside Feels Like / Humidity / Wind in the upper-right of the weather widget, joined by a small moon phase glyph. The redundant label strip under the daylight arc — sunrise / "Xh Ym" duration / sunset — is gone; the arc renders as pure visual now. The "Xh Ym" duration line in particular wasn't carrying its weight, and seeing sunrise/sunset times at the top alongside the temperature is faster to read than scanning down past the forecast.
+
 ## [1.8.3] – 2026-05-22
 
 ### Added — Dashboard

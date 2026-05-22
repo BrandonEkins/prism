@@ -33,6 +33,8 @@ import {
   CloudSnow,
   Sun,
   CloudSun,
+  Sunrise,
+  Sunset,
   Wind,
   Droplets,
   Zap,
@@ -331,6 +333,10 @@ export const WeatherWidget = React.memo(function WeatherWidget({
           weather={weatherData.current}
           location={weatherData.location}
           units={units}
+          sunrise={weatherData.sunrise}
+          sunset={weatherData.sunset}
+          moonPhase={weatherData.moonPhase}
+          moonPhaseName={weatherData.moonPhaseName}
         />
 
         {/* HOURLY FORECAST */}
@@ -355,19 +361,12 @@ export const WeatherWidget = React.memo(function WeatherWidget({
               />
             </div>
 
-            {/* Sunrise / sunset arc — replaced by precip chart when rain is imminent */}
+            {/* Sun + moon arc — replaced by precip chart when rain is imminent.
+                Sunrise/sunset times + moon phase now live in the header
+                row (CurrentConditions), so the arc renders without a
+                duplicate label strip. */}
             {showSunArc && (
               <div className="flex flex-col gap-1">
-                <div className="flex items-baseline justify-between gap-2">
-                  <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                    Daylight
-                  </span>
-                  <span className="text-[10px] tabular-nums text-muted-foreground">
-                    {weatherData.sunrise!.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
-                    {' – '}
-                    {weatherData.sunset!.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
-                  </span>
-                </div>
                 <SunriseSunsetArc
                   sunrise={weatherData.sunrise!}
                   sunset={weatherData.sunset!}
@@ -402,13 +401,22 @@ function CurrentConditions({
   weather,
   location,
   units,
+  sunrise,
+  sunset,
+  moonPhase,
+  moonPhaseName,
 }: {
   weather: CurrentWeather;
   location: string;
   units: WeatherUnits;
+  sunrise?: Date;
+  sunset?: Date;
+  moonPhase?: number;
+  moonPhaseName?: string;
 }) {
   const temp  = formatTemp(weather.temperature, units);
   const feels = formatTemp(weather.feelsLike, units);
+  const fmtTime = (d: Date) => d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true });
 
   return (
     <div className="flex items-start justify-between gap-2">
@@ -442,6 +450,27 @@ function CurrentConditions({
           <Wind className="h-3 w-3" />
           <span>{weather.windSpeed} {units.windSpeed}</span>
         </div>
+        {(sunrise || sunset || moonPhase !== undefined) && (
+          <div className="flex items-center justify-end gap-2 pt-0.5 tabular-nums">
+            {sunrise && (
+              <span className="flex items-center gap-0.5" title="Sunrise">
+                <Sunrise className="h-3 w-3" style={{ color: '#FBBF24' }} />
+                {fmtTime(sunrise)}
+              </span>
+            )}
+            {sunset && (
+              <span className="flex items-center gap-0.5" title="Sunset">
+                <Sunset className="h-3 w-3" style={{ color: '#F97316' }} />
+                {fmtTime(sunset)}
+              </span>
+            )}
+            {moonPhase !== undefined && (
+              <span className="flex items-center" title={moonPhaseName ? `Moon — ${moonPhaseName}` : 'Moon phase'}>
+                <MoonGlyph phase={moonPhase} size={12} />
+              </span>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -919,16 +948,11 @@ function SunriseSunsetArc({
   const moonSetRaw  = moonset  ? (moonset.getTime()  - midnightMs) / dayMs : null;
   const inWindow = (f: number | null): f is number => f !== null && f >= 0 && f <= 1;
 
-  const fmt = (d: Date) => d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true });
-  const sunDayMs = sunset.getTime() - sunrise.getTime();
-  const dayH = Math.floor(sunDayMs / 3_600_000);
-  const dayM = Math.round((sunDayMs % 3_600_000) / 60_000);
 
   const SUN_COLOR = '#FBBF24';   // amber-400 — sun at zenith
   const SUN_LOW   = '#F97316';   // orange-500 — sun at low altitude
   const SUN_HORIZON = '#EF4444'; // red-500 — sun at the horizon
   const MOON_COLOR = '#60A5FA';
-  const labelRowH = 14;
 
   // Pick a sun-dot color that matches where it sits on the altitude gradient
   // — red near the horizon, amber high in the sky. Bucketed (rather than
@@ -1034,31 +1058,6 @@ function SunriseSunsetArc({
           </g>
         )}
       </svg>
-
-      {/* Single-row label strip — sunrise / duration / sunset only.
-          Moon labels intentionally omitted: the moon arc, blue tick marks,
-          phase-shaped dot, and per-day forecast glyphs already convey the
-          information, and stacking a second text row read as visual noise. */}
-      <div className="relative text-[11px] text-muted-foreground/70 select-none" style={{ height: labelRowH }}>
-        <div className="relative h-3.5">
-          {inWindow(sunRiseFrac) && (
-            <span className="absolute -translate-x-1/2 whitespace-nowrap" style={{ left: xOf(sunRiseFrac) }}>
-              {fmt(sunrise)}
-            </span>
-          )}
-          {inWindow(sunRiseFrac) && inWindow(sunSetFrac) && (
-            <span className="absolute -translate-x-1/2 whitespace-nowrap font-medium"
-              style={{ left: (xOf(sunRiseFrac) + xOf(sunSetFrac)) / 2, color: SUN_COLOR, opacity: 0.85 }}>
-              {dayH}h {dayM}m
-            </span>
-          )}
-          {inWindow(sunSetFrac) && (
-            <span className="absolute -translate-x-1/2 whitespace-nowrap" style={{ left: xOf(sunSetFrac) }}>
-              {fmt(sunset)}
-            </span>
-          )}
-        </div>
-      </div>
     </div>
   );
 }
