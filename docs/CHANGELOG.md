@@ -4,6 +4,9 @@ All notable changes to Prism are documented in this file.
 
 ## Unreleased
 
+### Added — Integrations
+- **MCP server for Prism (`.mcp/`)**: Self-contained Model Context Protocol server that exposes the Prism REST API as MCP tools, so AI clients (Claude Desktop, Claude Code, Cursor, Gemini CLI, Gemini Code Assist, VS Code Copilot Chat) can read and write chores, tasks, events, shopping, messages, meals, goals, recipes, maintenance, points, weather, and family data directly from a chat window. Uses the existing API-token auth (Settings → Security → API Tokens) via env vars in the client config. Built on `@modelcontextprotocol/sdk` v1.29+ with stdio transport. Returns both legacy `content` text and modern `structuredContent` objects (2025-06-18 spec) so parsed-object-aware clients can skip a JSON parse step. Future remote/hosted variant would use Streamable HTTP + OAuth 2.1 per spec 2025-11-25 — current build is local-subprocess only. Originally contributed by [@meatyhippo](https://github.com/meatyhippo) in [#61](https://github.com/sandydargoport/prism/pull/61) (closed by the author before merging) and cherry-picked here with SDK bump + structured-content modernization. See [`.mcp/README.md`](../.mcp/README.md) for setup.
+
 ## [1.8.1] – 2026-05-21
 
 > Weather widget overhaul (sun + moon on one altitude arc, red→orange→amber gradient by altitude, per-day moon phase glyphs, Apple-style temperature pill tracks), bus tracker fixes for the duplicate AM school stop and PM route ordering, and a round of layout editor polish (smarter widget placement, alphabetized add menu, sign-in gate, edit-mode click protection).
