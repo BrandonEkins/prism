@@ -553,17 +553,18 @@ function DashboardWidgetCell({
 }) {
   const { triggerExpand, expandedId } = useWidgetExpand();
   const handleDoubleClick = React.useCallback(
-    (e: React.MouseEvent<HTMLDivElement>) => triggerExpand(widgetId, e.currentTarget),
+    () => triggerExpand(widgetId),
     [widgetId, triggerExpand],
   );
   // Hide the in-grid instance while its clone is the magnified modal —
-  // avoids two copies of the same widget animating at once.
+  // avoids two copies of the same widget rendering simultaneously and
+  // bleeding through the dimmed backdrop.
   const hidden = expandedId === widgetId;
   return (
     <div
       onDoubleClick={handleDoubleClick}
       className="h-full w-full"
-      style={{ opacity: hidden ? 0 : 1, transition: 'opacity 100ms' }}
+      style={{ visibility: hidden ? 'hidden' : 'visible' }}
     >
       {children}
     </div>
