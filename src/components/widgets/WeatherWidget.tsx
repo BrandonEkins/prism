@@ -165,6 +165,51 @@ export interface WeatherWidgetProps {
 
 
 /**
+ * MOON PHASE GLYPH GEOMETRY (shared)
+ *
+ * Returns an SVG path string for the illuminated portion of the moon at the
+ * given phase: a half-circle on the lit side plus an elliptical arc whose
+ * x-radius shrinks toward zero at the quarter phases. At new moon (phase=0)
+ * the two arcs overlap and the closed path has zero area — caller should
+ * combine with an outlined disc so new moon reads as an empty circle.
+ *
+ * Used in two places: inline in the SunriseSunsetArc SVG, and as the body
+ * of the standalone <MoonGlyph> component (forecast day rows).
+ */
+function moonPhasePath(cx: number, cy: number, r: number, phase: number): string {
+  const ph = ((phase % 1) + 1) % 1;
+  const rxAbs = Math.abs(Math.cos(2 * Math.PI * ph)) * r;
+  const outerSweep = ph < 0.5 ? 1 : 0;
+  const innerSweep = Math.floor(ph * 4) % 2 === 1 ? 1 : 0;
+  return `M ${cx},${cy - r} A ${r},${r} 0 0 ${outerSweep} ${cx},${cy + r} A ${rxAbs},${r} 0 0 ${innerSweep} ${cx},${cy - r} Z`;
+}
+
+/**
+ * Small standalone moon glyph — outlined disc + lit fraction. Used next to
+ * each forecast day to show the night's moon phase at a glance.
+ */
+function MoonGlyph({
+  phase,
+  size = 14,
+  color = '#60A5FA',
+}: {
+  phase: number;
+  size?: number;
+  color?: string;
+}) {
+  const r = size / 2 - 0.5;
+  const c = size / 2;
+  return (
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} aria-hidden>
+      <circle cx={c} cy={c} r={r} fill="none" stroke={color}
+        strokeOpacity={0.5} strokeWidth={0.8} />
+      <path d={moonPhasePath(c, c, r, phase)} fill={color} opacity={0.9} />
+    </svg>
+  );
+}
+
+
+/**
  * ABSOLUTE TEMPERATURE COLOR SCALE
  * Maps a Fahrenheit value to a color on a fixed scale.
  * Since ForecastDay temps are always stored in °F, this works for both
@@ -442,11 +487,18 @@ function DayHeader({
         const widthPct = ((day.high - day.low)   / span) * 100;
         const rightPct = ((day.high - globalMin)  / span) * 100;
 
+        // Moon phase for this calendar day — global (no lat/lon needed since
+        // phase is the same anywhere on Earth at a given instant). Sampled at
+        // local noon to avoid edge-of-day phase rollover artifacts.
+        const dayNoon = new Date(day.date);
+        dayNoon.setHours(12, 0, 0, 0);
+        const dayPhase = SunCalc.getMoonIllumination(dayNoon).phase;
+
         return (
           <div key={i} className="flex items-center gap-2 py-1">
 
-            {/* Day label + precip % + icon — all one left cell */}
-            <div className="flex items-center gap-1.5 w-24 flex-shrink-0">
+            {/* Day label + precip % + weather icon + moon phase glyph */}
+            <div className="flex items-center gap-1.5 w-28 flex-shrink-0">
               <div className="w-12 flex-shrink-0 h-8 flex flex-col justify-center">
                 <div className="text-[11px] font-bold tracking-wide text-foreground leading-tight whitespace-nowrap">
                   {label}
@@ -462,6 +514,7 @@ function DayHeader({
                 condition={day.condition}
                 className="h-5 w-5 flex-shrink-0 text-muted-foreground"
               />
+              <MoonGlyph phase={dayPhase} size={14} />
             </div>
 
             {/* Track: proportional flex spacers keep temps outside the pill, no overflow */}
@@ -871,16 +924,6 @@ function SunriseSunsetArc({
   const dayH = Math.floor(sunDayMs / 3_600_000);
   const dayM = Math.round((sunDayMs % 3_600_000) / 60_000);
 
-  // Moon phase glyph path — single closed shape (half-circle on the lit side +
-  // ellipse for the terminator). Mirrors the standalone MoonIcon component.
-  const phasePath = (cx: number, cy: number, r: number, phase: number): string => {
-    const ph = ((phase % 1) + 1) % 1;
-    const rxAbs = Math.abs(Math.cos(2 * Math.PI * ph)) * r;
-    const outerSweep = ph < 0.5 ? 1 : 0;
-    const innerSweep = Math.floor(ph * 4) % 2 === 1 ? 1 : 0;
-    return `M ${cx},${cy - r} A ${r},${r} 0 0 ${outerSweep} ${cx},${cy + r} A ${rxAbs},${r} 0 0 ${innerSweep} ${cx},${cy - r} Z`;
-  };
-
   const SUN_COLOR = '#FBBF24';   // amber-400 — sun at zenith
   const SUN_LOW   = '#F97316';   // orange-500 — sun at low altitude
   const SUN_HORIZON = '#EF4444'; // red-500 — sun at the horizon
@@ -985,14 +1028,17 @@ function SunriseSunsetArc({
               stroke={isMoonUp ? MOON_COLOR : '#94A3B8'}
               strokeOpacity={isMoonUp ? 0.65 : 0.4}
               strokeWidth={1} />
-            <path d={phasePath(moonX, moonY, 6, moonPhase)}
+            <path d={moonPhasePath(moonX, moonY, 6, moonPhase)}
               fill={isMoonUp ? MOON_COLOR : '#94A3B8'}
               opacity={isMoonUp ? 1 : 0.55} />
           </g>
         )}
       </svg>
 
-      {/* Two-row label strip — sunrise / duration / sunset on top, moon times below */}
+      {/* Two-row label strip — sunrise / duration / sunset on top, moon times below.
+          Duration sits at the sun's apex (midpoint between rise and set), tinted
+          amber to match the arc. Phase name sits at the moon's apex when both
+          rise and set fall in today's window; falls back to chart center otherwise. */}
       <div className="relative text-[11px] text-muted-foreground/70 select-none" style={{ height: labelRowH }}>
         <div className="relative h-3.5">
           {inWindow(sunRiseFrac) && (
@@ -1001,8 +1047,8 @@ function SunriseSunsetArc({
             </span>
           )}
           {inWindow(sunRiseFrac) && inWindow(sunSetFrac) && (
-            <span className="absolute -translate-x-1/2 whitespace-nowrap opacity-60"
-              style={{ left: (xOf(sunRiseFrac) + xOf(sunSetFrac)) / 2 }}>
+            <span className="absolute -translate-x-1/2 whitespace-nowrap font-medium"
+              style={{ left: (xOf(sunRiseFrac) + xOf(sunSetFrac)) / 2, color: SUN_COLOR, opacity: 0.85 }}>
               {dayH}h {dayM}m
             </span>
           )}
@@ -1020,11 +1066,23 @@ function SunriseSunsetArc({
                 {fmt(moonrise)}
               </span>
             )}
-            {moonPhaseName && (
-              <span className="absolute left-1/2 -translate-x-1/2 whitespace-nowrap opacity-60">
-                {moonPhaseName}
-              </span>
-            )}
+            {moonPhaseName && (() => {
+              // Apex = midpoint of moon-up window when both rise and set are in
+              // today's frame; else fall back to chart center.
+              const apexX = inWindow(moonRiseRaw) && inWindow(moonSetRaw) && moonRiseRaw < moonSetRaw
+                ? (xOf(moonRiseRaw) + xOf(moonSetRaw)) / 2
+                : null;
+              return apexX !== null ? (
+                <span className="absolute -translate-x-1/2 whitespace-nowrap font-medium opacity-85"
+                  style={{ left: apexX }}>
+                  {moonPhaseName}
+                </span>
+              ) : (
+                <span className="absolute left-1/2 -translate-x-1/2 whitespace-nowrap opacity-60">
+                  {moonPhaseName}
+                </span>
+              );
+            })()}
             {inWindow(moonSetRaw) && moonset && (
               <span className="absolute -translate-x-1/2 whitespace-nowrap opacity-85"
                 style={{ left: xOf(moonSetRaw) }}>
