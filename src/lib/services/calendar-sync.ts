@@ -1,6 +1,11 @@
 import { db } from '@/lib/db/client';
-import { calendarSources, events } from '@/lib/db/schema';
-import { eq, and, gte, lte, sql } from 'drizzle-orm';
+import { calendarSources, events, tasks, taskLists } from '@/lib/db/schema';
+import { eq, and, gte, lte, sql, inArray } from 'drizzle-orm';
+import {
+  fetchCalDAVEvents,
+  fetchCalDAVTasks,
+  type CalDAVConnectionConfig,
+} from '@/lib/integrations/caldav';
 import {
   fetchCalendarEvents,
   fetchCalendarList,
@@ -687,4 +692,312 @@ export async function getCalendarSourcesWithStatus() {
       },
     },
   });
+}
+
+// ─── CalDAV sync ───────────────────────────────────────────────────────────
+//
+// Read-only sync from any CalDAV server (Apple iCloud, Nextcloud, Radicale,
+// Baikal, Synology). Two-way write (createCalendarObject) isn't wired up yet
+// — that lives in a follow-up branch. Events from CalDAV land in the same
+// `events` table as Google + iCal; VTODO items land in `tasks`.
+
+/**
+ * Sync events from a single CalDAV calendar source.
+ */
+export async function syncCalDAVCalendarSource(
+  sourceId: string,
+  options: { timeMin?: Date; timeMax?: Date } = {}
+): Promise<{ synced: number; errors: string[] }> {
+  const errors: string[] = [];
+  let synced = 0;
+
+  const source = await db.query.calendarSources.findFirst({
+    where: eq(calendarSources.id, sourceId),
+  });
+
+  if (!source || source.provider !== 'caldav') {
+    return { synced: 0, errors: ['Not a CalDAV source'] };
+  }
+
+  if (!source.accessToken) {
+    return { synced: 0, errors: ['No credentials available'] };
+  }
+
+  let password: string;
+  try {
+    password = decrypt(source.accessToken);
+  } catch {
+    return { synced: 0, errors: ['Failed to decrypt credentials — may need to reconnect'] };
+  }
+
+  const config = source.syncErrors as CalDAVConnectionConfig | null;
+  if (!config?.serverUrl || !config?.username) {
+    return { synced: 0, errors: ['Missing CalDAV connection config'] };
+  }
+
+  // Skip event sync for sources whose discovery flagged them as VTODO-only.
+  // (undefined === legacy row from before flags were stored, so default to
+  // running the sync — back-compatible.)
+  if (config.supportsEvents === false) {
+    return { synced: 0, errors: [] };
+  }
+
+  const timeMin = options.timeMin || new Date(Date.now() - DEFAULT_TIME_MIN_MS);
+  const timeMax = options.timeMax || new Date(Date.now() + DEFAULT_TIME_MAX_MS);
+
+  try {
+    const caldavEvents = await fetchCalDAVEvents(
+      config.serverUrl,
+      config.username,
+      password,
+      source.sourceCalendarId,
+      timeMin,
+      timeMax,
+    );
+
+    for (const event of caldavEvents) {
+      const existing = await db.query.events.findFirst({
+        where: and(
+          eq(events.calendarSourceId, sourceId),
+          eq(events.externalEventId, event.uid),
+        ),
+      });
+
+      const eventData = {
+        title: event.title,
+        description: event.description,
+        location: event.location,
+        startTime: event.startTime,
+        endTime: event.endTime,
+        allDay: event.allDay,
+        color: event.color || source.color,
+        recurring: event.recurring,
+        recurrenceRule: event.recurrenceRule,
+        calendarSourceId: sourceId,
+        externalEventId: event.uid,
+        updatedAt: new Date(),
+      };
+
+      if (existing) {
+        await db.update(events).set(eventData).where(eq(events.id, existing.id));
+      } else {
+        await db.insert(events).values(eventData);
+      }
+
+      synced++;
+    }
+
+    // Drop events that no longer exist upstream (within the sync window only —
+    // matches the behavior of the Google + iCal paths in this file).
+    const upstreamUids = new Set(caldavEvents.map((e) => e.uid));
+    const localEvents = await db.query.events.findMany({
+      where: and(
+        eq(events.calendarSourceId, sourceId),
+        gte(events.startTime, timeMin),
+        lte(events.startTime, timeMax),
+      ),
+    });
+
+    for (const local of localEvents) {
+      if (local.externalEventId && !upstreamUids.has(local.externalEventId)) {
+        await db.delete(events).where(eq(events.id, local.id));
+      }
+    }
+
+    await db
+      .update(calendarSources)
+      .set({ lastSynced: new Date(), syncErrors: config })
+      .where(eq(calendarSources.id, sourceId));
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    errors.push(`CalDAV sync failed: ${msg}`);
+
+    await db
+      .update(calendarSources)
+      .set({
+        syncErrors: { ...config, lastError: msg, lastErrorAt: new Date().toISOString() },
+      })
+      .where(eq(calendarSources.id, sourceId));
+  }
+
+  return { synced, errors };
+}
+
+/**
+ * Sync tasks (VTODO) from a CalDAV calendar source into Prism tasks.
+ */
+export async function syncCalDAVTasks(
+  sourceId: string,
+): Promise<{ synced: number; errors: string[] }> {
+  const errors: string[] = [];
+  let synced = 0;
+
+  const source = await db.query.calendarSources.findFirst({
+    where: eq(calendarSources.id, sourceId),
+  });
+
+  if (!source || source.provider !== 'caldav') {
+    return { synced: 0, errors: ['Not a CalDAV source'] };
+  }
+  if (!source.accessToken) {
+    return { synced: 0, errors: ['No credentials available'] };
+  }
+
+  let password: string;
+  try {
+    password = decrypt(source.accessToken);
+  } catch {
+    return { synced: 0, errors: ['Failed to decrypt credentials'] };
+  }
+
+  const config = source.syncErrors as CalDAVConnectionConfig | null;
+  if (!config?.serverUrl || !config?.username) {
+    return { synced: 0, errors: ['Missing CalDAV connection config'] };
+  }
+
+  // Skip task sync for sources whose discovery flagged them as VEVENT-only.
+  if (config.supportsTasks === false) {
+    return { synced: 0, errors: [] };
+  }
+
+  try {
+    const caldavTasks = await fetchCalDAVTasks(
+      config.serverUrl,
+      config.username,
+      password,
+      source.sourceCalendarId,
+    );
+
+    // Apple iCloud injects metadata VTODOs into reminder lists whose data
+    // has migrated to the CloudKit-only Reminders system. Those don't
+    // represent real tasks — they're nag messages telling the user where
+    // their data went. Skip them so Prism doesn't show them as real tasks.
+    const APPLE_PLACEHOLDER_TITLES = new Set([
+      'Where are my reminders?',
+      'The creator of this list has upgraded these reminders.',
+    ]);
+
+    const realTasks = caldavTasks.filter(
+      t => !APPLE_PLACEHOLDER_TITLES.has(t.title.trim())
+    );
+
+    // Lazy task-list creation: if a CalDAV source returns only Apple's
+    // placeholder VTODOs (the common case for modern iCloud Reminders, whose
+    // real data lives in CloudKit and isn't reachable over CalDAV), don't
+    // pollute Settings with an empty task_list that the user can't populate.
+    // Only materialize a Prism task_list once we actually have real content
+    // to put in it, or once we already created one on a prior sync.
+    let taskListId: string | null = config.taskListId ?? null;
+    if (!taskListId && realTasks.length > 0) {
+      const existingTaskForSource = await db.query.tasks.findFirst({
+        where: sql`${tasks.externalId} LIKE ${`caldav:${source.id}:%`}`,
+        columns: { listId: true },
+      });
+      taskListId = existingTaskForSource?.listId ?? null;
+    }
+    if (!taskListId && realTasks.length > 0) {
+      const [newList] = await db
+        .insert(taskLists)
+        .values({
+          name: source.displayName || 'CalDAV Reminders',
+          color: source.color || '#6366f1',
+        })
+        .returning();
+      if (newList) {
+        taskListId = newList.id;
+        await db.update(calendarSources)
+          .set({ syncErrors: { ...config, taskListId: newList.id } })
+          .where(eq(calendarSources.id, source.id));
+      }
+    }
+
+    if (taskListId) {
+      await db.update(tasks)
+        .set({ listId: taskListId })
+        .where(and(
+          sql`${tasks.externalId} LIKE ${`caldav:${source.id}:%`}`,
+          sql`${tasks.listId} IS NULL`,
+        ));
+    }
+
+    const seenExternalIds = new Set<string>();
+
+    for (const task of realTasks) {
+      const externalId = `caldav:${source.id}:${task.uid}`;
+      seenExternalIds.add(externalId);
+
+      const existing = await db.query.tasks.findFirst({
+        where: eq(tasks.externalId, externalId),
+      });
+
+      const taskData = {
+        title: task.title,
+        description: task.description,
+        dueDate: task.dueDate || null,
+        completed: task.completed,
+        completedAt: task.completedAt,
+        priority: (task.priority || 'medium') as 'high' | 'medium' | 'low',
+        category: task.categories[0] || null,
+        listId: taskListId,
+        externalId,
+        externalUpdatedAt: new Date(),
+        lastSynced: new Date(),
+        updatedAt: new Date(),
+      };
+
+      if (existing) {
+        await db.update(tasks).set(taskData).where(eq(tasks.id, existing.id));
+      } else {
+        await db.insert(tasks).values(taskData);
+      }
+
+      synced++;
+    }
+
+    // Mirror upstream deletions: any caldav-prefixed task for this source
+    // that wasn't in the fetch round-trips out of Prism too. Also catches
+    // existing placeholder rows that pre-date the title filter above.
+    const allLocal = await db.query.tasks.findMany({
+      where: sql`${tasks.externalId} LIKE ${`caldav:${source.id}:%`}`,
+      columns: { id: true, externalId: true },
+    });
+    const stale = allLocal.filter(t => t.externalId && !seenExternalIds.has(t.externalId));
+    if (stale.length > 0) {
+      await db.delete(tasks).where(inArray(tasks.id, stale.map(t => t.id)));
+    }
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    errors.push(`CalDAV task sync failed: ${msg}`);
+  }
+
+  return { synced, errors };
+}
+
+/**
+ * Sync all enabled CalDAV calendar sources (events + tasks).
+ */
+export async function syncAllCalDAVCalendars(
+  options: { timeMin?: Date; timeMax?: Date } = {}
+): Promise<{ total: number; errors: string[] }> {
+  const allErrors: string[] = [];
+  let total = 0;
+
+  const sources = await db.query.calendarSources.findMany({
+    where: and(
+      eq(calendarSources.provider, 'caldav'),
+      eq(calendarSources.enabled, true),
+    ),
+  });
+
+  for (const source of sources) {
+    const eventResult = await syncCalDAVCalendarSource(source.id, options);
+    total += eventResult.synced;
+    allErrors.push(...eventResult.errors);
+
+    const taskResult = await syncCalDAVTasks(source.id);
+    total += taskResult.synced;
+    allErrors.push(...taskResult.errors);
+  }
+
+  return { total, errors: allErrors };
 }

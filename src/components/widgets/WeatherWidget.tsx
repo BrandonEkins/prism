@@ -302,11 +302,14 @@ export const WeatherWidget = React.memo(function WeatherWidget({
   const resolvedDays = forecastDays ?? Math.min(7, Math.max(1, weatherData.forecast.length));
 
   // Pre-filter to today-or-future so the label count matches what renders.
+  // Provider stores forecast.date as UTC-midnight of the location's calendar
+  // day (see openmeteo.ts comment), so read via getUTC* to compare against
+  // the viewer's local-today calendar string.
   const now = new Date();
   const todayLocalStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
   const visibleForecast = weatherData.forecast.slice(0, resolvedDays).filter((day) => {
     const d = new Date(day.date);
-    const s = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const s = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
     return s >= todayLocalStr;
   });
 
@@ -507,8 +510,10 @@ function DayHeader({
   return (
     <div className="flex flex-col mt-1">
       {days.map((day, i) => {
+        // Provider anchors forecast.date at UTC midnight of the location's
+        // calendar day; getUTC* avoids TZ slippage between server + viewer.
         const d = new Date(day.date);
-        const dayLocalStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        const dayLocalStr = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
         const isToday = dayLocalStr === todayLocalStr;
         const label = isToday ? 'TODAY' : day.dayName.toUpperCase();
 
@@ -553,7 +558,7 @@ function DayHeader({
               <span className="text-[11px] text-muted-foreground tabular-nums w-7 text-right flex-shrink-0">
                 {fmt(day.low)}°
               </span>
-              <div className="flex-1 relative h-4 rounded-full bg-muted-foreground/25 ring-1 ring-inset ring-muted-foreground/15 overflow-hidden min-w-0">
+              <div className="flex-1 relative h-4 rounded-full bg-black/10 dark:bg-white/15 ring-1 ring-inset ring-black/10 dark:ring-white/15 overflow-hidden min-w-0">
                 <div
                   className="absolute top-0 bottom-0 rounded-full"
                   style={{

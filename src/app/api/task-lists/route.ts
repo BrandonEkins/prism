@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db/client';
-import { taskLists } from '@/lib/db/schema';
-import { eq, asc } from 'drizzle-orm';
+import { taskLists, tasks, calendarSources } from '@/lib/db/schema';
+import { eq, asc, sql } from 'drizzle-orm';
 import { requireAuth, requireRole } from '@/lib/auth';
 import { getCached } from '@/lib/cache/redis';
 import { invalidateEntity } from '@/lib/cache/cacheKeys';
@@ -15,7 +15,37 @@ export async function GET() {
     const lists = await getCached(
       'task-lists:all',
       async () => db
-        .select()
+        .select({
+          id: taskLists.id,
+          name: taskLists.name,
+          color: taskLists.color,
+          sortOrder: taskLists.sortOrder,
+          createdBy: taskLists.createdBy,
+          createdAt: taskLists.createdAt,
+          updatedAt: taskLists.updatedAt,
+          // Derived: which external system populated this list, if any.
+          // 'caldav' when either:
+          //   (a) at least one task in the list has a caldav-prefixed externalId, OR
+          //   (b) a calendar_source's syncErrors JSON has taskListId pointing here.
+          // Checking (b) catches CalDAV-backed lists whose only tasks were
+          // Apple's placeholder VTODOs (now filtered out by sync) — those
+          // lists are empty but still legitimately CalDAV-sourced.
+          linkedProvider: sql<string | null>`(
+            CASE
+              WHEN EXISTS (
+                SELECT 1 FROM ${tasks}
+                WHERE ${tasks.listId} = ${taskLists.id}
+                  AND ${tasks.externalId} LIKE 'caldav:%'
+              ) THEN 'caldav'
+              WHEN EXISTS (
+                SELECT 1 FROM ${calendarSources}
+                WHERE ${calendarSources.provider} = 'caldav'
+                  AND ${calendarSources.syncErrors}->>'taskListId' = ${taskLists.id}::text
+              ) THEN 'caldav'
+              ELSE NULL
+            END
+          )`,
+        })
         .from(taskLists)
         .orderBy(asc(taskLists.sortOrder), asc(taskLists.name)),
       300
