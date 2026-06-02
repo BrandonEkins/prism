@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { toast } from '@/components/ui/use-toast';
 import {
   Lightbulb,
@@ -14,6 +14,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { CarouselArrows } from '@/components/ui/CarouselArrows';
 import { useConfirmDialog } from '@/lib/hooks/useConfirmDialog';
 import { useFamily } from '@/components/providers/FamilyProvider';
 import { useAuth } from '@/components/providers';
@@ -23,7 +24,12 @@ import { useOrientation } from '@/lib/hooks/useOrientation';
 import { useIsMobile } from '@/lib/hooks/useIsMobile';
 import type { GiftIdea, FamilyMember } from '@/types';
 
-export function GiftIdeasView() {
+interface GiftIdeasViewProps {
+  /** PersonFilter selection from the parent. null/empty = show all members. */
+  selectedMemberIds?: string[] | null;
+}
+
+export function GiftIdeasView({ selectedMemberIds }: GiftIdeasViewProps = {}) {
   const { members } = useFamily();
   const { activeUser, requireAuth } = useAuth();
   const { ideas, loading, error, addIdea, updateIdea, deleteIdea, togglePurchased } = useGiftIdeas(activeUser?.id);
@@ -34,8 +40,14 @@ export function GiftIdeasView() {
 
   const [editingIdea, setEditingIdea] = useState<GiftIdea | null>(null);
   const [quickAddByUser, setQuickAddByUser] = useState<Record<string, string>>({});
+  const scrollRef = useRef<HTMLDivElement>(null);
 
-  const otherMembers = useMemo(() => members, [members]);
+  const otherMembers = useMemo(() => {
+    const hasFilter = selectedMemberIds && selectedMemberIds.length > 0;
+    if (!hasFilter) return members;
+    return members.filter((m) => selectedMemberIds!.includes(m.id));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [members, selectedMemberIds?.join(',')]);
 
   // Group ideas by forUserId
   const ideasByUser = useMemo(() => {
@@ -107,10 +119,12 @@ export function GiftIdeasView() {
     : 'minmax(220px, 1fr)';
   return (
     <>
+      <div className="relative h-full">
       <div
+        ref={scrollRef}
         className={cn(
           // See ChoreGroupGrid for the grid-rows-1 reasoning.
-          'grid grid-rows-1 gap-3 h-full overflow-x-auto',
+          'grid grid-rows-1 gap-3 h-full overflow-x-auto scroll-smooth',
           isCarousel && 'snap-x snap-mandatory'
         )}
         style={{
@@ -177,6 +191,8 @@ export function GiftIdeasView() {
             </div>
           );
         })}
+      </div>
+        {isCarousel && !isMobile && <CarouselArrows scrollRef={scrollRef} />}
       </div>
 
       {/* Edit modal (inline for simplicity) */}
