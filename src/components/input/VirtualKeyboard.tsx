@@ -204,6 +204,13 @@ export function VirtualKeyboard() {
         display: visible ? undefined : 'none',
       }}
       onPointerDown={e => { e.stopPropagation(); e.preventDefault(); }}
+      // simple-keyboard stops the pointerdown before it reaches this container,
+      // so the preventDefault above never runs and the active input loses focus
+      // on any key tap (Shift/symbols) — the global focusout handler then reads
+      // that as "done" and hides the keyboard. The mousedown still bubbles here;
+      // preventing its default keeps focus on the input so tapping keys no longer
+      // dismisses the keyboard. (#125)
+      onMouseDown={e => { e.preventDefault(); }}
     >
       <div
         ref={containerRef}

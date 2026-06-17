@@ -4,6 +4,9 @@ All notable changes to Prism are documented in this file.
 
 ## Unreleased
 
+### Fixed — Touch keyboard
+- **On-screen keyboard no longer dismisses itself when you tap Shift.** On touch displays (e.g. Raspberry Pi kiosks), tapping Shift (or a symbol key) blurred the focused input, so the global focusout handler hid the keyboard. The keyboard container now keeps the input focused on tap — a `mousedown` preventDefault, since simple-keyboard swallows the pointerdown the existing handler relied on. Thanks @theg00se1030 for the precise root-cause analysis. Closes [#125](https://github.com/sandydargoport/prism/issues/125).
+
 ## [1.8.9] – 2026-06-16
 
 ### Fixed — Security / Login
