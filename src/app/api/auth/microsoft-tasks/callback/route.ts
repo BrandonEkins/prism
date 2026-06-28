@@ -3,6 +3,7 @@ import { requireAuth, requireRole } from '@/lib/auth';
 import { encrypt } from '@/lib/utils/crypto';
 import { getRedisClient } from '@/lib/cache/getRedisClient';
 import { logError } from '@/lib/utils/logError';
+import { resolveRedirectUri } from '@/lib/integrations/resolveRedirectUri';
 
 const MICROSOFT_TOKEN_URL = 'https://login.microsoftonline.com/consumers/oauth2/v2.0/token';
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
@@ -15,10 +16,10 @@ interface MicrosoftTokens {
   expires_in: number;
 }
 
-async function exchangeCodeForTokens(code: string): Promise<MicrosoftTokens> {
+async function exchangeCodeForTokens(code: string, redirectUriOverride?: string): Promise<MicrosoftTokens> {
   const clientId = process.env.MICROSOFT_CLIENT_ID;
   const clientSecret = process.env.MICROSOFT_CLIENT_SECRET;
-  const redirectUri = process.env.MICROSOFT_TASKS_REDIRECT_URI ||
+  const redirectUri = redirectUriOverride || process.env.MICROSOFT_TASKS_REDIRECT_URI ||
     `${BASE_URL}/api/auth/microsoft-tasks/callback`;
 
   if (!clientId || !clientSecret) {
@@ -104,7 +105,7 @@ export async function GET(request: Request) {
     }
 
     // Exchange code for tokens
-    const tokens = await exchangeCodeForTokens(code);
+    const tokens = await exchangeCodeForTokens(code, resolveRedirectUri(request, '/api/auth/microsoft-tasks/callback')); // dynamic redirect URI per request (#124)
     const tokenExpiresAt = new Date(Date.now() + tokens.expires_in * 1000);
 
     // Encrypt tokens for storage

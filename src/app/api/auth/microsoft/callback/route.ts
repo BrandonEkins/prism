@@ -5,6 +5,7 @@ import { eq } from 'drizzle-orm';
 import { exchangeCodeForTokens } from '@/lib/integrations/onedrive';
 import { encrypt } from '@/lib/utils/crypto';
 import { logError } from '@/lib/utils/logError';
+import { resolveRedirectUri } from '@/lib/integrations/resolveRedirectUri';
 
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
 
@@ -42,7 +43,7 @@ export async function GET(request: Request) {
       return NextResponse.redirect(`${BASE_URL}/settings?section=${errorSection}&error=missing_code${errorAnchor}`);
     }
 
-    const tokens = await exchangeCodeForTokens(code);
+    const tokens = await exchangeCodeForTokens(code, resolveRedirectUri(request, '/api/auth/microsoft/callback')); // dynamic redirect URI per request (#124)
     const tokenExpiresAt = new Date(Date.now() + tokens.expires_in * 1000);
 
     const encryptedAccessToken = encrypt(tokens.access_token);

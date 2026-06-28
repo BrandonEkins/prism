@@ -54,12 +54,12 @@ async function getConfig() {
   return { clientId: creds.clientId, clientSecret: creds.clientSecret, redirectUri: creds.gmailRedirectUri };
 }
 
-export async function getGmailAuthUrl(state?: string): Promise<string> {
+export async function getGmailAuthUrl(state?: string, redirectUriOverride?: string): Promise<string> {
   const { clientId, redirectUri } = await getConfig();
 
   const params = new URLSearchParams({
     client_id: clientId,
-    redirect_uri: redirectUri,
+    redirect_uri: redirectUriOverride || redirectUri,
     response_type: 'code',
     scope: SCOPES,
     access_type: 'offline',
@@ -73,7 +73,7 @@ export async function getGmailAuthUrl(state?: string): Promise<string> {
   return `${GOOGLE_OAUTH_URL}?${params.toString()}`;
 }
 
-export async function exchangeGmailCodeForTokens(code: string): Promise<GmailTokens> {
+export async function exchangeGmailCodeForTokens(code: string, redirectUriOverride?: string): Promise<GmailTokens> {
   const { clientId, clientSecret, redirectUri } = await getConfig();
 
   const response = await fetch(GOOGLE_TOKEN_URL, {
@@ -83,7 +83,7 @@ export async function exchangeGmailCodeForTokens(code: string): Promise<GmailTok
       code,
       client_id: clientId,
       client_secret: clientSecret,
-      redirect_uri: redirectUri,
+      redirect_uri: redirectUriOverride || redirectUri,
       grant_type: 'authorization_code',
     }),
   });

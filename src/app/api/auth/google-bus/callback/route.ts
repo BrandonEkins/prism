@@ -7,6 +7,7 @@ import { exchangeGmailCodeForTokens } from '@/lib/integrations/gmail';
 import { encrypt } from '@/lib/utils/crypto';
 import { logActivity } from '@/lib/services/auditLog';
 import { logError } from '@/lib/utils/logError';
+import { resolveRedirectUri } from '@/lib/integrations/resolveRedirectUri';
 
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
 
@@ -44,7 +45,7 @@ export async function GET(request: Request) {
       return NextResponse.redirect(`${BASE_URL}/settings?section=${returnSection}&error=missing_code${anchor}`);
     }
 
-    const tokens = await exchangeGmailCodeForTokens(code);
+    const tokens = await exchangeGmailCodeForTokens(code, resolveRedirectUri(request, '/api/auth/google-bus/callback')); // dynamic redirect URI per request (#124)
     const expiresAt = new Date(Date.now() + tokens.expires_in * 1000);
 
     // Encrypt tokens before storing

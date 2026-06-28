@@ -3,6 +3,7 @@ import { requireAuth, requireRole } from '@/lib/auth';
 import { encrypt } from '@/lib/utils/crypto';
 import { getRedisClient } from '@/lib/cache/getRedisClient';
 import { logError } from '@/lib/utils/logError';
+import { resolveRedirectUri } from '@/lib/integrations/resolveRedirectUri';
 
 const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token';
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
@@ -14,10 +15,10 @@ interface GoogleTokens {
   expires_in: number;
 }
 
-async function exchangeCodeForTokens(code: string): Promise<GoogleTokens> {
+async function exchangeCodeForTokens(code: string, redirectUriOverride?: string): Promise<GoogleTokens> {
   const clientId = process.env.GOOGLE_CLIENT_ID;
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-  const redirectUri = process.env.GOOGLE_TASKS_REDIRECT_URI ||
+  const redirectUri = redirectUriOverride || process.env.GOOGLE_TASKS_REDIRECT_URI ||
     `${BASE_URL}/api/auth/google-tasks/callback`;
 
   if (!clientId || !clientSecret) {
@@ -90,7 +91,7 @@ export async function GET(request: Request) {
       );
     }
 
-    const tokens = await exchangeCodeForTokens(code);
+    const tokens = await exchangeCodeForTokens(code, resolveRedirectUri(request, '/api/auth/google-tasks/callback')); // dynamic redirect URI per request (#124)
     const tokenExpiresAt = new Date(Date.now() + tokens.expires_in * 1000);
 
     const encryptedAccessToken = encrypt(tokens.access_token);

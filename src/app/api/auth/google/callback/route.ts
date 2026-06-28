@@ -10,6 +10,7 @@ import {
 } from '@/lib/integrations/google-calendar';
 import { encrypt } from '@/lib/utils/crypto';
 import { logActivity } from '@/lib/services/auditLog';
+import { resolveRedirectUri } from '@/lib/integrations/resolveRedirectUri';
 
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
 
@@ -71,7 +72,9 @@ export async function GET(request: Request) {
       }
     }
 
-    const tokens = await exchangeCodeForTokens(code);
+    // Re-derive the same request-host redirect URI used at /authorize so the
+    // token exchange's redirect_uri matches byte-for-byte (#124).
+    const tokens = await exchangeCodeForTokens(code, resolveRedirectUri(request, '/api/auth/google/callback'));
     const tokenExpiresAt = new Date(Date.now() + tokens.expires_in * 1000);
 
     // Encrypt tokens before storing

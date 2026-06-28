@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { requireAuth, requireRole } from '@/lib/auth';
 import { logError } from '@/lib/utils/logError';
 import { oauthSetupRedirect } from '@/lib/integrations/oauthSetupRedirect';
+import { resolveRedirectUri } from '@/lib/integrations/resolveRedirectUri';
 
 const GOOGLE_AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth';
 const SCOPES = 'https://www.googleapis.com/auth/tasks';
@@ -14,8 +15,7 @@ export async function GET(request: Request) {
   if (forbidden) return forbidden;
 
   const clientId = process.env.GOOGLE_CLIENT_ID;
-  const redirectUri = process.env.GOOGLE_TASKS_REDIRECT_URI ||
-    `${process.env.BASE_URL || 'http://localhost:3000'}/api/auth/google-tasks/callback`;
+  const redirectUri = resolveRedirectUri(request, '/api/auth/google-tasks/callback'); // dynamic redirect URI per request (#124)
 
   if (!clientId) {
     return oauthSetupRedirect('google');

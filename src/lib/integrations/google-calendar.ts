@@ -90,12 +90,12 @@ async function getConfig() {
 /**
  * Generate the Google OAuth authorization URL
  */
-export async function getGoogleAuthUrl(state?: string): Promise<string> {
+export async function getGoogleAuthUrl(state?: string, redirectUriOverride?: string): Promise<string> {
   const { clientId, redirectUri } = await getConfig();
 
   const params = new URLSearchParams({
     client_id: clientId,
-    redirect_uri: redirectUri,
+    redirect_uri: redirectUriOverride || redirectUri,
     response_type: 'code',
     scope: SCOPES,
     access_type: 'offline', // Get refresh token
@@ -112,7 +112,7 @@ export async function getGoogleAuthUrl(state?: string): Promise<string> {
 /**
  * Exchange authorization code for tokens
  */
-export async function exchangeCodeForTokens(code: string): Promise<GoogleTokens> {
+export async function exchangeCodeForTokens(code: string, redirectUriOverride?: string): Promise<GoogleTokens> {
   const { clientId, clientSecret, redirectUri } = await getConfig();
 
   const response = await fetch(GOOGLE_TOKEN_URL, {
@@ -124,7 +124,7 @@ export async function exchangeCodeForTokens(code: string): Promise<GoogleTokens>
       code,
       client_id: clientId,
       client_secret: clientSecret,
-      redirect_uri: redirectUri,
+      redirect_uri: redirectUriOverride || redirectUri,
       grant_type: 'authorization_code',
     }),
   });

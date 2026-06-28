@@ -48,9 +48,11 @@ export async function getGoogleCredentials(): Promise<GoogleCredentials | null> 
   }
   const clientId = process.env.GOOGLE_CLIENT_ID;
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-  const redirectUri = process.env.GOOGLE_REDIRECT_URI;
+  // redirectUri is derived per-request now (#124); the env var is an optional
+  // fallback and no longer required for the config to count as "set up".
+  const redirectUri = process.env.GOOGLE_REDIRECT_URI ?? '';
   const gmailRedirectUri = process.env.GOOGLE_GMAIL_REDIRECT_URI ?? redirectUri ?? '';
-  if (!clientId || !clientSecret || !redirectUri) return null;
+  if (!clientId || !clientSecret) return null;
   return { clientId, clientSecret, redirectUri, gmailRedirectUri };
 }
 
@@ -66,9 +68,10 @@ export async function getMicrosoftCredentials(): Promise<MicrosoftCredentials | 
   }
   const clientId = process.env.MICROSOFT_CLIENT_ID;
   const clientSecret = process.env.MICROSOFT_CLIENT_SECRET;
-  const redirectUri = process.env.MICROSOFT_REDIRECT_URI;
+  // redirectUri is derived per-request now (#124); env var is an optional fallback.
+  const redirectUri = process.env.MICROSOFT_REDIRECT_URI ?? '';
   const tasksRedirectUri = process.env.MICROSOFT_TASKS_REDIRECT_URI ?? redirectUri ?? '';
-  if (!clientId || !clientSecret || !redirectUri) return null;
+  if (!clientId || !clientSecret) return null;
   return { clientId, clientSecret, redirectUri, tasksRedirectUri };
 }
 

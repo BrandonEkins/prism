@@ -3,6 +3,7 @@ import { requireAuth, requireRole } from '@/lib/auth';
 import { getGoogleAuthUrl } from '@/lib/integrations/google-calendar';
 import { logError } from '@/lib/utils/logError';
 import { isOAuthNotConfigured, oauthSetupRedirect } from '@/lib/integrations/oauthSetupRedirect';
+import { resolveRedirectUri } from '@/lib/integrations/resolveRedirectUri';
 
 export async function GET(request: Request) {
   const auth = await requireAuth();
@@ -20,7 +21,8 @@ export async function GET(request: Request) {
     if (userId) stateObj.userId = userId;
     if (reauth) stateObj.reauth = reauth;
     const state = JSON.stringify(stateObj);
-    const authUrl = await getGoogleAuthUrl(state);
+    const redirectUri = resolveRedirectUri(request, '/api/auth/google/callback');
+    const authUrl = await getGoogleAuthUrl(state, redirectUri);
 
     return NextResponse.redirect(authUrl);
   } catch (error) {

@@ -3,6 +3,7 @@ import { requireAuth, requireRole } from '@/lib/auth';
 import { getMicrosoftAuthUrl } from '@/lib/integrations/onedrive';
 import { logError } from '@/lib/utils/logError';
 import { isOAuthNotConfigured, oauthSetupRedirect } from '@/lib/integrations/oauthSetupRedirect';
+import { resolveRedirectUri } from '@/lib/integrations/resolveRedirectUri';
 
 export async function GET(request: Request) {
   const auth = await requireAuth();
@@ -21,7 +22,8 @@ export async function GET(request: Request) {
     const returnSection = searchParams.get('returnSection') || '';
 
     const state = JSON.stringify({ sourceName, returnSection });
-    const authUrl = await getMicrosoftAuthUrl(state);
+    const redirectUri = resolveRedirectUri(request, '/api/auth/microsoft/callback'); // dynamic redirect URI per request (#124)
+    const authUrl = await getMicrosoftAuthUrl(state, redirectUri);
 
     return NextResponse.redirect(authUrl);
   } catch (error) {
