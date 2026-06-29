@@ -52,3 +52,5 @@ This means there's no "more research" path that turns a ❌ into a ✅. If you s
 ## Why this page exists
 
 Because every six months somebody (often me) asks "wait, can't we just hit the iCloud API for X?" and goes off to investigate, finds a stale community library, builds half of an integration, and discovers the same wall. This page is the doctrine note: the wall is structural, not "we haven't tried hard enough," and the energy is better spent on the mirror approach.
+
+The shared-album resolver that hit this wall (the legacy `sharedstreams` protocol details — partition discovery, the `330` / `X-Apple-MMe-Host` redirect, short-lived signed URLs) was captured in the [decisions log](../decisions-log.md) before its branch was deleted, so the next person doesn't re-reverse-engineer it.
