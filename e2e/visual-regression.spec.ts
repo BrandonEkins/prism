@@ -35,9 +35,10 @@
  * - Set `E2E_HAS_TEST_DB=1` (and optionally `E2E_PIN=...`) when running
  *   against such a DB. Without that flag, every test in this spec is
  *   skipped — by design — to prevent accidental PII capture.
- * - Required synthetic seed (for future implementation): family members
- *   named "Alice/Bob/Carol/Dan", a fixture wallpaper from `tests/fixtures/`,
- *   no real calendar events, no real bus routes, no real weather location.
+ * - Required synthetic seed: family members named "Alex/Jordan/Emma/Sophie"
+ *   (defined in `src/lib/db/seed.ts`), no real calendar events, no real
+ *   bus routes, no real weather location. Baselines must be captured in CI
+ *   against this seed — never against a live local deployment.
  */
 
 import { test, expect, Page } from '@playwright/test';
