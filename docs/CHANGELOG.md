@@ -4,6 +4,25 @@ All notable changes to Prism are documented in this file.
 
 ## Unreleased
 
+## [1.10.0] – 2026-07-27
+
+A feature release: recipe & meal-plan sync with Tandoor and Mealie, a calendar-sync overhaul that stops the sync from ever silently losing events, and a settings reshuffle so household basics live where you'd expect. Ships three database migrations (recipe sources, deleted-event tombstones, and a pending-deletion flag) — all applied automatically on start.
+
+### Recipes & meals
+- **Sync recipes and meal plans from Tandoor and Mealie.** Connect a server once (read-only API token) and pull recipes — ingredients, steps, times, tags, and photos — and your meal plan into Prism, from **Recipes → Add ▾ → "Sync recipes…"** and **Meals → Add ▾ → "Sync meal plan…"**. It's review-and-approve: every sync shows exactly what would change and you pick what to apply — adds and updates are pre-selected, removals are opt-in, and a mass-delete guard keeps a source glitch from wiping your library. A planned meal automatically brings its recipe along if you haven't imported it yet. Re-syncing is idempotent (unchanged items show "up to date"). Both apps ride one reusable framework, so more integrations are straightforward from here.
+- **Fixed ingredient scaling.** Scaling a recipe's servings multiplied *every* number in an ingredient line, so "1 8 oz can" doubled to "2 16 oz can". It now scales only the leading quantity (handling fractions and mixed numbers) and leaves pack/size numbers alone.
+
+### Calendar
+- **Sync never silently deletes anymore.** When an event disappears from its source calendar, Prism no longer removes it on the next pull — it *holds* it and shows a "**Review N**" badge on the calendar. You review each removal and choose **Delete** (remove it) or **Keep** (turn it into a permanent local event). Adds and updates still apply automatically, so the dashboard stays current; only removals wait for you. Applying requires delete permission, so a shared display shows the badge but can't act on it without a parent.
+- **Deleting an event in Prism now sticks.** Previously a synced event you deleted could reappear on the next sync; a tombstone now keeps it gone (and Google deletes also propagate back to Google).
+- **Calendar management moved onto the Calendar page.** Connected calendars, groups, hours, and iCal subscriptions now live behind a **Manage** button on the calendar itself instead of buried in Settings.
+- **Honest sync counts + a smoother sync.** The sync toast reports what actually changed ("2 added, 1 updated, 3 flagged for review") instead of the total re-pulled, a manual sync refreshes the calendar immediately (no page reload), and the Add-Event date field is now clickable to change the date, not just the time.
+
+### Settings
+- **New "General" section** groups the household basics that were scattered before: **Location**, **Time zone**, and **Week starts on**.
+- **Household time zone setting** — server-side scheduling and syncs (e.g. placing imported meal-plan times) now anchor to your zone; defaults to your browser's.
+- **Set your weather location by ZIP / postal code** with a clean, single-result lookup (no API key required), instead of fiddly free text.
+
 ## [1.9.0] – 2026-07-24
 
 Security-hardening release from a full codebase audit. It closes a cluster of access-control gaps on the API, adds server-side-request-forgery guards to the calendar/photo integrations, hardens sessions and OAuth, and updates dependencies carrying published advisories. No changes to how Prism behaves for you day-to-day, and no database migration — but if you run Prism on a network-exposed Home Assistant ingress, this is a recommended upgrade.
