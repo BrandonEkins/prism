@@ -16,7 +16,7 @@ import { useFamily } from '@/components/providers';
 import { CalendarColorPicker } from '../components/CalendarColorPicker';
 import { useHiddenHours } from '@/lib/hooks/useHiddenHours';
 
-export function CalendarsSection() {
+export function CalendarsSection({ onSynced }: { onSynced?: () => void } = {}) {
   const { confirm, dialogProps: confirmDialogProps } = useConfirmDialog();
   const { members: familyMembers } = useFamily();
   const { calendars, loading: calendarsLoading, refresh: refreshCalendars } = useCalendarSources();
@@ -175,7 +175,8 @@ export function CalendarsSection() {
         const parts: string[] = [];
         if (data.added) parts.push(`${data.added} added`);
         if (data.updated) parts.push(`${data.updated} updated`);
-        if (data.removed) parts.push(`${data.removed} removed`);
+        // Removals are held for review, not applied — reflect that in the toast.
+        if (data.removed) parts.push(`${data.removed} flagged for review`);
         let message = parts.length
           ? `Sync complete: ${parts.join(', ')}`
           : 'Sync complete — already up to date';
@@ -190,6 +191,9 @@ export function CalendarsSection() {
         }
         toast({ title: message, variant: 'success' });
         refreshCalendars();
+        // Let the host (Calendar page) refetch its events so a manual sync
+        // shows new/removed events immediately, no page refresh needed.
+        onSynced?.();
       } else {
         const hasReauthError = data.errors?.some((e: string) => e.includes('Re-authentication required') || e.includes('Token expired'));
         if (hasReauthError) {

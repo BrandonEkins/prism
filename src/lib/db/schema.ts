@@ -162,6 +162,11 @@ export const events = pgTable('events', {
 
   lastSynced: timestamp('last_synced'),
 
+  // Set when sync finds this synced event gone from its source. Instead of
+  // deleting silently, it's flagged pending so the user reviews the removal
+  // (deletes-only review). Null = not pending.
+  pendingDeletion: timestamp('pending_deletion'),
+
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 }, (table) => ({
@@ -170,6 +175,24 @@ export const events = pgTable('events', {
   calendarSourceIdx: index('events_calendar_source_idx').on(table.calendarSourceId),
   // Unique constraint to prevent duplicate synced events
   sourceExternalUnique: uniqueIndex('events_source_external_unique')
+    .on(table.calendarSourceId, table.externalEventId),
+}));
+
+/**
+ * Tombstones for synced events the user deleted locally. A one-way pull sync
+ * would otherwise re-add them from the source on the next run. The sync skips
+ * any (calendarSourceId, externalEventId) listed here. Cascade-deletes with the
+ * source. (Google deletes propagate upstream too; CalDAV/iCal rely on this.)
+ */
+export const dismissedEvents = pgTable('dismissed_events', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  calendarSourceId: uuid('calendar_source_id')
+    .notNull()
+    .references(() => calendarSources.id, { onDelete: 'cascade' }),
+  externalEventId: varchar('external_event_id', { length: 255 }).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (table) => ({
+  dismissedSourceExternalUnique: uniqueIndex('dismissed_events_source_external_unique')
     .on(table.calendarSourceId, table.externalEventId),
 }));
 
