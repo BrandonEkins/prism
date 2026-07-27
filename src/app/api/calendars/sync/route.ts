@@ -13,6 +13,7 @@ import { logError } from '@/lib/utils/logError';
 import { db } from '@/lib/db/client';
 import { calendarSources } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
+import { invalidateEntity } from '@/lib/cache/cacheKeys';
 import {
   syncAllGoogleCalendars,
   syncGoogleCalendarSource,
@@ -61,7 +62,14 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    let result: { synced?: number; total?: number; errors: string[] };
+    let result: {
+      synced?: number;
+      total?: number;
+      added: number;
+      updated: number;
+      removed: number;
+      errors: string[];
+    };
 
     if (body.calendarId) {
       // Sync specific calendar — dispatch by provider
@@ -80,7 +88,13 @@ export async function POST(request: NextRequest) {
         : source.provider === 'caldav'
           ? await syncCalDAVCalendarSource(body.calendarId, options)
           : await syncGoogleCalendarSource(body.calendarId, options);
-      result = { synced: syncResult.synced, errors: syncResult.errors };
+      result = {
+        synced: syncResult.synced,
+        added: syncResult.added,
+        updated: syncResult.updated,
+        removed: syncResult.removed,
+        errors: syncResult.errors,
+      };
     } else {
       // Sync all calendars across all supported providers
       const [google, ical, caldav] = await Promise.all([
@@ -90,6 +104,9 @@ export async function POST(request: NextRequest) {
       ]);
       result = {
         total: google.total + ical.total + caldav.total,
+        added: google.added + ical.added + caldav.added,
+        updated: google.updated + ical.updated + caldav.updated,
+        removed: google.removed + ical.removed + caldav.removed,
         errors: [...google.errors, ...ical.errors, ...caldav.errors],
       };
     }
@@ -106,11 +123,24 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // A manual sync writes straight to the DB; invalidate the cached event
+    // lists so the calendar reflects new/removed events immediately (the cron
+    // path does this itself, but this route didn't).
+    await invalidateEntity('events');
+
+    // Report NET changes (added / updated / removed), not total re-pulled.
+    const changeParts: string[] = [];
+    if (result.added) changeParts.push(`${result.added} added`);
+    if (result.updated) changeParts.push(`${result.updated} updated`);
+    if (result.removed) changeParts.push(`${result.removed} removed`);
+    const changeSummary = changeParts.length ? changeParts.join(', ') : 'no changes';
+
     return NextResponse.json({
       success: true,
-      message: body.calendarId
-        ? `Synced ${result.synced} events`
-        : `Synced ${result.total} events from all calendars`,
+      message: `Calendar sync complete — ${changeSummary}`,
+      added: result.added,
+      updated: result.updated,
+      removed: result.removed,
       synced: result.synced ?? result.total,
       errors: result.errors.length > 0 ? result.errors : undefined,
     });

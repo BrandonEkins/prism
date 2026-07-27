@@ -18,6 +18,7 @@ import { calendarSources } from '@/lib/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { logError } from '@/lib/utils/logError';
 import { upsertBirthday } from '@/lib/services/birthday-merge';
+import { invalidateEntity } from '@/lib/cache/cacheKeys';
 import {
   fetchCalendarEvents,
   refreshAccessToken,
@@ -256,23 +257,32 @@ export async function POST() {
     // "Alex") collapses onto an iCloud contact with FN "Alex Doe"
     // when both share a birth month/day, instead of becoming a separate
     // row. See src/lib/services/birthday-merge.ts.
-    let synced = 0;
+    let added = 0;
+    let updated = 0;
     for (const row of rows) {
       try {
-        await upsertBirthday({
+        const outcome = await upsertBirthday({
           name: row.name,
           birthDate: row.birthDate,
           eventType: row.eventType as 'birthday' | 'anniversary' | 'milestone',
           source: row.googleCalendarSource,
         });
-        synced++;
+        if (outcome === 'inserted') added++;
+        else if (outcome === 'updated') updated++;
       } catch (err) {
         console.error('[BirthdaySync] Failed to upsert:', row.name, row.eventType, err);
         errors.push(`Failed to upsert ${row.name}: ${err}`);
       }
     }
+    // Refresh cached birthday lists so new/changed ones show immediately.
+    if (added + updated > 0) await invalidateEntity('birthdays');
+
+    // Net changes (added + updated), not the total re-pulled — matches the
+    // calendar-event sync. `synced` kept for back-compat.
     return NextResponse.json({
-      synced,
+      synced: added + updated,
+      added,
+      updated,
       total: allEvents.length,
       errors: errors.length > 0 ? errors : undefined,
     });
