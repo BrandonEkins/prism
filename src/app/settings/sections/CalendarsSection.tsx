@@ -15,6 +15,7 @@ import { useCalendarSources } from '@/lib/hooks';
 import { useFamily } from '@/components/providers';
 import { CalendarColorPicker } from '../components/CalendarColorPicker';
 import { useHiddenHours } from '@/lib/hooks/useHiddenHours';
+import { useOAuthConfigStatus } from './integrations/shared/useOAuthConfigStatus';
 
 export function CalendarsSection({ onSynced }: { onSynced?: () => void } = {}) {
   const { confirm, dialogProps: confirmDialogProps } = useConfirmDialog();
@@ -194,6 +195,10 @@ export function CalendarsSection({ onSynced }: { onSynced?: () => void } = {}) {
         // Let the host (Calendar page) refetch its events so a manual sync
         // shows new/removed events immediately, no page refresh needed.
         onSynced?.();
+        // Also fire the global signal so calendar views on *other* surfaces
+        // (dashboard widget, an open Calendar page) refetch too — this Settings
+        // host has no calendar of its own to refresh.
+        window.dispatchEvent(new Event('prism:calendar-synced'));
       } else {
         const hasReauthError = data.errors?.some((e: string) => e.includes('Re-authentication required') || e.includes('Token expired'));
         if (hasReauthError) {
@@ -248,6 +253,8 @@ export function CalendarsSection({ onSynced }: { onSynced?: () => void } = {}) {
 
       <AddIcalSubscriptionCard onAdded={refreshCalendars} />
 
+      <AdvancedCalendarSyncCard />
+
       {/* Connected Calendars */}
       <Card>
         <CardHeader>
@@ -265,14 +272,8 @@ export function CalendarsSection({ onSynced }: { onSynced?: () => void } = {}) {
             <div className="text-center py-6 space-y-2">
               <p className="text-muted-foreground">No calendars connected yet</p>
               <p className="text-sm text-muted-foreground">
-                Connect Google in{' '}
-                <button
-                  onClick={() => { window.location.href = '/settings?section=integrations#google'; }}
-                  className="text-primary hover:underline font-medium"
-                >
-                  Integrations
-                </button>
-                {' '}to import calendars.
+                Subscribe to a calendar above for a read-only feed with zero setup, or use
+                two-way sync in Advanced above.
               </p>
             </div>
           ) : (
@@ -785,6 +786,14 @@ function AddIcalSubscriptionCard({ onAdded }: { onAdded: () => void }) {
       setUrl('');
       setName('');
       onAdded();
+      // The server imports the feed in the background, then invalidates the
+      // events cache. Nudge calendar views to refetch as it lands — one now,
+      // and a couple of staggered follow-ups to cover the sub-second-to-a-few-
+      // seconds a first import takes — so events appear without a page refresh.
+      window.dispatchEvent(new Event('prism:calendar-synced'));
+      [2500, 6000].forEach((ms) =>
+        setTimeout(() => window.dispatchEvent(new Event('prism:calendar-synced')), ms),
+      );
     } catch (err) {
       toast({ title: err instanceof Error ? err.message : 'Failed to add calendar', variant: 'destructive' });
     } finally {
@@ -795,11 +804,22 @@ function AddIcalSubscriptionCard({ onAdded }: { onAdded: () => void }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Subscribe to a calendar (read-only)</CardTitle>
+        <CardTitle>Subscribe to a calendar — no account needed</CardTitle>
         <CardDescription>
-          Paste any public iCal URL — Apple Calendar / iCloud, Outlook.live.com, a school sports feed, etc.
+          Paste any public iCal URL — Google Calendar, Apple Calendar / iCloud, Outlook.live.com, a school sports feed, etc.
+          Works immediately, read-only, zero setup.
           Apple users: in <em>Calendar.app → right-click your calendar → Share Calendar → Public Calendar</em>, then copy the <code>webcal://</code> URL. iCloud.com works the same way under <em>Calendar → ⓘ → Public Calendar</em>.
         </CardDescription>
+        <details className="text-xs text-muted-foreground">
+          <summary className="cursor-pointer select-none hover:text-foreground">
+            How do I get my Google Calendar link?
+          </summary>
+          <p className="mt-1.5 pl-3">
+            Google Calendar → Settings → click your calendar → &quot;Integrate calendar&quot; → copy
+            the &quot;Secret address in iCal format&quot; (it ends in <code>.ics</code>). The normal
+            calendar share link won&apos;t work.
+          </p>
+        </details>
       </CardHeader>
       <CardContent className="space-y-3">
         <div className="grid gap-3 sm:grid-cols-[1fr_220px_auto]">
@@ -822,6 +842,69 @@ function AddIcalSubscriptionCard({ onAdded }: { onAdded: () => void }) {
           <Button onClick={submit} disabled={submitting || !url.trim()}>
             <Plus className="h-4 w-4 mr-2" />
             {submitting ? 'Adding…' : 'Add'}
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+/**
+ * Secondary/advanced calendar sync options — two-way accounts, each needing
+ * some form of setup (an admin-configured OAuth app for Google/Microsoft, or
+ * a per-user app-specific password for Apple/CalDAV). Deliberately below the
+ * keyless iCal card so a non-technical user reaches the zero-setup path
+ * first (#178).
+ */
+function AdvancedCalendarSyncCard() {
+  const oauthStatus = useOAuthConfigStatus();
+  const googleConfigured = oauthStatus === null ? true : oauthStatus.google;
+  const microsoftConfigured = oauthStatus === null ? true : oauthStatus.microsoft;
+
+  const goTo = (anchor: string) => {
+    window.location.href = `/settings?section=integrations#${anchor}`;
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">Advanced: two-way sync</CardTitle>
+        <CardDescription>
+          Read and write to a real calendar account instead of a read-only feed.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-2">
+        <div className="flex items-center justify-between gap-3 p-3 rounded-md border border-border">
+          <div className="min-w-0">
+            <div className="font-medium text-sm">Google Calendar</div>
+            <div className="text-xs text-muted-foreground">
+              {googleConfigured ? 'Two-way sync via OAuth' : 'Needs a one-time admin setup'}
+            </div>
+          </div>
+          <Button variant="outline" size="sm" onClick={() => goTo('google')}>
+            {googleConfigured ? 'Connect' : 'Set up'}
+          </Button>
+        </div>
+        <div className="flex items-center justify-between gap-3 p-3 rounded-md border border-border">
+          <div className="min-w-0">
+            <div className="font-medium text-sm">Apple iCloud / CalDAV</div>
+            <div className="text-xs text-muted-foreground">
+              App-specific password — no admin setup needed
+            </div>
+          </div>
+          <Button variant="outline" size="sm" onClick={() => goTo('caldav')}>
+            Connect
+          </Button>
+        </div>
+        <div className="flex items-center justify-between gap-3 p-3 rounded-md border border-border">
+          <div className="min-w-0">
+            <div className="font-medium text-sm">Microsoft</div>
+            <div className="text-xs text-muted-foreground">
+              {microsoftConfigured ? 'Two-way sync via OAuth' : 'Needs a one-time admin setup'}
+            </div>
+          </div>
+          <Button variant="outline" size="sm" onClick={() => goTo('microsoft')}>
+            {microsoftConfigured ? 'Connect' : 'Set up'}
           </Button>
         </div>
       </CardContent>
