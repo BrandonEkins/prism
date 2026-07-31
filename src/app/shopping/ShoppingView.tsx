@@ -6,6 +6,8 @@ import { ShoppingCart, Plus, Settings, Maximize2, Minimize2, Tags, Send, Chevron
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { EmptyState } from '@/components/ui/empty-state';
+import { PageLoader } from '@/components/ui/spinner';
 import { PageWrapper, SubpageHeader, UndoButton } from '@/components/layout';
 import type { OverflowItem } from '@/components/layout';
 import { ShoppingItemRow } from '@/app/shopping/ShoppingItemRow';
@@ -296,10 +298,10 @@ export function ShoppingView() {
           </div>
         )}
 
-        <div ref={swipeRef} className="flex-1 overflow-y-auto p-2 pb-24">
+        <div ref={swipeRef} className="flex-1 overflow-y-auto p-2">
           {loading ? (
-            <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-              <ShoppingCart className="h-12 w-12 mb-4 opacity-50 animate-pulse" /><p className="text-lg">Loading shopping lists...</p>
+            <div className="flex items-center justify-center h-full">
+              <PageLoader label="Loading shopping lists..." />
             </div>
           ) : error ? (
             <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
@@ -308,12 +310,20 @@ export function ShoppingView() {
               <p className="text-base mt-2">Please check your connection</p>
             </div>
           ) : !activeList ? (
-            <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-              <ShoppingCart className="h-12 w-12 mb-4 opacity-50" /><p className="text-lg">No shopping lists yet</p>
-              <Button variant="outline" size="sm" className="mt-4" onClick={handleNewList}>Create your first list</Button>
+            <div className="flex items-center justify-center h-full">
+              <EmptyState
+                icon={<ShoppingCart />}
+                title="No shopping lists yet"
+                action={<Button variant="outline" size="sm" onClick={handleNewList}>Create your first list</Button>}
+              />
             </div>
           ) : activeList ? (
-            <div className="max-w-7xl mx-auto">
+            // pb-24 lives here (not on the scroll container above) so it only
+            // reserves clearance for the mobile FAB below actual list content —
+            // putting it on the scroll container instead skewed EmptyState's
+            // centering upward (min-h-full centers within the padded content
+            // box, and that box's center shifts when top/bottom padding differ).
+            <div className="max-w-7xl mx-auto pb-24">
               <div className={cn(
                 'grid gap-2',
                 isMobile ? 'grid-cols-1' : isPortrait ? 'grid-cols-2' : 'grid-cols-3'

@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/ui/avatar';
 import { useFamily, useAuth } from '@/components/providers';
-import { usePinLength } from '@/lib/hooks/usePinLength';
+import { DEFAULT_PIN_LENGTH } from '@/lib/constants';
 import { SettingsView } from './SettingsView';
 
 type GateState = 'checking' | 'prompt' | 'verified';
@@ -71,16 +71,20 @@ function SettingsPinPrompt({
   onDismiss: () => void;
 }) {
   const { members, loading } = useFamily();
-  // When unauthenticated, /api/family omits role — show all members and let
-  // the backend enforce parent-only access on verify-pin.
+  // Parents only — children/guests can't manage settings. `/api/family` now
+  // returns `role` even when unauthenticated (it isn't sensitive), so this
+  // is a plain equality check; previously the fallback `!m.role` treated a
+  // missing role as "assume parent," which showed every child as selectable
+  // here since the unauthenticated response omitted role entirely.
   const parents = members
-    .filter((m) => !m.role || m.role === 'parent')
+    .filter((m) => m.role === 'parent')
     .map((m) => ({
       id: m.id,
       loginIndex: m.loginIndex,
       name: m.name,
       color: m.color,
       avatarUrl: m.avatarUrl ?? undefined,
+      pinLength: m.pinLength,
     }));
 
   const [selectedParent, setSelectedParent] = useState<(typeof parents)[0] | null>(null);
@@ -90,7 +94,9 @@ function SettingsPinPrompt({
   const [isShaking, setIsShaking] = useState(false);
   const [mounted, setMounted] = useState(false);
 
-  const { pinLength } = usePinLength();
+  // Every pad requires exactly the SELECTED parent's own PIN length, not a
+  // family-wide constant — members can have different-length PINs.
+  const pinLength = selectedParent?.pinLength ?? DEFAULT_PIN_LENGTH;
 
   useEffect(() => {
     setMounted(true);
@@ -103,6 +109,8 @@ function SettingsPinPrompt({
     }
   }, [parents, selectedParent]);
 
+  // pinLength must be a dependency — it changes per selected parent (their
+  // own configured length), not just once per session.
   const handleKeyPress = useCallback((digit: string) => {
     if (isVerifying) return;
     setError(null);
@@ -110,7 +118,7 @@ function SettingsPinPrompt({
       if (prev.length >= pinLength) return prev;
       return [...prev, digit];
     });
-  }, [isVerifying]);
+  }, [isVerifying, pinLength]);
 
   const handleBackspace = useCallback(() => {
     if (isVerifying) return;

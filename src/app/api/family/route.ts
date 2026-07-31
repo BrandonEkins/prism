@@ -9,7 +9,7 @@ import { getCached } from '@/lib/cache/redis';
 import { invalidateEntity } from '@/lib/cache/cacheKeys';
 import { logActivity } from '@/lib/services/auditLog';
 import { logError } from '@/lib/utils/logError';
-import { getConfiguredPinLength } from '@/lib/services/pinLength';
+import { MIN_PIN_LENGTH, MAX_PIN_LENGTH, DEFAULT_PIN_LENGTH } from '@/lib/constants';
 
 interface FamilyMemberResponse {
   id: string;
@@ -19,6 +19,8 @@ interface FamilyMemberResponse {
   email: string | null;
   avatarUrl: string | null;
   hasPin: boolean;
+  /** Per-member PIN length (4/5/6). Not sensitive — every PIN pad needs it. */
+  pinLength: number;
   createdAt: string;
 }
 
@@ -27,9 +29,17 @@ interface PublicFamilyMemberResponse {
   id: ''; // empty — never a real UUID; loginIndex is the login token
   loginIndex: number;
   name: string;
+  // Role isn't sensitive (just parent/child/guest) and callers like the
+  // Settings PIN gate need it to filter to parents-only *before* the user
+  // has authenticated — omitting it previously made every member look like
+  // a parent (see the unauthenticated branch's `!m.role` fallback).
+  role: 'parent' | 'child' | 'guest';
   color: string;
   avatarUrl: string | null;
   hasPin: boolean;
+  /** Per-member PIN length (4/5/6). Not sensitive — the login pad needs it
+   *  to know how many digits to expect before the user has authenticated. */
+  pinLength: number;
 }
 
 async function setupIsComplete(): Promise<boolean> {
@@ -50,13 +60,46 @@ export async function GET(request: NextRequest) {
     // No UUIDs exposed — the login endpoint accepts memberIndex instead.
     // -----------------------------------------------------------------------
     if (!auth) {
+      // Setup-bootstrap: before setup completes there's no session yet, but the
+      // wizard needs REAL member ids to display + edit the family it's building
+      // (going back to the Family step, or reloading, must re-show the members).
+      // Mirrors the POST/PATCH/DELETE bootstrap exception; the window closes the
+      // instant setupComplete is set. Returned fresh (never cached) so real ids
+      // can't leak into the cached public response.
+      if (!(await setupIsComplete())) {
+        const rows = await db
+          .select({
+            id: users.id,
+            name: users.name,
+            role: users.role,
+            color: users.color,
+            avatarUrl: users.avatarUrl,
+            pin: users.pin,
+            pinLength: users.pinLength,
+          })
+          .from(users)
+          .orderBy(users.sortOrder, users.createdAt);
+        const members = rows.map((user) => ({
+          id: user.id,
+          name: user.name,
+          role: user.role as 'parent' | 'child' | 'guest',
+          color: user.color,
+          avatarUrl: user.avatarUrl,
+          hasPin: !!user.pin,
+          pinLength: user.pinLength,
+        }));
+        return NextResponse.json({ members, total: members.length });
+      }
+
       const data = await getCached('family:public', async () => {
         const results = await db
           .select({
             name: users.name,
+            role: users.role,
             color: users.color,
             avatarUrl: users.avatarUrl,
             pin: users.pin,
+            pinLength: users.pinLength,
           })
           .from(users)
           .orderBy(users.sortOrder, users.createdAt);
@@ -65,9 +108,11 @@ export async function GET(request: NextRequest) {
           id: '' as const,
           loginIndex: index,
           name: user.name,
+          role: user.role as 'parent' | 'child' | 'guest',
           color: user.color,
           avatarUrl: user.avatarUrl,
           hasPin: !!user.pin,
+          pinLength: user.pinLength,
         }));
 
         return { members, total: members.length };
@@ -93,6 +138,7 @@ export async function GET(request: NextRequest) {
           email: users.email,
           avatarUrl: users.avatarUrl,
           pin: users.pin,
+          pinLength: users.pinLength,
           createdAt: users.createdAt,
         })
         .from(users)
@@ -111,6 +157,7 @@ export async function GET(request: NextRequest) {
         email: user.email,
         avatarUrl: user.avatarUrl,
         hasPin: !!user.pin,
+        pinLength: user.pinLength,
         createdAt: user.createdAt.toISOString(),
       }));
 
@@ -153,6 +200,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const trimmedName = body.name.trim();
+    if (!trimmedName) {
+      return NextResponse.json(
+        { error: 'Name is required' },
+        { status: 400 }
+      );
+    }
+
+    // Names must be unique (case-insensitive, trimmed) — two members with the
+    // same name break login/admin member selection, which key off name alone
+    // in several places (e.g. ordinal member selection, avatar-grid taps).
+    const existingNames = await db.select({ name: users.name }).from(users);
+    if (existingNames.some((u) => u.name.trim().toLowerCase() === trimmedName.toLowerCase())) {
+      return NextResponse.json(
+        { error: `A member named "${trimmedName}" already exists. Please use a different name.` },
+        { status: 409 }
+      );
+    }
+
     if (!body.role || !['parent', 'child', 'guest'].includes(body.role)) {
       return NextResponse.json(
         { error: 'Role must be "parent", "child", or "guest"' },
@@ -167,12 +233,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Per-member PIN length: an explicit, valid `pinLength` on the request
+    // wins; otherwise fall back to the plain built-in default (there is no
+    // family-wide default setting any more — every member's length is their
+    // own choice, made at creation time).
+    let memberPinLength = DEFAULT_PIN_LENGTH;
+    if (body.pinLength !== undefined) {
+      const n = Math.round(Number(body.pinLength));
+      if (!Number.isFinite(n) || n < MIN_PIN_LENGTH || n > MAX_PIN_LENGTH) {
+        return NextResponse.json(
+          { error: `pinLength must be between ${MIN_PIN_LENGTH} and ${MAX_PIN_LENGTH}` },
+          { status: 400 }
+        );
+      }
+      memberPinLength = n;
+    }
+
     let hashedPin: string | null = null;
     if (body.pin) {
-      const expectedLen = await getConfiguredPinLength();
-      if (!new RegExp(`^\\d{${expectedLen}}$`).test(body.pin)) {
+      if (!new RegExp(`^\\d{${memberPinLength}}$`).test(body.pin)) {
         return NextResponse.json(
-          { error: `PIN must be exactly ${expectedLen} digits` },
+          { error: `PIN must be exactly ${memberPinLength} digits` },
           { status: 400 }
         );
       }
@@ -192,10 +273,11 @@ export async function POST(request: NextRequest) {
     const [newMember] = await db
       .insert(users)
       .values({
-        name: body.name.trim(),
+        name: trimmedName,
         role: body.role,
         color: body.color,
         pin: hashedPin,
+        pinLength: memberPinLength,
         email: body.email?.trim() || null,
         avatarUrl: body.avatarUrl || null,
         preferences: body.preferences || {},
@@ -217,6 +299,7 @@ export async function POST(request: NextRequest) {
       email: newMember.email,
       avatarUrl: newMember.avatarUrl,
       hasPin: !!hashedPin,
+      pinLength: newMember.pinLength,
       createdAt: newMember.createdAt.toISOString(),
     };
 
