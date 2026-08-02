@@ -125,6 +125,17 @@ export function LayoutGridEditor({
     return Math.floor((width - 2 * containerPadding + margin) / (cellSize + margin));
   }, [width, cellSize, margin]);
 
+  // Canonical target row count of the design (tallest configured screen for this
+  // orientation, e.g. 27 for 1080p landscape). In display mode the grid renders
+  // this exact canvas scaled-to-fit the real viewport, so a laptop browser and a
+  // fullscreen kiosk show the same layout (just different scale) instead of
+  // gaining/losing rows and clipping.
+  const displayTargetRows = useMemo(() => {
+    const zones = SAFE_ZONES[screenGuideOrientation];
+    if (!zones?.length) return undefined;
+    return Math.max(...zones.map(z => z.rows));
+  }, [SAFE_ZONES, screenGuideOrientation]);
+
   const { totalRows, totalCols } = useMemo(() => {
     let maxY = visibleRows;
     let maxX = cols;
@@ -564,71 +575,92 @@ export function LayoutGridEditor({
 
   const screenGuideLines = useMemo(() => {
     if (!isEditable || !mounted || width <= 0) return null;
-    const safeZones = SAFE_ZONES[screenGuideOrientation].filter(z => enabledSizes.includes(z.name));
+    // Single canonical design-canvas frame (the primary screen). The dashboard
+    // stretches this one design to fill ANY screen, so there's no longer a
+    // per-resolution safe-zone overlay — just the bounds you design within.
+    const primary = SAFE_ZONES[screenGuideOrientation]?.[0];
+    if (!primary) return null;
     const patternH = cellSize + margin;
     const patternW = cellSize + margin;
 
     const gridW = totalCols * patternW + containerPadding;
     const gridH = totalRows * patternH + containerPadding;
 
+    const rectW = primary.cols * patternW - margin;
+    const rectH = primary.rows * patternH - margin;
+    const color = primary.color;
+    // Corner bracket arm length: ~8% of the smaller dimension, clamped 18–44px
+    const arm = Math.round(Math.min(Math.min(rectW, rectH) * 0.08, 44));
+    const t = 5; // stroke thickness px
+    const glow = `drop-shadow(0 0 4px ${color}) drop-shadow(0 0 8px ${color}bb)`;
+    const cornerStyle = (pos: 'tl' | 'tr' | 'bl' | 'br'): React.CSSProperties => ({
+      position: 'absolute',
+      width: arm,
+      height: arm,
+      borderColor: color,
+      borderStyle: 'solid',
+      borderWidth: 0,
+      ...(pos === 'tl' && { top: 0, left: 0, borderTopWidth: t, borderLeftWidth: t }),
+      ...(pos === 'tr' && { top: 0, right: 0, borderTopWidth: t, borderRightWidth: t }),
+      ...(pos === 'bl' && { bottom: 0, left: 0, borderBottomWidth: t, borderLeftWidth: t }),
+      ...(pos === 'br' && { bottom: 0, right: 0, borderBottomWidth: t, borderRightWidth: t }),
+      filter: glow,
+    });
+
     return (
       <div
         className="absolute pointer-events-none z-[5]"
         style={{ left: containerPadding, top: containerPadding, width: gridW, height: gridH }}
       >
-        {safeZones.map(zone => {
-          const rectW = zone.cols * patternW - margin;
-          const rectH = zone.rows * patternH - margin;
-          // Corner bracket arm length: ~8% of the smaller dimension, clamped 18–44px
-          const arm = Math.round(Math.min(Math.min(rectW, rectH) * 0.08, 44));
-          const t = 5; // stroke thickness px
-          const glow = `drop-shadow(0 0 4px ${zone.color}) drop-shadow(0 0 8px ${zone.color}bb)`;
-          const cornerStyle = (pos: 'tl' | 'tr' | 'bl' | 'br'): React.CSSProperties => ({
-            position: 'absolute',
-            width: arm,
-            height: arm,
-            borderColor: zone.color,
-            borderStyle: 'solid',
-            borderWidth: 0,
-            ...(pos === 'tl' && { top: 0, left: 0, borderTopWidth: t, borderLeftWidth: t }),
-            ...(pos === 'tr' && { top: 0, right: 0, borderTopWidth: t, borderRightWidth: t }),
-            ...(pos === 'bl' && { bottom: 0, left: 0, borderBottomWidth: t, borderLeftWidth: t }),
-            ...(pos === 'br' && { bottom: 0, right: 0, borderBottomWidth: t, borderRightWidth: t }),
-            filter: glow,
-          });
-          return (
-            <div
-              key={`rect-${zone.name}`}
-              className="absolute"
-              style={{ left: 0, top: 0, width: rectW, height: rectH }}
-            >
-              <div style={cornerStyle('tl')} />
-              <div style={cornerStyle('tr')} />
-              <div style={cornerStyle('bl')} />
-              <div style={cornerStyle('br')} />
-              <span
-                className="absolute text-[10px] px-1 py-0.5 rounded font-semibold"
-                style={{
-                  backgroundColor: zone.color,
-                  color: 'white',
-                  bottom: arm + 4,
-                  right: 0,
-                  filter: `drop-shadow(0 0 4px ${zone.color}) drop-shadow(0 1px 3px rgba(0,0,0,0.7))`,
-                }}
-              >
-                {zone.name}
-              </span>
-            </div>
-          );
-        })}
+        <div className="absolute" style={{ left: 0, top: 0, width: rectW, height: rectH }}>
+          <div style={cornerStyle('tl')} />
+          <div style={cornerStyle('tr')} />
+          <div style={cornerStyle('bl')} />
+          <div style={cornerStyle('br')} />
+          <span
+            className="absolute text-[10px] px-1 py-0.5 rounded font-semibold"
+            style={{
+              backgroundColor: color,
+              color: 'white',
+              bottom: arm + 4,
+              right: 0,
+              filter: `drop-shadow(0 0 4px ${color}) drop-shadow(0 1px 3px rgba(0,0,0,0.7))`,
+            }}
+          >
+            Screen
+          </span>
+        </div>
       </div>
     );
-  }, [isEditable, mounted, width, cellSize, margin, screenGuideOrientation, enabledSizes, cols, totalRows, totalCols, containerPadding, SAFE_ZONES]);
+  }, [isEditable, mounted, width, cellSize, margin, screenGuideOrientation, totalRows, totalCols, containerPadding, SAFE_ZONES]);
 
   const combinedRef = useCallback((node: HTMLDivElement | null) => {
     (scrollContainerRef as React.MutableRefObject<HTMLDivElement | null>).current = node;
     containerRef(node);
   }, [containerRef]);
+
+  // Preview (measure) mode: render the REAL display — the same stretch-to-fill
+  // CssGridDisplay the live dashboard uses — so the preview is true WYSIWYG
+  // instead of a square-cell, letterboxed approximation. (The old multi-screen
+  // safe-zone preview lives on in git history / the archived guide code if a
+  // fixed-aspect fit is ever needed again for odd screens like iPad/e-readers.)
+  if (isEditable && measureMode) {
+    return (
+      <div className={className || ''}>
+        <CssGridDisplay
+          layout={stableLayout}
+          renderWidget={renderWidget}
+          margin={margin}
+          containerPadding={containerPadding}
+          cols={cols}
+          headerOffset={measureHideNav ? 0 : 50}
+          bottomOffset={measureHideNav ? 0 : bottomOffset}
+          targetRows={displayTargetRows}
+          designOrientation={screenGuideOrientation}
+        />
+      </div>
+    );
+  }
 
   if (isEditable) {
     return (
@@ -692,6 +724,8 @@ export function LayoutGridEditor({
       headerOffset={headerOffset}
       bottomOffset={bottomOffset}
       minVisibleRows={minVisibleRows}
+      targetRows={displayTargetRows}
+      designOrientation={screenGuideOrientation}
       className={className}
     />
   );
