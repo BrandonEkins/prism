@@ -10,6 +10,7 @@
 'use client';
 
 import * as React from 'react';
+import { Emoji } from '@/components/ui/Emoji';
 import { cn } from '@/lib/utils';
 import { WidgetContainer, WidgetEmpty } from './WidgetContainer';
 import type { Birthday } from '@/lib/hooks/useBirthdays';
@@ -55,21 +56,41 @@ export const BirthdaysWidget = React.memo(function BirthdaysWidget({
 }: BirthdaysWidgetProps) {
   const items = birthdays.slice(0, maxItems);
 
+  // Show only the whole rows that fit (no scrollbar, no half-cut last row) —
+  // measure the list area and cap the visible count, like the weather widget.
+  const listRef = React.useRef<HTMLDivElement>(null);
+  const [maxRows, setMaxRows] = React.useState(maxItems);
+  React.useEffect(() => {
+    const el = listRef.current;
+    if (!el) return;
+    const HEADER_PX = 26; // table header row
+    const ROW_PX = 34; // one birthday row (py-1.5 + text), slightly generous
+    const measure = () => {
+      const h = el.clientHeight;
+      if (h > 0) setMaxRows(Math.max(1, Math.floor((h - HEADER_PX) / ROW_PX)));
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  const visible = items.slice(0, maxRows);
+
   return (
     <WidgetContainer
       title="Upcoming Birthdays & Milestones"
-      icon={<span>🎂</span>}
+      icon={<Emoji e="🎂" />}
       loading={loading}
       error={error}
       titleHref={titleHref}
     >
       {items.length === 0 ? (
         <WidgetEmpty
-          icon={<span>🎂</span>}
+          icon={<Emoji e="🎂" />}
           message="No upcoming birthdays or events"
         />
       ) : (
-        <div className="overflow-auto h-full">
+        <div ref={listRef} className="overflow-hidden h-full">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b text-xs text-muted-foreground">
@@ -81,7 +102,7 @@ export const BirthdaysWidget = React.memo(function BirthdaysWidget({
               </tr>
             </thead>
             <tbody>
-              {items.map((item) => (
+              {visible.map((item) => (
                 <tr
                   key={item.id}
                   className={cn(
@@ -98,7 +119,7 @@ export const BirthdaysWidget = React.memo(function BirthdaysWidget({
                     )}
                   </td>
                   <td className="py-1.5 px-1 text-center">
-                    {TYPE_ICONS[item.eventType] || '⭐'}
+                    <Emoji e={TYPE_ICONS[item.eventType] || '⭐'} />
                   </td>
                   <td className="py-1.5 px-1 text-right text-muted-foreground tabular-nums">
                     {item.age != null ? item.age : ''}

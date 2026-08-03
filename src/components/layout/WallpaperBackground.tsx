@@ -138,42 +138,68 @@ export function WallpaperBackground() {
   const screenOrientation = useScreenOrientation();
   const orientationOverride = useOrientationOverride();
   const effectiveOrientation = orientationOverride === 'auto' ? screenOrientation : orientationOverride;
-  const { photos } = usePhotos({
+  // Fetch all wallpaper photos, then PREFER the ones matching this screen's
+  // orientation — but fall back to any photo when none match, so a display whose
+  // orientation has no photos still shows a wallpaper instead of going blank.
+  const { photos: allPhotos } = usePhotos({
     sort: 'random',
-    limit: 30,
+    limit: 40,
     usage: 'wallpaper',
-    orientation: autoOrientation ? effectiveOrientation : undefined,
   });
+  const orientedPhotos = autoOrientation
+    ? allPhotos.filter((p) => p.orientation === effectiveOrientation)
+    : allPhotos;
+  const photos = orientedPhotos.length > 0 ? orientedPhotos : allPhotos;
+
   const [currentIndex, setCurrentIndex] = useState(0);
   const [fadingOut, setFadingOut] = useState(false);
 
+  // Track photos whose file is missing/deleted (the image 404s) so we skip past
+  // them instead of showing a blank background. A broken pinned photo falls back
+  // to the rotation; a broken rotation photo is dropped from the pool so the next
+  // render lands on a good one. Resets on reload (so restored files reappear).
+  const [brokenIds, setBrokenIds] = useState<Set<string>>(new Set());
+  const markBroken = useCallback((id: string) => {
+    setBrokenIds((prev) => (prev.has(id) ? prev : new Set(prev).add(id)));
+  }, []);
+
+  const usePinned = !!pinnedId && !brokenIds.has(pinnedId);
+  const pool = photos.filter((p) => !brokenIds.has(p.id));
+
   // Rotate photos (only if no pinned photo and interval is not "never")
   useEffect(() => {
-    if (!enabled || photos.length <= 1 || pinnedId || interval === 0) return;
+    if (!enabled || pool.length <= 1 || usePinned || interval === 0) return;
     const timer = window.setInterval(() => {
       setFadingOut(true);
       // After fade out, switch image and fade back in
       setTimeout(() => {
-        setCurrentIndex((i) => (i + 1) % photos.length);
+        setCurrentIndex((i) => i + 1);
         setFadingOut(false);
       }, 1000);
     }, interval * 1000);
     return () => window.clearInterval(timer);
-  }, [enabled, photos.length, interval, pinnedId]);
+  }, [enabled, pool.length, interval, usePinned]);
 
   if (!enabled) return null;
 
-  // Use pinned photo if set, otherwise use rotating photos
-  const src = pinnedId
-    ? `/api/photos/${pinnedId}/file`
-    : photos[currentIndex]
-      ? `/api/photos/${photos[currentIndex]!.id}/file`
-      : null;
+  // Pinned photo (if set and not broken), else the next non-broken rotation photo.
+  const rotationPhoto = pool.length > 0 ? pool[currentIndex % pool.length] : undefined;
+  const activeId = usePinned ? pinnedId : (rotationPhoto?.id ?? null);
+  const src = activeId ? `/api/photos/${activeId}/file` : null;
 
   if (!src) return null;
 
   return (
     <div className="fixed inset-0 z-0 pointer-events-none">
+      {/* Validator — if this photo's file 404s, mark it broken and skip it. */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        key={activeId ?? 'none'}
+        src={src}
+        alt=""
+        className="hidden"
+        onError={() => activeId && markBroken(activeId)}
+      />
       {/* Photo */}
       <div
         className="absolute inset-0 bg-cover bg-center transition-opacity duration-1000"
