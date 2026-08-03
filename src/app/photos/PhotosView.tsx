@@ -54,12 +54,14 @@ export function PhotosView() {
   const [orientationFilters, setOrientationFilters] = useState<Set<string>>(new Set());
   const [usageFilters, setUsageFilters] = useState<Set<string>>(new Set());
   const [favoriteFilter, setFavoriteFilter] = useState<boolean | undefined>(undefined);
+  const [belowHdFilter, setBelowHdFilter] = useState(false);
 
   const { photos: rawPhotos, loading, error, total, refresh, loadMore, updateUsage } =
     usePhotos({
       sort: 'chronological',
       limit: 50,
       favorite: favoriteFilter,
+      belowHd: belowHdFilter,
     });
 
   // Client-side multi-select filtering
@@ -74,15 +76,28 @@ export function PhotosView() {
         return tags.some((t) => usageFilters.has(t));
       });
     }
+    // belowHd is applied server-side (usePhotos) so it filters the whole
+    // library, not just the loaded page — nothing to do here.
     return filtered;
   }, [rawPhotos, orientationFilters, usageFilters]);
 
-  const hasActiveFilters = orientationFilters.size > 0 || usageFilters.size > 0 || !!favoriteFilter;
+  const hasActiveFilters =
+    orientationFilters.size > 0 || usageFilters.size > 0 || !!favoriteFilter || belowHdFilter;
+
+  // Currently-selected photos (for bulk usage toggles' aggregate state)
+  const selectedPhotos = React.useMemo(
+    () => photos.filter((p) => selectedIds.has(p.id)),
+    [photos, selectedIds],
+  );
+  const allSelectedHaveTag = (tag: string) =>
+    selectedPhotos.length > 0 &&
+    selectedPhotos.every((p) => p.usage.split(',').includes(tag));
 
   const clearFilters = () => {
     setOrientationFilters(new Set());
     setUsageFilters(new Set());
     setFavoriteFilter(undefined);
+    setBelowHdFilter(false);
   };
 
   const handleDelete = useCallback(async (photoId: string) => {
@@ -140,6 +155,57 @@ export function PhotosView() {
     }
   }, [selectedIds, confirm, exitSelectMode, refresh]);
 
+  // Select all — covers the WHOLE filtered library (not just the loaded page)
+  // by asking the server for every matching id. Orientation/usage are filtered
+  // client-side and can't be expressed in that query, so when either is active
+  // we fall back to selecting the currently-loaded photos.
+  const [selectingAll, setSelectingAll] = useState(false);
+  const handleSelectAll = useCallback(async () => {
+    if (selectedIds.size > 0) {
+      setSelectedIds(new Set());
+      return;
+    }
+    if (orientationFilters.size > 0 || usageFilters.size > 0) {
+      setSelectedIds(new Set(photos.map((p) => p.id)));
+      return;
+    }
+    setSelectingAll(true);
+    try {
+      const params = new URLSearchParams();
+      if (favoriteFilter !== undefined) params.set('favorite', String(favoriteFilter));
+      if (belowHdFilter) params.set('belowHd', 'true');
+      params.set('idsOnly', 'true');
+      const res = await fetch(`/api/photos?${params}`);
+      if (!res.ok) throw new Error('Request failed');
+      const data = await res.json();
+      setSelectedIds(new Set<string>(data.ids ?? []));
+    } catch {
+      setSelectedIds(new Set(photos.map((p) => p.id)));
+    } finally {
+      setSelectingAll(false);
+    }
+  }, [selectedIds, orientationFilters, usageFilters, favoriteFilter, belowHdFilter, photos]);
+
+  const handleBulkUsage = useCallback(
+    async (tag: string, action: 'add' | 'remove') => {
+      const ids = Array.from(selectedIds);
+      if (ids.length === 0) return;
+      try {
+        const res = await fetch('/api/photos/bulk-usage', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ids, tag, action }),
+        });
+        if (!res.ok) throw new Error('Request failed');
+        refresh();
+      } catch (err) {
+        console.error('Error updating usage:', err);
+        toast({ title: 'Failed to update photos', variant: 'destructive' });
+      }
+    },
+    [selectedIds, refresh],
+  );
+
   return (
     <PageWrapper>
       <div className="h-screen flex flex-col">
@@ -194,6 +260,16 @@ export function PhotosView() {
             <Star className="h-3.5 w-3.5" />
             Favorites
           </Button>
+          <Button
+            variant={belowHdFilter ? 'secondary' : 'outline'}
+            size="sm"
+            onClick={() => setBelowHdFilter((v) => !v)}
+            className="h-8 gap-1.5 shrink-0"
+            title="Show only photos below 1920×1080 (yellow/red dots) — low-res for HD wallpaper"
+          >
+            <span className="w-2.5 h-2.5 rounded-full bg-yellow-500 ring-1 ring-black/30" />
+            Below HD
+          </Button>
           {hasActiveFilters && (
             <Button variant="ghost" size="sm" onClick={clearFilters} className="shrink-0 text-muted-foreground h-8">
               <X className="h-3 w-3 mr-1" />
@@ -211,17 +287,37 @@ export function PhotosView() {
               variant="ghost"
               size="sm"
               className="h-8"
-              onClick={() =>
-                setSelectedIds(
-                  selectedIds.size === photos.length
-                    ? new Set()
-                    : new Set(photos.map((p) => p.id)),
-                )
-              }
-              disabled={photos.length === 0}
+              onClick={handleSelectAll}
+              disabled={photos.length === 0 || selectingAll}
             >
-              {selectedIds.size === photos.length ? 'Clear all' : 'Select all'}
+              {selectingAll
+                ? 'Selecting…'
+                : selectedIds.size > 0
+                  ? 'Clear all'
+                  : `Select all${total > photos.length ? ` (${total})` : ''}`}
             </Button>
+
+            {/* Bulk-toggle W/G/S across the selection */}
+            <div className="flex items-center gap-1 border-l pl-2 ml-1">
+              <span className="text-xs text-muted-foreground mr-0.5">Show in:</span>
+              {USAGE_OPTIONS.map((opt) => {
+                const active = allSelectedHaveTag(opt.value);
+                return (
+                  <Button
+                    key={opt.value}
+                    variant={active ? 'secondary' : 'outline'}
+                    size="sm"
+                    className="h-8"
+                    disabled={selectedIds.size === 0}
+                    onClick={() => handleBulkUsage(opt.value, active ? 'remove' : 'add')}
+                    title={`${active ? 'Remove selected from' : 'Add selected to'} ${opt.label}`}
+                  >
+                    {opt.label}
+                  </Button>
+                );
+              })}
+            </div>
+
             <div className="ml-auto">
               <Button
                 variant="destructive"
