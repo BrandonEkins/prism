@@ -26,7 +26,7 @@ export function ManageCalendarsModal({
 }) {
   return (
     <Dialog open onOpenChange={onClose}>
-      <DialogContent className="w-[calc(100vw-2rem)] max-w-3xl max-h-[85vh] overflow-y-auto overflow-x-hidden">
+      <DialogContent className="w-[calc(100vw-2rem)] max-w-5xl max-h-[85vh] overflow-y-auto overflow-x-hidden">
         <DialogHeader>
           <DialogTitle>Manage calendars</DialogTitle>
         </DialogHeader>
