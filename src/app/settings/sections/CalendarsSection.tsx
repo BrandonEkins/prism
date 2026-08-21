@@ -890,7 +890,7 @@ function AddIcalSubscriptionCard({ onAdded }: { onAdded: () => void }) {
         </details>
       </CardHeader>
       <CardContent className="space-y-3">
-        <div className="grid gap-3 sm:grid-cols-[1fr_220px_auto]">
+        <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_220px_auto]">
           <Input
             type="url"
             placeholder="webcal://p99-caldav.icloud.com/published/..."
