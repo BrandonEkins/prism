@@ -7,6 +7,18 @@ import { useHiddenHours } from '../useHiddenHours';
 
 const STORAGE_KEY = 'prism:calendar-hidden-hours';
 
+// useHiddenHours now reconciles against /api/settings; jsdom has no global
+// fetch, so stub it to an empty-settings response (the DB reconcile becomes a
+// no-op and the localStorage-cache behavior these tests assert is preserved).
+beforeAll(() => {
+  global.fetch = jest.fn(() =>
+    Promise.resolve({ ok: true, json: () => Promise.resolve({ settings: {} }) }),
+  ) as unknown as typeof fetch;
+});
+afterAll(() => {
+  delete (global as { fetch?: unknown }).fetch;
+});
+
 beforeEach(() => {
   localStorage.clear();
 });

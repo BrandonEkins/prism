@@ -3,7 +3,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { CalendarEvent } from '@/types/calendar';
 
-const HIDDEN_HOURS_KEY = 'prism:calendar-hidden-hours';
+// localStorage key doubles as a fast-paint cache AND the migration source for
+// installs that stored hidden-hours locally before it moved to the database.
+const CACHE_KEY = 'prism:calendar-hidden-hours';
+// Database settings key (persists across updates + shared across devices).
+const SETTING_KEY = 'calendarHiddenHours';
 
 interface HiddenHoursSettings {
   /** Mode for hour filtering */
@@ -26,39 +30,84 @@ const DEFAULT_SETTINGS: HiddenHoursSettings = {
   enabled: false,
 };
 
+function normalize(parsed: unknown): HiddenHoursSettings {
+  const p = (parsed ?? {}) as Partial<HiddenHoursSettings>;
+  return {
+    mode: p.mode === 'manual' || p.mode === 'auto-fit' ? p.mode : DEFAULT_SETTINGS.mode,
+    startHour: typeof p.startHour === 'number' ? p.startHour : DEFAULT_SETTINGS.startHour,
+    endHour: typeof p.endHour === 'number' ? p.endHour : DEFAULT_SETTINGS.endHour,
+    bufferHours: typeof p.bufferHours === 'number' ? p.bufferHours : DEFAULT_SETTINGS.bufferHours,
+    enabled: typeof p.enabled === 'boolean' ? p.enabled : DEFAULT_SETTINGS.enabled,
+  };
+}
+
 export function useHiddenHours() {
   const [settings, setSettingsState] = useState<HiddenHoursSettings>(DEFAULT_SETTINGS);
   const [loaded, setLoaded] = useState(false);
 
-  // Load from localStorage on mount
   useEffect(() => {
+    // 1. Instant paint from the localStorage cache (so the calendar doesn't
+    //    flash default hours before the DB responds).
+    let cached: HiddenHoursSettings | null = null;
     try {
-      const saved = localStorage.getItem(HIDDEN_HOURS_KEY);
+      const saved = localStorage.getItem(CACHE_KEY);
       if (saved) {
-        const parsed = JSON.parse(saved);
-        setSettingsState({
-          mode: typeof parsed.mode === 'string' && (parsed.mode === 'manual' || parsed.mode === 'auto-fit') ? parsed.mode : DEFAULT_SETTINGS.mode,
-          startHour: typeof parsed.startHour === 'number' ? parsed.startHour : DEFAULT_SETTINGS.startHour,
-          endHour: typeof parsed.endHour === 'number' ? parsed.endHour : DEFAULT_SETTINGS.endHour,
-          bufferHours: typeof parsed.bufferHours === 'number' ? parsed.bufferHours : DEFAULT_SETTINGS.bufferHours,
-          enabled: typeof parsed.enabled === 'boolean' ? parsed.enabled : DEFAULT_SETTINGS.enabled,
-        });
+        cached = normalize(JSON.parse(saved));
+        setSettingsState(cached);
       }
     } catch {
-      // Use defaults
+      // ignore
     }
     setLoaded(true);
+
+    // 2. Authoritative value from the database; reconcile + refresh the cache.
+    let active = true;
+    fetch('/api/settings')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!active) return;
+        const dbValue = data?.settings?.[SETTING_KEY];
+        if (dbValue && typeof dbValue === 'object') {
+          const norm = normalize(dbValue);
+          setSettingsState(norm);
+          try {
+            localStorage.setItem(CACHE_KEY, JSON.stringify(norm));
+          } catch {
+            // ignore
+          }
+        } else if (cached) {
+          // One-time migration: DB has no value yet but this device had a local
+          // one — push it up so it persists and reaches other devices.
+          fetch('/api/settings', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ key: SETTING_KEY, value: cached }),
+          }).catch(() => {});
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      active = false;
+    };
   }, []);
 
-  // Save to localStorage
   const setSettings = useCallback((newSettings: Partial<HiddenHoursSettings>) => {
     setSettingsState((prev) => {
       const updated = { ...prev, ...newSettings };
+      // Cache locally for instant paint next load.
       try {
-        localStorage.setItem(HIDDEN_HOURS_KEY, JSON.stringify(updated));
+        localStorage.setItem(CACHE_KEY, JSON.stringify(updated));
       } catch {
-        // Ignore storage errors
+        // ignore
       }
+      // Persist to the DB (requires settings permission; a display-only session
+      // silently keeps the local value if the PATCH is refused).
+      fetch('/api/settings', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key: SETTING_KEY, value: updated }),
+      }).catch(() => {});
       return updated;
     });
   }, []);
