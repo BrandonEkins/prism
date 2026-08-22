@@ -26,6 +26,7 @@ import { useCardCapacity } from '@/lib/hooks/useCardCapacity';
 import type { DayBucket } from '@/lib/hooks/useWeekViewData';
 import { useTimeFormat } from '@/components/providers';
 import { eventOccursOnDisplayDay, eventSpansMultipleDisplayDays, formatDisplayTime, isCalendarEventPast, toDisplayDate } from '@/lib/utils/timeFormat';
+import { eventsOverlappingRange } from '@/lib/utils/calendarRange';
 
 export interface MultiWeekViewProps {
   currentDate: Date;
@@ -86,7 +87,10 @@ export function MultiWeekView({
     weeks.push(hideWeekends ? row.filter((d) => d.getDay() !== 0 && d.getDay() !== 6) : row);
   }
   const colCount = hideWeekends ? 5 : 7;
-  const spanningEvents = events
+  // Scope the wide event list to the visible weeks once, so the spanning +
+  // per-day filters iterate the local slice instead of thousands of events.
+  const scopedEvents = eventsOverlappingRange(events, weekStart, addDays(weekStart, weekCount * 7));
+  const spanningEvents = scopedEvents
     .filter((event) => eventSpansMultipleDisplayDays(
       event.startTime,
       event.endTime,
@@ -136,7 +140,7 @@ export function MultiWeekView({
                   date={date}
                   rowDates={week}
                   spanningEvents={rowSpanningEvents}
-                  events={events}
+                  events={scopedEvents}
                   onEventClick={onEventClick}
                   compact={compact}
                   bordered={bordered}

@@ -142,6 +142,20 @@ export function useDayBucketsForRange({
     const start = startOfDay(from);
     const end = startOfDay(to);
 
+    // Pre-filter to events that overlap [from, to] (padded ±1 day so a
+    // timezone boundary can never drop a real match) so the per-day membership
+    // check below iterates a small slice instead of the full, up-to-several-
+    // thousand-event dataset on every view switch / month advance. The precise
+    // per-day check (eventOnDay) is unchanged, so results are identical.
+    const DAY_MS = 86_400_000;
+    const filterStartMs = start.getTime() - DAY_MS;
+    const filterEndMs = end.getTime() + 2 * DAY_MS;
+    const rangeEvents = overlays.events
+      ? events.filter(
+          (e) => e.startTime.getTime() <= filterEndMs && e.endTime.getTime() >= filterStartMs,
+        )
+      : EMPTY_EVENTS;
+
     const safeMeals = overlays.meals ? meals ?? EMPTY_MEALS : EMPTY_MEALS;
     const safeChores = overlays.chores ? chores ?? EMPTY_CHORES : EMPTY_CHORES;
     const safeTasks = overlays.tasks ? tasks ?? EMPTY_TASKS : EMPTY_TASKS;
@@ -154,7 +168,7 @@ export function useDayBucketsForRange({
       const key = dateKey(date);
 
       const dayEvents = overlays.events
-        ? events.filter((e) => eventOnDay(e, date, displayTimezone))
+        ? rangeEvents.filter((e) => eventOnDay(e, date, displayTimezone))
         : EMPTY_EVENTS;
       const allDayEvents = dayEvents
         .filter((e) => e.allDay)

@@ -23,6 +23,7 @@ import { seasonalPalettes } from '@/lib/themes/seasonalThemes';
 import { useTimeFormat } from '@/components/providers';
 import { InlineCalendarEvent, SpanningEventRows } from './cells';
 import { eventOccursOnDisplayDay, eventSpansMultipleDisplayDays, toDisplayDate } from '@/lib/utils/timeFormat';
+import { eventsOverlappingRange } from '@/lib/utils/calendarRange';
 
 // Get the accent color for a month (1-12)
 function getMonthColor(month: Date): string {
@@ -79,7 +80,10 @@ function MiniMonth({
   for (let i = 0; i < days.length; i += 7) {
     weeks.push(days.slice(i, i + 7));
   }
-  const spanningEvents = events
+  // Scope the wide event list to this mini-month's visible grid once, so the
+  // spanning filter and the per-day filter below iterate ~40 events, not thousands.
+  const scopedEvents = eventsOverlappingRange(events, calendarStart, calendarEnd);
+  const spanningEvents = scopedEvents
     .filter((event) => eventSpansMultipleDisplayDays(
       event.startTime,
       event.endTime,
@@ -131,7 +135,7 @@ function MiniMonth({
               {week.map((date, dayIndex) => {
               const inMonth = isSameMonth(date, month);
               const today = isSameDay(date, displayNow);
-              const dayEvents = events
+              const dayEvents = scopedEvents
                 .filter((event) => !spanningEventSet.has(event))
                 .filter((event) => eventOccursOnDisplayDay(
                   event.startTime,
