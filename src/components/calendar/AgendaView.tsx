@@ -22,6 +22,7 @@ import {
   toDisplayDate,
   type TimeFormat,
 } from '@/lib/utils/timeFormat';
+import { eventsOverlappingRange } from '@/lib/utils/calendarRange';
 
 const MEAL_FALLBACK_COLOR = '#10b981';
 const CHORE_FALLBACK_COLOR = '#f59e0b';
@@ -80,7 +81,10 @@ export function AgendaView({
   const cards = displayMode === 'cards';
   const startDate = startOfDay(toDisplayDate(new Date(), displayTimezone));
 
-  const filteredEvents = events
+  // Scope the wide event list to the agenda horizon once, so the per-day
+  // membership check below iterates a small slice instead of thousands.
+  const scopedEvents = eventsOverlappingRange(events, startDate, addDays(startDate, days));
+  const filteredEvents = scopedEvents
     .filter(e => Array.from({ length: days }, (_, i) => addDays(startDate, i))
       .some(date => eventOccursOnDisplayDay(
         e.startTime,

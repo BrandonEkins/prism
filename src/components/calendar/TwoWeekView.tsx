@@ -21,6 +21,7 @@ import {
   formatDisplayTime,
   toDisplayDate,
 } from '@/lib/utils/timeFormat';
+import { eventsOverlappingRange } from '@/lib/utils/calendarRange';
 
 export interface TwoWeekViewProps {
   currentDate: Date;
@@ -52,8 +53,10 @@ export function TwoWeekView({
   const week1Num = getWeek(week1[0]!);
   const week2Num = getWeek(week2[0]!);
 
+  // Scope the wide event list to the two visible weeks once.
+  const scopedEvents = eventsOverlappingRange(events, weekStart, addDays(weekStart, 14));
   const renderDayCell = (date: Date, compact: boolean = false) => {
-    const dayEvents = events.filter((event) => eventOccursOnDisplayDay(
+    const dayEvents = scopedEvents.filter((event) => eventOccursOnDisplayDay(
       event.startTime,
       event.endTime,
       event.allDay,
