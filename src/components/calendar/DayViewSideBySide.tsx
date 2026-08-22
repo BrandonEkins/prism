@@ -29,6 +29,7 @@ import {
   formatDisplayTimeRange,
   toDisplayDate,
 } from '@/lib/utils/timeFormat';
+import { eventsOverlappingRange } from '@/lib/utils/calendarRange';
 
 export interface DayViewSideBySideProps {
   currentDate: Date;
@@ -89,7 +90,8 @@ export function DayViewSideBySide({
 
   // Get visible hours (filtered if hidden mode is enabled)
   const dayStart = startOfDay(currentDate);
-  const dayEvents = events.filter((event) => eventOccursOnDisplayDay(
+  const scopedEvents = eventsOverlappingRange(events, currentDate, currentDate);
+  const dayEvents = scopedEvents.filter((event) => eventOccursOnDisplayDay(
     event.startTime,
     event.endTime,
     event.allDay,
