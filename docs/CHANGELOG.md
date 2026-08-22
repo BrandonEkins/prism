@@ -4,6 +4,13 @@ All notable changes to Prism are documented in this file.
 
 ## Unreleased
 
+## [1.16.1] – 2026-08-22
+
+### Calendar
+- **Faster view switching and month navigation.** Flipping between calendar views and advancing the month (especially 3-month) is much snappier, and switching no longer briefly freezes the display while the new view renders. Each view now scopes its work to just the dates on screen instead of scanning the whole event history every time.
+- **The "hide hours" setting now sticks.** It is stored in the database instead of per-browser, so it survives updates and stays consistent across your devices.
+- **The Manage calendars window no longer scrolls sideways** and now uses more of the screen width on large displays.
+
 ## [1.16.0] – 2026-08-21
 
 ### Display
