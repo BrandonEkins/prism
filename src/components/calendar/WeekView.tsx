@@ -30,6 +30,7 @@ import {
   formatDisplayTimeRange,
   toDisplayDate,
 } from '@/lib/utils/timeFormat';
+import { eventsOverlappingRange } from '@/lib/utils/calendarRange';
 
 export type CalendarDisplayMode = 'inline' | 'cards';
 
@@ -77,7 +78,10 @@ export function WeekView({
   const { settings: hiddenSettings, toggleHidden, getVisibleHours } = useHiddenHours();
 
   const weekEnd = addDays(weekStart, 7);
-  const timedWeekEvents = events
+  // Scope the wide event list to this week once; the per-day/per-hour filters
+  // below all read the local slice instead of thousands of events.
+  const scopedEvents = eventsOverlappingRange(events, weekStart, weekEnd);
+  const timedWeekEvents = scopedEvents
     .filter((event) => {
       const displayStart = toDisplayDate(event.startTime, displayTimezone);
       return !event.allDay
@@ -96,7 +100,7 @@ export function WeekView({
 
   // Multi-day timed events share the persistent header with all-day events so
   // they do not become oversized blocks in the hourly grid.
-  const getAllDayEvents = (date: Date) => events.filter((event) =>
+  const getAllDayEvents = (date: Date) => scopedEvents.filter((event) =>
     (event.allDay || eventSpansMultipleDisplayDays(
       event.startTime,
       event.endTime,
@@ -124,14 +128,14 @@ export function WeekView({
   // across the entire day, so events that overlap but start in different
   // hours still split the column horizontally).
   const getDayTimedEvents = (date: Date) =>
-    events.filter((event) =>
+    scopedEvents.filter((event) =>
       !event.allDay
       && !eventSpansMultipleDisplayDays(event.startTime, event.endTime, false, displayTimezone)
       && isSameDay(toDisplayDate(event.startTime, displayTimezone), date));
 
   // Get timed events for a specific day and hour
   const getHourEvents = (date: Date, hour: number) =>
-    events.filter(
+    scopedEvents.filter(
       (e) =>
         isSameDay(toDisplayDate(e.startTime, displayTimezone), date) &&
         !e.allDay &&

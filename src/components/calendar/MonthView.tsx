@@ -26,6 +26,7 @@ import { useCardCapacity } from '@/lib/hooks/useCardCapacity';
 import type { DayBucket } from '@/lib/hooks/useWeekViewData';
 import { useTimeFormat } from '@/components/providers';
 import { eventOccursOnDisplayDay, eventSpansMultipleDisplayDays, isCalendarEventPast, toDisplayDate } from '@/lib/utils/timeFormat';
+import { eventsOverlappingRange } from '@/lib/utils/calendarRange';
 
 // Get the accent color for a month (1-12)
 function getMonthColor(month: Date): string {
@@ -88,7 +89,10 @@ export function MonthView({
 
   const numWeeks = Math.ceil(days.length / 7);
   const dayNames = [...DAYS_SHORT_ARRAY.slice(weekStartsOn), ...DAYS_SHORT_ARRAY.slice(0, weekStartsOn)];
-  const spanningEvents = events
+  // Scope the wide event list to this month grid's visible range once, so the
+  // spanning + per-day filters iterate ~40 events instead of thousands.
+  const scopedEvents = eventsOverlappingRange(events, calendarStart, calendarEnd);
+  const spanningEvents = scopedEvents
     .filter((event) => eventSpansMultipleDisplayDays(
       event.startTime,
       event.endTime,
@@ -139,7 +143,7 @@ export function MonthView({
               rowDate,
               displayTimezone,
             )));
-          const dayEvents = events
+          const dayEvents = scopedEvents
             .filter((event) => !spanningEventSet.has(event))
             .filter((event) => eventOccursOnDisplayDay(
               event.startTime,

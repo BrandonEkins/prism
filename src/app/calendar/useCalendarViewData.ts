@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useTransition } from 'react';
 import {
   format,
   startOfWeek,
@@ -28,12 +28,16 @@ export type { CalendarGroup } from '@/lib/hooks';
 export function useCalendarViewData() {
   const { weekStartsOn } = useWeekStartsOn();
   const { displayTimezone } = useTimeFormat();
+  // View/date changes trigger a heavy re-bucket + grid re-render. Running those
+  // as a transition keeps the switcher/nav responsive (and lets us show a subtle
+  // pending state) instead of freezing while the new view computes.
+  const [isNavPending, startTransition] = useTransition();
   const [currentDate, setCurrentDate] = useState(new Date());
 
   useEffect(() => {
     setCurrentDate(toDisplayDate(new Date(), displayTimezone));
   }, [displayTimezone]);
-  const [viewType, setViewType] = useState<CalendarViewType>(() => {
+  const [viewType, setViewTypeState] = useState<CalendarViewType>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('prism-calendar-view-type') as CalendarViewType | null;
       const valid: CalendarViewType[] = ['agenda', 'day', 'week', 'weekVertical', 'multiWeek', 'month', 'threeMonth'];
@@ -41,6 +45,10 @@ export function useCalendarViewData() {
     }
     return 'month';
   });
+  const setViewType = useCallback(
+    (next: CalendarViewType) => startTransition(() => setViewTypeState(next)),
+    [],
+  );
 
   useEffect(() => {
     localStorage.setItem('prism-calendar-view-type', viewType);
@@ -146,12 +154,12 @@ export function useCalendarViewData() {
   }, [apiEvents, filterEvents]);
 
   const goToToday = useCallback(
-    () => setCurrentDate(toDisplayDate(new Date(), displayTimezone)),
+    () => startTransition(() => setCurrentDate(toDisplayDate(new Date(), displayTimezone))),
     [displayTimezone],
   );
 
   const goToPrevious = useCallback(() => {
-    setCurrentDate(prev => {
+    startTransition(() => setCurrentDate(prev => {
       switch (viewType) {
         case 'agenda': return prev; // no navigation
         case 'day': return subDays(prev, 1);
@@ -161,11 +169,11 @@ export function useCalendarViewData() {
         case 'month': return subMonths(prev, 1);
         case 'threeMonth': return subMonths(prev, 1);
       }
-    });
+    }));
   }, [viewType, weekCount]);
 
   const goToNext = useCallback(() => {
-    setCurrentDate(prev => {
+    startTransition(() => setCurrentDate(prev => {
       switch (viewType) {
         case 'agenda': return prev; // no navigation
         case 'day': return addDays(prev, 1);
@@ -175,7 +183,7 @@ export function useCalendarViewData() {
         case 'month': return addMonths(prev, 1);
         case 'threeMonth': return addMonths(prev, 1);
       }
-    });
+    }));
   }, [viewType, weekCount]);
 
   const getDateRangeTitle = useCallback((): string => {
@@ -218,5 +226,6 @@ export function useCalendarViewData() {
     overlays, setOverlays,
     events, loading, error, refreshEvents,
     goToToday, goToPrevious, goToNext, getDateRangeTitle,
+    isNavPending,
   };
 }
