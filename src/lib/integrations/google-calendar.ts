@@ -159,8 +159,13 @@ export class TokenRevokedError extends Error {
 /**
  * Refresh access token using refresh token
  */
-export async function refreshAccessToken(refreshToken: string): Promise<GoogleTokens> {
-  const { clientId, clientSecret } = await getConfig();
+export async function refreshAccessToken(
+  refreshToken: string,
+  credentialsOverride?: { clientId: string; clientSecret: string },
+): Promise<GoogleTokens> {
+  // The manual-token flow validates a pasted refresh token against pasted, not-
+  // yet-stored credentials; every other caller uses the stored config.
+  const { clientId, clientSecret } = credentialsOverride ?? (await getConfig());
 
   const response = await fetch(GOOGLE_TOKEN_URL, {
     method: 'POST',
