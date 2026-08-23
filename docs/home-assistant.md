@@ -248,3 +248,6 @@ See [docs/voice-api.md](voice-api.md) for the full endpoint reference, request/r
 - Check the Prism container is running: `docker ps`
 - Test the endpoint manually: `curl -H "Authorization: Bearer YOUR_TOKEN" http://prism.local:3000/api/chores`
 - Check HA logs for connection errors
+
+**Google Calendar won't connect — "must end with a public top-level domain"**
+- The add-on runs on a private LAN address, which Google refuses to accept as an OAuth redirect URI. Either put Prism behind a public HTTPS URL, or use the no-public-URL method (paste a refresh token from Google's OAuth Playground). See [Calendar → Google Calendar without a public URL](features/CALENDAR.md#google-calendar-without-a-public-url-oauth-playground).

@@ -20,6 +20,21 @@ OAuth grants Prism read+write access to your Google Calendars. You can create, e
 
 The connection covers Calendar specifically. If you also want Google Tasks sync, that's configured per-list inside the Google provider card on the same *Settings → Integrations* page.
 
+### Google Calendar without a public URL (OAuth Playground)
+
+*Settings → Integrations → Google → **Connect without a public URL (advanced)**.*
+
+The normal **Connect** button needs a public HTTPS address, because Google refuses to register a private/LAN redirect URI (e.g. `http://homeassistant.local:8123/…` or `http://192.168.x.x:3000/…`) — you'll see *"must end with a public top-level domain."* If Prism only runs on your LAN (Home Assistant add-on, bare Docker) and you'd rather not put it behind a public URL, you can still get full read+write by generating a refresh token yourself with Google's OAuth Playground and pasting it into Prism. The sign-in stays entirely on Google's own domain — nothing routes through a third party.
+
+1. In the [Google Cloud Console](https://console.cloud.google.com/apis/credentials), create an **OAuth 2.0 Client ID** (type *Web application*) and enable the **Google Calendar API**.
+2. Add `https://developers.google.com/oauthplayground` to the client's **Authorized redirect URIs**.
+3. Open the [OAuth 2.0 Playground](https://developers.google.com/oauthplayground), click the gear icon, tick **"Use your own OAuth credentials"**, and paste the same Client ID and Secret.
+4. In *Step 1*, select **Google Calendar API v3 → `https://www.googleapis.com/auth/calendar`**, click **Authorize APIs**, and sign in with the account whose calendars you want.
+5. In *Step 2*, click **Exchange authorization code for tokens** and copy the **Refresh token**.
+6. In Prism, open the *Connect without a public URL (advanced)* section of the Google card and paste the Client ID, Client Secret, and Refresh token. Prism validates them with Google and imports your calendars with full read+write.
+
+**Heads-up — publish your consent screen to Production.** If your OAuth consent screen is left in *Testing* mode, Google expires refresh tokens after **7 days** and the connection stops working. Publish the app to *Production* (no verification is required for your own use of Calendar scopes) so it keeps working. If a connection ever goes stale, just re-paste a fresh refresh token in the same place. To revoke access entirely, go to *Google Account → Security → Third-party access*.
+
 ### iCal subscriptions (read-only)
 
 *Open the Calendar page → **Manage** → Subscribe to a calendar → paste URL.*
