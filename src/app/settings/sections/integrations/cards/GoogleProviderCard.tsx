@@ -10,6 +10,7 @@ import { useConfirmDialog } from '@/lib/hooks/useConfirmDialog';
 import { ProviderCardShell } from '../shared/ProviderCardShell';
 import { CollapsibleSubSection } from '../shared/CollapsibleSubSection';
 import { GoogleCredentialsForm } from './GoogleCredentialsForm';
+import { GoogleManualTokenForm } from './GoogleManualTokenForm';
 import type { IntegrationStatus } from '../shared/useIntegrationStatus';
 import type { ConnectionStatus } from '../shared/ConnectionStatusBadge';
 import { connectedAsLabel } from '../shared/connectedAs';
@@ -208,6 +209,14 @@ export function GoogleProviderCard({
             </Button>
           </CollapsibleSubSection>
         )}
+        <CollapsibleSubSection
+          id="google-manual-token"
+          label="Connect without a public URL (advanced)"
+          summary="Paste a refresh token from Google's OAuth Playground — for LAN-only installs, or to re-paste an expired one"
+          forceOpen={forceSubSectionOpen === 'google-manual-token'}
+        >
+          <GoogleManualTokenForm onSaved={() => window.location.reload()} />
+        </CollapsibleSubSection>
         <CollapsibleSubSection
           id="google-calendars"
           label="Calendars"
