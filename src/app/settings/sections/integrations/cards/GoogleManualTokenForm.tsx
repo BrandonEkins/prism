@@ -101,46 +101,71 @@ export function GoogleManualTokenForm({ onSaved }: { onSaved?: () => void }) {
         and paste it here — the login stays on Google&apos;s own domain.
       </p>
 
+      <p className="text-xs font-medium text-foreground">
+        Do all of this signed into a <span className="underline">single</span> Google account — the one
+        whose calendars you want — ideally in a private/incognito window, so you never mix up accounts.
+      </p>
+
       <ol className="list-decimal space-y-1 pl-5 text-xs text-muted-foreground">
         <li>
           In the{' '}
           <a
-            href="https://console.cloud.google.com/apis/credentials"
+            href="https://console.cloud.google.com/"
             target="_blank"
             rel="noopener noreferrer"
             className={linkClass}
           >
             Google Cloud Console
           </a>
-          , create an OAuth 2.0 Client ID (Web application) and enable the{' '}
-          <span className="font-medium">Google Calendar API</span>.
+          , create a project, then enable the <span className="font-medium">Google Calendar API</span>.
         </li>
         <li>
-          Add <code className="rounded bg-muted px-1">https://developers.google.com/oauthplayground</code>{' '}
-          to the client&apos;s <span className="font-medium">Authorized redirect URIs</span>.
+          Configure the <span className="font-medium">OAuth consent screen</span> (User type:{' '}
+          <span className="font-medium">External</span>), then <span className="font-medium">Publish</span>{' '}
+          it to <span className="font-medium">Production</span> — this is what keeps the connection from
+          expiring after 7 days.
         </li>
         <li>
-          Open the Playground → gear icon → check{' '}
-          <span className="font-medium">&ldquo;Use your own OAuth credentials&rdquo;</span> → paste the
-          same Client ID and Secret.
+          Create an <span className="font-medium">OAuth Client ID</span> of type{' '}
+          <span className="font-medium">Web application</span>, and add{' '}
+          <code className="rounded bg-muted px-1">https://developers.google.com/oauthplayground</code> to
+          its <span className="font-medium">Authorized redirect URIs</span>. Copy the Client ID and Secret
+          (the secret is shown only once).
         </li>
         <li>
-          Step 1: select{' '}
+          Open the{' '}
+          <a
+            href="https://developers.google.com/oauthplayground"
+            target="_blank"
+            rel="noopener noreferrer"
+            className={linkClass}
+          >
+            OAuth Playground
+          </a>{' '}
+          → gear icon → check{' '}
+          <span className="font-medium">&ldquo;Use your own OAuth credentials&rdquo;</span> → paste that
+          Client ID and Secret.
+        </li>
+        <li>
+          Step 1: enter the scope{' '}
           <code className="rounded bg-muted px-1">https://www.googleapis.com/auth/calendar</code> →{' '}
-          <span className="font-medium">Authorize APIs</span> → sign in with the Google account you want.
+          <span className="font-medium">Authorize APIs</span> → sign in → if warned the app isn&apos;t
+          verified, choose <span className="font-medium">Advanced → proceed</span> (expected for your own
+          app) → <span className="font-medium">Allow</span>.
         </li>
         <li>
           Step 2: <span className="font-medium">Exchange authorization code for tokens</span> → copy the{' '}
           <span className="font-medium">Refresh token</span>.
         </li>
-        <li>Paste all three values below.</li>
+        <li>Paste the Client ID, Client Secret, and Refresh token below.</li>
       </ol>
 
       <div className="rounded-md border border-amber-300 bg-amber-50 p-2.5 text-xs text-amber-900 dark:border-amber-700/60 dark:bg-amber-950/40 dark:text-amber-100">
-        If your OAuth consent screen is in <span className="font-medium">Testing</span> mode, Google
-        expires refresh tokens after 7 days. Publish the app to{' '}
-        <span className="font-medium">Production</span> (no verification is needed for your own use of
-        Calendar scopes) so it keeps working — otherwise you&apos;ll have to re-paste weekly.
+        <span className="font-medium">Keep it from expiring:</span> publish the consent screen to{' '}
+        <span className="font-medium">Production</span> (step 2). In <span className="font-medium">Testing</span>{' '}
+        mode Google expires refresh tokens after 7 days. Publishing shows a one-time &ldquo;Google
+        hasn&apos;t verified this app&rdquo; notice — click <span className="font-medium">Advanced → proceed</span>;
+        that&apos;s normal for an app you run yourself.
       </div>
 
       <label className="block space-y-1">

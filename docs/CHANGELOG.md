@@ -4,6 +4,9 @@ All notable changes to Prism are documented in this file.
 
 ## Unreleased
 
+### Integrations
+- **Connect Google Calendar on a Home Assistant / LAN-only install — no public URL required.** If Prism only runs on your local network (the Home Assistant add-on, or bare Docker on a private IP), Google refuses to accept your address as an OAuth redirect, so the normal **Connect** button can't finish. There's now a **"Connect without a public URL (advanced)"** option under *Settings → Integrations → Google*: you generate a refresh token with Google's OAuth Playground and paste it in for full two-way calendar sync — the sign-in stays entirely on Google's own domain, with no reverse proxy or tunnel needed. The in-app instructions walk through the whole setup end-to-end — creating the project, publishing the consent screen to Production (so the connection doesn't expire after 7 days), and generating the token — all under a single Google account.
+
 ## [1.16.2] – 2026-08-23
 
 ### Integrations

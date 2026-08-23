@@ -26,14 +26,25 @@ The connection covers Calendar specifically. If you also want Google Tasks sync,
 
 The normal **Connect** button needs a public HTTPS address, because Google refuses to register a private/LAN redirect URI (e.g. `http://homeassistant.local:8123/…` or `http://192.168.x.x:3000/…`) — you'll see *"must end with a public top-level domain."* If Prism only runs on your LAN (Home Assistant add-on, bare Docker) and you'd rather not put it behind a public URL, you can still get full read+write by generating a refresh token yourself with Google's OAuth Playground and pasting it into Prism. The sign-in stays entirely on Google's own domain — nothing routes through a third party.
 
-1. In the [Google Cloud Console](https://console.cloud.google.com/apis/credentials), create an **OAuth 2.0 Client ID** (type *Web application*) and enable the **Google Calendar API**.
-2. Add `https://developers.google.com/oauthplayground` to the client's **Authorized redirect URIs**.
-3. Open the [OAuth 2.0 Playground](https://developers.google.com/oauthplayground), click the gear icon, tick **"Use your own OAuth credentials"**, and paste the same Client ID and Secret.
-4. In *Step 1*, select **Google Calendar API v3 → `https://www.googleapis.com/auth/calendar`**, click **Authorize APIs**, and sign in with the account whose calendars you want.
-5. In *Step 2*, click **Exchange authorization code for tokens** and copy the **Refresh token**.
-6. In Prism, open the *Connect without a public URL (advanced)* section of the Google card and paste the Client ID, Client Secret, and Refresh token. Prism validates them with Google and imports your calendars with full read+write.
+**Do everything signed into a single Google account** — the one whose calendars you want — ideally in a private/incognito window, so you never mix up accounts. Account confusion (the project under one account, the calendars under another) is the #1 cause of setup trouble here.
 
-**Heads-up — publish your consent screen to Production.** If your OAuth consent screen is left in *Testing* mode, Google expires refresh tokens after **7 days** and the connection stops working. Publish the app to *Production* (no verification is required for your own use of Calendar scopes) so it keeps working. If a connection ever goes stale, just re-paste a fresh refresh token in the same place. To revoke access entirely, go to *Google Account → Security → Third-party access*.
+1. In the [Google Cloud Console](https://console.cloud.google.com/), **create a project**, then enable the **Google Calendar API**.
+2. Configure the **OAuth consent screen** (User type **External**; fill in the app name and your support/developer email).
+3. **Publish the app to Production.** This is the important one — in *Testing* mode Google expires refresh tokens after **7 days**; publishing removes that limit. Because you own the project, you can click through the one-time "Google hasn't verified this app" notice (**Advanced → proceed**) — no formal verification is needed for your own use of the Calendar scope.
+4. Create an **OAuth Client ID** of type **Web application**. Under **Authorized redirect URIs**, add exactly `https://developers.google.com/oauthplayground`. Copy the **Client ID** and **Client Secret** — the secret is shown only once.
+5. Open the [OAuth 2.0 Playground](https://developers.google.com/oauthplayground) → gear icon → tick **"Use your own OAuth credentials"** → paste that Client ID and Secret.
+6. In *Step 1*, enter the scope `https://www.googleapis.com/auth/calendar` → **Authorize APIs** → sign in → **Advanced → proceed → Allow**.
+7. In *Step 2*, click **Exchange authorization code for tokens** and copy the **Refresh token** (starts with `1//`).
+8. In Prism, open **Settings → Integrations → Google → "Connect without a public URL (advanced)"** and paste the **Client ID, Client Secret, and Refresh token**. Prism validates them with Google and imports your calendars with full read+write.
+
+**Troubleshooting:**
+
+- *"Google rejected the client ID / secret pair"* — the Client ID and Secret don't match, or the secret was rotated. Open your client in the Console, generate a fresh secret (shown only once), and use it in **both** the Playground and Prism.
+- *"Google rejected the refresh token"* — it's expired, revoked, or was minted with a *different* client than the one you pasted. Generate a fresh token in the Playground using the exact same Client ID + Secret, in one pass, and paste it right away. Make sure you copied the **Refresh token** (`1//…`), not the Access token (`ya29.…`).
+- **The Playground's *Exchange* returns no refresh token** — you've already granted the app once. Revoke it at [myaccount.google.com/permissions](https://myaccount.google.com/permissions), then Authorize again for a fresh consent.
+- **The project doesn't appear in the Console** — you're signed into the wrong Google account. The project, client, consent screen, and Playground authorization must **all** be the same account.
+
+To revoke Prism's access entirely, go to *Google Account → Security → Third-party access*.
 
 ### iCal subscriptions (read-only)
 
