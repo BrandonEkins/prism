@@ -55,10 +55,59 @@ export type InputProps = React.InputHTMLAttributes<HTMLInputElement>;
  * </label>
  */
 const Input = React.forwardRef<HTMLInputElement, InputProps>(
-  ({ className, type, ...props }, ref) => {
+  ({ className, type, inputMode, onKeyDown, onClick, onFocus, onBlur, ...props }, ref) => {
+    const [isEditing, setIsEditing] = React.useState(false);
+    const internalRef = React.useRef<HTMLInputElement | null>(null);
+
+    React.useImperativeHandle(ref, () => internalRef.current as HTMLInputElement);
+
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+      // If user presses Enter or Space or OK button while not editing, enter edit mode
+      if (!isEditing && (e.key === 'Enter' || e.key === ' ' || e.keyCode === 13 || e.keyCode === 23)) {
+        e.preventDefault();
+        setIsEditing(true);
+        requestAnimationFrame(() => {
+          internalRef.current?.focus();
+          internalRef.current?.select?.();
+        });
+        return;
+      }
+
+      // If user presses Enter or Escape while editing, finish edit mode
+      if (isEditing && (e.key === 'Enter' || e.key === 'Escape')) {
+        setIsEditing(false);
+        internalRef.current?.blur?.();
+        return;
+      }
+
+      onKeyDown?.(e);
+    };
+
+    const handleClick = (e: React.MouseEvent<HTMLInputElement>) => {
+      setIsEditing(true);
+      onClick?.(e);
+    };
+
+    const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+      onFocus?.(e);
+    };
+
+    const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+      setIsEditing(false);
+      onBlur?.(e);
+    };
+
+    const defaultInputMode = inputMode || (type === 'number' ? 'numeric' : 'text');
+
     return (
       <input
         type={type}
+        inputMode={isEditing ? defaultInputMode : 'none'}
+        data-editing={isEditing ? 'true' : 'false'}
+        onKeyDown={handleKeyDown}
+        onClick={handleClick}
+        onFocus={handleFocus}
+        onBlur={handleBlur}
         className={cn(
           // Layout
           'flex w-full',
@@ -75,7 +124,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
           // Placeholder styling
           'placeholder:text-muted-foreground',
           // Focus state
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+          'focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
           // Disabled state
           'disabled:cursor-not-allowed disabled:opacity-50',
           // File input specific styling
@@ -84,10 +133,11 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
           'appearance-none',
           // Touch optimization
           'touch-action-manipulation',
+          !isEditing && 'cursor-pointer',
           // Custom classes
           className
         )}
-        ref={ref}
+        ref={internalRef}
         {...props}
       />
     );

@@ -296,14 +296,18 @@ export function PhotosSettingsSection() {
         <CardContent className="space-y-3">
           <div className="flex items-center gap-3">
             <Input
-              type="number"
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
               value={resolution.width}
               onChange={(e) => setResolution({ ...resolution, width: parseInt(e.target.value) || 1920 })}
               className="w-24 text-sm"
             />
             <span className="text-muted-foreground">x</span>
             <Input
-              type="number"
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
               value={resolution.height}
               onChange={(e) => setResolution({ ...resolution, height: parseInt(e.target.value) || 1080 })}
               className="w-24 text-sm"

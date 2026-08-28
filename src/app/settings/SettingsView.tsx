@@ -228,9 +228,38 @@ export function SettingsView() {
                 return (
                   <button
                     key={section.id}
-                    onClick={() => setActiveSection(section.id)}
+                    data-active={activeSection === section.id ? 'true' : 'false'}
+                    onClick={() => {
+                      setActiveSection(section.id);
+                      requestAnimationFrame(() => {
+                        const container = document.getElementById('settings-section-container');
+                        if (container) {
+                          const firstFocusable = container.querySelector<HTMLElement>(
+                            'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"]), [role="slider"]'
+                          );
+                          if (firstFocusable) {
+                            firstFocusable.focus();
+                          }
+                        }
+                      });
+                    }}
+                    onKeyDown={(e) => {
+                      const isRight = e.key === 'ArrowRight' || e.key === 'Right' || e.keyCode === 39 || e.keyCode === 22 || e.which === 39 || e.which === 22;
+                      if (isRight) {
+                        e.preventDefault();
+                        const container = document.getElementById('settings-section-container');
+                        if (container) {
+                          const firstFocusable = container.querySelector<HTMLElement>(
+                            'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"]), [role="slider"]'
+                          );
+                          if (firstFocusable) {
+                            firstFocusable.focus();
+                          }
+                        }
+                      }
+                    }}
                     className={cn(
-                      'w-full flex items-center gap-3 px-3 py-2 rounded-md text-left',
+                      'w-full flex items-center gap-3 px-3 py-2 rounded-md text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-primary',
                       'hover:bg-accent/50 transition-colors',
                       activeSection === section.id && 'bg-accent text-accent-foreground'
                     )}
@@ -244,7 +273,95 @@ export function SettingsView() {
 
           </nav>
 
-          <div className="flex-1 overflow-y-auto p-4 md:p-6">
+          <div
+            id="settings-content-panel"
+            tabIndex={-1}
+            onKeyDown={(e) => {
+              const isLeft = e.key === 'ArrowLeft' || e.key === 'Left' || e.keyCode === 37 || e.keyCode === 21 || e.which === 37 || e.which === 21;
+              const isRight = e.key === 'ArrowRight' || e.key === 'Right' || e.keyCode === 39 || e.keyCode === 22 || e.which === 39 || e.which === 22;
+              const isUp = e.key === 'ArrowUp' || e.key === 'Up' || e.keyCode === 38 || e.keyCode === 19 || e.which === 38 || e.which === 19;
+              const isDown = e.key === 'ArrowDown' || e.key === 'Down' || e.keyCode === 40 || e.keyCode === 20 || e.which === 40 || e.which === 20;
+
+              const container = document.getElementById('settings-section-container') || e.currentTarget;
+              const focusables = Array.from(
+                container.querySelectorAll<HTMLElement>(
+                  'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"]), [role="slider"], [role="switch"]'
+                )
+              );
+
+              const active = document.activeElement as HTMLElement | null;
+              const activeIdx = active ? focusables.indexOf(active) : -1;
+              const isEditing = active?.getAttribute('data-editing') === 'true';
+
+              if (isLeft) {
+                if (!isEditing) {
+                  const prev = activeIdx > 0 ? focusables[activeIdx - 1] : undefined;
+                  if (prev && active) {
+                    const activeRect = active.getBoundingClientRect();
+                    const prevRect = prev.getBoundingClientRect();
+                    if (Math.abs(activeRect.top - prevRect.top) < 20) {
+                      e.preventDefault();
+                      prev.focus();
+                      return;
+                    }
+                  }
+                  const activeSidebarBtn = document.querySelector<HTMLButtonElement>(
+                    'nav button[data-active="true"]'
+                  );
+                  if (activeSidebarBtn) {
+                    e.preventDefault();
+                    activeSidebarBtn.focus();
+                  }
+                }
+              } else if (isRight) {
+                if (!isEditing && activeIdx >= 0 && activeIdx < focusables.length - 1) {
+                  const next = focusables[activeIdx + 1];
+                  if (next && active) {
+                    const activeRect = active.getBoundingClientRect();
+                    const nextRect = next.getBoundingClientRect();
+                    if (Math.abs(activeRect.top - nextRect.top) < 20) {
+                      e.preventDefault();
+                      next.focus();
+                    }
+                  }
+                }
+              } else if (isUp) {
+                if (!isEditing) {
+                  if (activeIdx === 0 || active === e.currentTarget || activeIdx === -1) {
+                    const activeSidebarBtn = document.querySelector<HTMLButtonElement>(
+                      'nav button[data-active="true"]'
+                    );
+                    if (activeSidebarBtn) {
+                      e.preventDefault();
+                      activeSidebarBtn.focus();
+                    }
+                  } else if (activeIdx > 0) {
+                    e.preventDefault();
+                    const prev = focusables[activeIdx - 1];
+                    if (prev) {
+                      prev.focus();
+                      prev.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' });
+                    }
+                  }
+                }
+              } else if (isDown) {
+                if (!isEditing) {
+                  if (active === e.currentTarget && focusables.length > 0 && focusables[0]) {
+                    e.preventDefault();
+                    focusables[0].focus();
+                  } else if (activeIdx >= 0 && activeIdx < focusables.length - 1) {
+                    e.preventDefault();
+                    const next = focusables[activeIdx + 1];
+                    if (next) {
+                      next.focus();
+                      next.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' });
+                    }
+                  }
+                }
+              }
+            }}
+            className="flex-1 overflow-y-auto p-4 md:p-6 focus:outline-none"
+          >
             {/*
               Mobile section selector. The desktop sidebar above is hidden on
               <md, so without this the Settings page is reachable from MobileNav
@@ -267,7 +384,7 @@ export function SettingsView() {
                 ))}
               </select>
             </div>
-            <div className="max-w-2xl">
+            <div id="settings-section-container" className="max-w-2xl">
               {activeSection === 'account' && <AccountSection />}
               {activeSection === 'family' && <FamilySection />}
               {activeSection === 'integrations' && <IntegrationsSection />}
