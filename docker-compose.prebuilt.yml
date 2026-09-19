@@ -1,0 +1,8 @@
+# Fast production update path. The source compose file intentionally builds
+# from checkout for development and feature branches; this override selects
+# the published image for stable deployments instead.
+services:
+  app:
+    image: ghcr.io/sandydargoport/prism:latest
+    build: null
+    pull_policy: always
