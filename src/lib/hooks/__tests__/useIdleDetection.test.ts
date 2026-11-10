@@ -134,12 +134,14 @@ describe('useIdleDetection', () => {
     expect(result.current.isIdle).toBe(true);
   });
 
-  it('defaults to 120s when no stored value and no initialTimeout', () => {
+  it('never goes idle by default when no stored value and no initialTimeout', () => {
     const { result } = renderHook(() => useIdleDetection());
 
     act(() => {
-      jest.advanceTimersByTime(119000);
+      jest.advanceTimersByTime(24 * 60 * 60 * 1000);
     });
+    expect(result.current.isIdle).toBe(false);
+  });
     expect(result.current.isIdle).toBe(false);
 
     act(() => {

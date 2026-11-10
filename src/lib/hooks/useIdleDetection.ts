@@ -6,7 +6,7 @@ import { useIsPWA } from './useIsPWA';
 const STORAGE_KEY = 'prism-screensaver-timeout';
 const AWAY_MODE_STORAGE_KEY = 'prism-away-mode-timeout';
 const LAST_ACTIVITY_KEY = 'prism-last-activity';
-const DEFAULT_TIMEOUT = 120;
+const DEFAULT_TIMEOUT = 0; // 0 = never (screensaver off by default)
 
 function getStoredTimeout(): number {
   if (typeof window === 'undefined') return DEFAULT_TIMEOUT;
