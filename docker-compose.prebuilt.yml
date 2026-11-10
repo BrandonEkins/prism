@@ -3,6 +3,6 @@
 # the published image for stable deployments instead.
 services:
   app:
-    image: ghcr.io/sandydargoport/prism:latest
+    image: ghcr.io/brandonekins/prism:latest
     build: null
     pull_policy: always
