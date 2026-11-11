@@ -142,13 +142,6 @@ describe('useIdleDetection', () => {
     });
     expect(result.current.isIdle).toBe(false);
   });
-    expect(result.current.isIdle).toBe(false);
-
-    act(() => {
-      jest.advanceTimersByTime(1000);
-    });
-    expect(result.current.isIdle).toBe(true);
-  });
 
   it('dismisses idle on keydown after becoming idle', () => {
     const { result } = renderHook(() => useIdleDetection(2));
