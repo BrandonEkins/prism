@@ -60,7 +60,8 @@ describe('changedSettings', () => {
 describe('screenSummary', () => {
   const clock = (t: string) => t;
   it('says when it rests, when night is and how many Interludes', () => {
-    expect(screenSummary({}, { source: 'photos' }, clock)).toBe('Rests after 2 min, night from dusk');
+    expect(screenSummary({}, { source: 'photos' }, clock)).toBe('Never rests, night from dusk');
+    expect(screenSummary({ 'prism-screensaver-timeout': '120' }, { source: 'photos' }, clock)).toBe('Rests after 2 min, night from dusk');
     expect(screenSummary(
       { 'prism-screensaver-timeout': '0', 'prism-screen-schedule': JSON.stringify([{ dashboardId: 'x', days: [1], from: '07:00', to: '08:00' }]) },
       { day: 'dashboard', night: 'off', switch: { by: 'clock', from: '21:00', to: '06:30' } },

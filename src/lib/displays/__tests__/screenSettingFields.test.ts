@@ -50,7 +50,7 @@ describe('Sign out after', () => {
 
 describe('currentOption', () => {
   it('shows what the screen falls back to when nothing, or nothing it knows, is stored', () => {
-    expect(currentOption(field('prism-screensaver-timeout'), {})).toBe('120');
+    expect(currentOption(field('prism-screensaver-timeout'), {})).toBe('0');
     expect(currentOption(field('prism-screensaver-drift'), { 'prism-screensaver-drift': 'off' })).toBe('off');
     expect(currentOption(field('prism-screensaver-shortcut'), { 'prism-screensaver-shortcut': 'yes' })).toBe('off');
   });
