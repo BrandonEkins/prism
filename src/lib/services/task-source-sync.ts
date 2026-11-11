@@ -21,11 +21,11 @@ import type {
   SyncResult,
 } from '@/lib/integrations/tasks/types';
 
-export interface TaskSourceSyncOutcome {
+export type TaskSourceSyncOutcome = {
   /** HTTP status the sync route answers with. */
   status: number;
   body: Record<string, unknown>;
-}
+};
 
 /**
  * Performs bidirectional sync between Prism tasks and the external provider.
