@@ -363,7 +363,10 @@ async function performSync(
                 completedAt: remoteTask.completedAt || null,
                 externalUpdatedAt: remoteTask.updatedAt,
                 lastSynced: new Date(),
-                updatedAt: new Date(),
+                // The remote's time, not now: stamping now made the copy look
+                // newer than the remote, so the next sync pushed it straight
+                // back, and every sync after that did the same.
+                updatedAt: remoteTask.updatedAt,
               })
               .where(eq(tasks.id, localTask.id));
             result.updated++;
@@ -375,7 +378,7 @@ async function performSync(
           try {
             // For MS To-Do, taskId needs format "listId:taskId"
             const taskIdForProvider = `${externalListId}:${remoteTask.id}`;
-            await provider.updateTask(tokens, taskIdForProvider, {
+            const pushed = await provider.updateTask(tokens, taskIdForProvider, {
               title: localTask.title,
               description: localTask.description,
               dueDate: localTask.dueDate,
@@ -383,12 +386,15 @@ async function performSync(
               priority: localTask.priority,
             });
 
-            // Update local sync timestamp
+            // Match the remote's new timestamp so the next sync sees the two
+            // as equal and leaves them alone.
+            const pushedAt = pushed?.updatedAt ?? new Date();
             await db
               .update(tasks)
               .set({
+                externalUpdatedAt: pushedAt,
                 lastSynced: new Date(),
-                updatedAt: new Date(),
+                updatedAt: pushedAt,
               })
               .where(eq(tasks.id, localTask.id));
             result.updated++;
@@ -427,7 +433,7 @@ async function performSync(
               externalId: created.id,
               externalUpdatedAt: created.updatedAt,
               lastSynced: new Date(),
-              updatedAt: new Date(),
+              updatedAt: created.updatedAt,
             })
             .where(eq(tasks.id, localTask.id));
           result.created++;

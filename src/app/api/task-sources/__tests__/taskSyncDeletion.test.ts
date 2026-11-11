@@ -204,3 +204,49 @@ describe('a task the provider is listing again', () => {
     );
   });
 });
+
+describe('timestamps after a sync', () => {
+  const REMOTE_AT = new Date(Date.now() - 30 * 60 * 1000);
+  const remote = (over: Record<string, unknown> = {}) => ({
+    id: 'r1', title: 'A task', completed: false, updatedAt: REMOTE_AT, ...over,
+  });
+  const taskUpdates = () =>
+    writes.filter((w) => w.op === 'update' && (w.payload as Record<string, unknown>)?.updatedAt !== undefined);
+
+  it('gives a pulled task the remote time, so the next sync does not push it back', async () => {
+    localRows = [syncedRow({ updatedAt: LONG_AGO })];
+    mockFetchTasks.mockResolvedValue([remote({ completed: true })]);
+
+    await run();
+
+    expect(mockUpdateTask).not.toHaveBeenCalled();
+    expect(taskUpdates()).toEqual([
+      expect.objectContaining({ payload: expect.objectContaining({ completed: true, updatedAt: REMOTE_AT }) }),
+    ]);
+  });
+
+  it('gives a pushed task the time the provider returned', async () => {
+    const pushedAt = new Date();
+    localRows = [syncedRow({ updatedAt: new Date(REMOTE_AT.getTime() + 60_000), title: 'Renamed' })];
+    mockFetchTasks.mockResolvedValue([remote()]);
+    mockUpdateTask.mockResolvedValue(remote({ title: 'Renamed', updatedAt: pushedAt }));
+
+    await run();
+
+    expect(mockUpdateTask).toHaveBeenCalledTimes(1);
+    expect(taskUpdates()).toEqual([
+      expect.objectContaining({ payload: expect.objectContaining({ updatedAt: pushedAt, externalUpdatedAt: pushedAt }) }),
+    ]);
+  });
+
+  it('leaves a task alone when neither side changed it', async () => {
+    localRows = [syncedRow({ updatedAt: REMOTE_AT })];
+    mockFetchTasks.mockResolvedValue([remote()]);
+
+    await run();
+
+    expect(mockUpdateTask).not.toHaveBeenCalled();
+    expect(mockCreateTask).not.toHaveBeenCalled();
+    expect(taskUpdates()).toEqual([]);
+  });
+});
