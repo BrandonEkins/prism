@@ -43,6 +43,9 @@ export async function register() {
     const { startCalendarSyncCron } = await import('./lib/server/calendarSyncCron');
     startCalendarSyncCron();
 
+    const { startTaskSyncCron } = await import('./lib/server/taskSyncCron');
+    startTaskSyncCron();
+
     const { startPhotoSyncCron } = await import('./lib/server/photoSyncCron');
     startPhotoSyncCron();
 
