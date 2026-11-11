@@ -63,7 +63,7 @@ export const SCREEN_SETTING_FIELDS: ScreenSettingField[] = [
     label: 'Activate after',
     group: 'Screensaver',
     options: seconds([[30, '30 seconds'], [60, '1 minute'], [120, '2 minutes'], [600, '10 minutes'], [3600, '1 hour'], [0, 'Never']]),
-    fallback: '120',
+    fallback: '0',
   },
   {
     key: MOTION,

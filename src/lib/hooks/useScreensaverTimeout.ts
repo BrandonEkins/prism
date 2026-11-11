@@ -4,7 +4,7 @@ import { useCallback } from 'react';
 import { useStoredString, writeStored } from './useStoredValue';
 
 const STORAGE_KEY = 'prism-screensaver-timeout';
-const DEFAULT_TIMEOUT = 120; // 2 minutes in seconds
+const DEFAULT_TIMEOUT = 0; // Never, until a screen chooses a timeout
 
 export const SCREENSAVER_TIMEOUT_OPTIONS = [
   { value: 30, label: '30 seconds' },

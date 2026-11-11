@@ -6,7 +6,7 @@ import { resolveAwayAutoAfter } from '@/lib/awayMode/autoAfter';
 
 const STORAGE_KEY = 'prism-screensaver-timeout';
 const LAST_ACTIVITY_KEY = 'prism-last-activity';
-const DEFAULT_TIMEOUT = 120;
+const DEFAULT_TIMEOUT = 0; // Never, until a screen chooses a timeout
 
 function getStoredTimeout(): number {
   if (typeof window === 'undefined') return DEFAULT_TIMEOUT;

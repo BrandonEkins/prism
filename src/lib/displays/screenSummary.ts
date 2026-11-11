@@ -12,7 +12,7 @@ import { parseSchedule, SCREEN_SCHEDULE_KEY } from './screenSchedule';
 import type { ScreenSettings } from './screenSettings';
 
 /** The screensaver timeout a screen uses when it never chose one, in seconds. */
-const DEFAULT_TIMEOUT_S = 120;
+const DEFAULT_TIMEOUT_S = 0;
 
 function restsAfter(seconds: number): string {
   if (seconds <= 0) return 'Never rests';
