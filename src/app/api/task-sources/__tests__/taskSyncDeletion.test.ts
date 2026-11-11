@@ -210,8 +210,13 @@ describe('timestamps after a sync', () => {
   const remote = (over: Record<string, unknown> = {}) => ({
     id: 'r1', title: 'A task', completed: false, updatedAt: REMOTE_AT, ...over,
   });
+  // Updates to task rows that set updatedAt; the source row's own
+  // bookkeeping (lastSyncAt) is not a task write.
   const taskUpdates = () =>
-    writes.filter((w) => w.op === 'update' && (w.payload as Record<string, unknown>)?.updatedAt !== undefined);
+    writes.filter((w) => {
+      const payload = w.payload as Record<string, unknown> | undefined;
+      return w.op === 'update' && payload?.updatedAt !== undefined && !('lastSyncAt' in payload);
+    });
 
   it('gives a pulled task the remote time, so the next sync does not push it back', async () => {
     localRows = [syncedRow({ updatedAt: LONG_AGO })];
